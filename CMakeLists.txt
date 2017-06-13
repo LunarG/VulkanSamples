@@ -43,6 +43,12 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
     if (BUILD_WSI_MIR_SUPPORT)
         find_package(Mir REQUIRED)
     endif()
+
+    # This option can be used to suppress the installation of artifacts from the
+    # Vulkan-LoaderAndValidationLayers repo while running "make install" for the
+    # VulkanTools and VulkanSamples repos.  This can be used to prevent the
+    # overwriting of LVL artifacts when installing these downstream repos.
+    option(INSTALL_LVL_FILES "Install content from LoaderAndValidationLayers repo" ON)
 endif()
 
 set(SCRIPTS_DIR "${CMAKE_CURRENT_SOURCE_DIR}/scripts")
@@ -283,6 +289,7 @@ add_custom_target(generate_helper_files DEPENDS
     vk_object_types.h
     vk_layer_dispatch_table.h
     vk_dispatch_table_helper.h
+    vk_extension_helper.h
     )
 
 # Rules to build generated helper files
@@ -294,6 +301,7 @@ run_vk_xml_generate(helper_file_generator.py vk_struct_size_helper.h)
 run_vk_xml_generate(helper_file_generator.py vk_struct_size_helper.c)
 run_vk_xml_generate(helper_file_generator.py vk_enum_string_helper.h)
 run_vk_xml_generate(helper_file_generator.py vk_object_types.h)
+run_vk_xml_generate(helper_file_generator.py vk_extension_helper.h)
 
 if(NOT WIN32)
     include(GNUInstallDirs)
@@ -309,7 +317,9 @@ if(NOT WIN32)
 endif()
 
 if(UNIX)
-    install(DIRECTORY "${PROJECT_SOURCE_DIR}/include/vulkan" DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
+    if(INSTALL_LVL_FILES)
+        install(DIRECTORY "${PROJECT_SOURCE_DIR}/include/vulkan" DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
+    endif()
 
 # uninstall target
 configure_file(

@@ -92,3 +92,45 @@ VKAPI_ATTR void VKAPI_CALL GetPhysicalDeviceSparseImageFormatProperties2KHR(
 VKAPI_ATTR void VKAPI_CALL terminator_GetPhysicalDeviceSparseImageFormatProperties2KHR(
     VkPhysicalDevice physicalDevice, const VkPhysicalDeviceSparseImageFormatInfo2KHR* pFormatInfo, uint32_t* pPropertyCount,
     VkSparseImageFormatProperties2KHR* pProperties);
+
+VKAPI_ATTR VkResult VKAPI_CALL GetPhysicalDeviceSurfaceCapabilities2KHR(VkPhysicalDevice physicalDevice,
+                                                                        const VkPhysicalDeviceSurfaceInfo2KHR* pSurfaceInfo,
+                                                                        VkSurfaceCapabilities2KHR* pSurfaceCapabilities);
+
+VKAPI_ATTR VkResult VKAPI_CALL terminator_GetPhysicalDeviceSurfaceCapabilities2KHR(
+    VkPhysicalDevice physicalDevice, const VkPhysicalDeviceSurfaceInfo2KHR* pSurfaceInfo,
+    VkSurfaceCapabilities2KHR* pSurfaceCapabilities);
+
+VKAPI_ATTR VkResult VKAPI_CALL GetPhysicalDeviceSurfaceFormats2KHR(VkPhysicalDevice physicalDevice,
+                                                                   const VkPhysicalDeviceSurfaceInfo2KHR* pSurfaceInfo,
+                                                                   uint32_t* pSurfaceFormatCount,
+                                                                   VkSurfaceFormat2KHR* pSurfaceFormats);
+
+VKAPI_ATTR VkResult VKAPI_CALL terminator_GetPhysicalDeviceSurfaceFormats2KHR(VkPhysicalDevice physicalDevice,
+                                                                              const VkPhysicalDeviceSurfaceInfo2KHR* pSurfaceInfo,
+                                                                              uint32_t* pSurfaceFormatCount,
+                                                                              VkSurfaceFormat2KHR* pSurfaceFormats);
+
+VKAPI_ATTR VkResult VKAPI_CALL GetPhysicalDeviceSurfaceCapabilities2EXT(VkPhysicalDevice physicalDevice, VkSurfaceKHR surface,
+                                                                        VkSurfaceCapabilities2EXT* pSurfaceCapabilities);
+
+VKAPI_ATTR VkResult VKAPI_CALL terminator_GetPhysicalDeviceSurfaceCapabilities2EXT(VkPhysicalDevice physicalDevice,
+                                                                                   VkSurfaceKHR surface,
+                                                                                   VkSurfaceCapabilities2EXT* pSurfaceCapabilities);
+
+VKAPI_ATTR VkResult VKAPI_CALL ReleaseDisplayEXT(VkPhysicalDevice physicalDevice, VkDisplayKHR display);
+
+VKAPI_ATTR VkResult VKAPI_CALL terminator_ReleaseDisplayEXT(VkPhysicalDevice physicalDevice, VkDisplayKHR display);
+
+#ifdef VK_USE_PLATFORM_XLIB_XRANDR_EXT
+VKAPI_ATTR VkResult VKAPI_CALL AcquireXlibDisplayEXT(VkPhysicalDevice physicalDevice, Display* dpy, VkDisplayKHR display);
+
+VKAPI_ATTR VkResult VKAPI_CALL terminator_AcquireXlibDisplayEXT(VkPhysicalDevice physicalDevice, Display* dpy,
+                                                                VkDisplayKHR display);
+
+VKAPI_ATTR VkResult VKAPI_CALL GetRandROutputDisplayEXT(VkPhysicalDevice physicalDevice, Display* dpy, RROutput rrOutput,
+                                                        VkDisplayKHR* pDisplay);
+
+VKAPI_ATTR VkResult VKAPI_CALL terminator_GetRandROutputDisplayEXT(VkPhysicalDevice physicalDevice, Display* dpy, RROutput rrOutput,
+                                                                   VkDisplayKHR* pDisplay);
+#endif  // VK_USE_PLATFORM_XLIB_XRANDR_EXT

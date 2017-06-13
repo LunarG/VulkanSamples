@@ -61,13 +61,11 @@ static void initUniqueObjects(instance_layer_data *instance_data, const VkAlloca
     layer_debug_actions(instance_data->report_data, instance_data->logging_callback, pAllocator, "google_unique_objects");
 }
 
-// Handle CreateInstance Extensions
-static void checkInstanceRegisterExtensions(const VkInstanceCreateInfo *pCreateInfo, VkInstance instance) {
-    uint32_t i;
+// Check enabled instance extensions against supported instance extension whitelist
+static void InstanceExtensionWhitelist(const VkInstanceCreateInfo *pCreateInfo, VkInstance instance) {
     instance_layer_data *instance_data = GetLayerDataPtr(get_dispatch_key(instance), instance_layer_data_map);
-    instance_data->extensions.InitFromInstanceCreateInfo(pCreateInfo);
 
-    for (i = 0; i < pCreateInfo->enabledExtensionCount; i++) {
+    for (uint32_t i = 0; i < pCreateInfo->enabledExtensionCount; i++) {
         // Check for recognized instance extensions
         if (!white_list(pCreateInfo->ppEnabledExtensionNames[i], kUniqueObjectsSupportedInstanceExtensions)) {
             log_msg(instance_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
@@ -79,22 +77,11 @@ static void checkInstanceRegisterExtensions(const VkInstanceCreateInfo *pCreateI
     }
 }
 
-// Handle CreateDevice Extensions
-static void createDeviceRegisterExtensions(const VkDeviceCreateInfo *pCreateInfo, VkDevice device) {
+// Check enabled device extensions against supported device extension whitelist
+static void DeviceExtensionWhitelist(const VkDeviceCreateInfo *pCreateInfo, VkDevice device) {
     layer_data *device_data = GetLayerDataPtr(get_dispatch_key(device), layer_data_map);
-    PFN_vkGetDeviceProcAddr gpa = device_data->dispatch_table.GetDeviceProcAddr;
-
-    device_data->dispatch_table.CreateSwapchainKHR = (PFN_vkCreateSwapchainKHR)gpa(device, "vkCreateSwapchainKHR");
-    device_data->dispatch_table.DestroySwapchainKHR = (PFN_vkDestroySwapchainKHR)gpa(device, "vkDestroySwapchainKHR");
-    device_data->dispatch_table.GetSwapchainImagesKHR = (PFN_vkGetSwapchainImagesKHR)gpa(device, "vkGetSwapchainImagesKHR");
-    device_data->dispatch_table.AcquireNextImageKHR = (PFN_vkAcquireNextImageKHR)gpa(device, "vkAcquireNextImageKHR");
-    device_data->dispatch_table.QueuePresentKHR = (PFN_vkQueuePresentKHR)gpa(device, "vkQueuePresentKHR");
-    device_data->wsi_enabled = false;
 
     for (uint32_t i = 0; i < pCreateInfo->enabledExtensionCount; i++) {
-        if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_KHR_SWAPCHAIN_EXTENSION_NAME) == 0) {
-            device_data->wsi_enabled = true;
-        }
         // Check for recognized device extensions
         if (!white_list(pCreateInfo->ppEnabledExtensionNames[i], kUniqueObjectsSupportedDeviceExtensions)) {
             log_msg(device_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
@@ -147,7 +134,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateInstance(const VkInstanceCreateInfo *pCreat
     }
 
     initUniqueObjects(instance_data, pAllocator);
-    checkInstanceRegisterExtensions(pCreateInfo, *pInstance);
+    InstanceExtensionWhitelist(pCreateInfo, *pInstance);
 
     // Disable and free tmp callbacks, no longer necessary
     if (instance_data->num_tmp_callbacks > 0) {
@@ -173,7 +160,7 @@ VKAPI_ATTR void VKAPI_CALL DestroyInstance(VkInstance instance, const VkAllocati
     }
 
     layer_debug_report_destroy_instance(instance_data->report_data);
-    layer_data_map.erase(key);
+    FreeLayerDataPtr(key, instance_layer_data_map);
 }
 
 VKAPI_ATTR VkResult VKAPI_CALL CreateDevice(VkPhysicalDevice gpu, const VkDeviceCreateInfo *pCreateInfo,
@@ -203,9 +190,9 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateDevice(VkPhysicalDevice gpu, const VkDevice
     // Setup layer's device dispatch table
     layer_init_device_dispatch_table(*pDevice, &my_device_data->dispatch_table, fpGetDeviceProcAddr);
 
-    createDeviceRegisterExtensions(pCreateInfo, *pDevice);
-    // Set gpu for this device in order to get at any objects mapped at instance level
+    DeviceExtensionWhitelist(pCreateInfo, *pDevice);
 
+    // Set gpu for this device in order to get at any objects mapped at instance level
     my_device_data->instance_data = my_instance_data;
 
     return result;
@@ -217,7 +204,8 @@ VKAPI_ATTR void VKAPI_CALL DestroyDevice(VkDevice device, const VkAllocationCall
 
     layer_debug_report_destroy_device(device);
     dev_data->dispatch_table.DestroyDevice(device, pAllocator);
-    layer_data_map.erase(key);
+
+    FreeLayerDataPtr(key, layer_data_map);
 }
 
 static const VkLayerProperties globalLayerProps = {"VK_LAYER_GOOGLE_unique_objects",
@@ -227,16 +215,6 @@ static const VkLayerProperties globalLayerProps = {"VK_LAYER_GOOGLE_unique_objec
 
 /// Declare prototype for these functions
 VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL GetPhysicalDeviceProcAddr(VkInstance instance, const char *funcName);
-
-static inline PFN_vkVoidFunction layer_intercept_proc(const char *name) {
-    for (unsigned int i = 0; i < sizeof(procmap) / sizeof(procmap[0]); i++) {
-        if (!strcmp(name, procmap[i].name)) return procmap[i].pFunc;
-    }
-    if (0 == strcmp(name, "vk_layerGetPhysicalDeviceProcAddr")) {
-        return (PFN_vkVoidFunction)GetPhysicalDeviceProcAddr;
-    }
-    return NULL;
-}
 
 VKAPI_ATTR VkResult VKAPI_CALL EnumerateInstanceLayerProperties(uint32_t *pCount, VkLayerProperties *pProperties) {
     return util_GetLayerProperties(1, &globalLayerProps, pCount, pProperties);
@@ -268,46 +246,31 @@ VKAPI_ATTR VkResult VKAPI_CALL EnumerateDeviceExtensionProperties(VkPhysicalDevi
 }
 
 VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL GetDeviceProcAddr(VkDevice device, const char *funcName) {
-    PFN_vkVoidFunction addr;
-    assert(device);
-    addr = layer_intercept_proc(funcName);
-    if (addr) {
-        return addr;
+    const auto item = name_to_funcptr_map.find(funcName);
+    if (item != name_to_funcptr_map.end()) {
+        return reinterpret_cast<PFN_vkVoidFunction>(item->second);
     }
 
-    layer_data *dev_data = GetLayerDataPtr(get_dispatch_key(device), layer_data_map);
-    VkLayerDispatchTable *disp_table = &dev_data->dispatch_table;
-    if (disp_table->GetDeviceProcAddr == NULL) {
-        return NULL;
-    }
-    return disp_table->GetDeviceProcAddr(device, funcName);
+    layer_data *device_data = GetLayerDataPtr(get_dispatch_key(device), layer_data_map);
+    const auto &table = device_data->dispatch_table;
+    if (!table.GetDeviceProcAddr) return nullptr;
+    return table.GetDeviceProcAddr(device, funcName);
 }
 
 VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL GetInstanceProcAddr(VkInstance instance, const char *funcName) {
-    PFN_vkVoidFunction addr;
-
-    addr = layer_intercept_proc(funcName);
-    if (addr) {
-        return addr;
+    const auto item = name_to_funcptr_map.find(funcName);
+    if (item != name_to_funcptr_map.end()) {
+        return reinterpret_cast<PFN_vkVoidFunction>(item->second);
     }
-    assert(instance);
 
     instance_layer_data *instance_data = GetLayerDataPtr(get_dispatch_key(instance), instance_layer_data_map);
-    addr = debug_report_get_instance_proc_addr(instance_data->report_data, funcName);
-    if (addr) {
-        return addr;
-    }
-
-    VkLayerInstanceDispatchTable *disp_table = &instance_data->dispatch_table;
-    if (disp_table->GetInstanceProcAddr == NULL) {
-        return NULL;
-    }
-    return disp_table->GetInstanceProcAddr(instance, funcName);
+    const auto &table = instance_data->dispatch_table;
+    if (!table.GetInstanceProcAddr) return nullptr;
+    return table.GetInstanceProcAddr(instance, funcName);
 }
 
-VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL GetPhysicalDeviceProcAddr(VkInstance instance, const char *funcName) {
-    assert(instance);
 
+VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL GetPhysicalDeviceProcAddr(VkInstance instance, const char *funcName) {
     instance_layer_data *instance_data = GetLayerDataPtr(get_dispatch_key(instance), instance_layer_data_map);
     VkLayerInstanceDispatchTable *disp_table = &instance_data->dispatch_table;
     if (disp_table->GetPhysicalDeviceProcAddr == NULL) {
@@ -401,35 +364,6 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateGraphicsPipelines(VkDevice device, VkPipeli
         }
     }
     return result;
-}
-
-VKAPI_ATTR VkResult VKAPI_CALL CreateDebugReportCallbackEXT(VkInstance instance,
-                                                            const VkDebugReportCallbackCreateInfoEXT *pCreateInfo,
-                                                            const VkAllocationCallbacks *pAllocator,
-                                                            VkDebugReportCallbackEXT *pMsgCallback) {
-    instance_layer_data *instance_data = GetLayerDataPtr(get_dispatch_key(instance), instance_layer_data_map);
-    VkResult result =
-        instance_data->dispatch_table.CreateDebugReportCallbackEXT(instance, pCreateInfo, pAllocator, pMsgCallback);
-
-    if (VK_SUCCESS == result) {
-        result = layer_create_msg_callback(instance_data->report_data, false, pCreateInfo, pAllocator, pMsgCallback);
-    }
-    return result;
-}
-
-VKAPI_ATTR void VKAPI_CALL DestroyDebugReportCallbackEXT(VkInstance instance, VkDebugReportCallbackEXT callback,
-                                                         const VkAllocationCallbacks *pAllocator) {
-    instance_layer_data *instance_data = GetLayerDataPtr(get_dispatch_key(instance), instance_layer_data_map);
-    instance_data->dispatch_table.DestroyDebugReportCallbackEXT(instance, callback, pAllocator);
-    layer_destroy_msg_callback(instance_data->report_data, callback, pAllocator);
-}
-
-VKAPI_ATTR void VKAPI_CALL DebugReportMessageEXT(VkInstance instance, VkDebugReportFlagsEXT flags,
-                                                 VkDebugReportObjectTypeEXT objType, uint64_t object, size_t location,
-                                                 int32_t msgCode, const char *pLayerPrefix, const char *pMsg) {
-    instance_layer_data *instance_data = GetLayerDataPtr(get_dispatch_key(instance), instance_layer_data_map);
-    instance_data->dispatch_table.DebugReportMessageEXT(instance, flags, objType, object, location, msgCode, pLayerPrefix,
-                                                                  pMsg);
 }
 
 VKAPI_ATTR VkResult VKAPI_CALL CreateSwapchainKHR(VkDevice device, const VkSwapchainCreateInfoKHR *pCreateInfo,
@@ -799,25 +733,6 @@ VKAPI_ATTR VkResult VKAPI_CALL DebugMarkerSetObjectNameEXT(VkDevice device, VkDe
 }
 
 }  // namespace unique_objects
-
-// vk_layer_logging.h expects these to be defined
-VKAPI_ATTR VkResult VKAPI_CALL vkCreateDebugReportCallbackEXT(VkInstance instance,
-                                                              const VkDebugReportCallbackCreateInfoEXT *pCreateInfo,
-                                                              const VkAllocationCallbacks *pAllocator,
-                                                              VkDebugReportCallbackEXT *pMsgCallback) {
-    return unique_objects::CreateDebugReportCallbackEXT(instance, pCreateInfo, pAllocator, pMsgCallback);
-}
-
-VKAPI_ATTR void VKAPI_CALL vkDestroyDebugReportCallbackEXT(VkInstance instance, VkDebugReportCallbackEXT msgCallback,
-                                                           const VkAllocationCallbacks *pAllocator) {
-    unique_objects::DestroyDebugReportCallbackEXT(instance, msgCallback, pAllocator);
-}
-
-VKAPI_ATTR void VKAPI_CALL vkDebugReportMessageEXT(VkInstance instance, VkDebugReportFlagsEXT flags,
-                                                   VkDebugReportObjectTypeEXT objType, uint64_t object, size_t location,
-                                                   int32_t msgCode, const char *pLayerPrefix, const char *pMsg) {
-    unique_objects::DebugReportMessageEXT(instance, flags, objType, object, location, msgCode, pLayerPrefix, pMsg);
-}
 
 VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkEnumerateInstanceExtensionProperties(const char *pLayerName, uint32_t *pCount,
                                                                                       VkExtensionProperties *pProperties) {

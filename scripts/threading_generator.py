@@ -18,6 +18,7 @@
 # limitations under the License.
 #
 # Author: Mike Stroyan <stroyan@google.com>
+# Author: Mark Lobodzinski <mark@lunarg.com>
 
 import os,re,sys
 from generator import *
@@ -271,8 +272,8 @@ class ThreadOutputGenerator(OutputGenerator):
         # Finish C++ namespace and multiple inclusion protection
         self.newline()
         # record intercepted procedures
-        write('// intercepts', file=self.outFile)
-        write('struct { const char* name; PFN_vkVoidFunction pFunc;} procmap[] = {', file=self.outFile)
+        write('// Map of all APIs to be intercepted by this layer', file=self.outFile)
+        write('static const std::unordered_map<std::string, void*> name_to_funcptr_map = {', file=self.outFile)
         write('\n'.join(self.intercepts), file=self.outFile)
         write('};\n', file=self.outFile)
         self.newline()
@@ -364,13 +365,6 @@ class ThreadOutputGenerator(OutputGenerator):
     # Command generation
     def genCmd(self, cmdinfo, name):
         # Commands shadowed by interface functions and are not implemented
-        interface_functions = [
-            'vkEnumerateInstanceLayerProperties',
-            'vkEnumerateInstanceExtensionProperties',
-            'vkEnumerateDeviceLayerProperties',
-        ]
-        if name in interface_functions:
-            return
         special_functions = [
             'vkGetDeviceProcAddr',
             'vkGetInstanceProcAddr',
@@ -384,13 +378,17 @@ class ThreadOutputGenerator(OutputGenerator):
             'vkDestroyDebugReportCallbackEXT',
             'vkAllocateDescriptorSets',
             'vkGetSwapchainImagesKHR',
+            'vkEnumerateInstanceLayerProperties',
+            'vkEnumerateInstanceExtensionProperties',
+            'vkEnumerateDeviceLayerProperties',
+            'vkEnumerateDeviceExtensionProperties',
         ]
         if name in special_functions:
             decls = self.makeCDecls(cmdinfo.elem)
             self.appendSection('command', '')
             self.appendSection('command', '// declare only')
             self.appendSection('command', decls[0])
-            self.intercepts += [ '    {"%s", reinterpret_cast<PFN_vkVoidFunction>(%s)},' % (name,name[2:]) ]
+            self.intercepts += [ '    {"%s", (void*)%s},' % (name,name[2:]) ]
             return
         if "QueuePresentKHR" in name or ("DebugMarker" in name and "EXT" in name):
             self.appendSection('command', '// TODO - not wrapping EXT function ' + name)
@@ -403,7 +401,7 @@ class ThreadOutputGenerator(OutputGenerator):
         # record that the function will be intercepted
         if (self.featureExtraProtect != None):
             self.intercepts += [ '#ifdef %s' % self.featureExtraProtect ]
-        self.intercepts += [ '    {"%s", reinterpret_cast<PFN_vkVoidFunction>(%s)},' % (name,name[2:]) ]
+        self.intercepts += [ '    {"%s", (void*)%s},' % (name,name[2:]) ]
         if (self.featureExtraProtect != None):
             self.intercepts += [ '#endif' ]
 

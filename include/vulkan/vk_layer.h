@@ -68,7 +68,7 @@ typedef struct VkNegotiateLayerInterface {
 typedef VkResult (VKAPI_PTR *PFN_vkNegotiateLoaderLayerInterfaceVersion)(VkNegotiateLayerInterface *pVersionStruct);
 
 // Function prototype for unknown physical device extension command
-typedef VkResult(VKAPI_PTR *PFN_PhysDevExt)(VkPhysicalDevice phys_device, ...);
+typedef VkResult(VKAPI_PTR *PFN_PhysDevExt)(VkPhysicalDevice phys_device);
 
 // ------------------------------------------------------------------------------------------------
 // CreateInstance and CreateDevice support structures

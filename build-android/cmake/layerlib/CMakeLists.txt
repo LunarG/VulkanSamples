@@ -64,6 +64,7 @@ add_library(VkLayer_core_validation SHARED
         ${SRC_DIR}/layers/core_validation.cpp
         ${SRC_DIR}/layers/descriptor_sets.cpp
         ${SRC_DIR}/layers/buffer_validation.cpp
+        ${SRC_DIR}/layers/shader_validation.cpp
         ${SRC_DIR}/layers/vk_layer_table.cpp)
 target_include_directories(VkLayer_core_validation PRIVATE
         ${SRC_DIR}/include
@@ -114,15 +115,5 @@ target_include_directories(VkLayer_unique_objects PRIVATE
         ${COMMON_DIR}/include
         ${SRC_DIR}/loader)
 target_link_libraries(VkLayer_unique_objects PRIVATE log layer_utils)
-
-add_library(VkLayer_swapchain SHARED
-       ${SRC_DIR}/layers/swapchain.cpp
-       ${SRC_DIR}/layers/vk_layer_table.cpp)
-target_include_directories(VkLayer_swapchain PRIVATE
-       ${SRC_DIR}/include
-       ${SRC_DIR}/layers
-       ${COMMON_DIR}/include
-       ${SRC_DIR}/loader)
-target_link_libraries(VkLayer_swapchain PRIVATE log layer_utils)
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_clone}")

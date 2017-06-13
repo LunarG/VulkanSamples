@@ -40,7 +40,7 @@
 # include <memory>
 # include <vector>
 #endif /*VULKAN_HPP_DISABLE_ENHANCED_MODE*/
-static_assert( VK_HEADER_VERSION ==  50 , "Wrong VK_HEADER_VERSION!" );
+static_assert( VK_HEADER_VERSION ==  51 , "Wrong VK_HEADER_VERSION!" );
 
 // 32-bit vulkan is not typesafe for handles, so don't allow copy constructors on this platform by default.
 // To enable this feature on 32-bit platforms please define VULKAN_HPP_TYPESAFE_CONVERSION
@@ -18775,19 +18775,19 @@ namespace vk
 
   enum class IndirectCommandsTokenTypeNVX
   {
-    eVkIndirectCommandsTokenPipeline = VK_INDIRECT_COMMANDS_TOKEN_PIPELINE_NVX,
-    eVkIndirectCommandsTokenDescriptorSet = VK_INDIRECT_COMMANDS_TOKEN_DESCRIPTOR_SET_NVX,
-    eVkIndirectCommandsTokenIndexBuffer = VK_INDIRECT_COMMANDS_TOKEN_INDEX_BUFFER_NVX,
-    eVkIndirectCommandsTokenVertexBuffer = VK_INDIRECT_COMMANDS_TOKEN_VERTEX_BUFFER_NVX,
-    eVkIndirectCommandsTokenPushConstant = VK_INDIRECT_COMMANDS_TOKEN_PUSH_CONSTANT_NVX,
-    eVkIndirectCommandsTokenDrawIndexed = VK_INDIRECT_COMMANDS_TOKEN_DRAW_INDEXED_NVX,
-    eVkIndirectCommandsTokenDraw = VK_INDIRECT_COMMANDS_TOKEN_DRAW_NVX,
-    eVkIndirectCommandsTokenDispatch = VK_INDIRECT_COMMANDS_TOKEN_DISPATCH_NVX
+    ePipeline = VK_INDIRECT_COMMANDS_TOKEN_TYPE_PIPELINE_NVX,
+    eDescriptorSet = VK_INDIRECT_COMMANDS_TOKEN_TYPE_DESCRIPTOR_SET_NVX,
+    eIndexBuffer = VK_INDIRECT_COMMANDS_TOKEN_TYPE_INDEX_BUFFER_NVX,
+    eVertexBuffer = VK_INDIRECT_COMMANDS_TOKEN_TYPE_VERTEX_BUFFER_NVX,
+    ePushConstant = VK_INDIRECT_COMMANDS_TOKEN_TYPE_PUSH_CONSTANT_NVX,
+    eDrawIndexed = VK_INDIRECT_COMMANDS_TOKEN_TYPE_DRAW_INDEXED_NVX,
+    eDraw = VK_INDIRECT_COMMANDS_TOKEN_TYPE_DRAW_NVX,
+    eDispatch = VK_INDIRECT_COMMANDS_TOKEN_TYPE_DISPATCH_NVX
   };
 
   struct IndirectCommandsTokenNVX
   {
-    IndirectCommandsTokenNVX( IndirectCommandsTokenTypeNVX tokenType_ = IndirectCommandsTokenTypeNVX::eVkIndirectCommandsTokenPipeline, Buffer buffer_ = Buffer(), DeviceSize offset_ = 0 )
+    IndirectCommandsTokenNVX( IndirectCommandsTokenTypeNVX tokenType_ = IndirectCommandsTokenTypeNVX::ePipeline, Buffer buffer_ = Buffer(), DeviceSize offset_ = 0 )
       : tokenType( tokenType_ )
       , buffer( buffer_ )
       , offset( offset_ )
@@ -18847,7 +18847,7 @@ namespace vk
 
   struct IndirectCommandsLayoutTokenNVX
   {
-    IndirectCommandsLayoutTokenNVX( IndirectCommandsTokenTypeNVX tokenType_ = IndirectCommandsTokenTypeNVX::eVkIndirectCommandsTokenPipeline, uint32_t bindingUnit_ = 0, uint32_t dynamicCount_ = 0, uint32_t divisor_ = 0 )
+    IndirectCommandsLayoutTokenNVX( IndirectCommandsTokenTypeNVX tokenType_ = IndirectCommandsTokenTypeNVX::ePipeline, uint32_t bindingUnit_ = 0, uint32_t dynamicCount_ = 0, uint32_t divisor_ = 0 )
       : tokenType( tokenType_ )
       , bindingUnit( bindingUnit_ )
       , dynamicCount( dynamicCount_ )
@@ -19000,11 +19000,11 @@ namespace vk
 
   enum class ObjectEntryTypeNVX
   {
-    eVkObjectEntryDescriptorSet = VK_OBJECT_ENTRY_DESCRIPTOR_SET_NVX,
-    eVkObjectEntryPipeline = VK_OBJECT_ENTRY_PIPELINE_NVX,
-    eVkObjectEntryIndexBuffer = VK_OBJECT_ENTRY_INDEX_BUFFER_NVX,
-    eVkObjectEntryVertexBuffer = VK_OBJECT_ENTRY_VERTEX_BUFFER_NVX,
-    eVkObjectEntryPushConstant = VK_OBJECT_ENTRY_PUSH_CONSTANT_NVX
+    eDescriptorSet = VK_OBJECT_ENTRY_TYPE_DESCRIPTOR_SET_NVX,
+    ePipeline = VK_OBJECT_ENTRY_TYPE_PIPELINE_NVX,
+    eIndexBuffer = VK_OBJECT_ENTRY_TYPE_INDEX_BUFFER_NVX,
+    eVertexBuffer = VK_OBJECT_ENTRY_TYPE_VERTEX_BUFFER_NVX,
+    ePushConstant = VK_OBJECT_ENTRY_TYPE_PUSH_CONSTANT_NVX
   };
 
   struct ObjectTableCreateInfoNVX
@@ -19138,7 +19138,7 @@ namespace vk
 
   struct ObjectTableEntryNVX
   {
-    ObjectTableEntryNVX( ObjectEntryTypeNVX type_ = ObjectEntryTypeNVX::eVkObjectEntryDescriptorSet, ObjectEntryUsageFlagsNVX flags_ = ObjectEntryUsageFlagsNVX() )
+    ObjectTableEntryNVX( ObjectEntryTypeNVX type_ = ObjectEntryTypeNVX::eDescriptorSet, ObjectEntryUsageFlagsNVX flags_ = ObjectEntryUsageFlagsNVX() )
       : type( type_ )
       , flags( flags_ )
     {
@@ -19189,7 +19189,7 @@ namespace vk
 
   struct ObjectTablePipelineEntryNVX
   {
-    ObjectTablePipelineEntryNVX( ObjectEntryTypeNVX type_ = ObjectEntryTypeNVX::eVkObjectEntryDescriptorSet, ObjectEntryUsageFlagsNVX flags_ = ObjectEntryUsageFlagsNVX(), Pipeline pipeline_ = Pipeline() )
+    ObjectTablePipelineEntryNVX( ObjectEntryTypeNVX type_ = ObjectEntryTypeNVX::eDescriptorSet, ObjectEntryUsageFlagsNVX flags_ = ObjectEntryUsageFlagsNVX(), Pipeline pipeline_ = Pipeline() )
       : type( type_ )
       , flags( flags_ )
       , pipeline( pipeline_ )
@@ -19249,7 +19249,7 @@ namespace vk
 
   struct ObjectTableDescriptorSetEntryNVX
   {
-    ObjectTableDescriptorSetEntryNVX( ObjectEntryTypeNVX type_ = ObjectEntryTypeNVX::eVkObjectEntryDescriptorSet, ObjectEntryUsageFlagsNVX flags_ = ObjectEntryUsageFlagsNVX(), PipelineLayout pipelineLayout_ = PipelineLayout(), DescriptorSet descriptorSet_ = DescriptorSet() )
+    ObjectTableDescriptorSetEntryNVX( ObjectEntryTypeNVX type_ = ObjectEntryTypeNVX::eDescriptorSet, ObjectEntryUsageFlagsNVX flags_ = ObjectEntryUsageFlagsNVX(), PipelineLayout pipelineLayout_ = PipelineLayout(), DescriptorSet descriptorSet_ = DescriptorSet() )
       : type( type_ )
       , flags( flags_ )
       , pipelineLayout( pipelineLayout_ )
@@ -19318,7 +19318,7 @@ namespace vk
 
   struct ObjectTableVertexBufferEntryNVX
   {
-    ObjectTableVertexBufferEntryNVX( ObjectEntryTypeNVX type_ = ObjectEntryTypeNVX::eVkObjectEntryDescriptorSet, ObjectEntryUsageFlagsNVX flags_ = ObjectEntryUsageFlagsNVX(), Buffer buffer_ = Buffer() )
+    ObjectTableVertexBufferEntryNVX( ObjectEntryTypeNVX type_ = ObjectEntryTypeNVX::eDescriptorSet, ObjectEntryUsageFlagsNVX flags_ = ObjectEntryUsageFlagsNVX(), Buffer buffer_ = Buffer() )
       : type( type_ )
       , flags( flags_ )
       , buffer( buffer_ )
@@ -19378,7 +19378,7 @@ namespace vk
 
   struct ObjectTableIndexBufferEntryNVX
   {
-    ObjectTableIndexBufferEntryNVX( ObjectEntryTypeNVX type_ = ObjectEntryTypeNVX::eVkObjectEntryDescriptorSet, ObjectEntryUsageFlagsNVX flags_ = ObjectEntryUsageFlagsNVX(), Buffer buffer_ = Buffer(), IndexType indexType_ = IndexType::eUint16 )
+    ObjectTableIndexBufferEntryNVX( ObjectEntryTypeNVX type_ = ObjectEntryTypeNVX::eDescriptorSet, ObjectEntryUsageFlagsNVX flags_ = ObjectEntryUsageFlagsNVX(), Buffer buffer_ = Buffer(), IndexType indexType_ = IndexType::eUint16 )
       : type( type_ )
       , flags( flags_ )
       , buffer( buffer_ )
@@ -19447,7 +19447,7 @@ namespace vk
 
   struct ObjectTablePushConstantEntryNVX
   {
-    ObjectTablePushConstantEntryNVX( ObjectEntryTypeNVX type_ = ObjectEntryTypeNVX::eVkObjectEntryDescriptorSet, ObjectEntryUsageFlagsNVX flags_ = ObjectEntryUsageFlagsNVX(), PipelineLayout pipelineLayout_ = PipelineLayout(), ShaderStageFlags stageFlags_ = ShaderStageFlags() )
+    ObjectTablePushConstantEntryNVX( ObjectEntryTypeNVX type_ = ObjectEntryTypeNVX::eDescriptorSet, ObjectEntryUsageFlagsNVX flags_ = ObjectEntryUsageFlagsNVX(), PipelineLayout pipelineLayout_ = PipelineLayout(), ShaderStageFlags stageFlags_ = ShaderStageFlags() )
       : type( type_ )
       , flags( flags_ )
       , pipelineLayout( pipelineLayout_ )
@@ -30187,14 +30187,14 @@ namespace vk
   {
     switch (value)
     {
-    case IndirectCommandsTokenTypeNVX::eVkIndirectCommandsTokenPipeline: return "VkIndirectCommandsTokenPipeline";
-    case IndirectCommandsTokenTypeNVX::eVkIndirectCommandsTokenDescriptorSet: return "VkIndirectCommandsTokenDescriptorSet";
-    case IndirectCommandsTokenTypeNVX::eVkIndirectCommandsTokenIndexBuffer: return "VkIndirectCommandsTokenIndexBuffer";
-    case IndirectCommandsTokenTypeNVX::eVkIndirectCommandsTokenVertexBuffer: return "VkIndirectCommandsTokenVertexBuffer";
-    case IndirectCommandsTokenTypeNVX::eVkIndirectCommandsTokenPushConstant: return "VkIndirectCommandsTokenPushConstant";
-    case IndirectCommandsTokenTypeNVX::eVkIndirectCommandsTokenDrawIndexed: return "VkIndirectCommandsTokenDrawIndexed";
-    case IndirectCommandsTokenTypeNVX::eVkIndirectCommandsTokenDraw: return "VkIndirectCommandsTokenDraw";
-    case IndirectCommandsTokenTypeNVX::eVkIndirectCommandsTokenDispatch: return "VkIndirectCommandsTokenDispatch";
+    case IndirectCommandsTokenTypeNVX::ePipeline: return "Pipeline";
+    case IndirectCommandsTokenTypeNVX::eDescriptorSet: return "DescriptorSet";
+    case IndirectCommandsTokenTypeNVX::eIndexBuffer: return "IndexBuffer";
+    case IndirectCommandsTokenTypeNVX::eVertexBuffer: return "VertexBuffer";
+    case IndirectCommandsTokenTypeNVX::ePushConstant: return "PushConstant";
+    case IndirectCommandsTokenTypeNVX::eDrawIndexed: return "DrawIndexed";
+    case IndirectCommandsTokenTypeNVX::eDraw: return "Draw";
+    case IndirectCommandsTokenTypeNVX::eDispatch: return "Dispatch";
     default: return "invalid";
     }
   }
@@ -30203,11 +30203,11 @@ namespace vk
   {
     switch (value)
     {
-    case ObjectEntryTypeNVX::eVkObjectEntryDescriptorSet: return "VkObjectEntryDescriptorSet";
-    case ObjectEntryTypeNVX::eVkObjectEntryPipeline: return "VkObjectEntryPipeline";
-    case ObjectEntryTypeNVX::eVkObjectEntryIndexBuffer: return "VkObjectEntryIndexBuffer";
-    case ObjectEntryTypeNVX::eVkObjectEntryVertexBuffer: return "VkObjectEntryVertexBuffer";
-    case ObjectEntryTypeNVX::eVkObjectEntryPushConstant: return "VkObjectEntryPushConstant";
+    case ObjectEntryTypeNVX::eDescriptorSet: return "DescriptorSet";
+    case ObjectEntryTypeNVX::ePipeline: return "Pipeline";
+    case ObjectEntryTypeNVX::eIndexBuffer: return "IndexBuffer";
+    case ObjectEntryTypeNVX::eVertexBuffer: return "VertexBuffer";
+    case ObjectEntryTypeNVX::ePushConstant: return "PushConstant";
     default: return "invalid";
     }
   }

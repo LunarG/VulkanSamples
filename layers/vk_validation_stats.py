@@ -49,8 +49,8 @@ layer_source_files = [
 'descriptor_sets.cpp',
 'parameter_validation.cpp',
 'object_tracker.cpp',
+'shader_validation.cpp',
 'buffer_validation.cpp',
-'swapchain.cpp'
 ]
 header_file = 'vk_validation_error_messages.h'
 # TODO : Don't hardcode linux path format if we want this to run on windows
@@ -100,19 +100,23 @@ class ValidationDatabase:
                 if line.startswith('#') or '' == line:
                     continue
                 db_line = line.split(self.delimiter)
-                if len(db_line) != 6:
-                    print("ERROR: Bad database line doesn't have 6 elements: %s" % (line))
+                if len(db_line) != 8:
+                    print("ERROR: Bad database line doesn't have 8 elements: %s" % (line))
                 error_enum = db_line[0]
                 implemented = db_line[1]
                 testname = db_line[2]
                 api = db_line[3]
-                error_str = db_line[4]
-                note = db_line[5]
+                vuid_string = db_line[4]
+                core_ext = db_line[5]
+                error_str = db_line[6]
+                note = db_line[7]
                 # Read complete database contents into our class var for later use
                 self.db_dict[error_enum] = {}
                 self.db_dict[error_enum]['check_implemented'] = implemented
                 self.db_dict[error_enum]['testname'] = testname
                 self.db_dict[error_enum]['api'] = api
+                self.db_dict[error_enum]['vuid_string'] = vuid_string
+                self.db_dict[error_enum]['core_ext'] = core_ext
                 self.db_dict[error_enum]['error_string'] = error_str
                 self.db_dict[error_enum]['note'] = note
                 # Now build custom data structs
@@ -163,9 +167,10 @@ class ValidationSource:
     def __init__(self, source_file_list):
         self.source_files = source_file_list
         self.enum_count_dict = {} # dict of enum values to the count of how much they're used, and location of where they're used
-        # 1790 is a special case that provides an exception when an extension is enabled. No specific error is flagged, but the exception is handled so add it here
+        # 1500099c is a special case that provides an exception when an extension is enabled. No specific error is flagged, but the exception is handled so add it here
         self.enum_count_dict['VALIDATION_ERROR_1500099c'] = {}
         self.enum_count_dict['VALIDATION_ERROR_1500099c']['count'] = 1
+        self.enum_count_dict['VALIDATION_ERROR_1500099c']['file_line'] = []
     def parse(self):
         duplicate_checks = 0
         for sf in self.source_files:

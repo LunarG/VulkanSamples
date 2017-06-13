@@ -69,11 +69,6 @@ lunarg_parameter_validation.debug_action = VK_DBG_LAYER_ACTION_LOG_MSG
 lunarg_parameter_validation.report_flags = error,warn,perf
 lunarg_parameter_validation.log_filename = stdout
 
-# VK_LAYER_LUNARG_swapchain Settings
-lunarg_swapchain.debug_action = VK_DBG_LAYER_ACTION_LOG_MSG
-lunarg_swapchain.report_flags = error,warn,perf
-lunarg_swapchain.log_filename = stdout
-
 # VK_LAYER_GOOGLE_threading Settings
 google_threading.debug_action = VK_DBG_LAYER_ACTION_LOG_MSG
 google_threading.report_flags = error,warn,perf

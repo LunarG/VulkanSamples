@@ -36,12 +36,12 @@
 // Allow use of STL min and max functions in Windows
 #define NOMINMAX
 
-#include <SPIRV/spirv.hpp>
 #include <algorithm>
 #include <assert.h>
 #include <iostream>
 #include <list>
 #include <map>
+#include <memory>
 #include <mutex>
 #include <set>
 #include <sstream>
@@ -49,7 +49,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include <string>
-#include <tuple>
 #include <inttypes.h>
 
 #include "vk_loader_platform.h"
@@ -63,11 +62,11 @@
 #endif
 #include "core_validation.h"
 #include "buffer_validation.h"
+#include "shader_validation.h"
 #include "vk_layer_table.h"
 #include "vk_layer_data.h"
 #include "vk_layer_extension_utils.h"
 #include "vk_layer_utils.h"
-#include "spirv-tools/libspirv.h"
 
 #if defined __ANDROID__
 #include <android/log.h>
@@ -116,9 +115,6 @@ static const VkDeviceMemory MEMORY_UNBOUND = VkDeviceMemory(~((uint64_t)(0)) - 1
 // by the extent of a swapchain targeting the surface.
 static const uint32_t kSurfaceSizeFromSwapchain = 0xFFFFFFFFu;
 
-// fwd decls
-struct shader_module;
-
 struct instance_layer_data {
     VkInstance instance = VK_NULL_HANDLE;
     debug_report_data *report_data = nullptr;
@@ -141,7 +137,7 @@ struct layer_data {
     debug_report_data *report_data = nullptr;
     VkLayerDispatchTable dispatch_table;
 
-    DeviceExtensions device_extensions = {};
+    DeviceExtensions extensions = {};
     unordered_set<VkQueue> queues;  // All queues under given device
     // Layer specific data
     unordered_map<VkSampler, unique_ptr<SAMPLER_STATE>> samplerMap;
@@ -153,7 +149,7 @@ struct layer_data {
     unordered_map<VkCommandPool, COMMAND_POOL_NODE> commandPoolMap;
     unordered_map<VkDescriptorPool, DESCRIPTOR_POOL_STATE *> descriptorPoolMap;
     unordered_map<VkDescriptorSet, cvdescriptorset::DescriptorSet *> setMap;
-    unordered_map<VkDescriptorSetLayout, cvdescriptorset::DescriptorSetLayout *> descriptorSetLayoutMap;
+    unordered_map<VkDescriptorSetLayout, std::unique_ptr<cvdescriptorset::DescriptorSetLayout>> descriptorSetLayoutMap;
     unordered_map<VkPipelineLayout, PIPELINE_LAYOUT_NODE> pipelineLayoutMap;
     unordered_map<VkDeviceMemory, unique_ptr<DEVICE_MEM_INFO>> memObjMap;
     unordered_map<VkFence, FENCE_NODE> fenceMap;
@@ -206,87 +202,6 @@ void ValidateLayerOrdering(const TCreateInfo &createInfo) {
         }
     }
 }
-
-// Code imported from shader_checker
-static void build_def_index(shader_module *);
-
-// A forward iterator over spirv instructions. Provides easy access to len, opcode, and content words
-// without the caller needing to care too much about the physical SPIRV module layout.
-struct spirv_inst_iter {
-    std::vector<uint32_t>::const_iterator zero;
-    std::vector<uint32_t>::const_iterator it;
-
-    uint32_t len() {
-        auto result = *it >> 16;
-        assert(result > 0);
-        return result;
-    }
-
-    uint32_t opcode() { return *it & 0x0ffffu; }
-
-    uint32_t const &word(unsigned n) {
-        assert(n < len());
-        return it[n];
-    }
-
-    uint32_t offset() { return (uint32_t)(it - zero); }
-
-    spirv_inst_iter() {}
-
-    spirv_inst_iter(std::vector<uint32_t>::const_iterator zero, std::vector<uint32_t>::const_iterator it) : zero(zero), it(it) {}
-
-    bool operator==(spirv_inst_iter const &other) { return it == other.it; }
-
-    bool operator!=(spirv_inst_iter const &other) { return it != other.it; }
-
-    spirv_inst_iter operator++(int) {  // x++
-        spirv_inst_iter ii = *this;
-        it += len();
-        return ii;
-    }
-
-    spirv_inst_iter operator++() {  // ++x;
-        it += len();
-        return *this;
-    }
-
-    // The iterator and the value are the same thing.
-    spirv_inst_iter &operator*() { return *this; }
-    spirv_inst_iter const &operator*() const { return *this; }
-};
-
-struct shader_module {
-    // The spirv image itself
-    vector<uint32_t> words;
-    // A mapping of <id> to the first word of its def. this is useful because walking type
-    // trees, constant expressions, etc requires jumping all over the instruction stream.
-    unordered_map<unsigned, unsigned> def_index;
-    bool has_valid_spirv;
-
-    shader_module(VkShaderModuleCreateInfo const *pCreateInfo)
-        : words((uint32_t *)pCreateInfo->pCode, (uint32_t *)pCreateInfo->pCode + pCreateInfo->codeSize / sizeof(uint32_t)),
-          def_index(),
-          has_valid_spirv(true) {
-        build_def_index(this);
-    }
-
-    shader_module() : has_valid_spirv(false) {}
-
-    // Expose begin() / end() to enable range-based for
-    spirv_inst_iter begin() const { return spirv_inst_iter(words.begin(), words.begin() + 5); }  // First insn
-    spirv_inst_iter end() const { return spirv_inst_iter(words.begin(), words.end()); }          // Just past last insn
-    // Given an offset into the module, produce an iterator there.
-    spirv_inst_iter at(unsigned offset) const { return spirv_inst_iter(words.begin(), words.begin() + offset); }
-
-    // Gets an iterator to the definition of an id
-    spirv_inst_iter get_def(unsigned id) const {
-        auto it = def_index.find(id);
-        if (it == def_index.end()) {
-            return end();
-        }
-        return at(it->second);
-    }
-};
 
 // TODO : This can be much smarter, using separate locks for separate global data
 static std::mutex global_lock;
@@ -402,6 +317,10 @@ SURFACE_STATE *GetSurfaceState(instance_layer_data *instance_data, VkSurfaceKHR 
         return nullptr;
     }
     return &it->second;
+}
+
+DeviceExtensions const *GetEnabledExtensions(layer_data const *dev_data) {
+    return &dev_data->extensions;
 }
 
 // Return ptr to memory binding for given handle of specified type
@@ -754,1054 +673,6 @@ static bool SetSparseMemBinding(layer_data *dev_data, MEM_BINDING binding, uint6
     return skip;
 }
 
-// SPIRV utility functions
-static void build_def_index(shader_module *module) {
-    for (auto insn : *module) {
-        switch (insn.opcode()) {
-            // Types
-            case spv::OpTypeVoid:
-            case spv::OpTypeBool:
-            case spv::OpTypeInt:
-            case spv::OpTypeFloat:
-            case spv::OpTypeVector:
-            case spv::OpTypeMatrix:
-            case spv::OpTypeImage:
-            case spv::OpTypeSampler:
-            case spv::OpTypeSampledImage:
-            case spv::OpTypeArray:
-            case spv::OpTypeRuntimeArray:
-            case spv::OpTypeStruct:
-            case spv::OpTypeOpaque:
-            case spv::OpTypePointer:
-            case spv::OpTypeFunction:
-            case spv::OpTypeEvent:
-            case spv::OpTypeDeviceEvent:
-            case spv::OpTypeReserveId:
-            case spv::OpTypeQueue:
-            case spv::OpTypePipe:
-                module->def_index[insn.word(1)] = insn.offset();
-                break;
-
-            // Fixed constants
-            case spv::OpConstantTrue:
-            case spv::OpConstantFalse:
-            case spv::OpConstant:
-            case spv::OpConstantComposite:
-            case spv::OpConstantSampler:
-            case spv::OpConstantNull:
-                module->def_index[insn.word(2)] = insn.offset();
-                break;
-
-            // Specialization constants
-            case spv::OpSpecConstantTrue:
-            case spv::OpSpecConstantFalse:
-            case spv::OpSpecConstant:
-            case spv::OpSpecConstantComposite:
-            case spv::OpSpecConstantOp:
-                module->def_index[insn.word(2)] = insn.offset();
-                break;
-
-            // Variables
-            case spv::OpVariable:
-                module->def_index[insn.word(2)] = insn.offset();
-                break;
-
-            // Functions
-            case spv::OpFunction:
-                module->def_index[insn.word(2)] = insn.offset();
-                break;
-
-            default:
-                // We don't care about any other defs for now.
-                break;
-        }
-    }
-}
-
-static spirv_inst_iter find_entrypoint(shader_module *src, char const *name, VkShaderStageFlagBits stageBits) {
-    for (auto insn : *src) {
-        if (insn.opcode() == spv::OpEntryPoint) {
-            auto entrypointName = (char const *)&insn.word(3);
-            auto entrypointStageBits = 1u << insn.word(1);
-
-            if (!strcmp(entrypointName, name) && (entrypointStageBits & stageBits)) {
-                return insn;
-            }
-        }
-    }
-
-    return src->end();
-}
-
-static char const *storage_class_name(unsigned sc) {
-    switch (sc) {
-        case spv::StorageClassInput:
-            return "input";
-        case spv::StorageClassOutput:
-            return "output";
-        case spv::StorageClassUniformConstant:
-            return "const uniform";
-        case spv::StorageClassUniform:
-            return "uniform";
-        case spv::StorageClassWorkgroup:
-            return "workgroup local";
-        case spv::StorageClassCrossWorkgroup:
-            return "workgroup global";
-        case spv::StorageClassPrivate:
-            return "private global";
-        case spv::StorageClassFunction:
-            return "function";
-        case spv::StorageClassGeneric:
-            return "generic";
-        case spv::StorageClassAtomicCounter:
-            return "atomic counter";
-        case spv::StorageClassImage:
-            return "image";
-        case spv::StorageClassPushConstant:
-            return "push constant";
-        default:
-            return "unknown";
-    }
-}
-
-// Get the value of an integral constant
-unsigned get_constant_value(shader_module const *src, unsigned id) {
-    auto value = src->get_def(id);
-    assert(value != src->end());
-
-    if (value.opcode() != spv::OpConstant) {
-        // TODO: Either ensure that the specialization transform is already performed on a module we're
-        //       considering here, OR -- specialize on the fly now.
-        return 1;
-    }
-
-    return value.word(3);
-}
-
-static void describe_type_inner(std::ostringstream &ss, shader_module const *src, unsigned type) {
-    auto insn = src->get_def(type);
-    assert(insn != src->end());
-
-    switch (insn.opcode()) {
-        case spv::OpTypeBool:
-            ss << "bool";
-            break;
-        case spv::OpTypeInt:
-            ss << (insn.word(3) ? 's' : 'u') << "int" << insn.word(2);
-            break;
-        case spv::OpTypeFloat:
-            ss << "float" << insn.word(2);
-            break;
-        case spv::OpTypeVector:
-            ss << "vec" << insn.word(3) << " of ";
-            describe_type_inner(ss, src, insn.word(2));
-            break;
-        case spv::OpTypeMatrix:
-            ss << "mat" << insn.word(3) << " of ";
-            describe_type_inner(ss, src, insn.word(2));
-            break;
-        case spv::OpTypeArray:
-            ss << "arr[" << get_constant_value(src, insn.word(3)) << "] of ";
-            describe_type_inner(ss, src, insn.word(2));
-            break;
-        case spv::OpTypePointer:
-            ss << "ptr to " << storage_class_name(insn.word(2)) << " ";
-            describe_type_inner(ss, src, insn.word(3));
-            break;
-        case spv::OpTypeStruct: {
-            ss << "struct of (";
-            for (unsigned i = 2; i < insn.len(); i++) {
-                describe_type_inner(ss, src, insn.word(i));
-                if (i == insn.len() - 1) {
-                    ss << ")";
-                } else {
-                    ss << ", ";
-                }
-            }
-            break;
-        }
-        case spv::OpTypeSampler:
-            ss << "sampler";
-            break;
-        case spv::OpTypeSampledImage:
-            ss << "sampler+";
-            describe_type_inner(ss, src, insn.word(2));
-            break;
-        case spv::OpTypeImage:
-            ss << "image(dim=" << insn.word(3) << ", sampled=" << insn.word(7) << ")";
-            break;
-        default:
-            ss << "oddtype";
-            break;
-    }
-}
-
-static std::string describe_type(shader_module const *src, unsigned type) {
-    std::ostringstream ss;
-    describe_type_inner(ss, src, type);
-    return ss.str();
-}
-
-static bool is_narrow_numeric_type(spirv_inst_iter type) {
-    if (type.opcode() != spv::OpTypeInt && type.opcode() != spv::OpTypeFloat) return false;
-    return type.word(2) < 64;
-}
-
-static bool types_match(shader_module const *a, shader_module const *b, unsigned a_type, unsigned b_type, bool a_arrayed,
-                        bool b_arrayed, bool relaxed) {
-    // Walk two type trees together, and complain about differences
-    auto a_insn = a->get_def(a_type);
-    auto b_insn = b->get_def(b_type);
-    assert(a_insn != a->end());
-    assert(b_insn != b->end());
-
-    if (a_arrayed && a_insn.opcode() == spv::OpTypeArray) {
-        return types_match(a, b, a_insn.word(2), b_type, false, b_arrayed, relaxed);
-    }
-
-    if (b_arrayed && b_insn.opcode() == spv::OpTypeArray) {
-        // We probably just found the extra level of arrayness in b_type: compare the type inside it to a_type
-        return types_match(a, b, a_type, b_insn.word(2), a_arrayed, false, relaxed);
-    }
-
-    if (a_insn.opcode() == spv::OpTypeVector && relaxed && is_narrow_numeric_type(b_insn)) {
-        return types_match(a, b, a_insn.word(2), b_type, a_arrayed, b_arrayed, false);
-    }
-
-    if (a_insn.opcode() != b_insn.opcode()) {
-        return false;
-    }
-
-    if (a_insn.opcode() == spv::OpTypePointer) {
-        // Match on pointee type. storage class is expected to differ
-        return types_match(a, b, a_insn.word(3), b_insn.word(3), a_arrayed, b_arrayed, relaxed);
-    }
-
-    if (a_arrayed || b_arrayed) {
-        // If we havent resolved array-of-verts by here, we're not going to.
-        return false;
-    }
-
-    switch (a_insn.opcode()) {
-        case spv::OpTypeBool:
-            return true;
-        case spv::OpTypeInt:
-            // Match on width, signedness
-            return a_insn.word(2) == b_insn.word(2) && a_insn.word(3) == b_insn.word(3);
-        case spv::OpTypeFloat:
-            // Match on width
-            return a_insn.word(2) == b_insn.word(2);
-        case spv::OpTypeVector:
-            // Match on element type, count.
-            if (!types_match(a, b, a_insn.word(2), b_insn.word(2), a_arrayed, b_arrayed, false)) return false;
-            if (relaxed && is_narrow_numeric_type(a->get_def(a_insn.word(2)))) {
-                return a_insn.word(3) >= b_insn.word(3);
-            } else {
-                return a_insn.word(3) == b_insn.word(3);
-            }
-        case spv::OpTypeMatrix:
-            // Match on element type, count.
-            return types_match(a, b, a_insn.word(2), b_insn.word(2), a_arrayed, b_arrayed, false) &&
-                   a_insn.word(3) == b_insn.word(3);
-        case spv::OpTypeArray:
-            // Match on element type, count. these all have the same layout. we don't get here if b_arrayed. This differs from
-            // vector & matrix types in that the array size is the id of a constant instruction, * not a literal within OpTypeArray
-            return types_match(a, b, a_insn.word(2), b_insn.word(2), a_arrayed, b_arrayed, false) &&
-                   get_constant_value(a, a_insn.word(3)) == get_constant_value(b, b_insn.word(3));
-        case spv::OpTypeStruct:
-            // Match on all element types
-            {
-                if (a_insn.len() != b_insn.len()) {
-                    return false;  // Structs cannot match if member counts differ
-                }
-
-                for (unsigned i = 2; i < a_insn.len(); i++) {
-                    if (!types_match(a, b, a_insn.word(i), b_insn.word(i), a_arrayed, b_arrayed, false)) {
-                        return false;
-                    }
-                }
-
-                return true;
-            }
-        default:
-            // Remaining types are CLisms, or may not appear in the interfaces we are interested in. Just claim no match.
-            return false;
-    }
-}
-
-static unsigned value_or_default(std::unordered_map<unsigned, unsigned> const &map, unsigned id, unsigned def) {
-    auto it = map.find(id);
-    if (it == map.end())
-        return def;
-    else
-        return it->second;
-}
-
-static unsigned get_locations_consumed_by_type(shader_module const *src, unsigned type, bool strip_array_level) {
-    auto insn = src->get_def(type);
-    assert(insn != src->end());
-
-    switch (insn.opcode()) {
-        case spv::OpTypePointer:
-            // See through the ptr -- this is only ever at the toplevel for graphics shaders we're never actually passing
-            // pointers around.
-            return get_locations_consumed_by_type(src, insn.word(3), strip_array_level);
-        case spv::OpTypeArray:
-            if (strip_array_level) {
-                return get_locations_consumed_by_type(src, insn.word(2), false);
-            } else {
-                return get_constant_value(src, insn.word(3)) * get_locations_consumed_by_type(src, insn.word(2), false);
-            }
-        case spv::OpTypeMatrix:
-            // Num locations is the dimension * element size
-            return insn.word(3) * get_locations_consumed_by_type(src, insn.word(2), false);
-        case spv::OpTypeVector: {
-            auto scalar_type = src->get_def(insn.word(2));
-            auto bit_width =
-                (scalar_type.opcode() == spv::OpTypeInt || scalar_type.opcode() == spv::OpTypeFloat) ? scalar_type.word(2) : 32;
-
-            // Locations are 128-bit wide; 3- and 4-component vectors of 64 bit types require two.
-            return (bit_width * insn.word(3) + 127) / 128;
-        }
-        default:
-            // Everything else is just 1.
-            return 1;
-
-            // TODO: extend to handle 64bit scalar types, whose vectors may need multiple locations.
-    }
-}
-
-static unsigned get_locations_consumed_by_format(VkFormat format) {
-    switch (format) {
-        case VK_FORMAT_R64G64B64A64_SFLOAT:
-        case VK_FORMAT_R64G64B64A64_SINT:
-        case VK_FORMAT_R64G64B64A64_UINT:
-        case VK_FORMAT_R64G64B64_SFLOAT:
-        case VK_FORMAT_R64G64B64_SINT:
-        case VK_FORMAT_R64G64B64_UINT:
-            return 2;
-        default:
-            return 1;
-    }
-}
-
-typedef std::pair<unsigned, unsigned> location_t;
-typedef std::pair<unsigned, unsigned> descriptor_slot_t;
-
-struct interface_var {
-    uint32_t id;
-    uint32_t type_id;
-    uint32_t offset;
-    bool is_patch;
-    bool is_block_member;
-    bool is_relaxed_precision;
-    // TODO: collect the name, too? Isn't required to be present.
-};
-
-struct shader_stage_attributes {
-    char const *const name;
-    bool arrayed_input;
-    bool arrayed_output;
-};
-
-static shader_stage_attributes shader_stage_attribs[] = {
-    {"vertex shader", false, false},  {"tessellation control shader", true, true}, {"tessellation evaluation shader", true, false},
-    {"geometry shader", true, false}, {"fragment shader", false, false},
-};
-
-static spirv_inst_iter get_struct_type(shader_module const *src, spirv_inst_iter def, bool is_array_of_verts) {
-    while (true) {
-        if (def.opcode() == spv::OpTypePointer) {
-            def = src->get_def(def.word(3));
-        } else if (def.opcode() == spv::OpTypeArray && is_array_of_verts) {
-            def = src->get_def(def.word(2));
-            is_array_of_verts = false;
-        } else if (def.opcode() == spv::OpTypeStruct) {
-            return def;
-        } else {
-            return src->end();
-        }
-    }
-}
-
-static void collect_interface_block_members(shader_module const *src, std::map<location_t, interface_var> *out,
-                                            std::unordered_map<unsigned, unsigned> const &blocks, bool is_array_of_verts,
-                                            uint32_t id, uint32_t type_id, bool is_patch) {
-    // Walk down the type_id presented, trying to determine whether it's actually an interface block.
-    auto type = get_struct_type(src, src->get_def(type_id), is_array_of_verts && !is_patch);
-    if (type == src->end() || blocks.find(type.word(1)) == blocks.end()) {
-        // This isn't an interface block.
-        return;
-    }
-
-    std::unordered_map<unsigned, unsigned> member_components;
-    std::unordered_map<unsigned, unsigned> member_relaxed_precision;
-
-    // Walk all the OpMemberDecorate for type's result id -- first pass, collect components.
-    for (auto insn : *src) {
-        if (insn.opcode() == spv::OpMemberDecorate && insn.word(1) == type.word(1)) {
-            unsigned member_index = insn.word(2);
-
-            if (insn.word(3) == spv::DecorationComponent) {
-                unsigned component = insn.word(4);
-                member_components[member_index] = component;
-            }
-
-            if (insn.word(3) == spv::DecorationRelaxedPrecision) {
-                member_relaxed_precision[member_index] = 1;
-            }
-        }
-    }
-
-    // Second pass -- produce the output, from Location decorations
-    for (auto insn : *src) {
-        if (insn.opcode() == spv::OpMemberDecorate && insn.word(1) == type.word(1)) {
-            unsigned member_index = insn.word(2);
-            unsigned member_type_id = type.word(2 + member_index);
-
-            if (insn.word(3) == spv::DecorationLocation) {
-                unsigned location = insn.word(4);
-                unsigned num_locations = get_locations_consumed_by_type(src, member_type_id, false);
-                auto component_it = member_components.find(member_index);
-                unsigned component = component_it == member_components.end() ? 0 : component_it->second;
-                bool is_relaxed_precision = member_relaxed_precision.find(member_index) != member_relaxed_precision.end();
-
-                for (unsigned int offset = 0; offset < num_locations; offset++) {
-                    interface_var v = {};
-                    v.id = id;
-                    // TODO: member index in interface_var too?
-                    v.type_id = member_type_id;
-                    v.offset = offset;
-                    v.is_patch = is_patch;
-                    v.is_block_member = true;
-                    v.is_relaxed_precision = is_relaxed_precision;
-                    (*out)[std::make_pair(location + offset, component)] = v;
-                }
-            }
-        }
-    }
-}
-
-static std::map<location_t, interface_var> collect_interface_by_location(shader_module const *src, spirv_inst_iter entrypoint,
-                                                                         spv::StorageClass sinterface, bool is_array_of_verts) {
-    std::unordered_map<unsigned, unsigned> var_locations;
-    std::unordered_map<unsigned, unsigned> var_builtins;
-    std::unordered_map<unsigned, unsigned> var_components;
-    std::unordered_map<unsigned, unsigned> blocks;
-    std::unordered_map<unsigned, unsigned> var_patch;
-    std::unordered_map<unsigned, unsigned> var_relaxed_precision;
-
-    for (auto insn : *src) {
-        // We consider two interface models: SSO rendezvous-by-location, and builtins. Complain about anything that
-        // fits neither model.
-        if (insn.opcode() == spv::OpDecorate) {
-            if (insn.word(2) == spv::DecorationLocation) {
-                var_locations[insn.word(1)] = insn.word(3);
-            }
-
-            if (insn.word(2) == spv::DecorationBuiltIn) {
-                var_builtins[insn.word(1)] = insn.word(3);
-            }
-
-            if (insn.word(2) == spv::DecorationComponent) {
-                var_components[insn.word(1)] = insn.word(3);
-            }
-
-            if (insn.word(2) == spv::DecorationBlock) {
-                blocks[insn.word(1)] = 1;
-            }
-
-            if (insn.word(2) == spv::DecorationPatch) {
-                var_patch[insn.word(1)] = 1;
-            }
-
-            if (insn.word(2) == spv::DecorationRelaxedPrecision) {
-                var_relaxed_precision[insn.word(1)] = 1;
-            }
-        }
-    }
-
-    // TODO: handle grouped decorations
-    // TODO: handle index=1 dual source outputs from FS -- two vars will have the same location, and we DON'T want to clobber.
-
-    // Find the end of the entrypoint's name string. additional zero bytes follow the actual null terminator, to fill out the
-    // rest of the word - so we only need to look at the last byte in the word to determine which word contains the terminator.
-    uint32_t word = 3;
-    while (entrypoint.word(word) & 0xff000000u) {
-        ++word;
-    }
-    ++word;
-
-    std::map<location_t, interface_var> out;
-
-    for (; word < entrypoint.len(); word++) {
-        auto insn = src->get_def(entrypoint.word(word));
-        assert(insn != src->end());
-        assert(insn.opcode() == spv::OpVariable);
-
-        if (insn.word(3) == static_cast<uint32_t>(sinterface)) {
-            unsigned id = insn.word(2);
-            unsigned type = insn.word(1);
-
-            int location = value_or_default(var_locations, id, -1);
-            int builtin = value_or_default(var_builtins, id, -1);
-            unsigned component = value_or_default(var_components, id, 0);  // Unspecified is OK, is 0
-            bool is_patch = var_patch.find(id) != var_patch.end();
-            bool is_relaxed_precision = var_relaxed_precision.find(id) != var_relaxed_precision.end();
-
-            // All variables and interface block members in the Input or Output storage classes must be decorated with either
-            // a builtin or an explicit location.
-            //
-            // TODO: integrate the interface block support here. For now, don't complain -- a valid SPIRV module will only hit
-            // this path for the interface block case, as the individual members of the type are decorated, rather than
-            // variable declarations.
-
-            if (location != -1) {
-                // A user-defined interface variable, with a location. Where a variable occupied multiple locations, emit
-                // one result for each.
-                unsigned num_locations = get_locations_consumed_by_type(src, type, is_array_of_verts && !is_patch);
-                for (unsigned int offset = 0; offset < num_locations; offset++) {
-                    interface_var v = {};
-                    v.id = id;
-                    v.type_id = type;
-                    v.offset = offset;
-                    v.is_patch = is_patch;
-                    v.is_relaxed_precision = is_relaxed_precision;
-                    out[std::make_pair(location + offset, component)] = v;
-                }
-            } else if (builtin == -1) {
-                // An interface block instance
-                collect_interface_block_members(src, &out, blocks, is_array_of_verts, id, type, is_patch);
-            }
-        }
-    }
-
-    return out;
-}
-
-static vector<std::pair<uint32_t, interface_var>> collect_interface_by_input_attachment_index(
-    shader_module const *src, std::unordered_set<uint32_t> const &accessible_ids) {
-    std::vector<std::pair<uint32_t, interface_var>> out;
-
-    for (auto insn : *src) {
-        if (insn.opcode() == spv::OpDecorate) {
-            if (insn.word(2) == spv::DecorationInputAttachmentIndex) {
-                auto attachment_index = insn.word(3);
-                auto id = insn.word(1);
-
-                if (accessible_ids.count(id)) {
-                    auto def = src->get_def(id);
-                    assert(def != src->end());
-
-                    if (def.opcode() == spv::OpVariable && insn.word(3) == spv::StorageClassUniformConstant) {
-                        auto num_locations = get_locations_consumed_by_type(src, def.word(1), false);
-                        for (unsigned int offset = 0; offset < num_locations; offset++) {
-                            interface_var v = {};
-                            v.id = id;
-                            v.type_id = def.word(1);
-                            v.offset = offset;
-                            out.emplace_back(attachment_index + offset, v);
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    return out;
-}
-
-static std::vector<std::pair<descriptor_slot_t, interface_var>> collect_interface_by_descriptor_slot(
-    debug_report_data *report_data, shader_module const *src, std::unordered_set<uint32_t> const &accessible_ids) {
-    std::unordered_map<unsigned, unsigned> var_sets;
-    std::unordered_map<unsigned, unsigned> var_bindings;
-
-    for (auto insn : *src) {
-        // All variables in the Uniform or UniformConstant storage classes are required to be decorated with both
-        // DecorationDescriptorSet and DecorationBinding.
-        if (insn.opcode() == spv::OpDecorate) {
-            if (insn.word(2) == spv::DecorationDescriptorSet) {
-                var_sets[insn.word(1)] = insn.word(3);
-            }
-
-            if (insn.word(2) == spv::DecorationBinding) {
-                var_bindings[insn.word(1)] = insn.word(3);
-            }
-        }
-    }
-
-    std::vector<std::pair<descriptor_slot_t, interface_var>> out;
-
-    for (auto id : accessible_ids) {
-        auto insn = src->get_def(id);
-        assert(insn != src->end());
-
-        if (insn.opcode() == spv::OpVariable &&
-            (insn.word(3) == spv::StorageClassUniform || insn.word(3) == spv::StorageClassUniformConstant)) {
-            unsigned set = value_or_default(var_sets, insn.word(2), 0);
-            unsigned binding = value_or_default(var_bindings, insn.word(2), 0);
-
-            interface_var v = {};
-            v.id = insn.word(2);
-            v.type_id = insn.word(1);
-            out.emplace_back(std::make_pair(set, binding), v);
-        }
-    }
-
-    return out;
-}
-
-static bool validate_interface_between_stages(debug_report_data *report_data, shader_module const *producer,
-                                              spirv_inst_iter producer_entrypoint, shader_stage_attributes const *producer_stage,
-                                              shader_module const *consumer, spirv_inst_iter consumer_entrypoint,
-                                              shader_stage_attributes const *consumer_stage) {
-    bool skip = false;
-
-    auto outputs =
-        collect_interface_by_location(producer, producer_entrypoint, spv::StorageClassOutput, producer_stage->arrayed_output);
-    auto inputs =
-        collect_interface_by_location(consumer, consumer_entrypoint, spv::StorageClassInput, consumer_stage->arrayed_input);
-
-    auto a_it = outputs.begin();
-    auto b_it = inputs.begin();
-
-    // Maps sorted by key (location); walk them together to find mismatches
-    while ((outputs.size() > 0 && a_it != outputs.end()) || (inputs.size() && b_it != inputs.end())) {
-        bool a_at_end = outputs.size() == 0 || a_it == outputs.end();
-        bool b_at_end = inputs.size() == 0 || b_it == inputs.end();
-        auto a_first = a_at_end ? std::make_pair(0u, 0u) : a_it->first;
-        auto b_first = b_at_end ? std::make_pair(0u, 0u) : b_it->first;
-
-        if (b_at_end || ((!a_at_end) && (a_first < b_first))) {
-            skip |= log_msg(report_data, VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0,
-                            __LINE__, SHADER_CHECKER_OUTPUT_NOT_CONSUMED, "SC",
-                            "%s writes to output location %u.%u which is not consumed by %s", producer_stage->name, a_first.first,
-                            a_first.second, consumer_stage->name);
-            a_it++;
-        } else if (a_at_end || a_first > b_first) {
-            skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
-                            SHADER_CHECKER_INPUT_NOT_PRODUCED, "SC", "%s consumes input location %u.%u which is not written by %s",
-                            consumer_stage->name, b_first.first, b_first.second, producer_stage->name);
-            b_it++;
-        } else {
-            // subtleties of arrayed interfaces:
-            // - if is_patch, then the member is not arrayed, even though the interface may be.
-            // - if is_block_member, then the extra array level of an arrayed interface is not
-            //   expressed in the member type -- it's expressed in the block type.
-            if (!types_match(producer, consumer, a_it->second.type_id, b_it->second.type_id,
-                             producer_stage->arrayed_output && !a_it->second.is_patch && !a_it->second.is_block_member,
-                             consumer_stage->arrayed_input && !b_it->second.is_patch && !b_it->second.is_block_member, true)) {
-                skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
-                                SHADER_CHECKER_INTERFACE_TYPE_MISMATCH, "SC", "Type mismatch on location %u.%u: '%s' vs '%s'",
-                                a_first.first, a_first.second, describe_type(producer, a_it->second.type_id).c_str(),
-                                describe_type(consumer, b_it->second.type_id).c_str());
-            }
-            if (a_it->second.is_patch != b_it->second.is_patch) {
-                skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, 0, __LINE__,
-                                SHADER_CHECKER_INTERFACE_TYPE_MISMATCH, "SC",
-                                "Decoration mismatch on location %u.%u: is per-%s in %s stage but "
-                                "per-%s in %s stage",
-                                a_first.first, a_first.second, a_it->second.is_patch ? "patch" : "vertex", producer_stage->name,
-                                b_it->second.is_patch ? "patch" : "vertex", consumer_stage->name);
-            }
-            if (a_it->second.is_relaxed_precision != b_it->second.is_relaxed_precision) {
-                skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, 0, __LINE__,
-                                SHADER_CHECKER_INTERFACE_TYPE_MISMATCH, "SC",
-                                "Decoration mismatch on location %u.%u: %s and %s stages differ in precision", a_first.first,
-                                a_first.second, producer_stage->name, consumer_stage->name);
-            }
-            a_it++;
-            b_it++;
-        }
-    }
-
-    return skip;
-}
-
-enum FORMAT_TYPE {
-    FORMAT_TYPE_FLOAT = 1,  // UNORM, SNORM, FLOAT, USCALED, SSCALED, SRGB -- anything we consider float in the shader
-    FORMAT_TYPE_SINT = 2,
-    FORMAT_TYPE_UINT = 4,
-};
-
-static unsigned get_format_type(VkFormat fmt) {
-    if (FormatIsSInt(fmt))
-        return FORMAT_TYPE_SINT;
-    if (FormatIsUInt(fmt))
-        return FORMAT_TYPE_UINT;
-    if (FormatIsDepthAndStencil(fmt))
-        return FORMAT_TYPE_FLOAT | FORMAT_TYPE_UINT;
-    if (fmt == VK_FORMAT_UNDEFINED)
-        return 0;
-    // everything else -- UNORM/SNORM/FLOAT/USCALED/SSCALED is all float in the shader.
-    return FORMAT_TYPE_FLOAT;
-}
-
-// characterizes a SPIR-V type appearing in an interface to a FF stage, for comparison to a VkFormat's characterization above.
-static unsigned get_fundamental_type(shader_module const *src, unsigned type) {
-    auto insn = src->get_def(type);
-    assert(insn != src->end());
-
-    switch (insn.opcode()) {
-        case spv::OpTypeInt:
-            return insn.word(3) ? FORMAT_TYPE_SINT : FORMAT_TYPE_UINT;
-        case spv::OpTypeFloat:
-            return FORMAT_TYPE_FLOAT;
-        case spv::OpTypeVector:
-            return get_fundamental_type(src, insn.word(2));
-        case spv::OpTypeMatrix:
-            return get_fundamental_type(src, insn.word(2));
-        case spv::OpTypeArray:
-            return get_fundamental_type(src, insn.word(2));
-        case spv::OpTypePointer:
-            return get_fundamental_type(src, insn.word(3));
-        case spv::OpTypeImage:
-            return get_fundamental_type(src, insn.word(2));
-
-        default:
-            return 0;
-    }
-}
-
-static uint32_t get_shader_stage_id(VkShaderStageFlagBits stage) {
-    uint32_t bit_pos = uint32_t(u_ffs(stage));
-    return bit_pos - 1;
-}
-
-static bool validate_vi_consistency(debug_report_data *report_data, VkPipelineVertexInputStateCreateInfo const *vi) {
-    // Walk the binding descriptions, which describe the step rate and stride of each vertex buffer.  Each binding should
-    // be specified only once.
-    std::unordered_map<uint32_t, VkVertexInputBindingDescription const *> bindings;
-    bool skip = false;
-
-    for (unsigned i = 0; i < vi->vertexBindingDescriptionCount; i++) {
-        auto desc = &vi->pVertexBindingDescriptions[i];
-        auto &binding = bindings[desc->binding];
-        if (binding) {
-            // TODO: VALIDATION_ERROR_096005cc perhaps?
-            skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
-                        SHADER_CHECKER_INCONSISTENT_VI, "SC", "Duplicate vertex input binding descriptions for binding %d",
-                        desc->binding);
-        } else {
-            binding = desc;
-        }
-    }
-
-    return skip;
-}
-
-static bool validate_vi_against_vs_inputs(debug_report_data *report_data, VkPipelineVertexInputStateCreateInfo const *vi,
-                                          shader_module const *vs, spirv_inst_iter entrypoint) {
-    bool skip = false;
-
-    auto inputs = collect_interface_by_location(vs, entrypoint, spv::StorageClassInput, false);
-
-    // Build index by location
-    std::map<uint32_t, VkVertexInputAttributeDescription const *> attribs;
-    if (vi) {
-        for (unsigned i = 0; i < vi->vertexAttributeDescriptionCount; i++) {
-            auto num_locations = get_locations_consumed_by_format(vi->pVertexAttributeDescriptions[i].format);
-            for (auto j = 0u; j < num_locations; j++) {
-                attribs[vi->pVertexAttributeDescriptions[i].location + j] = &vi->pVertexAttributeDescriptions[i];
-            }
-        }
-    }
-
-    auto it_a = attribs.begin();
-    auto it_b = inputs.begin();
-    bool used = false;
-
-    while ((attribs.size() > 0 && it_a != attribs.end()) || (inputs.size() > 0 && it_b != inputs.end())) {
-        bool a_at_end = attribs.size() == 0 || it_a == attribs.end();
-        bool b_at_end = inputs.size() == 0 || it_b == inputs.end();
-        auto a_first = a_at_end ? 0 : it_a->first;
-        auto b_first = b_at_end ? 0 : it_b->first.first;
-        if (!a_at_end && (b_at_end || a_first < b_first)) {
-            if (!used && log_msg(report_data, VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT,
-                                 0, __LINE__, SHADER_CHECKER_OUTPUT_NOT_CONSUMED, "SC",
-                                 "Vertex attribute at location %d not consumed by vertex shader", a_first)) {
-                skip = true;
-            }
-            used = false;
-            it_a++;
-        } else if (!b_at_end && (a_at_end || b_first < a_first)) {
-            skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, 0, __LINE__,
-                            SHADER_CHECKER_INPUT_NOT_PRODUCED, "SC", "Vertex shader consumes input at location %d but not provided",
-                            b_first);
-            it_b++;
-        } else {
-            unsigned attrib_type = get_format_type(it_a->second->format);
-            unsigned input_type = get_fundamental_type(vs, it_b->second.type_id);
-
-            // Type checking
-            if (!(attrib_type & input_type)) {
-                skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
-                                SHADER_CHECKER_INTERFACE_TYPE_MISMATCH, "SC",
-                                "Attribute type of `%s` at location %d does not match vertex shader input type of `%s`",
-                                string_VkFormat(it_a->second->format), a_first, describe_type(vs, it_b->second.type_id).c_str());
-            }
-
-            // OK!
-            used = true;
-            it_b++;
-        }
-    }
-
-    return skip;
-}
-
-static bool validate_fs_outputs_against_render_pass(debug_report_data *report_data, shader_module const *fs,
-                                                    spirv_inst_iter entrypoint, VkRenderPassCreateInfo const *rpci,
-                                                    uint32_t subpass_index) {
-    std::map<uint32_t, VkFormat> color_attachments;
-    auto subpass = rpci->pSubpasses[subpass_index];
-    for (auto i = 0u; i < subpass.colorAttachmentCount; ++i) {
-        uint32_t attachment = subpass.pColorAttachments[i].attachment;
-        if (attachment == VK_ATTACHMENT_UNUSED) continue;
-        if (rpci->pAttachments[attachment].format != VK_FORMAT_UNDEFINED) {
-            color_attachments[i] = rpci->pAttachments[attachment].format;
-        }
-    }
-
-    bool skip = false;
-
-    // TODO: dual source blend index (spv::DecIndex, zero if not provided)
-
-    auto outputs = collect_interface_by_location(fs, entrypoint, spv::StorageClassOutput, false);
-
-    auto it_a = outputs.begin();
-    auto it_b = color_attachments.begin();
-
-    // Walk attachment list and outputs together
-
-    while ((outputs.size() > 0 && it_a != outputs.end()) || (color_attachments.size() > 0 && it_b != color_attachments.end())) {
-        bool a_at_end = outputs.size() == 0 || it_a == outputs.end();
-        bool b_at_end = color_attachments.size() == 0 || it_b == color_attachments.end();
-
-        if (!a_at_end && (b_at_end || it_a->first.first < it_b->first)) {
-            skip |= log_msg(report_data, VK_DEBUG_REPORT_WARNING_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
-                            SHADER_CHECKER_OUTPUT_NOT_CONSUMED, "SC",
-                            "fragment shader writes to output location %d with no matching attachment", it_a->first.first);
-            it_a++;
-        } else if (!b_at_end && (a_at_end || it_a->first.first > it_b->first)) {
-            skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
-                            SHADER_CHECKER_INPUT_NOT_PRODUCED, "SC", "Attachment %d not written by fragment shader", it_b->first);
-            it_b++;
-        } else {
-            unsigned output_type = get_fundamental_type(fs, it_a->second.type_id);
-            unsigned att_type = get_format_type(it_b->second);
-
-            // Type checking
-            if (!(output_type & att_type)) {
-                skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
-                                SHADER_CHECKER_INTERFACE_TYPE_MISMATCH, "SC",
-                                "Attachment %d of type `%s` does not match fragment shader output type of `%s`", it_b->first,
-                                string_VkFormat(it_b->second), describe_type(fs, it_a->second.type_id).c_str());
-            }
-
-            // OK!
-            it_a++;
-            it_b++;
-        }
-    }
-
-    return skip;
-}
-
-// For some analyses, we need to know about all ids referenced by the static call tree of a particular entrypoint. This is
-// important for identifying the set of shader resources actually used by an entrypoint, for example.
-// Note: we only explore parts of the image which might actually contain ids we care about for the above analyses.
-//  - NOT the shader input/output interfaces.
-//
-// TODO: The set of interesting opcodes here was determined by eyeballing the SPIRV spec. It might be worth
-// converting parts of this to be generated from the machine-readable spec instead.
-static std::unordered_set<uint32_t> mark_accessible_ids(shader_module const *src, spirv_inst_iter entrypoint) {
-    std::unordered_set<uint32_t> ids;
-    std::unordered_set<uint32_t> worklist;
-    worklist.insert(entrypoint.word(2));
-
-    while (!worklist.empty()) {
-        auto id_iter = worklist.begin();
-        auto id = *id_iter;
-        worklist.erase(id_iter);
-
-        auto insn = src->get_def(id);
-        if (insn == src->end()) {
-            // ID is something we didn't collect in build_def_index. that's OK -- we'll stumble across all kinds of things here
-            // that we may not care about.
-            continue;
-        }
-
-        // Try to add to the output set
-        if (!ids.insert(id).second) {
-            continue;  // If we already saw this id, we don't want to walk it again.
-        }
-
-        switch (insn.opcode()) {
-            case spv::OpFunction:
-                // Scan whole body of the function, enlisting anything interesting
-                while (++insn, insn.opcode() != spv::OpFunctionEnd) {
-                    switch (insn.opcode()) {
-                        case spv::OpLoad:
-                        case spv::OpAtomicLoad:
-                        case spv::OpAtomicExchange:
-                        case spv::OpAtomicCompareExchange:
-                        case spv::OpAtomicCompareExchangeWeak:
-                        case spv::OpAtomicIIncrement:
-                        case spv::OpAtomicIDecrement:
-                        case spv::OpAtomicIAdd:
-                        case spv::OpAtomicISub:
-                        case spv::OpAtomicSMin:
-                        case spv::OpAtomicUMin:
-                        case spv::OpAtomicSMax:
-                        case spv::OpAtomicUMax:
-                        case spv::OpAtomicAnd:
-                        case spv::OpAtomicOr:
-                        case spv::OpAtomicXor:
-                            worklist.insert(insn.word(3));  // ptr
-                            break;
-                        case spv::OpStore:
-                        case spv::OpAtomicStore:
-                            worklist.insert(insn.word(1));  // ptr
-                            break;
-                        case spv::OpAccessChain:
-                        case spv::OpInBoundsAccessChain:
-                            worklist.insert(insn.word(3));  // base ptr
-                            break;
-                        case spv::OpSampledImage:
-                        case spv::OpImageSampleImplicitLod:
-                        case spv::OpImageSampleExplicitLod:
-                        case spv::OpImageSampleDrefImplicitLod:
-                        case spv::OpImageSampleDrefExplicitLod:
-                        case spv::OpImageSampleProjImplicitLod:
-                        case spv::OpImageSampleProjExplicitLod:
-                        case spv::OpImageSampleProjDrefImplicitLod:
-                        case spv::OpImageSampleProjDrefExplicitLod:
-                        case spv::OpImageFetch:
-                        case spv::OpImageGather:
-                        case spv::OpImageDrefGather:
-                        case spv::OpImageRead:
-                        case spv::OpImage:
-                        case spv::OpImageQueryFormat:
-                        case spv::OpImageQueryOrder:
-                        case spv::OpImageQuerySizeLod:
-                        case spv::OpImageQuerySize:
-                        case spv::OpImageQueryLod:
-                        case spv::OpImageQueryLevels:
-                        case spv::OpImageQuerySamples:
-                        case spv::OpImageSparseSampleImplicitLod:
-                        case spv::OpImageSparseSampleExplicitLod:
-                        case spv::OpImageSparseSampleDrefImplicitLod:
-                        case spv::OpImageSparseSampleDrefExplicitLod:
-                        case spv::OpImageSparseSampleProjImplicitLod:
-                        case spv::OpImageSparseSampleProjExplicitLod:
-                        case spv::OpImageSparseSampleProjDrefImplicitLod:
-                        case spv::OpImageSparseSampleProjDrefExplicitLod:
-                        case spv::OpImageSparseFetch:
-                        case spv::OpImageSparseGather:
-                        case spv::OpImageSparseDrefGather:
-                        case spv::OpImageTexelPointer:
-                            worklist.insert(insn.word(3));  // Image or sampled image
-                            break;
-                        case spv::OpImageWrite:
-                            worklist.insert(insn.word(1));  // Image -- different operand order to above
-                            break;
-                        case spv::OpFunctionCall:
-                            for (uint32_t i = 3; i < insn.len(); i++) {
-                                worklist.insert(insn.word(i));  // fn itself, and all args
-                            }
-                            break;
-
-                        case spv::OpExtInst:
-                            for (uint32_t i = 5; i < insn.len(); i++) {
-                                worklist.insert(insn.word(i));  // Operands to ext inst
-                            }
-                            break;
-                    }
-                }
-                break;
-        }
-    }
-
-    return ids;
-}
-
-static bool validate_push_constant_block_against_pipeline(debug_report_data *report_data,
-                                                          std::vector<VkPushConstantRange> const *push_constant_ranges,
-                                                          shader_module const *src, spirv_inst_iter type,
-                                                          VkShaderStageFlagBits stage) {
-    bool skip = false;
-
-    // Strip off ptrs etc
-    type = get_struct_type(src, type, false);
-    assert(type != src->end());
-
-    // Validate directly off the offsets. this isn't quite correct for arrays and matrices, but is a good first step.
-    // TODO: arrays, matrices, weird sizes
-    for (auto insn : *src) {
-        if (insn.opcode() == spv::OpMemberDecorate && insn.word(1) == type.word(1)) {
-            if (insn.word(3) == spv::DecorationOffset) {
-                unsigned offset = insn.word(4);
-                auto size = 4;  // Bytes; TODO: calculate this based on the type
-
-                bool found_range = false;
-                for (auto const &range : *push_constant_ranges) {
-                    if (range.offset <= offset && range.offset + range.size >= offset + size) {
-                        found_range = true;
-
-                        if ((range.stageFlags & stage) == 0) {
-                            skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0,
-                                            __LINE__, SHADER_CHECKER_PUSH_CONSTANT_NOT_ACCESSIBLE_FROM_STAGE, "SC",
-                                            "Push constant range covering variable starting at "
-                                            "offset %u not accessible from stage %s",
-                                            offset, string_VkShaderStageFlagBits(stage));
-                        }
-
-                        break;
-                    }
-                }
-
-                if (!found_range) {
-                    skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0,
-                                    __LINE__, SHADER_CHECKER_PUSH_CONSTANT_OUT_OF_RANGE, "SC",
-                                    "Push constant range covering variable starting at "
-                                    "offset %u not declared in layout",
-                                    offset);
-                }
-            }
-        }
-    }
-
-    return skip;
-}
-
-static bool validate_push_constant_usage(debug_report_data *report_data,
-                                         std::vector<VkPushConstantRange> const *push_constant_ranges, shader_module const *src,
-                                         std::unordered_set<uint32_t> accessible_ids, VkShaderStageFlagBits stage) {
-    bool skip = false;
-
-    for (auto id : accessible_ids) {
-        auto def_insn = src->get_def(id);
-        if (def_insn.opcode() == spv::OpVariable && def_insn.word(3) == spv::StorageClassPushConstant) {
-            skip |= validate_push_constant_block_against_pipeline(report_data, push_constant_ranges, src,
-                                                                  src->get_def(def_insn.word(1)), stage);
-        }
-    }
-
-    return skip;
-}
-
-// For given pipelineLayout verify that the set_layout_node at slot.first
-//  has the requested binding at slot.second and return ptr to that binding
-static VkDescriptorSetLayoutBinding const *get_descriptor_binding(PIPELINE_LAYOUT_NODE const *pipelineLayout,
-                                                                  descriptor_slot_t slot) {
-    if (!pipelineLayout) return nullptr;
-
-    if (slot.first >= pipelineLayout->set_layouts.size()) return nullptr;
-
-    return pipelineLayout->set_layouts[slot.first]->GetDescriptorSetLayoutBindingPtrFromBinding(slot.second);
-}
-
 // Check object status for selected flag state
 static bool validate_status(layer_data *dev_data, GLOBAL_CB_NODE *pNode, CBStatusFlags status_mask, VkFlags msg_flags,
                             const char *fail_msg, UNIQUE_VALIDATION_ERROR_CODE const msg_code) {
@@ -1844,7 +715,7 @@ cvdescriptorset::DescriptorSetLayout const *GetDescriptorSetLayout(layer_data co
     if (it == dev_data->descriptorSetLayoutMap.end()) {
         return nullptr;
     }
-    return it->second;
+    return it->second.get();
 }
 
 static PIPELINE_LAYOUT_NODE const *getPipelineLayout(layer_data const *dev_data, VkPipelineLayout pipeLayout) {
@@ -1853,6 +724,14 @@ static PIPELINE_LAYOUT_NODE const *getPipelineLayout(layer_data const *dev_data,
         return nullptr;
     }
     return &it->second;
+}
+
+shader_module const *GetShaderModuleState(layer_data const *dev_data, VkShaderModule module) {
+    auto it = dev_data->shaderModuleMap.find(module);
+    if (it == dev_data->shaderModuleMap.end()) {
+        return nullptr;
+    }
+    return it->second.get();
 }
 
 // Return true if for a given PSO, the given state enum is dynamic, else return false
@@ -2005,447 +884,6 @@ static bool verify_renderpass_compatibility(const layer_data *dev_data, const Vk
     return true;
 }
 
-// For given cvdescriptorset::DescriptorSet, verify that its Set is compatible w/ the setLayout corresponding to
-// pipelineLayout[layoutIndex]
-static bool verify_set_layout_compatibility(const cvdescriptorset::DescriptorSet *descriptor_set,
-                                            PIPELINE_LAYOUT_NODE const *pipeline_layout, const uint32_t layoutIndex,
-                                            string &errorMsg) {
-    auto num_sets = pipeline_layout->set_layouts.size();
-    if (layoutIndex >= num_sets) {
-        stringstream errorStr;
-        errorStr << "VkPipelineLayout (" << pipeline_layout->layout << ") only contains " << num_sets
-                 << " setLayouts corresponding to sets 0-" << num_sets - 1 << ", but you're attempting to bind set to index "
-                 << layoutIndex;
-        errorMsg = errorStr.str();
-        return false;
-    }
-    auto layout_node = pipeline_layout->set_layouts[layoutIndex];
-    return descriptor_set->IsCompatible(layout_node, &errorMsg);
-}
-
-// Validate that data for each specialization entry is fully contained within the buffer.
-static bool validate_specialization_offsets(debug_report_data *report_data, VkPipelineShaderStageCreateInfo const *info) {
-    bool skip = false;
-
-    VkSpecializationInfo const *spec = info->pSpecializationInfo;
-
-    if (spec) {
-        for (auto i = 0u; i < spec->mapEntryCount; i++) {
-            // TODO: This is a good place for VALIDATION_ERROR_1360060a.
-            if (spec->pMapEntries[i].offset + spec->pMapEntries[i].size > spec->dataSize) {
-                skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, 0, __LINE__,
-                                VALIDATION_ERROR_1360060c, "SC",
-                                "Specialization entry %u (for constant id %u) references memory outside provided "
-                                "specialization data (bytes %u.." PRINTF_SIZE_T_SPECIFIER "; " PRINTF_SIZE_T_SPECIFIER
-                                " bytes provided). %s.",
-                                i, spec->pMapEntries[i].constantID, spec->pMapEntries[i].offset,
-                                spec->pMapEntries[i].offset + spec->pMapEntries[i].size - 1, spec->dataSize,
-                                validation_error_map[VALIDATION_ERROR_1360060c]);
-            }
-        }
-    }
-
-    return skip;
-}
-
-static bool descriptor_type_match(shader_module const *module, uint32_t type_id, VkDescriptorType descriptor_type,
-                                  unsigned &descriptor_count) {
-    auto type = module->get_def(type_id);
-
-    descriptor_count = 1;
-
-    // Strip off any array or ptrs. Where we remove array levels, adjust the  descriptor count for each dimension.
-    while (type.opcode() == spv::OpTypeArray || type.opcode() == spv::OpTypePointer) {
-        if (type.opcode() == spv::OpTypeArray) {
-            descriptor_count *= get_constant_value(module, type.word(3));
-            type = module->get_def(type.word(2));
-        } else {
-            type = module->get_def(type.word(3));
-        }
-    }
-
-    switch (type.opcode()) {
-        case spv::OpTypeStruct: {
-            for (auto insn : *module) {
-                if (insn.opcode() == spv::OpDecorate && insn.word(1) == type.word(1)) {
-                    if (insn.word(2) == spv::DecorationBlock) {
-                        return descriptor_type == VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER ||
-                               descriptor_type == VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
-                    } else if (insn.word(2) == spv::DecorationBufferBlock) {
-                        return descriptor_type == VK_DESCRIPTOR_TYPE_STORAGE_BUFFER ||
-                               descriptor_type == VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC;
-                    }
-                }
-            }
-
-            // Invalid
-            return false;
-        }
-
-        case spv::OpTypeSampler:
-            return descriptor_type == VK_DESCRIPTOR_TYPE_SAMPLER || descriptor_type == VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-
-        case spv::OpTypeSampledImage:
-            if (descriptor_type == VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER) {
-                // Slight relaxation for some GLSL historical madness: samplerBuffer doesn't really have a sampler, and a texel
-                // buffer descriptor doesn't really provide one. Allow this slight mismatch.
-                auto image_type = module->get_def(type.word(2));
-                auto dim = image_type.word(3);
-                auto sampled = image_type.word(7);
-                return dim == spv::DimBuffer && sampled == 1;
-            }
-            return descriptor_type == VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-
-        case spv::OpTypeImage: {
-            // Many descriptor types backing image types-- depends on dimension and whether the image will be used with a sampler.
-            // SPIRV for Vulkan requires that sampled be 1 or 2 -- leaving the decision to runtime is unacceptable.
-            auto dim = type.word(3);
-            auto sampled = type.word(7);
-
-            if (dim == spv::DimSubpassData) {
-                return descriptor_type == VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT;
-            } else if (dim == spv::DimBuffer) {
-                if (sampled == 1) {
-                    return descriptor_type == VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER;
-                } else {
-                    return descriptor_type == VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER;
-                }
-            } else if (sampled == 1) {
-                return descriptor_type == VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE ||
-                       descriptor_type == VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-            } else {
-                return descriptor_type == VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
-            }
-        }
-
-        // We shouldn't really see any other junk types -- but if we do, they're a mismatch.
-        default:
-            return false;  // Mismatch
-    }
-}
-
-static bool require_feature(debug_report_data *report_data, VkBool32 feature, char const *feature_name) {
-    if (!feature) {
-        if (log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
-                    SHADER_CHECKER_FEATURE_NOT_ENABLED, "SC",
-                    "Shader requires VkPhysicalDeviceFeatures::%s but is not "
-                    "enabled on the device",
-                    feature_name)) {
-            return true;
-        }
-    }
-
-    return false;
-}
-
-static bool require_extension(debug_report_data *report_data, bool extension, char const *extension_name) {
-    if (!extension) {
-        if (log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
-                    SHADER_CHECKER_FEATURE_NOT_ENABLED, "SC",
-                    "Shader requires extension %s but is not "
-                    "enabled on the device",
-                    extension_name)) {
-            return true;
-        }
-    }
-
-    return false;
-}
-
-static bool validate_shader_capabilities(layer_data *dev_data, shader_module const *src) {
-    bool skip = false;
-
-    auto report_data = dev_data->report_data;
-    auto const & enabledFeatures = dev_data->enabled_features;
-
-    struct CapabilityInfo {
-        char const *name;
-        VkBool32 const VkPhysicalDeviceFeatures::*feature;
-        bool const DeviceExtensions::*extension;
-    };
-
-    using F = VkPhysicalDeviceFeatures;
-    using E = DeviceExtensions;
-
-    // clang-format off
-    static const std::unordered_map<uint32_t, CapabilityInfo> capabilities = {
-        // Capabilities always supported by a Vulkan 1.0 implementation -- no
-        // feature bits.
-        {spv::CapabilityMatrix, {nullptr}},
-        {spv::CapabilityShader, {nullptr}},
-        {spv::CapabilityInputAttachment, {nullptr}},
-        {spv::CapabilitySampled1D, {nullptr}},
-        {spv::CapabilityImage1D, {nullptr}},
-        {spv::CapabilitySampledBuffer, {nullptr}},
-        {spv::CapabilityImageQuery, {nullptr}},
-        {spv::CapabilityDerivativeControl, {nullptr}},
-
-        // Capabilities that are optionally supported, but require a feature to
-        // be enabled on the device
-        {spv::CapabilityGeometry, {"geometryShader", &F::geometryShader}},
-        {spv::CapabilityTessellation, {"tessellationShader", &F::tessellationShader}},
-        {spv::CapabilityFloat64, {"shaderFloat64", &F::shaderFloat64}},
-        {spv::CapabilityInt64, {"shaderInt64", &F::shaderInt64}},
-        {spv::CapabilityTessellationPointSize, {"shaderTessellationAndGeometryPointSize", &F::shaderTessellationAndGeometryPointSize}},
-        {spv::CapabilityGeometryPointSize, {"shaderTessellationAndGeometryPointSize", &F::shaderTessellationAndGeometryPointSize}},
-        {spv::CapabilityImageGatherExtended, {"shaderImageGatherExtended", &F::shaderImageGatherExtended}},
-        {spv::CapabilityStorageImageMultisample, {"shaderStorageImageMultisample", &F::shaderStorageImageMultisample}},
-        {spv::CapabilityUniformBufferArrayDynamicIndexing, {"shaderUniformBufferArrayDynamicIndexing", &F::shaderUniformBufferArrayDynamicIndexing}},
-        {spv::CapabilitySampledImageArrayDynamicIndexing, {"shaderSampledImageArrayDynamicIndexing", &F::shaderSampledImageArrayDynamicIndexing}},
-        {spv::CapabilityStorageBufferArrayDynamicIndexing, {"shaderStorageBufferArrayDynamicIndexing", &F::shaderStorageBufferArrayDynamicIndexing}},
-        {spv::CapabilityStorageImageArrayDynamicIndexing, {"shaderStorageImageArrayDynamicIndexing", &F::shaderStorageBufferArrayDynamicIndexing}},
-        {spv::CapabilityClipDistance, {"shaderClipDistance", &F::shaderClipDistance}},
-        {spv::CapabilityCullDistance, {"shaderCullDistance", &F::shaderCullDistance}},
-        {spv::CapabilityImageCubeArray, {"imageCubeArray", &F::imageCubeArray}},
-        {spv::CapabilitySampleRateShading, {"sampleRateShading", &F::sampleRateShading}},
-        {spv::CapabilitySparseResidency, {"shaderResourceResidency", &F::shaderResourceResidency}},
-        {spv::CapabilityMinLod, {"shaderResourceMinLod", &F::shaderResourceMinLod}},
-        {spv::CapabilitySampledCubeArray, {"imageCubeArray", &F::imageCubeArray}},
-        {spv::CapabilityImageMSArray, {"shaderStorageImageMultisample", &F::shaderStorageImageMultisample}},
-        {spv::CapabilityStorageImageExtendedFormats, {"shaderStorageImageExtendedFormats", &F::shaderStorageImageExtendedFormats}},
-        {spv::CapabilityInterpolationFunction, {"sampleRateShading", &F::sampleRateShading}},
-        {spv::CapabilityStorageImageReadWithoutFormat, {"shaderStorageImageReadWithoutFormat", &F::shaderStorageImageReadWithoutFormat}},
-        {spv::CapabilityStorageImageWriteWithoutFormat, {"shaderStorageImageWriteWithoutFormat", &F::shaderStorageImageWriteWithoutFormat}},
-        {spv::CapabilityMultiViewport, {"multiViewport", &F::multiViewport}},
-
-        // Capabilities that require an extension
-        {spv::CapabilityDrawParameters, {VK_KHR_SHADER_DRAW_PARAMETERS_EXTENSION_NAME, nullptr, &E::khr_shader_draw_parameters}},
-        {spv::CapabilityGeometryShaderPassthroughNV, {VK_NV_GEOMETRY_SHADER_PASSTHROUGH_EXTENSION_NAME, nullptr, &E::nv_geometry_shader_passthrough}},
-        {spv::CapabilitySampleMaskOverrideCoverageNV, {VK_NV_SAMPLE_MASK_OVERRIDE_COVERAGE_EXTENSION_NAME, nullptr, &E::nv_sample_mask_override_coverage}},
-        {spv::CapabilityShaderViewportIndexLayerNV, {VK_NV_VIEWPORT_ARRAY2_EXTENSION_NAME, nullptr, &E::nv_viewport_array2}},
-        {spv::CapabilityShaderViewportMaskNV, {VK_NV_VIEWPORT_ARRAY2_EXTENSION_NAME, nullptr, &E::nv_viewport_array2}},
-        {spv::CapabilitySubgroupBallotKHR, {VK_EXT_SHADER_SUBGROUP_BALLOT_EXTENSION_NAME, nullptr, &E::khr_subgroup_ballot}},
-        {spv::CapabilitySubgroupVoteKHR, {VK_EXT_SHADER_SUBGROUP_VOTE_EXTENSION_NAME, nullptr, &E::khr_subgroup_vote}},
-    };
-    // clang-format on
-
-    for (auto insn : *src) {
-        if (insn.opcode() == spv::OpCapability) {
-            auto it = capabilities.find(insn.word(1));
-            if (it != capabilities.end()) {
-                if (it->second.feature) {
-                    skip |= require_feature(report_data, enabledFeatures.*(it->second.feature), it->second.name);
-                }
-                if (it->second.extension) {
-                    skip |= require_extension(report_data, dev_data->device_extensions.*(it->second.extension), it->second.name);
-                }
-            }
-        }
-    }
-
-    return skip;
-}
-
-static uint32_t descriptor_type_to_reqs(shader_module const *module, uint32_t type_id) {
-    auto type = module->get_def(type_id);
-
-    while (true) {
-        switch (type.opcode()) {
-            case spv::OpTypeArray:
-            case spv::OpTypeSampledImage:
-                type = module->get_def(type.word(2));
-                break;
-            case spv::OpTypePointer:
-                type = module->get_def(type.word(3));
-                break;
-            case spv::OpTypeImage: {
-                auto dim = type.word(3);
-                auto arrayed = type.word(5);
-                auto msaa = type.word(6);
-
-                switch (dim) {
-                    case spv::Dim1D:
-                        return arrayed ? DESCRIPTOR_REQ_VIEW_TYPE_1D_ARRAY : DESCRIPTOR_REQ_VIEW_TYPE_1D;
-                    case spv::Dim2D:
-                        return (msaa ? DESCRIPTOR_REQ_MULTI_SAMPLE : DESCRIPTOR_REQ_SINGLE_SAMPLE) |
-                               (arrayed ? DESCRIPTOR_REQ_VIEW_TYPE_2D_ARRAY : DESCRIPTOR_REQ_VIEW_TYPE_2D);
-                    case spv::Dim3D:
-                        return DESCRIPTOR_REQ_VIEW_TYPE_3D;
-                    case spv::DimCube:
-                        return arrayed ? DESCRIPTOR_REQ_VIEW_TYPE_CUBE_ARRAY : DESCRIPTOR_REQ_VIEW_TYPE_CUBE;
-                    case spv::DimSubpassData:
-                        return msaa ? DESCRIPTOR_REQ_MULTI_SAMPLE : DESCRIPTOR_REQ_SINGLE_SAMPLE;
-                    default:  // buffer, etc.
-                        return 0;
-                }
-            }
-            default:
-                return 0;
-        }
-    }
-}
-
-static bool validate_pipeline_shader_stage(
-    layer_data *dev_data, VkPipelineShaderStageCreateInfo const *pStage, PIPELINE_STATE *pipeline,
-    shader_module **out_module, spirv_inst_iter *out_entrypoint) {
-    bool skip = false;
-    auto module_it = dev_data->shaderModuleMap.find(pStage->module);
-    auto module = *out_module = module_it->second.get();
-    auto report_data = dev_data->report_data;
-
-    if (!module->has_valid_spirv) return false;
-
-    // Find the entrypoint
-    auto entrypoint = *out_entrypoint = find_entrypoint(module, pStage->pName, pStage->stage);
-    if (entrypoint == module->end()) {
-        if (log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
-                    VALIDATION_ERROR_10600586, "SC", "No entrypoint found named `%s` for stage %s. %s.", pStage->pName,
-                    string_VkShaderStageFlagBits(pStage->stage), validation_error_map[VALIDATION_ERROR_10600586])) {
-            return true;  // no point continuing beyond here, any analysis is just going to be garbage.
-        }
-    }
-
-    // Validate shader capabilities against enabled device features
-    skip |= validate_shader_capabilities(dev_data, module);
-
-    // Mark accessible ids
-    auto accessible_ids = mark_accessible_ids(module, entrypoint);
-
-    // Validate descriptor set layout against what the entrypoint actually uses
-    auto descriptor_uses = collect_interface_by_descriptor_slot(report_data, module, accessible_ids);
-
-    auto pipelineLayout = pipeline->pipeline_layout;
-
-    skip |= validate_specialization_offsets(report_data, pStage);
-    skip |= validate_push_constant_usage(report_data, &pipelineLayout.push_constant_ranges, module, accessible_ids, pStage->stage);
-
-    // Validate descriptor use
-    for (auto use : descriptor_uses) {
-        // While validating shaders capture which slots are used by the pipeline
-        auto &reqs = pipeline->active_slots[use.first.first][use.first.second];
-        reqs = descriptor_req(reqs | descriptor_type_to_reqs(module, use.second.type_id));
-
-        // Verify given pipelineLayout has requested setLayout with requested binding
-        const auto &binding = get_descriptor_binding(&pipelineLayout, use.first);
-        unsigned required_descriptor_count;
-
-        if (!binding) {
-            skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
-                            SHADER_CHECKER_MISSING_DESCRIPTOR, "SC",
-                            "Shader uses descriptor slot %u.%u (used as type `%s`) but not declared in pipeline layout",
-                            use.first.first, use.first.second, describe_type(module, use.second.type_id).c_str());
-        } else if (~binding->stageFlags & pStage->stage) {
-            skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, 0, __LINE__,
-                            SHADER_CHECKER_DESCRIPTOR_NOT_ACCESSIBLE_FROM_STAGE, "SC",
-                            "Shader uses descriptor slot %u.%u (used "
-                            "as type `%s`) but descriptor not "
-                            "accessible from stage %s",
-                            use.first.first, use.first.second, describe_type(module, use.second.type_id).c_str(),
-                            string_VkShaderStageFlagBits(pStage->stage));
-        } else if (!descriptor_type_match(module, use.second.type_id, binding->descriptorType, required_descriptor_count)) {
-            skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
-                            SHADER_CHECKER_DESCRIPTOR_TYPE_MISMATCH, "SC",
-                            "Type mismatch on descriptor slot "
-                            "%u.%u (used as type `%s`) but "
-                            "descriptor of type %s",
-                            use.first.first, use.first.second, describe_type(module, use.second.type_id).c_str(),
-                            string_VkDescriptorType(binding->descriptorType));
-        } else if (binding->descriptorCount < required_descriptor_count) {
-            skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
-                            SHADER_CHECKER_DESCRIPTOR_TYPE_MISMATCH, "SC",
-                            "Shader expects at least %u descriptors for binding %u.%u (used as type `%s`) but only %u provided",
-                            required_descriptor_count, use.first.first, use.first.second,
-                            describe_type(module, use.second.type_id).c_str(), binding->descriptorCount);
-        }
-    }
-
-    // Validate use of input attachments against subpass structure
-    if (pStage->stage == VK_SHADER_STAGE_FRAGMENT_BIT) {
-        auto input_attachment_uses = collect_interface_by_input_attachment_index(module, accessible_ids);
-
-        auto rpci = pipeline->render_pass_ci.ptr();
-        auto subpass = pipeline->graphicsPipelineCI.subpass;
-
-        for (auto use : input_attachment_uses) {
-            auto input_attachments = rpci->pSubpasses[subpass].pInputAttachments;
-            auto index = (input_attachments && use.first < rpci->pSubpasses[subpass].inputAttachmentCount)
-                             ? input_attachments[use.first].attachment
-                             : VK_ATTACHMENT_UNUSED;
-
-            if (index == VK_ATTACHMENT_UNUSED) {
-                skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
-                                SHADER_CHECKER_MISSING_INPUT_ATTACHMENT, "SC",
-                                "Shader consumes input attachment index %d but not provided in subpass", use.first);
-            } else if (!(get_format_type(rpci->pAttachments[index].format) & get_fundamental_type(module, use.second.type_id))) {
-                skip |=
-                    log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
-                            SHADER_CHECKER_INPUT_ATTACHMENT_TYPE_MISMATCH, "SC",
-                            "Subpass input attachment %u format of %s does not match type used in shader `%s`", use.first,
-                            string_VkFormat(rpci->pAttachments[index].format), describe_type(module, use.second.type_id).c_str());
-            }
-        }
-    }
-
-    return skip;
-}
-
-// Validate that the shaders used by the given pipeline and store the active_slots
-//  that are actually used by the pipeline into pPipeline->active_slots
-static bool validate_and_capture_pipeline_shader_state(layer_data *dev_data, PIPELINE_STATE *pPipeline) {
-    auto pCreateInfo = pPipeline->graphicsPipelineCI.ptr();
-    int vertex_stage = get_shader_stage_id(VK_SHADER_STAGE_VERTEX_BIT);
-    int fragment_stage = get_shader_stage_id(VK_SHADER_STAGE_FRAGMENT_BIT);
-
-    shader_module *shaders[5];
-    memset(shaders, 0, sizeof(shaders));
-    spirv_inst_iter entrypoints[5];
-    memset(entrypoints, 0, sizeof(entrypoints));
-    bool skip = false;
-
-    for (uint32_t i = 0; i < pCreateInfo->stageCount; i++) {
-        auto pStage = &pCreateInfo->pStages[i];
-        auto stage_id = get_shader_stage_id(pStage->stage);
-        skip |= validate_pipeline_shader_stage(dev_data, pStage, pPipeline, &shaders[stage_id], &entrypoints[stage_id]);
-    }
-
-    // if the shader stages are no good individually, cross-stage validation is pointless.
-    if (skip) return true;
-
-    auto vi = pCreateInfo->pVertexInputState;
-
-    if (vi) {
-        skip |= validate_vi_consistency(dev_data->report_data, vi);
-    }
-
-    if (shaders[vertex_stage] && shaders[vertex_stage]->has_valid_spirv) {
-        skip |= validate_vi_against_vs_inputs(dev_data->report_data, vi, shaders[vertex_stage], entrypoints[vertex_stage]);
-    }
-
-    int producer = get_shader_stage_id(VK_SHADER_STAGE_VERTEX_BIT);
-    int consumer = get_shader_stage_id(VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT);
-
-    while (!shaders[producer] && producer != fragment_stage) {
-        producer++;
-        consumer++;
-    }
-
-    for (; producer != fragment_stage && consumer <= fragment_stage; consumer++) {
-        assert(shaders[producer]);
-        if (shaders[consumer] && shaders[consumer]->has_valid_spirv && shaders[producer]->has_valid_spirv) {
-            skip |= validate_interface_between_stages(dev_data->report_data, shaders[producer], entrypoints[producer],
-                                                      &shader_stage_attribs[producer], shaders[consumer], entrypoints[consumer],
-                                                      &shader_stage_attribs[consumer]);
-
-            producer = consumer;
-        }
-    }
-
-    if (shaders[fragment_stage] && shaders[fragment_stage]->has_valid_spirv) {
-        skip |= validate_fs_outputs_against_render_pass(dev_data->report_data, shaders[fragment_stage], entrypoints[fragment_stage],
-                                                        pPipeline->render_pass_ci.ptr(), pCreateInfo->subpass);
-    }
-
-    return skip;
-}
-
-static bool validate_compute_pipeline(layer_data *dev_data, PIPELINE_STATE *pPipeline) {
-    auto pCreateInfo = pPipeline->computePipelineCI.ptr();
-
-    shader_module *module;
-    spirv_inst_iter entrypoint;
-
-    return validate_pipeline_shader_stage(dev_data, &pCreateInfo->stage, pPipeline, &module, &entrypoint);
-}
 // Return Set node ptr for specified set or else NULL
 cvdescriptorset::DescriptorSet *GetSetNode(const layer_data *dev_data, VkDescriptorSet set) {
     auto set_it = dev_data->setMap.find(set);
@@ -2606,6 +1044,24 @@ static bool ValidatePipelineDrawtimeState(layer_data const *dev_data, LAST_BOUND
     // TODO : Add more checks here
 
     return skip;
+}
+
+// For given cvdescriptorset::DescriptorSet, verify that its Set is compatible w/ the setLayout corresponding to
+// pipelineLayout[layoutIndex]
+static bool verify_set_layout_compatibility(const cvdescriptorset::DescriptorSet *descriptor_set,
+                                            PIPELINE_LAYOUT_NODE const *pipeline_layout, const uint32_t layoutIndex,
+                                            string &errorMsg) {
+    auto num_sets = pipeline_layout->set_layouts.size();
+    if (layoutIndex >= num_sets) {
+        stringstream errorStr;
+        errorStr << "VkPipelineLayout (" << pipeline_layout->layout << ") only contains " << num_sets
+                 << " setLayouts corresponding to sets 0-" << num_sets - 1 << ", but you're attempting to bind set to index "
+                 << layoutIndex;
+        errorMsg = errorStr.str();
+        return false;
+    }
+    auto layout_node = pipeline_layout->set_layouts[layoutIndex];
+    return descriptor_set->IsCompatible(layout_node, &errorMsg);
 }
 
 // Validate overall state at the time of a draw call
@@ -2816,7 +1272,7 @@ static bool verifyPipelineCreateState(layer_data *dev_data, std::vector<PIPELINE
                         validation_error_map[VALIDATION_ERROR_096005ee]);
     }
 
-    if (!GetDisables(dev_data)->shader_validation && validate_and_capture_pipeline_shader_state(dev_data, pPipeline)) {
+    if (validate_and_capture_pipeline_shader_state(dev_data, pPipeline)) {
         skip = true;
     }
     // Each shader's stage must be unique
@@ -3019,15 +1475,15 @@ static void freeDescriptorSet(layer_data *dev_data, cvdescriptorset::DescriptorS
 // Free all DS Pools including their Sets & related sub-structs
 // NOTE : Calls to this function should be wrapped in mutex
 static void deletePools(layer_data *dev_data) {
-    if (dev_data->descriptorPoolMap.size() <= 0) return;
-    for (auto ii = dev_data->descriptorPoolMap.begin(); ii != dev_data->descriptorPoolMap.end(); ++ii) {
+    for (auto ii = dev_data->descriptorPoolMap.begin(); ii != dev_data->descriptorPoolMap.end();) {
         // Remove this pools' sets from setMap and delete them
-        for (auto ds : (*ii).second->sets) {
+        for (auto ds : ii->second->sets) {
             freeDescriptorSet(dev_data, ds);
         }
-        (*ii).second->sets.clear();
+        ii->second->sets.clear();
+        delete ii->second;
+        ii = dev_data->descriptorPoolMap.erase(ii);
     }
-    dev_data->descriptorPoolMap.clear();
 }
 
 static void clearDescriptorPool(layer_data *dev_data, const VkDevice device, const VkDescriptorPool pool,
@@ -3370,6 +1826,9 @@ static void init_core_validation(instance_layer_data *instance_data, const VkAll
 void SetDisabledFlags(instance_layer_data *instance_data, VkValidationFlagsEXT *val_flags_struct) {
     for (uint32_t i = 0; i < val_flags_struct->disabledValidationCheckCount; ++i) {
         switch (val_flags_struct->pDisabledValidationChecks[i]) {
+            case VK_VALIDATION_CHECK_SHADERS_EXT:
+                instance_data->disabled.shader_validation = true;
+                break;
             case VK_VALIDATION_CHECK_ALL_EXT:
                 // Set all disabled flags to true
                 instance_data->disabled.SetAll(true);
@@ -3437,7 +1896,7 @@ VKAPI_ATTR void VKAPI_CALL DestroyInstance(VkInstance instance, const VkAllocati
     }
 
     layer_debug_report_destroy_instance(instance_data->report_data);
-    layer_data_map.erase(key);
+    FreeLayerDataPtr(key, instance_layer_data_map);
 }
 
 static bool ValidatePhysicalDeviceQueueFamily(instance_layer_data *instance_data, const PHYSICAL_DEVICE_STATE *pd_state,
@@ -3448,7 +1907,7 @@ static bool ValidatePhysicalDeviceQueueFamily(instance_layer_data *instance_data
     if (!vu_note) vu_note = validation_error_map[err_code];
 
     const char *conditional_ext_cmd =
-        instance_data->extensions.khr_get_physical_device_properties2 ? "or vkGetPhysicalDeviceQueueFamilyProperties2KHR" : "";
+        instance_data->extensions.vk_khr_get_physical_device_properties_2 ? "or vkGetPhysicalDeviceQueueFamilyProperties2KHR" : "";
 
     std::string count_note = (UNCALLED == pd_state->vkGetPhysicalDeviceQueueFamilyPropertiesState)
                                  ? "the pQueueFamilyPropertyCount was never obtained"
@@ -3483,7 +1942,7 @@ static bool ValidateDeviceQueueCreateInfos(instance_layer_data *instance_data, c
             const auto requested_queue_count = infos[i].queueCount;
             const auto queue_family_props_count = pd_state->queue_family_properties.size();
             const bool queue_family_has_props = requested_queue_family < queue_family_props_count;
-            const char *conditional_ext_cmd = instance_data->extensions.khr_get_physical_device_properties2
+            const char *conditional_ext_cmd = instance_data->extensions.vk_khr_get_physical_device_properties_2
                                                   ? "or vkGetPhysicalDeviceQueueFamilyProperties2KHR"
                                                   : "";
             std::string count_note =
@@ -3602,7 +2061,8 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateDevice(VkPhysicalDevice gpu, const VkDevice
     device_data->physical_device = gpu;
 
     device_data->report_data = layer_debug_report_create_device(instance_data->report_data, *pDevice);
-    device_data->device_extensions.InitFromDeviceCreateInfo(pCreateInfo);
+    device_data->extensions.InitFromDeviceCreateInfo(&instance_data->extensions, pCreateInfo);
+
     // Get physical device limits for this device
     instance_data->dispatch_table.GetPhysicalDeviceProperties(gpu, &(device_data->phys_dev_properties.properties));
     uint32_t count;
@@ -3629,7 +2089,6 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateDevice(VkPhysicalDevice gpu, const VkDevice
 // prototype
 VKAPI_ATTR void VKAPI_CALL DestroyDevice(VkDevice device, const VkAllocationCallbacks *pAllocator) {
     // TODOSC : Shouldn't need any customization here
-    bool skip = false;
     dispatch_key key = get_dispatch_key(device);
     layer_data *dev_data = GetLayerDataPtr(key, layer_data_map);
     // Free all the memory
@@ -3644,9 +2103,6 @@ VKAPI_ATTR void VKAPI_CALL DestroyDevice(VkDevice device, const VkAllocationCall
     deletePools(dev_data);
     // All sets should be removed
     assert(dev_data->setMap.empty());
-    for (auto del_layout : dev_data->descriptorSetLayoutMap) {
-        delete del_layout.second;
-    }
     dev_data->descriptorSetLayoutMap.clear();
     dev_data->imageViewMap.clear();
     dev_data->imageMap.clear();
@@ -3663,10 +2119,9 @@ VKAPI_ATTR void VKAPI_CALL DestroyDevice(VkDevice device, const VkAllocationCall
 #if DISPATCH_MAP_DEBUG
     fprintf(stderr, "Device: 0x%p, key: 0x%p\n", device, key);
 #endif
-    if (!skip) {
-        dev_data->dispatch_table.DestroyDevice(device, pAllocator);
-        layer_data_map.erase(key);
-    }
+
+    dev_data->dispatch_table.DestroyDevice(device, pAllocator);
+    FreeLayerDataPtr(key, layer_data_map);
 }
 
 static const VkExtensionProperties instance_extensions[] = {{VK_EXT_DEBUG_REPORT_EXTENSION_NAME, VK_EXT_DEBUG_REPORT_SPEC_VERSION}};
@@ -5298,6 +3753,7 @@ static void PostCallRecordDestroyPipeline(layer_data *dev_data, VkPipeline pipel
                                           VK_OBJECT obj_struct) {
     // Any bound cmd buffers are now invalid
     invalidateCommandBuffers(dev_data, pipeline_state->cb_bindings, obj_struct);
+    delete getPipelineState(dev_data, pipeline);
     dev_data->pipelineMap.erase(pipeline);
 }
 
@@ -5395,6 +3851,7 @@ static void PostCallRecordDestroyDescriptorPool(layer_data *dev_data, VkDescript
         freeDescriptorSet(dev_data, ds);
     }
     dev_data->descriptorPoolMap.erase(descriptorPool);
+    delete desc_pool_state;
 }
 
 VKAPI_ATTR void VKAPI_CALL DestroyDescriptorPool(VkDevice device, VkDescriptorPool descriptorPool,
@@ -5803,7 +4260,7 @@ const VkPhysicalDeviceFeatures *GetEnabledFeatures(const layer_data *device_data
     return &device_data->enabled_features;
 }
 
-const DeviceExtensions *GetDeviceExtensions(const layer_data *device_data) { return &device_data->device_extensions; }
+const DeviceExtensions *GetDeviceExtensions(const layer_data *device_data) { return &device_data->extensions; }
 
 VKAPI_ATTR VkResult VKAPI_CALL CreateImage(VkDevice device, const VkImageCreateInfo *pCreateInfo,
                                            const VkAllocationCallbacks *pAllocator, VkImage *pImage) {
@@ -6069,8 +4526,8 @@ static bool PreCallValidateCreateDescriptorSetLayout(layer_data *dev_data, const
 
 static void PostCallRecordCreateDescriptorSetLayout(layer_data *dev_data, const VkDescriptorSetLayoutCreateInfo *create_info,
                                                     VkDescriptorSetLayout set_layout) {
-    // TODO: Convert this to unique_ptr to avoid leaks
-    dev_data->descriptorSetLayoutMap[set_layout] = new cvdescriptorset::DescriptorSetLayout(create_info, set_layout);
+    dev_data->descriptorSetLayoutMap[set_layout] = std::unique_ptr<cvdescriptorset::DescriptorSetLayout>(
+        new cvdescriptorset::DescriptorSetLayout(create_info, set_layout));
 }
 
 VKAPI_ATTR VkResult VKAPI_CALL CreateDescriptorSetLayout(VkDevice device, const VkDescriptorSetLayoutCreateInfo *pCreateInfo,
@@ -6477,7 +4934,7 @@ VKAPI_ATTR VkResult VKAPI_CALL BeginCommandBuffer(VkCommandBuffer commandBuffer,
         if (cb_node->in_use.load()) {
             skip |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
                             HandleToUint64(commandBuffer), __LINE__, VALIDATION_ERROR_16e00062, "MEM",
-                            "Calling vkBeginCommandBuffer() on active command buffer 0x%p before it has completed. "
+                            "Calling vkBeginCommandBuffer() on active command buffer %p before it has completed. "
                             "You must check command buffer fence before this call. %s",
                             commandBuffer, validation_error_map[VALIDATION_ERROR_16e00062]);
         }
@@ -7651,9 +6108,7 @@ VKAPI_ATTR void VKAPI_CALL CmdSetEvent(VkCommandBuffer commandBuffer, VkEvent ev
         if (!pCB->waitedEvents.count(event)) {
             pCB->writeEventsBeforeWait.push_back(event);
         }
-        std::function<bool(VkQueue)> eventUpdate =
-            std::bind(setEventStageMask, std::placeholders::_1, commandBuffer, event, stageMask);
-        pCB->eventUpdates.push_back(eventUpdate);
+        pCB->eventUpdates.emplace_back([=](VkQueue q){return setEventStageMask(q, commandBuffer, event, stageMask);});
     }
     lock.unlock();
     if (!skip) dev_data->dispatch_table.CmdSetEvent(commandBuffer, event, stageMask);
@@ -7682,9 +6137,7 @@ VKAPI_ATTR void VKAPI_CALL CmdResetEvent(VkCommandBuffer commandBuffer, VkEvent 
             pCB->writeEventsBeforeWait.push_back(event);
         }
         // TODO : Add check for VALIDATION_ERROR_32c008f8
-        std::function<bool(VkQueue)> eventUpdate =
-            std::bind(setEventStageMask, std::placeholders::_1, commandBuffer, event, VkPipelineStageFlags(0));
-        pCB->eventUpdates.push_back(eventUpdate);
+        pCB->eventUpdates.emplace_back([=](VkQueue q){return setEventStageMask(q, commandBuffer, event, VkPipelineStageFlags(0));});
     }
     lock.unlock();
     if (!skip) dev_data->dispatch_table.CmdResetEvent(commandBuffer, event, stageMask);
@@ -7781,7 +6234,7 @@ static bool ValidateBarriers(const char *funcName, VkCommandBuffer cmdBuffer, ui
             skip |= ValidateImageAspectMask(dev_data, image_data->image, image_data->createInfo.format, aspect_mask, funcName);
 
             std::string param_name = "pImageMemoryBarriers[" + std::to_string(i) + "].subresourceRange";
-            skip |= ValidateImageSubresourceRange(dev_data, image_data, nullptr, mem_barrier->subresourceRange, funcName,
+            skip |= ValidateImageSubresourceRange(dev_data, image_data, false, mem_barrier->subresourceRange, funcName,
                                                   param_name.c_str());
         }
     }
@@ -7977,9 +6430,9 @@ VKAPI_ATTR void VKAPI_CALL CmdWaitEvents(VkCommandBuffer commandBuffer, uint32_t
             cb_state->waitedEvents.insert(pEvents[i]);
             cb_state->events.push_back(pEvents[i]);
         }
-        std::function<bool(VkQueue)> event_update =
-            std::bind(validateEventStageMask, std::placeholders::_1, cb_state, eventCount, first_event_index, sourceStageMask);
-        cb_state->eventUpdates.push_back(event_update);
+        cb_state->eventUpdates.emplace_back([=](VkQueue q){
+            return validateEventStageMask(q, cb_state, eventCount, first_event_index, sourceStageMask);
+        });
         skip |= ValidateCmdQueueFlags(dev_data, cb_state, "vkCmdWaitEvents()", VK_QUEUE_GRAPHICS_BIT | VK_QUEUE_COMPUTE_BIT,
                                       VALIDATION_ERROR_1e602415);
         skip |= ValidateCmd(dev_data, cb_state, CMD_WAITEVENTS, "vkCmdWaitEvents()");
@@ -8055,7 +6508,7 @@ VKAPI_ATTR void VKAPI_CALL CmdPipelineBarrier(VkCommandBuffer commandBuffer, VkP
     }
 }
 
-bool setQueryState(VkQueue queue, VkCommandBuffer commandBuffer, QueryObject object, bool value) {
+static bool setQueryState(VkQueue queue, VkCommandBuffer commandBuffer, QueryObject object, bool value) {
     layer_data *dev_data = GetLayerDataPtr(get_dispatch_key(commandBuffer), layer_data_map);
     GLOBAL_CB_NODE *pCB = GetCBNode(dev_data, commandBuffer);
     if (pCB) {
@@ -8074,48 +6527,58 @@ VKAPI_ATTR void VKAPI_CALL CmdBeginQuery(VkCommandBuffer commandBuffer, VkQueryP
     std::unique_lock<std::mutex> lock(global_lock);
     GLOBAL_CB_NODE *pCB = GetCBNode(dev_data, commandBuffer);
     if (pCB) {
-        QueryObject query = {queryPool, slot};
-        pCB->activeQueries.insert(query);
-        if (!pCB->startedQueries.count(query)) {
-            pCB->startedQueries.insert(query);
-        }
         skip |= ValidateCmdQueueFlags(dev_data, pCB, "vkCmdBeginQuery()", VK_QUEUE_GRAPHICS_BIT | VK_QUEUE_COMPUTE_BIT,
                                       VALIDATION_ERROR_17802415);
         skip |= ValidateCmd(dev_data, pCB, CMD_BEGINQUERY, "vkCmdBeginQuery()");
+    }
+    lock.unlock();
+
+    if (skip) return;
+
+    dev_data->dispatch_table.CmdBeginQuery(commandBuffer, queryPool, slot, flags);
+
+    lock.lock();
+    if (pCB) {
+        QueryObject query = {queryPool, slot};
+        pCB->activeQueries.insert(query);
+        pCB->startedQueries.insert(query);
         UpdateCmdBufferLastCmd(pCB, CMD_BEGINQUERY);
         addCommandBufferBinding(&GetQueryPoolNode(dev_data, queryPool)->cb_bindings,
                                 {HandleToUint64(queryPool), kVulkanObjectTypeQueryPool}, pCB);
     }
-    lock.unlock();
-    if (!skip) dev_data->dispatch_table.CmdBeginQuery(commandBuffer, queryPool, slot, flags);
 }
 
 VKAPI_ATTR void VKAPI_CALL CmdEndQuery(VkCommandBuffer commandBuffer, VkQueryPool queryPool, uint32_t slot) {
     bool skip = false;
     layer_data *dev_data = GetLayerDataPtr(get_dispatch_key(commandBuffer), layer_data_map);
     std::unique_lock<std::mutex> lock(global_lock);
+    QueryObject query = {queryPool, slot};
     GLOBAL_CB_NODE *cb_state = GetCBNode(dev_data, commandBuffer);
     if (cb_state) {
-        QueryObject query = {queryPool, slot};
         if (!cb_state->activeQueries.count(query)) {
             skip |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
                             HandleToUint64(commandBuffer), __LINE__, VALIDATION_ERROR_1ae00652, "DS",
                             "Ending a query before it was started: queryPool 0x%" PRIx64 ", index %d. %s",
                             HandleToUint64(queryPool), slot, validation_error_map[VALIDATION_ERROR_1ae00652]);
-        } else {
-            cb_state->activeQueries.erase(query);
         }
-        std::function<bool(VkQueue)> query_update = std::bind(setQueryState, std::placeholders::_1, commandBuffer, query, true);
-        cb_state->queryUpdates.push_back(query_update);
         skip |= ValidateCmdQueueFlags(dev_data, cb_state, "VkCmdEndQuery()", VK_QUEUE_GRAPHICS_BIT | VK_QUEUE_COMPUTE_BIT,
                                       VALIDATION_ERROR_1ae02415);
         skip |= ValidateCmd(dev_data, cb_state, CMD_ENDQUERY, "VkCmdEndQuery()");
+    }
+    lock.unlock();
+
+    if (skip) return;
+
+    dev_data->dispatch_table.CmdEndQuery(commandBuffer, queryPool, slot);
+
+    lock.lock();
+    if (cb_state) {
+        cb_state->activeQueries.erase(query);
+        cb_state->queryUpdates.emplace_back([=](VkQueue q){return setQueryState(q, commandBuffer, query, true);});
         UpdateCmdBufferLastCmd(cb_state, CMD_ENDQUERY);
         addCommandBufferBinding(&GetQueryPoolNode(dev_data, queryPool)->cb_bindings,
                                 {HandleToUint64(queryPool), kVulkanObjectTypeQueryPool}, cb_state);
     }
-    lock.unlock();
-    if (!skip) dev_data->dispatch_table.CmdEndQuery(commandBuffer, queryPool, slot);
 }
 
 VKAPI_ATTR void VKAPI_CALL CmdResetQueryPool(VkCommandBuffer commandBuffer, VkQueryPool queryPool, uint32_t firstQuery,
@@ -8124,50 +6587,48 @@ VKAPI_ATTR void VKAPI_CALL CmdResetQueryPool(VkCommandBuffer commandBuffer, VkQu
     layer_data *dev_data = GetLayerDataPtr(get_dispatch_key(commandBuffer), layer_data_map);
     std::unique_lock<std::mutex> lock(global_lock);
     GLOBAL_CB_NODE *cb_state = GetCBNode(dev_data, commandBuffer);
-    if (cb_state) {
-        for (uint32_t i = 0; i < queryCount; i++) {
-            QueryObject query = {queryPool, firstQuery + i};
-            cb_state->waitedEventsBeforeQueryReset[query] = cb_state->waitedEvents;
-            std::function<bool(VkQueue)> query_update =
-                std::bind(setQueryState, std::placeholders::_1, commandBuffer, query, false);
-            cb_state->queryUpdates.push_back(query_update);
-        }
+        skip |= insideRenderPass(dev_data, cb_state, "vkCmdResetQueryPool()", VALIDATION_ERROR_1c600017);
+        skip |= ValidateCmd(dev_data, cb_state, CMD_RESETQUERYPOOL, "VkCmdResetQueryPool()");
         skip |= ValidateCmdQueueFlags(dev_data, cb_state, "VkCmdResetQueryPool()", VK_QUEUE_GRAPHICS_BIT | VK_QUEUE_COMPUTE_BIT,
                                       VALIDATION_ERROR_1c602415);
-        skip |= ValidateCmd(dev_data, cb_state, CMD_RESETQUERYPOOL, "VkCmdResetQueryPool()");
-        UpdateCmdBufferLastCmd(cb_state, CMD_RESETQUERYPOOL);
-        skip |= insideRenderPass(dev_data, cb_state, "vkCmdResetQueryPool()", VALIDATION_ERROR_1c600017);
-        addCommandBufferBinding(&GetQueryPoolNode(dev_data, queryPool)->cb_bindings,
-                                {HandleToUint64(queryPool), kVulkanObjectTypeQueryPool}, cb_state);
-    }
     lock.unlock();
-    if (!skip) dev_data->dispatch_table.CmdResetQueryPool(commandBuffer, queryPool, firstQuery, queryCount);
-}
 
-bool validateQuery(VkQueue queue, GLOBAL_CB_NODE *pCB, VkQueryPool queryPool, uint32_t queryCount, uint32_t firstQuery) {
-    bool skip = false;
-    layer_data *dev_data = GetLayerDataPtr(get_dispatch_key(pCB->commandBuffer), layer_data_map);
-    auto queue_data = dev_data->queueMap.find(queue);
-    if (queue_data == dev_data->queueMap.end()) return false;
+    if (skip) return;
+
+    dev_data->dispatch_table.CmdResetQueryPool(commandBuffer, queryPool, firstQuery, queryCount);
+
+    lock.lock();
     for (uint32_t i = 0; i < queryCount; i++) {
         QueryObject query = {queryPool, firstQuery + i};
-        auto query_data = queue_data->second.queryToStateMap.find(query);
-        bool fail = false;
-        if (query_data != queue_data->second.queryToStateMap.end()) {
-            if (!query_data->second) {
-                fail = true;
-            }
-        } else {
-            auto global_query_data = dev_data->queryToStateMap.find(query);
-            if (global_query_data != dev_data->queryToStateMap.end()) {
-                if (!global_query_data->second) {
-                    fail = true;
-                }
-            } else {
-                fail = true;
-            }
-        }
-        if (fail) {
+        cb_state->waitedEventsBeforeQueryReset[query] = cb_state->waitedEvents;
+        cb_state->queryUpdates.emplace_back([=](VkQueue q){return setQueryState(q, commandBuffer, query, false);});
+    }
+    UpdateCmdBufferLastCmd(cb_state, CMD_RESETQUERYPOOL);
+    addCommandBufferBinding(&GetQueryPoolNode(dev_data, queryPool)->cb_bindings,
+                            {HandleToUint64(queryPool), kVulkanObjectTypeQueryPool}, cb_state);
+}
+
+static bool IsQueryInvalid(layer_data *dev_data, QUEUE_STATE *queue_data, VkQueryPool queryPool, uint32_t queryIndex) {
+    QueryObject query = {queryPool, queryIndex};
+    auto query_data = queue_data->queryToStateMap.find(query);
+    if (query_data != queue_data->queryToStateMap.end()) {
+        if (!query_data->second) return true;
+    } else {
+        auto it = dev_data->queryToStateMap.find(query);
+        if (it == dev_data->queryToStateMap.end() || !it->second)
+            return true;
+    }
+
+    return false;
+}
+
+static bool validateQuery(VkQueue queue, GLOBAL_CB_NODE *pCB, VkQueryPool queryPool, uint32_t firstQuery, uint32_t queryCount) {
+    bool skip = false;
+    layer_data *dev_data = GetLayerDataPtr(get_dispatch_key(pCB->commandBuffer), layer_data_map);
+    auto queue_data = GetQueueState(dev_data, queue);
+    if (!queue_data) return false;
+    for (uint32_t i = 0; i < queryCount; i++) {
+        if (IsQueryInvalid(dev_data, queue_data, queryPool, firstQuery + i)) {
             skip |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
                             HandleToUint64(pCB->commandBuffer), __LINE__, DRAWSTATE_INVALID_QUERY, "DS",
                             "Requesting a copy from query to buffer with invalid query: queryPool 0x%" PRIx64 ", index %d",
@@ -8188,34 +6649,36 @@ VKAPI_ATTR void VKAPI_CALL CmdCopyQueryPoolResults(VkCommandBuffer commandBuffer
     auto dst_buff_state = GetBufferState(dev_data, dstBuffer);
     if (cb_node && dst_buff_state) {
         skip |= ValidateMemoryIsBoundToBuffer(dev_data, dst_buff_state, "vkCmdCopyQueryPoolResults()", VALIDATION_ERROR_19400674);
-        // Update bindings between buffer and cmd buffer
-        AddCommandBufferBindingBuffer(dev_data, cb_node, dst_buff_state);
         // Validate that DST buffer has correct usage flags set
         skip |=
             ValidateBufferUsageFlags(dev_data, dst_buff_state, VK_BUFFER_USAGE_TRANSFER_DST_BIT, true, VALIDATION_ERROR_19400672,
                                      "vkCmdCopyQueryPoolResults()", "VK_BUFFER_USAGE_TRANSFER_DST_BIT");
-        std::function<bool()> function = [=]() {
-            SetBufferMemoryValid(dev_data, dst_buff_state, true);
-            return false;
-        };
-        cb_node->validate_functions.push_back(function);
-        std::function<bool(VkQueue)> query_update =
-            std::bind(validateQuery, std::placeholders::_1, cb_node, queryPool, queryCount, firstQuery);
-        cb_node->queryUpdates.push_back(query_update);
         skip |= ValidateCmdQueueFlags(dev_data, cb_node, "vkCmdCopyQueryPoolResults()",
                                       VK_QUEUE_GRAPHICS_BIT | VK_QUEUE_COMPUTE_BIT, VALIDATION_ERROR_19402415);
         skip |= ValidateCmd(dev_data, cb_node, CMD_COPYQUERYPOOLRESULTS, "vkCmdCopyQueryPoolResults()");
-        UpdateCmdBufferLastCmd(cb_node, CMD_COPYQUERYPOOLRESULTS);
         skip |= insideRenderPass(dev_data, cb_node, "vkCmdCopyQueryPoolResults()", VALIDATION_ERROR_19400017);
-        addCommandBufferBinding(&GetQueryPoolNode(dev_data, queryPool)->cb_bindings,
-                                {HandleToUint64(queryPool), kVulkanObjectTypeQueryPool}, cb_node);
-    } else {
-        assert(0);
     }
     lock.unlock();
-    if (!skip)
-        dev_data->dispatch_table.CmdCopyQueryPoolResults(commandBuffer, queryPool, firstQuery, queryCount, dstBuffer, dstOffset,
-                                                         stride, flags);
+
+    if (skip) return;
+
+    dev_data->dispatch_table.CmdCopyQueryPoolResults(commandBuffer, queryPool, firstQuery, queryCount, dstBuffer, dstOffset,
+                                                     stride, flags);
+
+    lock.lock();
+    if (cb_node && dst_buff_state) {
+        AddCommandBufferBindingBuffer(dev_data, cb_node, dst_buff_state);
+        cb_node->validate_functions.emplace_back([=]() {
+            SetBufferMemoryValid(dev_data, dst_buff_state, true);
+            return false;
+        });
+        cb_node->queryUpdates.emplace_back([=](VkQueue q) {
+            return validateQuery(q, cb_node, queryPool, firstQuery, queryCount);
+        });
+        UpdateCmdBufferLastCmd(cb_node, CMD_COPYQUERYPOOLRESULTS);
+        addCommandBufferBinding(&GetQueryPoolNode(dev_data, queryPool)->cb_bindings,
+                                {HandleToUint64(queryPool), kVulkanObjectTypeQueryPool}, cb_node);
+    }
 }
 
 VKAPI_ATTR void VKAPI_CALL CmdPushConstants(VkCommandBuffer commandBuffer, VkPipelineLayout layout, VkShaderStageFlags stageFlags,
@@ -8271,16 +6734,22 @@ VKAPI_ATTR void VKAPI_CALL CmdWriteTimestamp(VkCommandBuffer commandBuffer, VkPi
     std::unique_lock<std::mutex> lock(global_lock);
     GLOBAL_CB_NODE *cb_state = GetCBNode(dev_data, commandBuffer);
     if (cb_state) {
-        QueryObject query = {queryPool, slot};
-        std::function<bool(VkQueue)> query_update = std::bind(setQueryState, std::placeholders::_1, commandBuffer, query, true);
-        cb_state->queryUpdates.push_back(query_update);
         skip |= ValidateCmdQueueFlags(dev_data, cb_state, "vkCmdWriteTimestamp()", VK_QUEUE_GRAPHICS_BIT | VK_QUEUE_COMPUTE_BIT,
                                       VALIDATION_ERROR_1e802415);
         skip |= ValidateCmd(dev_data, cb_state, CMD_WRITETIMESTAMP, "vkCmdWriteTimestamp()");
-        UpdateCmdBufferLastCmd(cb_state, CMD_WRITETIMESTAMP);
     }
     lock.unlock();
-    if (!skip) dev_data->dispatch_table.CmdWriteTimestamp(commandBuffer, pipelineStage, queryPool, slot);
+
+    if (skip) return;
+
+    dev_data->dispatch_table.CmdWriteTimestamp(commandBuffer, pipelineStage, queryPool, slot);
+
+    lock.lock();
+    if (cb_state) {
+        QueryObject query = {queryPool, slot};
+        cb_state->queryUpdates.emplace_back([=](VkQueue q) {return setQueryState(q, commandBuffer, query, true);});
+        UpdateCmdBufferLastCmd(cb_state, CMD_WRITETIMESTAMP);
+    }
 }
 
 static bool MatchUsage(layer_data *dev_data, uint32_t count, const VkAttachmentReference *attachments,
@@ -8497,7 +6966,6 @@ static void PostCallRecordCreateFramebuffer(layer_data *dev_data, const VkFrameb
             continue;
         }
         MT_FB_ATTACHMENT_INFO fb_info;
-        fb_info.mem = GetImageState(dev_data, view_state->create_info.image)->binding.mem;
         fb_info.view_state = view_state;
         fb_info.image = view_state->create_info.image;
         fb_state->attachments.push_back(fb_info);
@@ -8781,44 +7249,17 @@ static bool CreatePassDAG(const layer_data *dev_data, const VkRenderPassCreateIn
 VKAPI_ATTR VkResult VKAPI_CALL CreateShaderModule(VkDevice device, const VkShaderModuleCreateInfo *pCreateInfo,
                                                   const VkAllocationCallbacks *pAllocator, VkShaderModule *pShaderModule) {
     layer_data *dev_data = GetLayerDataPtr(get_dispatch_key(device), layer_data_map);
-    bool skip = false;
-    spv_result_t spv_valid = SPV_SUCCESS;
+    bool spirv_valid;
 
-    if (!GetDisables(dev_data)->shader_validation) {
-        if (!dev_data->device_extensions.nv_glsl_shader && (pCreateInfo->codeSize % 4)) {
-            skip |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0,
-                            __LINE__, VALIDATION_ERROR_12a00ac0, "SC",
-                            "SPIR-V module not valid: Codesize must be a multiple of 4 but is " PRINTF_SIZE_T_SPECIFIER ". %s",
-                            pCreateInfo->codeSize, validation_error_map[VALIDATION_ERROR_12a00ac0]);
-        } else {
-            // Use SPIRV-Tools validator to try and catch any issues with the module itself
-            spv_context ctx = spvContextCreate(SPV_ENV_VULKAN_1_0);
-            spv_const_binary_t binary{ pCreateInfo->pCode, pCreateInfo->codeSize / sizeof(uint32_t) };
-            spv_diagnostic diag = nullptr;
-
-            spv_valid = spvValidate(ctx, &binary, &diag);
-            if (spv_valid != SPV_SUCCESS) {
-                if (!dev_data->device_extensions.nv_glsl_shader || (pCreateInfo->pCode[0] == spv::MagicNumber)) {
-                    skip |= log_msg(dev_data->report_data,
-                        spv_valid == SPV_WARNING ? VK_DEBUG_REPORT_WARNING_BIT_EXT : VK_DEBUG_REPORT_ERROR_BIT_EXT,
-                        VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__, SHADER_CHECKER_INCONSISTENT_SPIRV, "SC",
-                        "SPIR-V module not valid: %s", diag && diag->error ? diag->error : "(no error text)");
-                }
-            }
-
-            spvDiagnosticDestroy(diag);
-            spvContextDestroy(ctx);
-        }
-
-        if (skip) return VK_ERROR_VALIDATION_FAILED_EXT;
-    }
+    if (PreCallValidateCreateShaderModule(dev_data, pCreateInfo, &spirv_valid))
+        return VK_ERROR_VALIDATION_FAILED_EXT;
 
     VkResult res = dev_data->dispatch_table.CreateShaderModule(device, pCreateInfo, pAllocator, pShaderModule);
 
-    if (res == VK_SUCCESS && !GetDisables(dev_data)->shader_validation) {
+    if (res == VK_SUCCESS) {
         std::lock_guard<std::mutex> lock(global_lock);
-        const auto new_shader_module = (SPV_SUCCESS == spv_valid ? new shader_module(pCreateInfo) : new shader_module());
-        dev_data->shaderModuleMap[*pShaderModule] = unique_ptr<shader_module>(new_shader_module);
+        unique_ptr<shader_module> new_shader_module(spirv_valid ? new shader_module(pCreateInfo) : new shader_module());
+        dev_data->shaderModuleMap[*pShaderModule] = std::move(new_shader_module);
     }
     return res;
 }
@@ -10060,7 +8501,7 @@ static bool PreCallValidateCreateSwapchainKHR(layer_data *dev_data, const char *
     // All physical devices and queue families are required to be able
     // to present to any native window on Android; require the
     // application to have established support on any other platform.
-    if (!dev_data->instance_data->extensions.khr_android_surface) {
+    if (!dev_data->instance_data->extensions.vk_khr_android_surface) {
         auto support_predicate = [dev_data](decltype(surface_state->gpu_queue_support)::const_reference qs) -> bool {
             // TODO: should restrict search only to queue families of VkDeviceQueueCreateInfos, not whole phys. device
             return (qs.first.gpu == dev_data->physical_device) && qs.second;
@@ -10277,7 +8718,7 @@ static bool PreCallValidateCreateSwapchainKHR(layer_data *dev_data, const char *
     // Validate state for shared presentable case
     if (VK_PRESENT_MODE_SHARED_DEMAND_REFRESH_KHR == pCreateInfo->presentMode ||
         VK_PRESENT_MODE_SHARED_CONTINUOUS_REFRESH_KHR == pCreateInfo->presentMode) {
-        if (!dev_data->device_extensions.khr_shared_presentable_image) {
+        if (!dev_data->extensions.vk_khr_shared_presentable_image) {
             if (log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
                         HandleToUint64(dev_data->device), __LINE__, DRAWSTATE_EXTENSION_NOT_ENABLED, "DS",
                         "%s called with presentMode %s which requires the VK_KHR_shared_presentable_image extension, which has not "
@@ -10374,57 +8815,92 @@ VKAPI_ATTR void VKAPI_CALL DestroySwapchainKHR(VkDevice device, VkSwapchainKHR s
     if (!skip) dev_data->dispatch_table.DestroySwapchainKHR(device, swapchain, pAllocator);
 }
 
-VKAPI_ATTR VkResult VKAPI_CALL GetSwapchainImagesKHR(VkDevice device, VkSwapchainKHR swapchain, uint32_t *pCount,
-                                                     VkImage *pSwapchainImages) {
-    layer_data *dev_data = GetLayerDataPtr(get_dispatch_key(device), layer_data_map);
-    VkResult result = dev_data->dispatch_table.GetSwapchainImagesKHR(device, swapchain, pCount, pSwapchainImages);
-
-    if (result == VK_SUCCESS && pSwapchainImages != NULL) {
-        // This should never happen and is checked by param checker.
-        if (!pCount) return result;
+static bool PreCallValidateGetSwapchainImagesKHR(layer_data *device_data, SWAPCHAIN_NODE *swapchain_state, VkDevice device,
+                                                 uint32_t *pSwapchainImageCount, VkImage *pSwapchainImages) {
+    bool skip = false;
+    if (swapchain_state && pSwapchainImages) {
         std::lock_guard<std::mutex> lock(global_lock);
-        const size_t count = *pCount;
-        auto swapchain_node = GetSwapchainNode(dev_data, swapchain);
-        if (swapchain_node && !swapchain_node->images.empty()) {
-            // TODO : Not sure I like the memcmp here, but it works
-            const bool mismatch = (swapchain_node->images.size() != count ||
-                                   memcmp(&swapchain_node->images[0], pSwapchainImages, sizeof(swapchain_node->images[0]) * count));
-            if (mismatch) {
-                // TODO: Verify against Valid Usage section of extension
-                log_msg(dev_data->report_data, VK_DEBUG_REPORT_WARNING_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_SWAPCHAIN_KHR_EXT,
-                        HandleToUint64(swapchain), __LINE__, MEMTRACK_NONE, "SWAP_CHAIN",
-                        "vkGetSwapchainInfoKHR(0x%" PRIx64
-                        ", VK_SWAP_CHAIN_INFO_TYPE_PERSISTENT_IMAGES_KHR) returned mismatching data",
-                        HandleToUint64(swapchain));
-            }
+        // Compare the preliminary value of *pSwapchainImageCount with the value this time:
+        if (swapchain_state->vkGetSwapchainImagesKHRState == UNCALLED) {
+            skip |= log_msg(device_data->report_data, VK_DEBUG_REPORT_WARNING_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
+                            HandleToUint64(device), __LINE__, SWAPCHAIN_PRIOR_COUNT, "DS",
+                            "vkGetSwapchainImagesKHR() called with non-NULL pSwapchainImageCount; but no prior positive "
+                            "value has been seen for pSwapchainImages.");
+        } else if (*pSwapchainImageCount > swapchain_state->get_swapchain_image_count) {
+            skip |= log_msg(device_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
+                            HandleToUint64(device), __LINE__, SWAPCHAIN_INVALID_COUNT, "DS",
+                            "vkGetSwapchainImagesKHR() called with non-NULL pSwapchainImageCount, and with "
+                            "pSwapchainImages set to a value (%d) that is greater than the value (%d) that was returned when "
+                            "pSwapchainImageCount was NULL.",
+                            *pSwapchainImageCount, swapchain_state->get_swapchain_image_count);
         }
-        for (uint32_t i = 0; i < *pCount; ++i) {
+    }
+    return skip;
+}
+
+static void PostCallRecordGetSwapchainImagesKHR(layer_data *device_data, SWAPCHAIN_NODE *swapchain_state, VkDevice device,
+                                                uint32_t *pSwapchainImageCount, VkImage *pSwapchainImages) {
+    std::lock_guard<std::mutex> lock(global_lock);
+
+    if (*pSwapchainImageCount > swapchain_state->images.size()) swapchain_state->images.resize(*pSwapchainImageCount);
+
+    if (pSwapchainImages) {
+        if (swapchain_state->vkGetSwapchainImagesKHRState < QUERY_DETAILS) {
+            swapchain_state->vkGetSwapchainImagesKHRState = QUERY_DETAILS;
+        }
+        for (uint32_t i = 0; i < *pSwapchainImageCount; ++i) {
+            if (swapchain_state->images[i] != VK_NULL_HANDLE) continue;  // Already retrieved this.
+
             IMAGE_LAYOUT_NODE image_layout_node;
             image_layout_node.layout = VK_IMAGE_LAYOUT_UNDEFINED;
-            image_layout_node.format = swapchain_node->createInfo.imageFormat;
+            image_layout_node.format = swapchain_state->createInfo.imageFormat;
             // Add imageMap entries for each swapchain image
             VkImageCreateInfo image_ci = {};
             image_ci.flags = 0;
             image_ci.imageType = VK_IMAGE_TYPE_2D;
-            image_ci.format = swapchain_node->createInfo.imageFormat;
-            image_ci.extent.width = swapchain_node->createInfo.imageExtent.width;
-            image_ci.extent.height = swapchain_node->createInfo.imageExtent.height;
+            image_ci.format = swapchain_state->createInfo.imageFormat;
+            image_ci.extent.width = swapchain_state->createInfo.imageExtent.width;
+            image_ci.extent.height = swapchain_state->createInfo.imageExtent.height;
             image_ci.extent.depth = 1;
             image_ci.mipLevels = 1;
-            image_ci.arrayLayers = swapchain_node->createInfo.imageArrayLayers;
+            image_ci.arrayLayers = swapchain_state->createInfo.imageArrayLayers;
             image_ci.samples = VK_SAMPLE_COUNT_1_BIT;
             image_ci.tiling = VK_IMAGE_TILING_OPTIMAL;
-            image_ci.usage = swapchain_node->createInfo.imageUsage;
-            image_ci.sharingMode = swapchain_node->createInfo.imageSharingMode;
-            dev_data->imageMap[pSwapchainImages[i]] = unique_ptr<IMAGE_STATE>(new IMAGE_STATE(pSwapchainImages[i], &image_ci));
-            auto &image_state = dev_data->imageMap[pSwapchainImages[i]];
+            image_ci.usage = swapchain_state->createInfo.imageUsage;
+            image_ci.sharingMode = swapchain_state->createInfo.imageSharingMode;
+            device_data->imageMap[pSwapchainImages[i]] = unique_ptr<IMAGE_STATE>(new IMAGE_STATE(pSwapchainImages[i], &image_ci));
+            auto &image_state = device_data->imageMap[pSwapchainImages[i]];
             image_state->valid = false;
             image_state->binding.mem = MEMTRACKER_SWAP_CHAIN_IMAGE_KEY;
-            swapchain_node->images.push_back(pSwapchainImages[i]);
+            swapchain_state->images[i] = pSwapchainImages[i];
             ImageSubresourcePair subpair = {pSwapchainImages[i], false, VkImageSubresource()};
-            dev_data->imageSubresourceMap[pSwapchainImages[i]].push_back(subpair);
-            dev_data->imageLayoutMap[subpair] = image_layout_node;
+            device_data->imageSubresourceMap[pSwapchainImages[i]].push_back(subpair);
+            device_data->imageLayoutMap[subpair] = image_layout_node;
         }
+    }
+
+    if (*pSwapchainImageCount) {
+        if (swapchain_state->vkGetSwapchainImagesKHRState < QUERY_COUNT) {
+            swapchain_state->vkGetSwapchainImagesKHRState = QUERY_COUNT;
+        }
+        swapchain_state->get_swapchain_image_count = *pSwapchainImageCount;
+    }
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL GetSwapchainImagesKHR(VkDevice device, VkSwapchainKHR swapchain, uint32_t *pSwapchainImageCount,
+                                                     VkImage *pSwapchainImages) {
+    VkResult result = VK_ERROR_VALIDATION_FAILED_EXT;
+    layer_data *device_data = GetLayerDataPtr(get_dispatch_key(device), layer_data_map);
+
+    auto swapchain_state = GetSwapchainNode(device_data, swapchain);
+    bool skip = PreCallValidateGetSwapchainImagesKHR(device_data, swapchain_state, device, pSwapchainImageCount, pSwapchainImages);
+
+    if (!skip) {
+        result = device_data->dispatch_table.GetSwapchainImagesKHR(device, swapchain, pSwapchainImageCount, pSwapchainImages);
+    }
+
+    if ((result == VK_SUCCESS || result == VK_INCOMPLETE)) {
+        PostCallRecordGetSwapchainImagesKHR(device_data, swapchain_state, device, pSwapchainImageCount, pSwapchainImages);
     }
     return result;
 }
@@ -10476,7 +8952,7 @@ VKAPI_ATTR VkResult VKAPI_CALL QueuePresentKHR(VkQueue queue, const VkPresentInf
                 if (FindLayouts(dev_data, image, layouts)) {
                     for (auto layout : layouts) {
                         if ((layout != VK_IMAGE_LAYOUT_PRESENT_SRC_KHR) &&
-                            (!dev_data->device_extensions.khr_shared_presentable_image ||
+                            (!dev_data->extensions.vk_khr_shared_presentable_image ||
                              (layout != VK_IMAGE_LAYOUT_SHARED_PRESENT_KHR))) {
                             skip |=
                                 log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_QUEUE_EXT,
@@ -10492,7 +8968,7 @@ VKAPI_ATTR VkResult VKAPI_CALL QueuePresentKHR(VkQueue queue, const VkPresentInf
             // All physical devices and queue families are required to be able
             // to present to any native window on Android; require the
             // application to have established support on any other platform.
-            if (!dev_data->instance_data->extensions.khr_android_surface) {
+            if (!dev_data->instance_data->extensions.vk_khr_android_surface) {
                 auto surface_state = GetSurfaceState(dev_data->instance_data, swapchain_data->createInfo.surface);
                 auto support_it = surface_state->gpu_queue_support.find({dev_data->physical_device, queue_state->queueFamilyIndex});
 
@@ -10977,14 +9453,15 @@ VKAPI_ATTR void VKAPI_CALL DestroySurfaceKHR(VkInstance instance, VkSurfaceKHR s
     std::unique_lock<std::mutex> lock(global_lock);
     auto surface_state = GetSurfaceState(instance_data, surface);
 
-    if (surface_state) {
-        // TODO: track swapchains created from this surface.
-        instance_data->surface_map.erase(surface);
+    if ((surface_state) && (surface_state->swapchain)) {
+        skip |= log_msg(instance_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_INSTANCE_EXT,
+            HandleToUint64(instance), __LINE__, VALIDATION_ERROR_26c009e4, "DS",
+            "vkDestroySurfaceKHR() called before its associated VkSwapchainKHR was destroyed. %s",
+            validation_error_map[VALIDATION_ERROR_26c009e4]);
     }
+    instance_data->surface_map.erase(surface);
     lock.unlock();
-
     if (!skip) {
-        // Call down the call chain:
         instance_data->dispatch_table.DestroySurfaceKHR(instance, surface, pAllocator);
     }
 }
@@ -11578,49 +10055,313 @@ VKAPI_ATTR void VKAPI_CALL CmdPushDescriptorSetWithTemplateKHR(VkCommandBuffer c
     dev_data->dispatch_table.CmdPushDescriptorSetWithTemplateKHR(commandBuffer, descriptorUpdateTemplate, layout, set, pData);
 }
 
-static PFN_vkVoidFunction intercept_core_instance_command(const char *name);
+static void PostCallRecordGetPhysicalDeviceDisplayPlanePropertiesKHR(instance_layer_data *instanceData,
+                                                                     VkPhysicalDevice physicalDevice, uint32_t *pPropertyCount,
+                                                                     VkDisplayPlanePropertiesKHR *pProperties) {
+    std::unique_lock<std::mutex> lock(global_lock);
+    auto physical_device_state = GetPhysicalDeviceState(instanceData, physicalDevice);
 
-static PFN_vkVoidFunction intercept_core_device_command(const char *name);
+    if (*pPropertyCount) {
+        if (physical_device_state->vkGetPhysicalDeviceDisplayPlanePropertiesKHRState < QUERY_COUNT) {
+            physical_device_state->vkGetPhysicalDeviceDisplayPlanePropertiesKHRState = QUERY_COUNT;
+        }
+        physical_device_state->display_plane_property_count = *pPropertyCount;
+    }
+    if (pProperties) {
+        if (physical_device_state->vkGetPhysicalDeviceDisplayPlanePropertiesKHRState < QUERY_DETAILS) {
+            physical_device_state->vkGetPhysicalDeviceDisplayPlanePropertiesKHRState = QUERY_DETAILS;
+        }
+    }
+}
 
-static PFN_vkVoidFunction intercept_device_extension_command(const char *name, VkDevice device);
+VKAPI_ATTR VkResult VKAPI_CALL GetPhysicalDeviceDisplayPlanePropertiesKHR(VkPhysicalDevice physicalDevice, uint32_t *pPropertyCount,
+                                                                          VkDisplayPlanePropertiesKHR *pProperties) {
+    VkResult result = VK_SUCCESS;
+    instance_layer_data *instance_data = GetLayerDataPtr(get_dispatch_key(physicalDevice), instance_layer_data_map);
 
-static PFN_vkVoidFunction intercept_khr_swapchain_command(const char *name, VkDevice dev);
+    result = instance_data->dispatch_table.GetPhysicalDeviceDisplayPlanePropertiesKHR(physicalDevice, pPropertyCount, pProperties);
 
-static PFN_vkVoidFunction intercept_khr_surface_command(const char *name, VkInstance instance);
+    if (result == VK_SUCCESS || result == VK_INCOMPLETE) {
+        PostCallRecordGetPhysicalDeviceDisplayPlanePropertiesKHR(instance_data, physicalDevice, pPropertyCount, pProperties);
+    }
 
-static PFN_vkVoidFunction
-intercept_extension_instance_commands(const char *name, VkInstance instance);
+    return result;
+}
 
-VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL GetDeviceProcAddr(VkDevice dev, const char *funcName) {
-    assert(dev);
+static bool ValidateGetPhysicalDeviceDisplayPlanePropertiesKHRQuery(instance_layer_data *instance_data,
+                                                                    VkPhysicalDevice physicalDevice, uint32_t planeIndex,
+                                                                    const char *api_name) {
+    bool skip = false;
+    auto physical_device_state = GetPhysicalDeviceState(instance_data, physicalDevice);
+    if (physical_device_state->vkGetPhysicalDeviceDisplayPlanePropertiesKHRState == UNCALLED) {
+        skip |= log_msg(
+            instance_data->report_data, VK_DEBUG_REPORT_WARNING_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT,
+            HandleToUint64(physicalDevice), __LINE__, SWAPCHAIN_GET_SUPPORTED_DISPLAYS_WITHOUT_QUERY, "DL",
+            "Potential problem with calling %s() without first querying vkGetPhysicalDeviceDisplayPlanePropertiesKHR.", api_name);
+    } else {
+        if (planeIndex >= physical_device_state->display_plane_property_count) {
+            skip |= log_msg(
+                instance_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT,
+                HandleToUint64(physicalDevice), __LINE__, VALIDATION_ERROR_29c009c2, "DL",
+                "%s(): planeIndex must be in the range [0, %d] that was returned by vkGetPhysicalDeviceDisplayPlanePropertiesKHR. "
+                "Do you have the plane index hardcoded? %s",
+                api_name, physical_device_state->display_plane_property_count - 1, validation_error_map[VALIDATION_ERROR_29c009c2]);
+        }
+    }
+    return skip;
+}
 
-    PFN_vkVoidFunction proc = intercept_core_device_command(funcName);
-    if (!proc) proc = intercept_device_extension_command(funcName, dev);
-    if (!proc) proc = intercept_khr_swapchain_command(funcName, dev);
-    if (proc) return proc;
+static bool PreCallValidateGetDisplayPlaneSupportedDisplaysKHR(instance_layer_data *instance_data, VkPhysicalDevice physicalDevice,
+                                                               uint32_t planeIndex) {
+    bool skip = false;
+    std::lock_guard<std::mutex> lock(global_lock);
+    skip |= ValidateGetPhysicalDeviceDisplayPlanePropertiesKHRQuery(instance_data, physicalDevice, planeIndex,
+                                                                    "vkGetDisplayPlaneSupportedDisplaysKHR");
+    return skip;
+}
 
-    layer_data *dev_data = GetLayerDataPtr(get_dispatch_key(dev), layer_data_map);
-    auto &table = dev_data->dispatch_table;
+VKAPI_ATTR VkResult VKAPI_CALL GetDisplayPlaneSupportedDisplaysKHR(VkPhysicalDevice physicalDevice, uint32_t planeIndex,
+                                                                   uint32_t *pDisplayCount, VkDisplayKHR *pDisplays) {
+    VkResult result = VK_ERROR_VALIDATION_FAILED_EXT;
+    instance_layer_data *instance_data = GetLayerDataPtr(get_dispatch_key(physicalDevice), instance_layer_data_map);
+    bool skip = PreCallValidateGetDisplayPlaneSupportedDisplaysKHR(instance_data, physicalDevice, planeIndex);
+    if (!skip) {
+        result =
+            instance_data->dispatch_table.GetDisplayPlaneSupportedDisplaysKHR(physicalDevice, planeIndex, pDisplayCount, pDisplays);
+    }
+    return result;
+}
+
+static bool PreCallValidateGetDisplayPlaneCapabilitiesKHR(instance_layer_data *instance_data, VkPhysicalDevice physicalDevice,
+                                                          uint32_t planeIndex) {
+    bool skip = false;
+    std::lock_guard<std::mutex> lock(global_lock);
+    skip |= ValidateGetPhysicalDeviceDisplayPlanePropertiesKHRQuery(instance_data, physicalDevice, planeIndex,
+                                                                    "vkGetDisplayPlaneCapabilitiesKHR");
+    return skip;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL GetDisplayPlaneCapabilitiesKHR(VkPhysicalDevice physicalDevice, VkDisplayModeKHR mode,
+                                                              uint32_t planeIndex, VkDisplayPlaneCapabilitiesKHR *pCapabilities) {
+    VkResult result = VK_ERROR_VALIDATION_FAILED_EXT;
+    instance_layer_data *instance_data = GetLayerDataPtr(get_dispatch_key(physicalDevice), instance_layer_data_map);
+    bool skip = PreCallValidateGetDisplayPlaneCapabilitiesKHR(instance_data, physicalDevice, planeIndex);
+
+    if (!skip) {
+        result = instance_data->dispatch_table.GetDisplayPlaneCapabilitiesKHR(physicalDevice, mode, planeIndex, pCapabilities);
+    }
+
+    return result;
+}
+
+VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL GetDeviceProcAddr(VkDevice device, const char *funcName);
+VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL GetPhysicalDeviceProcAddr(VkInstance instance, const char *funcName);
+VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL GetInstanceProcAddr(VkInstance instance, const char *funcName);
+
+// Map of all APIs to be intercepted by this layer
+static const std::unordered_map<std::string, void*> name_to_funcptr_map = {
+    {"vkGetInstanceProcAddr", (void*)GetInstanceProcAddr},
+    {"vk_layerGetPhysicalDeviceProcAddr", (void*)GetPhysicalDeviceProcAddr},
+    {"vkGetDeviceProcAddr", (void*)GetDeviceProcAddr},
+    {"vkCreateInstance", (void*)CreateInstance},
+    {"vkCreateDevice", (void*)CreateDevice},
+    {"vkEnumeratePhysicalDevices", (void*)EnumeratePhysicalDevices},
+    {"vkGetPhysicalDeviceQueueFamilyProperties", (void*)GetPhysicalDeviceQueueFamilyProperties},
+    {"vkDestroyInstance", (void*)DestroyInstance},
+    {"vkEnumerateInstanceLayerProperties", (void*)EnumerateInstanceLayerProperties},
+    {"vkEnumerateDeviceLayerProperties", (void*)EnumerateDeviceLayerProperties},
+    {"vkEnumerateInstanceExtensionProperties", (void*)EnumerateInstanceExtensionProperties},
+    {"vkEnumerateDeviceExtensionProperties", (void*)EnumerateDeviceExtensionProperties},
+    {"vkCreateDescriptorUpdateTemplateKHR", (void*)CreateDescriptorUpdateTemplateKHR},
+    {"vkDestroyDescriptorUpdateTemplateKHR", (void*)DestroyDescriptorUpdateTemplateKHR},
+    {"vkUpdateDescriptorSetWithTemplateKHR", (void*)UpdateDescriptorSetWithTemplateKHR},
+    {"vkCmdPushDescriptorSetWithTemplateKHR", (void*)CmdPushDescriptorSetWithTemplateKHR},
+    {"vkCreateSwapchainKHR", (void*)CreateSwapchainKHR},
+    {"vkDestroySwapchainKHR", (void*)DestroySwapchainKHR},
+    {"vkGetSwapchainImagesKHR", (void*)GetSwapchainImagesKHR},
+    {"vkAcquireNextImageKHR", (void*)AcquireNextImageKHR},
+    {"vkQueuePresentKHR", (void*)QueuePresentKHR},
+    {"vkQueueSubmit", (void*)QueueSubmit},
+    {"vkWaitForFences", (void*)WaitForFences},
+    {"vkGetFenceStatus", (void*)GetFenceStatus},
+    {"vkQueueWaitIdle", (void*)QueueWaitIdle},
+    {"vkDeviceWaitIdle", (void*)DeviceWaitIdle},
+    {"vkGetDeviceQueue", (void*)GetDeviceQueue},
+    {"vkDestroyDevice", (void*)DestroyDevice},
+    {"vkDestroyFence", (void*)DestroyFence},
+    {"vkResetFences", (void*)ResetFences},
+    {"vkDestroySemaphore", (void*)DestroySemaphore},
+    {"vkDestroyEvent", (void*)DestroyEvent},
+    {"vkDestroyQueryPool", (void*)DestroyQueryPool},
+    {"vkDestroyBuffer", (void*)DestroyBuffer},
+    {"vkDestroyBufferView", (void*)DestroyBufferView},
+    {"vkDestroyImage", (void*)DestroyImage},
+    {"vkDestroyImageView", (void*)DestroyImageView},
+    {"vkDestroyShaderModule", (void*)DestroyShaderModule},
+    {"vkDestroyPipeline", (void*)DestroyPipeline},
+    {"vkDestroyPipelineLayout", (void*)DestroyPipelineLayout},
+    {"vkDestroySampler", (void*)DestroySampler},
+    {"vkDestroyDescriptorSetLayout", (void*)DestroyDescriptorSetLayout},
+    {"vkDestroyDescriptorPool", (void*)DestroyDescriptorPool},
+    {"vkDestroyFramebuffer", (void*)DestroyFramebuffer},
+    {"vkDestroyRenderPass", (void*)DestroyRenderPass},
+    {"vkCreateBuffer", (void*)CreateBuffer},
+    {"vkCreateBufferView", (void*)CreateBufferView},
+    {"vkCreateImage", (void*)CreateImage},
+    {"vkCreateImageView", (void*)CreateImageView},
+    {"vkCreateFence", (void*)CreateFence},
+    {"vkCreatePipelineCache", (void*)CreatePipelineCache},
+    {"vkDestroyPipelineCache", (void*)DestroyPipelineCache},
+    {"vkGetPipelineCacheData", (void*)GetPipelineCacheData},
+    {"vkMergePipelineCaches", (void*)MergePipelineCaches},
+    {"vkCreateGraphicsPipelines", (void*)CreateGraphicsPipelines},
+    {"vkCreateComputePipelines", (void*)CreateComputePipelines},
+    {"vkCreateSampler", (void*)CreateSampler},
+    {"vkCreateDescriptorSetLayout", (void*)CreateDescriptorSetLayout},
+    {"vkCreatePipelineLayout", (void*)CreatePipelineLayout},
+    {"vkCreateDescriptorPool", (void*)CreateDescriptorPool},
+    {"vkResetDescriptorPool", (void*)ResetDescriptorPool},
+    {"vkAllocateDescriptorSets", (void*)AllocateDescriptorSets},
+    {"vkFreeDescriptorSets", (void*)FreeDescriptorSets},
+    {"vkUpdateDescriptorSets", (void*)UpdateDescriptorSets},
+    {"vkCreateCommandPool", (void*)CreateCommandPool},
+    {"vkDestroyCommandPool", (void*)DestroyCommandPool},
+    {"vkResetCommandPool", (void*)ResetCommandPool},
+    {"vkCreateQueryPool", (void*)CreateQueryPool},
+    {"vkAllocateCommandBuffers", (void*)AllocateCommandBuffers},
+    {"vkFreeCommandBuffers", (void*)FreeCommandBuffers},
+    {"vkBeginCommandBuffer", (void*)BeginCommandBuffer},
+    {"vkEndCommandBuffer", (void*)EndCommandBuffer},
+    {"vkResetCommandBuffer", (void*)ResetCommandBuffer},
+    {"vkCmdBindPipeline", (void*)CmdBindPipeline},
+    {"vkCmdSetViewport", (void*)CmdSetViewport},
+    {"vkCmdSetScissor", (void*)CmdSetScissor},
+    {"vkCmdSetLineWidth", (void*)CmdSetLineWidth},
+    {"vkCmdSetDepthBias", (void*)CmdSetDepthBias},
+    {"vkCmdSetBlendConstants", (void*)CmdSetBlendConstants},
+    {"vkCmdSetDepthBounds", (void*)CmdSetDepthBounds},
+    {"vkCmdSetStencilCompareMask", (void*)CmdSetStencilCompareMask},
+    {"vkCmdSetStencilWriteMask", (void*)CmdSetStencilWriteMask},
+    {"vkCmdSetStencilReference", (void*)CmdSetStencilReference},
+    {"vkCmdBindDescriptorSets", (void*)CmdBindDescriptorSets},
+    {"vkCmdBindVertexBuffers", (void*)CmdBindVertexBuffers},
+    {"vkCmdBindIndexBuffer", (void*)CmdBindIndexBuffer},
+    {"vkCmdDraw", (void*)CmdDraw},
+    {"vkCmdDrawIndexed", (void*)CmdDrawIndexed},
+    {"vkCmdDrawIndirect", (void*)CmdDrawIndirect},
+    {"vkCmdDrawIndexedIndirect", (void*)CmdDrawIndexedIndirect},
+    {"vkCmdDispatch", (void*)CmdDispatch},
+    {"vkCmdDispatchIndirect", (void*)CmdDispatchIndirect},
+    {"vkCmdCopyBuffer", (void*)CmdCopyBuffer},
+    {"vkCmdCopyImage", (void*)CmdCopyImage},
+    {"vkCmdBlitImage", (void*)CmdBlitImage},
+    {"vkCmdCopyBufferToImage", (void*)CmdCopyBufferToImage},
+    {"vkCmdCopyImageToBuffer", (void*)CmdCopyImageToBuffer},
+    {"vkCmdUpdateBuffer", (void*)CmdUpdateBuffer},
+    {"vkCmdFillBuffer", (void*)CmdFillBuffer},
+    {"vkCmdClearColorImage", (void*)CmdClearColorImage},
+    {"vkCmdClearDepthStencilImage", (void*)CmdClearDepthStencilImage},
+    {"vkCmdClearAttachments", (void*)CmdClearAttachments},
+    {"vkCmdResolveImage", (void*)CmdResolveImage},
+    {"vkGetImageSubresourceLayout", (void*)GetImageSubresourceLayout},
+    {"vkCmdSetEvent", (void*)CmdSetEvent},
+    {"vkCmdResetEvent", (void*)CmdResetEvent},
+    {"vkCmdWaitEvents", (void*)CmdWaitEvents},
+    {"vkCmdPipelineBarrier", (void*)CmdPipelineBarrier},
+    {"vkCmdBeginQuery", (void*)CmdBeginQuery},
+    {"vkCmdEndQuery", (void*)CmdEndQuery},
+    {"vkCmdResetQueryPool", (void*)CmdResetQueryPool},
+    {"vkCmdCopyQueryPoolResults", (void*)CmdCopyQueryPoolResults},
+    {"vkCmdPushConstants", (void*)CmdPushConstants},
+    {"vkCmdWriteTimestamp", (void*)CmdWriteTimestamp},
+    {"vkCreateFramebuffer", (void*)CreateFramebuffer},
+    {"vkCreateShaderModule", (void*)CreateShaderModule},
+    {"vkCreateRenderPass", (void*)CreateRenderPass},
+    {"vkCmdBeginRenderPass", (void*)CmdBeginRenderPass},
+    {"vkCmdNextSubpass", (void*)CmdNextSubpass},
+    {"vkCmdEndRenderPass", (void*)CmdEndRenderPass},
+    {"vkCmdExecuteCommands", (void*)CmdExecuteCommands},
+    {"vkSetEvent", (void*)SetEvent},
+    {"vkMapMemory", (void*)MapMemory},
+    {"vkUnmapMemory", (void*)UnmapMemory},
+    {"vkFlushMappedMemoryRanges", (void*)FlushMappedMemoryRanges},
+    {"vkInvalidateMappedMemoryRanges", (void*)InvalidateMappedMemoryRanges},
+    {"vkAllocateMemory", (void*)AllocateMemory},
+    {"vkFreeMemory", (void*)FreeMemory},
+    {"vkBindBufferMemory", (void*)BindBufferMemory},
+    {"vkGetBufferMemoryRequirements", (void*)GetBufferMemoryRequirements},
+    {"vkGetImageMemoryRequirements", (void*)GetImageMemoryRequirements},
+    {"vkGetQueryPoolResults", (void*)GetQueryPoolResults},
+    {"vkBindImageMemory", (void*)BindImageMemory},
+    {"vkQueueBindSparse", (void*)QueueBindSparse},
+    {"vkCreateSemaphore", (void*)CreateSemaphore},
+    {"vkCreateEvent", (void*)CreateEvent},
+#ifdef VK_USE_PLATFORM_ANDROID_KHR
+    {"vkCreateAndroidSurfaceKHR", (void*)CreateAndroidSurfaceKHR},
+#endif
+#ifdef VK_USE_PLATFORM_MIR_KHR
+    {"vkCreateMirSurfaceKHR", (void*)CreateMirSurfaceKHR},
+    {"vkGetPhysicalDeviceMirPresentationSupportKHR", (void*)GetPhysicalDeviceMirPresentationSupportKHR},
+#endif
+#ifdef VK_USE_PLATFORM_WAYLAND_KHR
+    {"vkCreateWaylandSurfaceKHR", (void*)CreateWaylandSurfaceKHR},
+    {"vkGetPhysicalDeviceWaylandPresentationSupportKHR", (void*)GetPhysicalDeviceWaylandPresentationSupportKHR},
+#endif
+#ifdef VK_USE_PLATFORM_WIN32_KHR
+    {"vkCreateWin32SurfaceKHR", (void*)CreateWin32SurfaceKHR},
+    {"vkGetPhysicalDeviceWin32PresentationSupportKHR", (void*)GetPhysicalDeviceWin32PresentationSupportKHR},
+#endif
+#ifdef VK_USE_PLATFORM_XCB_KHR
+    {"vkCreateXcbSurfaceKHR", (void*)CreateXcbSurfaceKHR},
+    {"vkGetPhysicalDeviceXcbPresentationSupportKHR", (void*)GetPhysicalDeviceXcbPresentationSupportKHR},
+#endif
+#ifdef VK_USE_PLATFORM_XLIB_KHR
+    {"vkCreateXlibSurfaceKHR", (void*)CreateXlibSurfaceKHR},
+    {"vkGetPhysicalDeviceXlibPresentationSupportKHR", (void*)GetPhysicalDeviceXlibPresentationSupportKHR},
+#endif
+    {"vkCreateDisplayPlaneSurfaceKHR", (void*)CreateDisplayPlaneSurfaceKHR},
+    {"vkDestroySurfaceKHR", (void*)DestroySurfaceKHR},
+    {"vkGetPhysicalDeviceSurfaceCapabilitiesKHR", (void*)GetPhysicalDeviceSurfaceCapabilitiesKHR},
+    {"vkGetPhysicalDeviceSurfaceCapabilities2KHR", (void*)GetPhysicalDeviceSurfaceCapabilities2KHR},
+    {"vkGetPhysicalDeviceSurfaceCapabilities2EXT", (void*)GetPhysicalDeviceSurfaceCapabilities2EXT},
+    {"vkGetPhysicalDeviceSurfaceSupportKHR", (void*)GetPhysicalDeviceSurfaceSupportKHR},
+    {"vkGetPhysicalDeviceSurfacePresentModesKHR", (void*)GetPhysicalDeviceSurfacePresentModesKHR},
+    {"vkGetPhysicalDeviceSurfaceFormatsKHR", (void*)GetPhysicalDeviceSurfaceFormatsKHR},
+    {"vkGetPhysicalDeviceSurfaceFormats2KHR", (void*)GetPhysicalDeviceSurfaceFormats2KHR},
+    {"vkGetPhysicalDeviceQueueFamilyProperties2KHR", (void*)GetPhysicalDeviceQueueFamilyProperties2KHR},
+    {"vkEnumeratePhysicalDeviceGroupsKHX", (void*)EnumeratePhysicalDeviceGroupsKHX},
+    {"vkCreateDebugReportCallbackEXT", (void*)CreateDebugReportCallbackEXT},
+    {"vkDestroyDebugReportCallbackEXT", (void*)DestroyDebugReportCallbackEXT},
+    {"vkDebugReportMessageEXT", (void*)DebugReportMessageEXT},
+    {"vkGetPhysicalDeviceDisplayPlanePropertiesKHR", (void*)GetPhysicalDeviceDisplayPlanePropertiesKHR},
+    {"GetDisplayPlaneSupportedDisplaysKHR", (void*)GetDisplayPlaneSupportedDisplaysKHR},
+    {"GetDisplayPlaneCapabilitiesKHR", (void*)GetDisplayPlaneCapabilitiesKHR},
+};
+
+VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL GetDeviceProcAddr(VkDevice device, const char *funcName) {
+    assert(device);
+    layer_data *device_data = GetLayerDataPtr(get_dispatch_key(device), layer_data_map);
+
+    // Is API to be intercepted by this layer?
+    const auto &item = name_to_funcptr_map.find(funcName);
+    if (item != name_to_funcptr_map.end()) {
+        return reinterpret_cast<PFN_vkVoidFunction>(item->second);
+    }
+
+    auto &table = device_data->dispatch_table;
     if (!table.GetDeviceProcAddr) return nullptr;
-    return table.GetDeviceProcAddr(dev, funcName);
+    return table.GetDeviceProcAddr(device, funcName);
 }
 
 VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL GetInstanceProcAddr(VkInstance instance, const char *funcName) {
-    PFN_vkVoidFunction proc = intercept_core_instance_command(funcName);
-    if (!proc) proc = intercept_core_device_command(funcName);
-    if (!proc) proc = intercept_khr_swapchain_command(funcName, VK_NULL_HANDLE);
-    if (!proc) proc = intercept_khr_surface_command(funcName, instance);
-    if (proc) return proc;
+    instance_layer_data *instance_data;
+    // Is API to be intercepted by this layer?
+    const auto &item = name_to_funcptr_map.find(funcName);
+    if (item != name_to_funcptr_map.end()) {
+        return reinterpret_cast<PFN_vkVoidFunction>(item->second);
+    }
 
-    assert(instance);
-
-    instance_layer_data *instance_data = GetLayerDataPtr(get_dispatch_key(instance), instance_layer_data_map);
-    proc = debug_report_get_instance_proc_addr(instance_data->report_data, funcName);
-    if (proc) return proc;
-
-    proc = intercept_extension_instance_commands(funcName, instance);
-    if (proc) return proc;
-
+    instance_data = GetLayerDataPtr(get_dispatch_key(instance), instance_layer_data_map);
     auto &table = instance_data->dispatch_table;
     if (!table.GetInstanceProcAddr) return nullptr;
     return table.GetInstanceProcAddr(instance, funcName);
@@ -11628,7 +10369,6 @@ VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL GetInstanceProcAddr(VkInstance instance
 
 VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL GetPhysicalDeviceProcAddr(VkInstance instance, const char *funcName) {
     assert(instance);
-
     instance_layer_data *instance_data = GetLayerDataPtr(get_dispatch_key(instance), instance_layer_data_map);
 
     auto &table = instance_data->dispatch_table;
@@ -11636,332 +10376,7 @@ VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL GetPhysicalDeviceProcAddr(VkInstance in
     return table.GetPhysicalDeviceProcAddr(instance, funcName);
 }
 
-static PFN_vkVoidFunction intercept_core_instance_command(const char *name) {
-    static const struct {
-        const char *name;
-        PFN_vkVoidFunction proc;
-    } core_instance_commands[] = {
-        {"vkGetInstanceProcAddr", reinterpret_cast<PFN_vkVoidFunction>(GetInstanceProcAddr)},
-        {"vk_layerGetPhysicalDeviceProcAddr", reinterpret_cast<PFN_vkVoidFunction>(GetPhysicalDeviceProcAddr)},
-        {"vkGetDeviceProcAddr", reinterpret_cast<PFN_vkVoidFunction>(GetDeviceProcAddr)},
-        {"vkCreateInstance", reinterpret_cast<PFN_vkVoidFunction>(CreateInstance)},
-        {"vkCreateDevice", reinterpret_cast<PFN_vkVoidFunction>(CreateDevice)},
-        {"vkEnumeratePhysicalDevices", reinterpret_cast<PFN_vkVoidFunction>(EnumeratePhysicalDevices)},
-        {"vkGetPhysicalDeviceQueueFamilyProperties", reinterpret_cast<PFN_vkVoidFunction>(GetPhysicalDeviceQueueFamilyProperties)},
-        {"vkDestroyInstance", reinterpret_cast<PFN_vkVoidFunction>(DestroyInstance)},
-        {"vkEnumerateInstanceLayerProperties", reinterpret_cast<PFN_vkVoidFunction>(EnumerateInstanceLayerProperties)},
-        {"vkEnumerateDeviceLayerProperties", reinterpret_cast<PFN_vkVoidFunction>(EnumerateDeviceLayerProperties)},
-        {"vkEnumerateInstanceExtensionProperties", reinterpret_cast<PFN_vkVoidFunction>(EnumerateInstanceExtensionProperties)},
-        {"vkEnumerateDeviceExtensionProperties", reinterpret_cast<PFN_vkVoidFunction>(EnumerateDeviceExtensionProperties)},
-    };
-
-    for (size_t i = 0; i < ARRAY_SIZE(core_instance_commands); i++) {
-        if (!strcmp(core_instance_commands[i].name, name)) return core_instance_commands[i].proc;
-    }
-
-    return nullptr;
-}
-
-static PFN_vkVoidFunction intercept_core_device_command(const char *name) {
-    static const struct {
-        const char *name;
-        PFN_vkVoidFunction proc;
-    } core_device_commands[] = {
-        {"vkGetDeviceProcAddr", reinterpret_cast<PFN_vkVoidFunction>(GetDeviceProcAddr)},
-        {"vkQueueSubmit", reinterpret_cast<PFN_vkVoidFunction>(QueueSubmit)},
-        {"vkWaitForFences", reinterpret_cast<PFN_vkVoidFunction>(WaitForFences)},
-        {"vkGetFenceStatus", reinterpret_cast<PFN_vkVoidFunction>(GetFenceStatus)},
-        {"vkQueueWaitIdle", reinterpret_cast<PFN_vkVoidFunction>(QueueWaitIdle)},
-        {"vkDeviceWaitIdle", reinterpret_cast<PFN_vkVoidFunction>(DeviceWaitIdle)},
-        {"vkGetDeviceQueue", reinterpret_cast<PFN_vkVoidFunction>(GetDeviceQueue)},
-        {"vkDestroyInstance", reinterpret_cast<PFN_vkVoidFunction>(DestroyInstance)},
-        {"vkDestroyDevice", reinterpret_cast<PFN_vkVoidFunction>(DestroyDevice)},
-        {"vkDestroyFence", reinterpret_cast<PFN_vkVoidFunction>(DestroyFence)},
-        {"vkResetFences", reinterpret_cast<PFN_vkVoidFunction>(ResetFences)},
-        {"vkDestroySemaphore", reinterpret_cast<PFN_vkVoidFunction>(DestroySemaphore)},
-        {"vkDestroyEvent", reinterpret_cast<PFN_vkVoidFunction>(DestroyEvent)},
-        {"vkDestroyQueryPool", reinterpret_cast<PFN_vkVoidFunction>(DestroyQueryPool)},
-        {"vkDestroyBuffer", reinterpret_cast<PFN_vkVoidFunction>(DestroyBuffer)},
-        {"vkDestroyBufferView", reinterpret_cast<PFN_vkVoidFunction>(DestroyBufferView)},
-        {"vkDestroyImage", reinterpret_cast<PFN_vkVoidFunction>(DestroyImage)},
-        {"vkDestroyImageView", reinterpret_cast<PFN_vkVoidFunction>(DestroyImageView)},
-        {"vkDestroyShaderModule", reinterpret_cast<PFN_vkVoidFunction>(DestroyShaderModule)},
-        {"vkDestroyPipeline", reinterpret_cast<PFN_vkVoidFunction>(DestroyPipeline)},
-        {"vkDestroyPipelineLayout", reinterpret_cast<PFN_vkVoidFunction>(DestroyPipelineLayout)},
-        {"vkDestroySampler", reinterpret_cast<PFN_vkVoidFunction>(DestroySampler)},
-        {"vkDestroyDescriptorSetLayout", reinterpret_cast<PFN_vkVoidFunction>(DestroyDescriptorSetLayout)},
-        {"vkDestroyDescriptorPool", reinterpret_cast<PFN_vkVoidFunction>(DestroyDescriptorPool)},
-        {"vkDestroyFramebuffer", reinterpret_cast<PFN_vkVoidFunction>(DestroyFramebuffer)},
-        {"vkDestroyRenderPass", reinterpret_cast<PFN_vkVoidFunction>(DestroyRenderPass)},
-        {"vkCreateBuffer", reinterpret_cast<PFN_vkVoidFunction>(CreateBuffer)},
-        {"vkCreateBufferView", reinterpret_cast<PFN_vkVoidFunction>(CreateBufferView)},
-        {"vkCreateImage", reinterpret_cast<PFN_vkVoidFunction>(CreateImage)},
-        {"vkCreateImageView", reinterpret_cast<PFN_vkVoidFunction>(CreateImageView)},
-        {"vkCreateFence", reinterpret_cast<PFN_vkVoidFunction>(CreateFence)},
-        {"vkCreatePipelineCache", reinterpret_cast<PFN_vkVoidFunction>(CreatePipelineCache)},
-        {"vkDestroyPipelineCache", reinterpret_cast<PFN_vkVoidFunction>(DestroyPipelineCache)},
-        {"vkGetPipelineCacheData", reinterpret_cast<PFN_vkVoidFunction>(GetPipelineCacheData)},
-        {"vkMergePipelineCaches", reinterpret_cast<PFN_vkVoidFunction>(MergePipelineCaches)},
-        {"vkCreateGraphicsPipelines", reinterpret_cast<PFN_vkVoidFunction>(CreateGraphicsPipelines)},
-        {"vkCreateComputePipelines", reinterpret_cast<PFN_vkVoidFunction>(CreateComputePipelines)},
-        {"vkCreateSampler", reinterpret_cast<PFN_vkVoidFunction>(CreateSampler)},
-        {"vkCreateDescriptorSetLayout", reinterpret_cast<PFN_vkVoidFunction>(CreateDescriptorSetLayout)},
-        {"vkCreatePipelineLayout", reinterpret_cast<PFN_vkVoidFunction>(CreatePipelineLayout)},
-        {"vkCreateDescriptorPool", reinterpret_cast<PFN_vkVoidFunction>(CreateDescriptorPool)},
-        {"vkResetDescriptorPool", reinterpret_cast<PFN_vkVoidFunction>(ResetDescriptorPool)},
-        {"vkAllocateDescriptorSets", reinterpret_cast<PFN_vkVoidFunction>(AllocateDescriptorSets)},
-        {"vkFreeDescriptorSets", reinterpret_cast<PFN_vkVoidFunction>(FreeDescriptorSets)},
-        {"vkUpdateDescriptorSets", reinterpret_cast<PFN_vkVoidFunction>(UpdateDescriptorSets)},
-        {"vkCreateCommandPool", reinterpret_cast<PFN_vkVoidFunction>(CreateCommandPool)},
-        {"vkDestroyCommandPool", reinterpret_cast<PFN_vkVoidFunction>(DestroyCommandPool)},
-        {"vkResetCommandPool", reinterpret_cast<PFN_vkVoidFunction>(ResetCommandPool)},
-        {"vkCreateQueryPool", reinterpret_cast<PFN_vkVoidFunction>(CreateQueryPool)},
-        {"vkAllocateCommandBuffers", reinterpret_cast<PFN_vkVoidFunction>(AllocateCommandBuffers)},
-        {"vkFreeCommandBuffers", reinterpret_cast<PFN_vkVoidFunction>(FreeCommandBuffers)},
-        {"vkBeginCommandBuffer", reinterpret_cast<PFN_vkVoidFunction>(BeginCommandBuffer)},
-        {"vkEndCommandBuffer", reinterpret_cast<PFN_vkVoidFunction>(EndCommandBuffer)},
-        {"vkResetCommandBuffer", reinterpret_cast<PFN_vkVoidFunction>(ResetCommandBuffer)},
-        {"vkCmdBindPipeline", reinterpret_cast<PFN_vkVoidFunction>(CmdBindPipeline)},
-        {"vkCmdSetViewport", reinterpret_cast<PFN_vkVoidFunction>(CmdSetViewport)},
-        {"vkCmdSetScissor", reinterpret_cast<PFN_vkVoidFunction>(CmdSetScissor)},
-        {"vkCmdSetLineWidth", reinterpret_cast<PFN_vkVoidFunction>(CmdSetLineWidth)},
-        {"vkCmdSetDepthBias", reinterpret_cast<PFN_vkVoidFunction>(CmdSetDepthBias)},
-        {"vkCmdSetBlendConstants", reinterpret_cast<PFN_vkVoidFunction>(CmdSetBlendConstants)},
-        {"vkCmdSetDepthBounds", reinterpret_cast<PFN_vkVoidFunction>(CmdSetDepthBounds)},
-        {"vkCmdSetStencilCompareMask", reinterpret_cast<PFN_vkVoidFunction>(CmdSetStencilCompareMask)},
-        {"vkCmdSetStencilWriteMask", reinterpret_cast<PFN_vkVoidFunction>(CmdSetStencilWriteMask)},
-        {"vkCmdSetStencilReference", reinterpret_cast<PFN_vkVoidFunction>(CmdSetStencilReference)},
-        {"vkCmdBindDescriptorSets", reinterpret_cast<PFN_vkVoidFunction>(CmdBindDescriptorSets)},
-        {"vkCmdBindVertexBuffers", reinterpret_cast<PFN_vkVoidFunction>(CmdBindVertexBuffers)},
-        {"vkCmdBindIndexBuffer", reinterpret_cast<PFN_vkVoidFunction>(CmdBindIndexBuffer)},
-        {"vkCmdDraw", reinterpret_cast<PFN_vkVoidFunction>(CmdDraw)},
-        {"vkCmdDrawIndexed", reinterpret_cast<PFN_vkVoidFunction>(CmdDrawIndexed)},
-        {"vkCmdDrawIndirect", reinterpret_cast<PFN_vkVoidFunction>(CmdDrawIndirect)},
-        {"vkCmdDrawIndexedIndirect", reinterpret_cast<PFN_vkVoidFunction>(CmdDrawIndexedIndirect)},
-        {"vkCmdDispatch", reinterpret_cast<PFN_vkVoidFunction>(CmdDispatch)},
-        {"vkCmdDispatchIndirect", reinterpret_cast<PFN_vkVoidFunction>(CmdDispatchIndirect)},
-        {"vkCmdCopyBuffer", reinterpret_cast<PFN_vkVoidFunction>(CmdCopyBuffer)},
-        {"vkCmdCopyImage", reinterpret_cast<PFN_vkVoidFunction>(CmdCopyImage)},
-        {"vkCmdBlitImage", reinterpret_cast<PFN_vkVoidFunction>(CmdBlitImage)},
-        {"vkCmdCopyBufferToImage", reinterpret_cast<PFN_vkVoidFunction>(CmdCopyBufferToImage)},
-        {"vkCmdCopyImageToBuffer", reinterpret_cast<PFN_vkVoidFunction>(CmdCopyImageToBuffer)},
-        {"vkCmdUpdateBuffer", reinterpret_cast<PFN_vkVoidFunction>(CmdUpdateBuffer)},
-        {"vkCmdFillBuffer", reinterpret_cast<PFN_vkVoidFunction>(CmdFillBuffer)},
-        {"vkCmdClearColorImage", reinterpret_cast<PFN_vkVoidFunction>(CmdClearColorImage)},
-        {"vkCmdClearDepthStencilImage", reinterpret_cast<PFN_vkVoidFunction>(CmdClearDepthStencilImage)},
-        {"vkCmdClearAttachments", reinterpret_cast<PFN_vkVoidFunction>(CmdClearAttachments)},
-        {"vkCmdResolveImage", reinterpret_cast<PFN_vkVoidFunction>(CmdResolveImage)},
-        {"vkGetImageSubresourceLayout", reinterpret_cast<PFN_vkVoidFunction>(GetImageSubresourceLayout) },
-        {"vkCmdSetEvent", reinterpret_cast<PFN_vkVoidFunction>(CmdSetEvent)},
-        {"vkCmdResetEvent", reinterpret_cast<PFN_vkVoidFunction>(CmdResetEvent)},
-        {"vkCmdWaitEvents", reinterpret_cast<PFN_vkVoidFunction>(CmdWaitEvents)},
-        {"vkCmdPipelineBarrier", reinterpret_cast<PFN_vkVoidFunction>(CmdPipelineBarrier)},
-        {"vkCmdBeginQuery", reinterpret_cast<PFN_vkVoidFunction>(CmdBeginQuery)},
-        {"vkCmdEndQuery", reinterpret_cast<PFN_vkVoidFunction>(CmdEndQuery)},
-        {"vkCmdResetQueryPool", reinterpret_cast<PFN_vkVoidFunction>(CmdResetQueryPool)},
-        {"vkCmdCopyQueryPoolResults", reinterpret_cast<PFN_vkVoidFunction>(CmdCopyQueryPoolResults)},
-        {"vkCmdPushConstants", reinterpret_cast<PFN_vkVoidFunction>(CmdPushConstants)},
-        {"vkCmdWriteTimestamp", reinterpret_cast<PFN_vkVoidFunction>(CmdWriteTimestamp)},
-        {"vkCreateFramebuffer", reinterpret_cast<PFN_vkVoidFunction>(CreateFramebuffer)},
-        {"vkCreateShaderModule", reinterpret_cast<PFN_vkVoidFunction>(CreateShaderModule)},
-        {"vkCreateRenderPass", reinterpret_cast<PFN_vkVoidFunction>(CreateRenderPass)},
-        {"vkCmdBeginRenderPass", reinterpret_cast<PFN_vkVoidFunction>(CmdBeginRenderPass)},
-        {"vkCmdNextSubpass", reinterpret_cast<PFN_vkVoidFunction>(CmdNextSubpass)},
-        {"vkCmdEndRenderPass", reinterpret_cast<PFN_vkVoidFunction>(CmdEndRenderPass)},
-        {"vkCmdExecuteCommands", reinterpret_cast<PFN_vkVoidFunction>(CmdExecuteCommands)},
-        {"vkSetEvent", reinterpret_cast<PFN_vkVoidFunction>(SetEvent)},
-        {"vkMapMemory", reinterpret_cast<PFN_vkVoidFunction>(MapMemory)},
-        {"vkUnmapMemory", reinterpret_cast<PFN_vkVoidFunction>(UnmapMemory)},
-        {"vkFlushMappedMemoryRanges", reinterpret_cast<PFN_vkVoidFunction>(FlushMappedMemoryRanges)},
-        {"vkInvalidateMappedMemoryRanges", reinterpret_cast<PFN_vkVoidFunction>(InvalidateMappedMemoryRanges)},
-        {"vkAllocateMemory", reinterpret_cast<PFN_vkVoidFunction>(AllocateMemory)},
-        {"vkFreeMemory", reinterpret_cast<PFN_vkVoidFunction>(FreeMemory)},
-        {"vkBindBufferMemory", reinterpret_cast<PFN_vkVoidFunction>(BindBufferMemory)},
-        {"vkGetBufferMemoryRequirements", reinterpret_cast<PFN_vkVoidFunction>(GetBufferMemoryRequirements)},
-        {"vkGetImageMemoryRequirements", reinterpret_cast<PFN_vkVoidFunction>(GetImageMemoryRequirements)},
-        {"vkGetQueryPoolResults", reinterpret_cast<PFN_vkVoidFunction>(GetQueryPoolResults)},
-        {"vkBindImageMemory", reinterpret_cast<PFN_vkVoidFunction>(BindImageMemory)},
-        {"vkQueueBindSparse", reinterpret_cast<PFN_vkVoidFunction>(QueueBindSparse)},
-        {"vkCreateSemaphore", reinterpret_cast<PFN_vkVoidFunction>(CreateSemaphore)},
-        {"vkCreateEvent", reinterpret_cast<PFN_vkVoidFunction>(CreateEvent)},
-    };
-
-    for (size_t i = 0; i < ARRAY_SIZE(core_device_commands); i++) {
-        if (!strcmp(core_device_commands[i].name, name)) return core_device_commands[i].proc;
-    }
-
-    return nullptr;
-}
-
-static PFN_vkVoidFunction intercept_device_extension_command(const char *name, VkDevice device) {
-    layer_data *device_data = GetLayerDataPtr(get_dispatch_key(device), layer_data_map);
-
-    const struct {
-        const char *name;
-        PFN_vkVoidFunction proc;
-        bool enabled;
-    } device_extension_commands[] = {
-        {"vkCreateDescriptorUpdateTemplateKHR", reinterpret_cast<PFN_vkVoidFunction>(CreateDescriptorUpdateTemplateKHR),
-         device_data->device_extensions.khr_descriptor_update_template},
-        {"vkDestroyDescriptorUpdateTemplateKHR", reinterpret_cast<PFN_vkVoidFunction>(DestroyDescriptorUpdateTemplateKHR),
-         device_data->device_extensions.khr_descriptor_update_template},
-        {"vkUpdateDescriptorSetWithTemplateKHR", reinterpret_cast<PFN_vkVoidFunction>(UpdateDescriptorSetWithTemplateKHR),
-         device_data->device_extensions.khr_descriptor_update_template},
-        {"vkCmdPushDescriptorSetWithTemplateKHR", reinterpret_cast<PFN_vkVoidFunction>(CmdPushDescriptorSetWithTemplateKHR),
-         device_data->device_extensions.khr_descriptor_update_template},
-    };
-
-    if (!device_data) return nullptr;
-
-    for (size_t i = 0; i < ARRAY_SIZE(device_extension_commands); i++) {
-        if (!strcmp(device_extension_commands[i].name, name) && device_extension_commands[i].enabled)
-            return device_extension_commands[i].proc;
-    }
-
-    return nullptr;
-}
-
-static PFN_vkVoidFunction intercept_khr_swapchain_command(const char *name, VkDevice dev) {
-    static const struct {
-        const char *name;
-        PFN_vkVoidFunction proc;
-    } khr_swapchain_commands[] = {
-        {"vkCreateSwapchainKHR", reinterpret_cast<PFN_vkVoidFunction>(CreateSwapchainKHR)},
-        {"vkDestroySwapchainKHR", reinterpret_cast<PFN_vkVoidFunction>(DestroySwapchainKHR)},
-        {"vkGetSwapchainImagesKHR", reinterpret_cast<PFN_vkVoidFunction>(GetSwapchainImagesKHR)},
-        {"vkAcquireNextImageKHR", reinterpret_cast<PFN_vkVoidFunction>(AcquireNextImageKHR)},
-        {"vkQueuePresentKHR", reinterpret_cast<PFN_vkVoidFunction>(QueuePresentKHR)},
-    };
-    layer_data *dev_data = nullptr;
-
-    if (dev) {
-        dev_data = GetLayerDataPtr(get_dispatch_key(dev), layer_data_map);
-        if (!dev_data->device_extensions.khr_swapchain) return nullptr;
-    }
-
-    for (size_t i = 0; i < ARRAY_SIZE(khr_swapchain_commands); i++) {
-        if (!strcmp(khr_swapchain_commands[i].name, name)) return khr_swapchain_commands[i].proc;
-    }
-
-    if (dev_data) {
-        if (!dev_data->device_extensions.khr_display_swapchain) return nullptr;
-    }
-
-    if (!strcmp("vkCreateSharedSwapchainsKHR", name)) return reinterpret_cast<PFN_vkVoidFunction>(CreateSharedSwapchainsKHR);
-
-    return nullptr;
-}
-
-static PFN_vkVoidFunction intercept_khr_surface_command(const char *name, VkInstance instance) {
-    using E = InstanceExtensions;
-    static const struct {
-        const char *name;
-        PFN_vkVoidFunction proc;
-        bool E::*enable;
-    } khr_surface_commands[] = {
-#ifdef VK_USE_PLATFORM_ANDROID_KHR
-        {"vkCreateAndroidSurfaceKHR", reinterpret_cast<PFN_vkVoidFunction>(CreateAndroidSurfaceKHR), &E::khr_android_surface},
-#endif  // VK_USE_PLATFORM_ANDROID_KHR
-#ifdef VK_USE_PLATFORM_MIR_KHR
-        {"vkCreateMirSurfaceKHR", reinterpret_cast<PFN_vkVoidFunction>(CreateMirSurfaceKHR), &E::khr_mir_surface},
-        {"vkGetPhysicalDeviceMirPresentationSupportKHR",
-         reinterpret_cast<PFN_vkVoidFunction>(GetPhysicalDeviceMirPresentationSupportKHR), &E::khr_mir_surface},
-#endif  // VK_USE_PLATFORM_MIR_KHR
-#ifdef VK_USE_PLATFORM_WAYLAND_KHR
-        {"vkCreateWaylandSurfaceKHR", reinterpret_cast<PFN_vkVoidFunction>(CreateWaylandSurfaceKHR), &E::khr_wayland_surface},
-        {"vkGetPhysicalDeviceWaylandPresentationSupportKHR",
-         reinterpret_cast<PFN_vkVoidFunction>(GetPhysicalDeviceWaylandPresentationSupportKHR), &E::khr_wayland_surface},
-#endif  // VK_USE_PLATFORM_WAYLAND_KHR
-#ifdef VK_USE_PLATFORM_WIN32_KHR
-        {"vkCreateWin32SurfaceKHR", reinterpret_cast<PFN_vkVoidFunction>(CreateWin32SurfaceKHR), &E::khr_win32_surface},
-        {"vkGetPhysicalDeviceWin32PresentationSupportKHR",
-         reinterpret_cast<PFN_vkVoidFunction>(GetPhysicalDeviceWin32PresentationSupportKHR), &E::khr_win32_surface},
-#endif  // VK_USE_PLATFORM_WIN32_KHR
-#ifdef VK_USE_PLATFORM_XCB_KHR
-        {"vkCreateXcbSurfaceKHR", reinterpret_cast<PFN_vkVoidFunction>(CreateXcbSurfaceKHR), &E::khr_xcb_surface},
-        {"vkGetPhysicalDeviceXcbPresentationSupportKHR",
-         reinterpret_cast<PFN_vkVoidFunction>(GetPhysicalDeviceXcbPresentationSupportKHR), &E::khr_xcb_surface},
-#endif  // VK_USE_PLATFORM_XCB_KHR
-#ifdef VK_USE_PLATFORM_XLIB_KHR
-        {"vkCreateXlibSurfaceKHR", reinterpret_cast<PFN_vkVoidFunction>(CreateXlibSurfaceKHR), &E::khr_xlib_surface},
-        {"vkGetPhysicalDeviceXlibPresentationSupportKHR",
-         reinterpret_cast<PFN_vkVoidFunction>(GetPhysicalDeviceXlibPresentationSupportKHR), &E::khr_xlib_surface},
-#endif  // VK_USE_PLATFORM_XLIB_KHR
-        {"vkCreateDisplayPlaneSurfaceKHR", reinterpret_cast<PFN_vkVoidFunction>(CreateDisplayPlaneSurfaceKHR), &E::khr_display},
-        {"vkDestroySurfaceKHR", reinterpret_cast<PFN_vkVoidFunction>(DestroySurfaceKHR), &E::khr_surface},
-        {"vkGetPhysicalDeviceSurfaceCapabilitiesKHR", reinterpret_cast<PFN_vkVoidFunction>(GetPhysicalDeviceSurfaceCapabilitiesKHR),
-         &E::khr_surface},
-        {"vkGetPhysicalDeviceSurfaceCapabilities2KHR",
-         reinterpret_cast<PFN_vkVoidFunction>(GetPhysicalDeviceSurfaceCapabilities2KHR), &E::khr_get_surface_capabilities2},
-        {"vkGetPhysicalDeviceSurfaceCapabilities2EXT",
-         reinterpret_cast<PFN_vkVoidFunction>(GetPhysicalDeviceSurfaceCapabilities2EXT), &E::ext_display_surface_counter},
-        {"vkGetPhysicalDeviceSurfaceSupportKHR", reinterpret_cast<PFN_vkVoidFunction>(GetPhysicalDeviceSurfaceSupportKHR),
-         &E::khr_surface},
-        {"vkGetPhysicalDeviceSurfacePresentModesKHR", reinterpret_cast<PFN_vkVoidFunction>(GetPhysicalDeviceSurfacePresentModesKHR),
-         &E::khr_surface},
-        {"vkGetPhysicalDeviceSurfaceFormatsKHR", reinterpret_cast<PFN_vkVoidFunction>(GetPhysicalDeviceSurfaceFormatsKHR),
-         &E::khr_surface},
-        {"vkGetPhysicalDeviceSurfaceFormats2KHR", reinterpret_cast<PFN_vkVoidFunction>(GetPhysicalDeviceSurfaceFormats2KHR),
-         &E::khr_get_surface_capabilities2},
-    };
-
-    instance_layer_data *instance_data = nullptr;
-    if (instance) {
-        instance_data = GetLayerDataPtr(get_dispatch_key(instance), instance_layer_data_map);
-    }
-
-    for (size_t i = 0; i < ARRAY_SIZE(khr_surface_commands); i++) {
-        if (!strcmp(khr_surface_commands[i].name, name)) {
-            if (instance_data && !(instance_data->extensions.*(khr_surface_commands[i].enable))) return nullptr;
-            return khr_surface_commands[i].proc;
-        }
-    }
-
-    return nullptr;
-}
-
-static PFN_vkVoidFunction intercept_extension_instance_commands(const char *name, VkInstance instance) {
-    // TODO: sort this out.
-    static const struct {
-        const char *name;
-        PFN_vkVoidFunction proc;
-        bool instance_layer_data::*enable;
-    } instance_extension_commands[] = {
-        {"vkGetPhysicalDeviceQueueFamilyProperties2KHR",
-         reinterpret_cast<PFN_vkVoidFunction>(GetPhysicalDeviceQueueFamilyProperties2KHR)},
-        {"vkEnumeratePhysicalDeviceGroupsKHX",
-         reinterpret_cast<PFN_vkVoidFunction>(EnumeratePhysicalDeviceGroupsKHX)},
-    };
-
-    for (size_t i = 0; i < ARRAY_SIZE(instance_extension_commands); i++) {
-        if (!strcmp(instance_extension_commands[i].name, name)) {
-            return instance_extension_commands[i].proc;
-        }
-    }
-    return nullptr;
-}
-
 }  // namespace core_validation
-
-// vk_layer_logging.h expects these to be defined
-
-VKAPI_ATTR VkResult VKAPI_CALL vkCreateDebugReportCallbackEXT(VkInstance instance,
-                                                              const VkDebugReportCallbackCreateInfoEXT *pCreateInfo,
-                                                              const VkAllocationCallbacks *pAllocator,
-                                                              VkDebugReportCallbackEXT *pMsgCallback) {
-    return core_validation::CreateDebugReportCallbackEXT(instance, pCreateInfo, pAllocator, pMsgCallback);
-}
-
-VKAPI_ATTR void VKAPI_CALL vkDestroyDebugReportCallbackEXT(VkInstance instance, VkDebugReportCallbackEXT msgCallback,
-                                                           const VkAllocationCallbacks *pAllocator) {
-    core_validation::DestroyDebugReportCallbackEXT(instance, msgCallback, pAllocator);
-}
-
-VKAPI_ATTR void VKAPI_CALL vkDebugReportMessageEXT(VkInstance instance, VkDebugReportFlagsEXT flags,
-                                                   VkDebugReportObjectTypeEXT objType, uint64_t object, size_t location,
-                                                   int32_t msgCode, const char *pLayerPrefix, const char *pMsg) {
-    core_validation::DebugReportMessageEXT(instance, flags, objType, object, location, msgCode, pLayerPrefix, pMsg);
-}
 
 // loader-layer interface v0, just wrappers since there is only a layer
 

@@ -342,8 +342,9 @@ static bool ValidateObject(T1 dispatchable_object, T2 object, VulkanObjectType o
                 if (other_device_data.second != device_data) {
                     if (other_device_data.second->object_map[object_type].find(object_handle) !=
                             other_device_data.second->object_map[object_type].end() ||
-                        (object_type == kVulkanObjectTypeImage && other_device_data.second->swapchainImageMap.find(object_handle) !=
-                                                                      other_device_data.second->swapchainImageMap.end())) {
+                        (object_type == kVulkanObjectTypeImage &&
+                         other_device_data.second->swapchainImageMap.find(object_handle) !=
+                             other_device_data.second->swapchainImageMap.end())) {
                         // Object found on other device, report an error if object has a device parent error code
                         if (wrong_device_code != VALIDATION_ERROR_UNDEFINED) {
                             return log_msg(device_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, debug_object_type,
@@ -359,8 +360,8 @@ static bool ValidateObject(T1 dispatchable_object, T2 object, VulkanObjectType o
             }
             // Report an error if object was not found anywhere
             return log_msg(device_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, debug_object_type, object_handle, __LINE__,
-                           invalid_handle_code, LayerName, "Invalid %s Object 0x%" PRIxLEAST64 ". %s",
-                           object_string[object_type], object_handle, validation_error_map[invalid_handle_code]);
+                           invalid_handle_code, LayerName, "Invalid %s Object 0x%" PRIxLEAST64 ". %s", object_string[object_type],
+                           object_handle, validation_error_map[invalid_handle_code]);
         }
     }
     return false;
@@ -396,6 +397,16 @@ VKAPI_ATTR void VKAPI_CALL DestroyInstance(VkInstance instance, const VkAllocati
 
     // TODO: The instance handle can not be validated here. The loader will likely have to validate it.
     ValidateObject(instance, instance, kVulkanObjectTypeInstance, true, VALIDATION_ERROR_2580bc01, VALIDATION_ERROR_UNDEFINED);
+
+    // Destroy physical devices
+    for (auto iit = instance_data->object_map[kVulkanObjectTypePhysicalDevice].begin();
+         iit != instance_data->object_map[kVulkanObjectTypePhysicalDevice].end();) {
+        OBJTRACK_NODE *pNode = iit->second;
+
+        VkPhysicalDevice physical_device = reinterpret_cast<VkPhysicalDevice>(pNode->handle);
+        DestroyObject(instance, physical_device, kVulkanObjectTypePhysicalDevice, nullptr, VALIDATION_ERROR_UNDEFINED, VALIDATION_ERROR_UNDEFINED);
+        iit = instance_data->object_map[kVulkanObjectTypePhysicalDevice].begin();
+    }
 
     DestroyObject(instance, instance, kVulkanObjectTypeInstance, pAllocator, VALIDATION_ERROR_258004ec, VALIDATION_ERROR_258004ee);
     // Report any remaining objects in LL
@@ -462,11 +473,11 @@ VKAPI_ATTR void VKAPI_CALL DestroyInstance(VkInstance instance, const VkAllocati
     }
 
     layer_debug_report_destroy_instance(instance_data->report_data);
-    layer_data_map.erase(key);
+    FreeLayerDataPtr(key, layer_data_map);
 
-    instanceExtMap.erase(pInstanceTable);
     lock.unlock();
     ot_instance_table_map.erase(key);
+    delete pInstanceTable;
 }
 
 VKAPI_ATTR void VKAPI_CALL DestroyDevice(VkDevice device, const VkAllocationCallbacks *pAllocator) {
@@ -513,6 +524,9 @@ VKAPI_ATTR void VKAPI_CALL DestroyDevice(VkDevice device, const VkAllocationCall
     VkLayerDispatchTable *pDisp = get_dispatch_table(ot_device_table_map, device);
     pDisp->DestroyDevice(device, pAllocator);
     ot_device_table_map.erase(key);
+    delete pDisp;
+
+    FreeLayerDataPtr(key, layer_data_map);
 }
 
 VKAPI_ATTR void VKAPI_CALL GetPhysicalDeviceFeatures(VkPhysicalDevice physicalDevice, VkPhysicalDeviceFeatures *pFeatures) {
@@ -3262,178 +3276,16 @@ VKAPI_ATTR VkResult VKAPI_CALL EnumerateDeviceExtensionProperties(VkPhysicalDevi
     return pTable->EnumerateDeviceExtensionProperties(physicalDevice, NULL, pCount, pProperties);
 }
 
-static inline PFN_vkVoidFunction InterceptMsgCallbackGetProcAddrCommand(const char *name, VkInstance instance) {
-    layer_data *instance_data = GetLayerDataPtr(get_dispatch_key(instance), layer_data_map);
-    return debug_report_get_instance_proc_addr(instance_data->report_data, name);
-}
-
 VKAPI_ATTR VkResult VKAPI_CALL CreateDisplayPlaneSurfaceKHR(VkInstance instance, const VkDisplaySurfaceCreateInfoKHR *pCreateInfo,
                                                             const VkAllocationCallbacks *pAllocator, VkSurfaceKHR *pSurface);
-
-static inline PFN_vkVoidFunction InterceptWsiEnabledCommand(const char *name, VkInstance instance) {
-    VkLayerInstanceDispatchTable *pTable = get_dispatch_table(ot_instance_table_map, instance);
-    if (instanceExtMap.size() == 0 || !instanceExtMap[pTable].wsi_enabled) return nullptr;
-
-    if (!strcmp("vkDestroySurfaceKHR", name)) return reinterpret_cast<PFN_vkVoidFunction>(DestroySurfaceKHR);
-    if (!strcmp("vkGetPhysicalDeviceSurfaceSupportKHR", name))
-        return reinterpret_cast<PFN_vkVoidFunction>(GetPhysicalDeviceSurfaceSupportKHR);
-    if (!strcmp("vkGetPhysicalDeviceSurfaceCapabilitiesKHR", name))
-        return reinterpret_cast<PFN_vkVoidFunction>(GetPhysicalDeviceSurfaceCapabilitiesKHR);
-    if (!strcmp("vkGetPhysicalDeviceSurfaceFormatsKHR", name))
-        return reinterpret_cast<PFN_vkVoidFunction>(GetPhysicalDeviceSurfaceFormatsKHR);
-    if (!strcmp("vkGetPhysicalDeviceSurfacePresentModesKHR", name))
-        return reinterpret_cast<PFN_vkVoidFunction>(GetPhysicalDeviceSurfacePresentModesKHR);
-    if ((instanceExtMap[pTable].display_enabled == true) && !strcmp("vkCreateDisplayPlaneSurfaceKHR", name))
-        return reinterpret_cast<PFN_vkVoidFunction>(CreateDisplayPlaneSurfaceKHR);
-
-#ifdef VK_USE_PLATFORM_WIN32_KHR
-    if ((instanceExtMap[pTable].win32_enabled == true) && !strcmp("vkCreateWin32SurfaceKHR", name))
-        return reinterpret_cast<PFN_vkVoidFunction>(CreateWin32SurfaceKHR);
-    if ((instanceExtMap[pTable].win32_enabled == true) && !strcmp("vkGetPhysicalDeviceWin32PresentationSupportKHR", name))
-        return reinterpret_cast<PFN_vkVoidFunction>(GetPhysicalDeviceWin32PresentationSupportKHR);
-#endif  // VK_USE_PLATFORM_WIN32_KHR
-#ifdef VK_USE_PLATFORM_XCB_KHR
-    if ((instanceExtMap[pTable].xcb_enabled == true) && !strcmp("vkCreateXcbSurfaceKHR", name))
-        return reinterpret_cast<PFN_vkVoidFunction>(CreateXcbSurfaceKHR);
-    if ((instanceExtMap[pTable].xcb_enabled == true) && !strcmp("vkGetPhysicalDeviceXcbPresentationSupportKHR", name))
-        return reinterpret_cast<PFN_vkVoidFunction>(GetPhysicalDeviceXcbPresentationSupportKHR);
-#endif  // VK_USE_PLATFORM_XCB_KHR
-#ifdef VK_USE_PLATFORM_XLIB_KHR
-    if ((instanceExtMap[pTable].xlib_enabled == true) && !strcmp("vkCreateXlibSurfaceKHR", name))
-        return reinterpret_cast<PFN_vkVoidFunction>(CreateXlibSurfaceKHR);
-    if ((instanceExtMap[pTable].xlib_enabled == true) && !strcmp("vkGetPhysicalDeviceXlibPresentationSupportKHR", name))
-        return reinterpret_cast<PFN_vkVoidFunction>(GetPhysicalDeviceXlibPresentationSupportKHR);
-#endif  // VK_USE_PLATFORM_XLIB_KHR
-#ifdef VK_USE_PLATFORM_MIR_KHR
-    if ((instanceExtMap[pTable].mir_enabled == true) && !strcmp("vkCreateMirSurfaceKHR", name))
-        return reinterpret_cast<PFN_vkVoidFunction>(CreateMirSurfaceKHR);
-    if ((instanceExtMap[pTable].mir_enabled == true) && !strcmp("vkGetPhysicalDeviceMirPresentationSupportKHR", name))
-        return reinterpret_cast<PFN_vkVoidFunction>(GetPhysicalDeviceMirPresentationSupportKHR);
-#endif  // VK_USE_PLATFORM_MIR_KHR
-#ifdef VK_USE_PLATFORM_WAYLAND_KHR
-    if ((instanceExtMap[pTable].wayland_enabled == true) && !strcmp("vkCreateWaylandSurfaceKHR", name))
-        return reinterpret_cast<PFN_vkVoidFunction>(CreateWaylandSurfaceKHR);
-    if ((instanceExtMap[pTable].wayland_enabled == true) && !strcmp("vkGetPhysicalDeviceWaylandPresentationSupportKHR", name))
-        return reinterpret_cast<PFN_vkVoidFunction>(GetPhysicalDeviceWaylandPresentationSupportKHR);
-#endif  // VK_USE_PLATFORM_WAYLAND_KHR
-#ifdef VK_USE_PLATFORM_ANDROID_KHR
-    if ((instanceExtMap[pTable].android_enabled == true) && !strcmp("vkCreateAndroidSurfaceKHR", name))
-        return reinterpret_cast<PFN_vkVoidFunction>(CreateAndroidSurfaceKHR);
-#endif  // VK_USE_PLATFORM_ANDROID_KHR
-
-    return nullptr;
-}
-
-static void CheckDeviceRegisterExtensions(const VkDeviceCreateInfo *pCreateInfo, VkDevice device) {
-    layer_data *device_data = GetLayerDataPtr(get_dispatch_key(device), layer_data_map);
-
-    for (uint32_t i = 0; i < pCreateInfo->enabledExtensionCount; i++) {
-        if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_KHR_DISPLAY_EXTENSION_NAME) == 0) {
-            device_data->enables.wsi_display_extension = true;
-        }
-        if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_KHR_DISPLAY_SWAPCHAIN_EXTENSION_NAME) == 0) {
-            device_data->enables.wsi_display_swapchain = true;
-        }
-        if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_KHR_DESCRIPTOR_UPDATE_TEMPLATE_EXTENSION_NAME) == 0) {
-            device_data->enables.khr_descriptor_update_template = true;
-        }
-        if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_KHR_MAINTENANCE1_EXTENSION_NAME) == 0) {
-            device_data->enables.khr_maintenance1 = true;
-        }
-        if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_KHR_PUSH_DESCRIPTOR_EXTENSION_NAME) == 0) {
-            device_data->enables.khr_push_descriptor = true;
-        }
-        if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_KHR_SWAPCHAIN_EXTENSION_NAME) == 0) {
-            device_data->enables.wsi = true;
-        }
-        if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], "OBJTRACK_EXTENSIONS") == 0) {
-            device_data->enables.objtrack_extensions = true;
-        }
-        if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_KHX_DEVICE_GROUP_EXTENSION_NAME) == 0) {
-            device_data->enables.khx_device_group = true;
-        }
-        if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_KHX_EXTERNAL_MEMORY_FD_EXTENSION_NAME) == 0) {
-            device_data->enables.khx_external_memory_fd = true;
-        }
-#ifdef VK_USE_PLATFORM_WIN32_KHX
-        if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_KHX_EXTERNAL_MEMORY_WIN32_EXTENSION_NAME) == 0) {
-            device_data->enables.khx_external_memory_win32 = true;
-        }
-#endif  // VK_USE_PLATFORM_WIN32_KHX
-        if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_KHX_EXTERNAL_SEMAPHORE_FD_EXTENSION_NAME) == 0) {
-            device_data->enables.khx_external_semaphore_fd = true;
-        }
-#ifdef VK_USE_PLATFORM_WIN32_KHX
-        if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_KHX_EXTERNAL_SEMAPHORE_WIN32_EXTENSION_NAME) == 0) {
-            device_data->enables.khx_external_semaphore_win32 = true;
-        }
-#endif  // VK_USE_PLATFORM_WIN32_KHX
-        if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_EXT_DISCARD_RECTANGLES_EXTENSION_NAME) == 0) {
-            device_data->enables.ext_discard_rectangles = true;
-        }
-        if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_EXT_DISPLAY_CONTROL_EXTENSION_NAME) == 0) {
-            device_data->enables.ext_display_control = true;
-        }
-        if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_NV_CLIP_SPACE_W_SCALING_EXTENSION_NAME) == 0) {
-            device_data->enables.nv_clip_space_w_scaling = true;
-        }
-        if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_NVX_DEVICE_GENERATED_COMMANDS_EXTENSION_NAME) == 0) {
-            device_data->enables.nvx_device_generated_commands = true;
-        }
-        if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_GOOGLE_DISPLAY_TIMING_EXTENSION_NAME) == 0) {
-            device_data->enables.google_display_timing = true;
-        }
-    }
-}
-
-static void CheckInstanceRegisterExtensions(const VkInstanceCreateInfo *pCreateInfo, VkInstance instance) {
-    VkLayerInstanceDispatchTable *pDisp = get_dispatch_table(ot_instance_table_map, instance);
-
-    instanceExtMap[pDisp] = {};
-
-    for (uint32_t i = 0; i < pCreateInfo->enabledExtensionCount; i++) {
-#ifdef VK_USE_PLATFORM_ANDROID_KHR
-        if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_KHR_ANDROID_SURFACE_EXTENSION_NAME) == 0) {
-            instanceExtMap[pDisp].android_enabled = true;
-        }
-#endif
-        if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_KHR_DISPLAY_EXTENSION_NAME) == 0) {
-            instanceExtMap[pDisp].display_enabled = true;
-        }
-        if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_KHR_SURFACE_EXTENSION_NAME) == 0) {
-            instanceExtMap[pDisp].wsi_enabled = true;
-        }
-#ifdef VK_USE_PLATFORM_MIR_KHR
-        if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_KHR_MIR_SURFACE_EXTENSION_NAME) == 0) {
-            instanceExtMap[pDisp].mir_enabled = true;
-        }
-#endif
-#ifdef VK_USE_PLATFORM_WAYLAND_KHR
-        if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_KHR_WAYLAND_SURFACE_EXTENSION_NAME) == 0) {
-            instanceExtMap[pDisp].wayland_enabled = true;
-        }
-#endif
-#ifdef VK_USE_PLATFORM_WIN32_KHR
-        if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_KHR_WIN32_SURFACE_EXTENSION_NAME) == 0) {
-            instanceExtMap[pDisp].win32_enabled = true;
-        }
-#endif
-#ifdef VK_USE_PLATFORM_XCB_KHR
-        if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_KHR_XCB_SURFACE_EXTENSION_NAME) == 0) {
-            instanceExtMap[pDisp].xcb_enabled = true;
-        }
-#endif
-#ifdef VK_USE_PLATFORM_XLIB_KHR
-        if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_KHR_XLIB_SURFACE_EXTENSION_NAME) == 0) {
-            instanceExtMap[pDisp].xlib_enabled = true;
-        }
-#endif
-    }
-}
 
 VKAPI_ATTR VkResult VKAPI_CALL CreateDevice(VkPhysicalDevice physicalDevice, const VkDeviceCreateInfo *pCreateInfo,
                                             const VkAllocationCallbacks *pAllocator, VkDevice *pDevice) {
     std::lock_guard<std::mutex> lock(global_lock);
+    bool skip = ValidateObject(physicalDevice, physicalDevice, kVulkanObjectTypePhysicalDevice, false, VALIDATION_ERROR_1fc27a01,
+                               VALIDATION_ERROR_UNDEFINED);
+    if (skip) return VK_ERROR_VALIDATION_FAILED_EXT;
+
     layer_data *phy_dev_data = GetLayerDataPtr(get_dispatch_key(physicalDevice), layer_data_map);
     VkLayerDeviceCreateInfo *chain_info = get_chain_info(pCreateInfo, VK_LAYER_LINK_INFO);
 
@@ -3462,7 +3314,6 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateDevice(VkPhysicalDevice physicalDevice, con
 
     initDeviceTable(*pDevice, fpGetDeviceProcAddr, ot_device_table_map);
 
-    CheckDeviceRegisterExtensions(pCreateInfo, *pDevice);
     CreateObject(*pDevice, *pDevice, kVulkanObjectTypeDevice, pAllocator);
 
     return result;
@@ -3527,7 +3378,6 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateInstance(const VkInstanceCreateInfo *pCreat
                                                               pCreateInfo->ppEnabledExtensionNames);
 
     InitObjectTracker(instance_data, pAllocator);
-    CheckInstanceRegisterExtensions(pCreateInfo, *pInstance);
 
     CreateObject(*pInstance, *pInstance, kVulkanObjectTypeInstance, pAllocator);
 
@@ -4213,7 +4063,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateDescriptorUpdateTemplateKHR(VkDevice device
                                                                  VkDescriptorUpdateTemplateKHR *pDescriptorUpdateTemplate) {
     bool skip = VK_FALSE;
     std::unique_lock<std::mutex> lock(global_lock);
-    skip |= ValidateObject(device, device, kVulkanObjectTypeDevice, false, VALIDATION_ERROR_UNDEFINED, VALIDATION_ERROR_UNDEFINED);
+    skip |= ValidateObject(device, device, kVulkanObjectTypeDevice, false, VALIDATION_ERROR_1fa05601, VALIDATION_ERROR_UNDEFINED);
     lock.unlock();
     if (skip) {
         return VK_ERROR_VALIDATION_FAILED_EXT;
@@ -4221,7 +4071,10 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateDescriptorUpdateTemplateKHR(VkDevice device
     layer_data *dev_data = GetLayerDataPtr(get_dispatch_key(device), layer_data_map);
     VkResult result = VK_SUCCESS;
     result = dev_data->dispatch_table.CreateDescriptorUpdateTemplateKHR(device, pCreateInfo, pAllocator, pDescriptorUpdateTemplate);
-    // TODO: Add tracking of VkDescriptorUpdateTemplateKHR
+    if (result == VK_SUCCESS) {
+        CreateObject(device, *pDescriptorUpdateTemplate, kVulkanObjectTypeDescriptorUpdateTemplateKHR, pAllocator);
+    }
+
     return result;
 }
 
@@ -4230,12 +4083,15 @@ VKAPI_ATTR void VKAPI_CALL DestroyDescriptorUpdateTemplateKHR(VkDevice device,
                                                               const VkAllocationCallbacks *pAllocator) {
     bool skip = VK_FALSE;
     std::unique_lock<std::mutex> lock(global_lock);
-    skip |= ValidateObject(device, device, kVulkanObjectTypeDevice, false, VALIDATION_ERROR_UNDEFINED, VALIDATION_ERROR_UNDEFINED);
-    // TODO: Add tracking of VkDescriptorUpdateTemplateKHR
+    skip |= ValidateObject(device, device, kVulkanObjectTypeDevice, false, VALIDATION_ERROR_24805601, VALIDATION_ERROR_UNDEFINED);
+    skip |= ValidateObject(device, descriptorUpdateTemplate, kVulkanObjectTypeDescriptorUpdateTemplateKHR, false,
+                           VALIDATION_ERROR_24805201, VALIDATION_ERROR_24805207);
     lock.unlock();
     if (!skip) {
         layer_data *dev_data = GetLayerDataPtr(get_dispatch_key(device), layer_data_map);
         dev_data->dispatch_table.DestroyDescriptorUpdateTemplateKHR(device, descriptorUpdateTemplate, pAllocator);
+        DestroyObject(device, descriptorUpdateTemplate, kVulkanObjectTypeDescriptorUpdateTemplateKHR, pAllocator,
+                      VALIDATION_ERROR_248002c8, VALIDATION_ERROR_248002ca);
     }
 }
 
@@ -4244,10 +4100,11 @@ VKAPI_ATTR void VKAPI_CALL UpdateDescriptorSetWithTemplateKHR(VkDevice device, V
                                                               const void *pData) {
     bool skip = VK_FALSE;
     std::unique_lock<std::mutex> lock(global_lock);
-    skip |= ValidateObject(device, device, kVulkanObjectTypeDevice, false, VALIDATION_ERROR_UNDEFINED, VALIDATION_ERROR_UNDEFINED);
-    skip |= ValidateObject(device, descriptorSet, kVulkanObjectTypeDescriptorSet, false, VALIDATION_ERROR_UNDEFINED,
+    skip |= ValidateObject(device, device, kVulkanObjectTypeDevice, false, VALIDATION_ERROR_33a05601, VALIDATION_ERROR_UNDEFINED);
+    skip |= ValidateObject(device, descriptorSet, kVulkanObjectTypeDescriptorSet, false, VALIDATION_ERROR_33a04801,
                            VALIDATION_ERROR_UNDEFINED);
-    // TODO: Add tracking of VkDescriptorUpdateTemplateKHR
+    skip |= ValidateObject(device, descriptorUpdateTemplate, kVulkanObjectTypeDescriptorUpdateTemplateKHR, false,
+                           VALIDATION_ERROR_33a05201, VALIDATION_ERROR_33a05207);
     lock.unlock();
     if (!skip) {
         layer_data *dev_data = GetLayerDataPtr(get_dispatch_key(device), layer_data_map);
@@ -4260,11 +4117,12 @@ VKAPI_ATTR void VKAPI_CALL CmdPushDescriptorSetWithTemplateKHR(VkCommandBuffer c
                                                                VkPipelineLayout layout, uint32_t set, const void *pData) {
     bool skip = false;
     std::unique_lock<std::mutex> lock(global_lock);
-    skip |= ValidateObject(commandBuffer, commandBuffer, kVulkanObjectTypeCommandBuffer, false, VALIDATION_ERROR_UNDEFINED,
+    skip |= ValidateObject(commandBuffer, commandBuffer, kVulkanObjectTypeCommandBuffer, false, VALIDATION_ERROR_1c002401,
                            VALIDATION_ERROR_UNDEFINED);
-    skip |= ValidateObject(commandBuffer, layout, kVulkanObjectTypePipelineLayout, false, VALIDATION_ERROR_UNDEFINED,
-                           VALIDATION_ERROR_UNDEFINED);
-    // TODO: Add tracking of VkDescriptorUpdateTemplateKHR
+    skip |= ValidateObject(commandBuffer, layout, kVulkanObjectTypePipelineLayout, false, VALIDATION_ERROR_1c00be01,
+                           VALIDATION_ERROR_1c000009);
+    skip |= ValidateObject(commandBuffer, descriptorUpdateTemplate, kVulkanObjectTypeDescriptorUpdateTemplateKHR, false,
+                           VALIDATION_ERROR_1c005201, VALIDATION_ERROR_1c000009);
     lock.unlock();
     if (!skip) {
         layer_data *dev_data = GetLayerDataPtr(get_dispatch_key(commandBuffer), layer_data_map);
@@ -5175,388 +5033,278 @@ VKAPI_ATTR VkResult VKAPI_CALL GetPhysicalDeviceSurfaceFormats2KHR(VkPhysicalDev
     return result;
 }
 
-static inline PFN_vkVoidFunction InterceptCoreDeviceCommand(const char *name) {
-    if (!name || name[0] != 'v' || name[1] != 'k') return NULL;
-
-    name += 2;
-    if (!strcmp(name, "GetDeviceProcAddr")) return (PFN_vkVoidFunction)GetDeviceProcAddr;
-    if (!strcmp(name, "DestroyDevice")) return (PFN_vkVoidFunction)DestroyDevice;
-    if (!strcmp(name, "GetDeviceQueue")) return (PFN_vkVoidFunction)GetDeviceQueue;
-    if (!strcmp(name, "QueueSubmit")) return (PFN_vkVoidFunction)QueueSubmit;
-    if (!strcmp(name, "QueueWaitIdle")) return (PFN_vkVoidFunction)QueueWaitIdle;
-    if (!strcmp(name, "DeviceWaitIdle")) return (PFN_vkVoidFunction)DeviceWaitIdle;
-    if (!strcmp(name, "AllocateMemory")) return (PFN_vkVoidFunction)AllocateMemory;
-    if (!strcmp(name, "FreeMemory")) return (PFN_vkVoidFunction)FreeMemory;
-    if (!strcmp(name, "MapMemory")) return (PFN_vkVoidFunction)MapMemory;
-    if (!strcmp(name, "UnmapMemory")) return (PFN_vkVoidFunction)UnmapMemory;
-    if (!strcmp(name, "FlushMappedMemoryRanges")) return (PFN_vkVoidFunction)FlushMappedMemoryRanges;
-    if (!strcmp(name, "InvalidateMappedMemoryRanges")) return (PFN_vkVoidFunction)InvalidateMappedMemoryRanges;
-    if (!strcmp(name, "GetDeviceMemoryCommitment")) return (PFN_vkVoidFunction)GetDeviceMemoryCommitment;
-    if (!strcmp(name, "BindBufferMemory")) return (PFN_vkVoidFunction)BindBufferMemory;
-    if (!strcmp(name, "BindImageMemory")) return (PFN_vkVoidFunction)BindImageMemory;
-    if (!strcmp(name, "GetBufferMemoryRequirements")) return (PFN_vkVoidFunction)GetBufferMemoryRequirements;
-    if (!strcmp(name, "GetImageMemoryRequirements")) return (PFN_vkVoidFunction)GetImageMemoryRequirements;
-    if (!strcmp(name, "GetImageSparseMemoryRequirements")) return (PFN_vkVoidFunction)GetImageSparseMemoryRequirements;
-    if (!strcmp(name, "QueueBindSparse")) return (PFN_vkVoidFunction)QueueBindSparse;
-    if (!strcmp(name, "CreateFence")) return (PFN_vkVoidFunction)CreateFence;
-    if (!strcmp(name, "DestroyFence")) return (PFN_vkVoidFunction)DestroyFence;
-    if (!strcmp(name, "ResetFences")) return (PFN_vkVoidFunction)ResetFences;
-    if (!strcmp(name, "GetFenceStatus")) return (PFN_vkVoidFunction)GetFenceStatus;
-    if (!strcmp(name, "WaitForFences")) return (PFN_vkVoidFunction)WaitForFences;
-    if (!strcmp(name, "CreateSemaphore")) return (PFN_vkVoidFunction)CreateSemaphore;
-    if (!strcmp(name, "DestroySemaphore")) return (PFN_vkVoidFunction)DestroySemaphore;
-    if (!strcmp(name, "CreateEvent")) return (PFN_vkVoidFunction)CreateEvent;
-    if (!strcmp(name, "DestroyEvent")) return (PFN_vkVoidFunction)DestroyEvent;
-    if (!strcmp(name, "GetEventStatus")) return (PFN_vkVoidFunction)GetEventStatus;
-    if (!strcmp(name, "SetEvent")) return (PFN_vkVoidFunction)SetEvent;
-    if (!strcmp(name, "ResetEvent")) return (PFN_vkVoidFunction)ResetEvent;
-    if (!strcmp(name, "CreateQueryPool")) return (PFN_vkVoidFunction)CreateQueryPool;
-    if (!strcmp(name, "DestroyQueryPool")) return (PFN_vkVoidFunction)DestroyQueryPool;
-    if (!strcmp(name, "GetQueryPoolResults")) return (PFN_vkVoidFunction)GetQueryPoolResults;
-    if (!strcmp(name, "CreateBuffer")) return (PFN_vkVoidFunction)CreateBuffer;
-    if (!strcmp(name, "DestroyBuffer")) return (PFN_vkVoidFunction)DestroyBuffer;
-    if (!strcmp(name, "CreateBufferView")) return (PFN_vkVoidFunction)CreateBufferView;
-    if (!strcmp(name, "DestroyBufferView")) return (PFN_vkVoidFunction)DestroyBufferView;
-    if (!strcmp(name, "CreateImage")) return (PFN_vkVoidFunction)CreateImage;
-    if (!strcmp(name, "DestroyImage")) return (PFN_vkVoidFunction)DestroyImage;
-    if (!strcmp(name, "GetImageSubresourceLayout")) return (PFN_vkVoidFunction)GetImageSubresourceLayout;
-    if (!strcmp(name, "CreateImageView")) return (PFN_vkVoidFunction)CreateImageView;
-    if (!strcmp(name, "DestroyImageView")) return (PFN_vkVoidFunction)DestroyImageView;
-    if (!strcmp(name, "CreateShaderModule")) return (PFN_vkVoidFunction)CreateShaderModule;
-    if (!strcmp(name, "DestroyShaderModule")) return (PFN_vkVoidFunction)DestroyShaderModule;
-    if (!strcmp(name, "CreatePipelineCache")) return (PFN_vkVoidFunction)CreatePipelineCache;
-    if (!strcmp(name, "DestroyPipelineCache")) return (PFN_vkVoidFunction)DestroyPipelineCache;
-    if (!strcmp(name, "GetPipelineCacheData")) return (PFN_vkVoidFunction)GetPipelineCacheData;
-    if (!strcmp(name, "MergePipelineCaches")) return (PFN_vkVoidFunction)MergePipelineCaches;
-    if (!strcmp(name, "CreateGraphicsPipelines")) return (PFN_vkVoidFunction)CreateGraphicsPipelines;
-    if (!strcmp(name, "CreateComputePipelines")) return (PFN_vkVoidFunction)CreateComputePipelines;
-    if (!strcmp(name, "DestroyPipeline")) return (PFN_vkVoidFunction)DestroyPipeline;
-    if (!strcmp(name, "CreatePipelineLayout")) return (PFN_vkVoidFunction)CreatePipelineLayout;
-    if (!strcmp(name, "DestroyPipelineLayout")) return (PFN_vkVoidFunction)DestroyPipelineLayout;
-    if (!strcmp(name, "CreateSampler")) return (PFN_vkVoidFunction)CreateSampler;
-    if (!strcmp(name, "DestroySampler")) return (PFN_vkVoidFunction)DestroySampler;
-    if (!strcmp(name, "CreateDescriptorSetLayout")) return (PFN_vkVoidFunction)CreateDescriptorSetLayout;
-    if (!strcmp(name, "DestroyDescriptorSetLayout")) return (PFN_vkVoidFunction)DestroyDescriptorSetLayout;
-    if (!strcmp(name, "CreateDescriptorPool")) return (PFN_vkVoidFunction)CreateDescriptorPool;
-    if (!strcmp(name, "DestroyDescriptorPool")) return (PFN_vkVoidFunction)DestroyDescriptorPool;
-    if (!strcmp(name, "ResetDescriptorPool")) return (PFN_vkVoidFunction)ResetDescriptorPool;
-    if (!strcmp(name, "AllocateDescriptorSets")) return (PFN_vkVoidFunction)AllocateDescriptorSets;
-    if (!strcmp(name, "FreeDescriptorSets")) return (PFN_vkVoidFunction)FreeDescriptorSets;
-    if (!strcmp(name, "UpdateDescriptorSets")) return (PFN_vkVoidFunction)UpdateDescriptorSets;
-    if (!strcmp(name, "CreateFramebuffer")) return (PFN_vkVoidFunction)CreateFramebuffer;
-    if (!strcmp(name, "DestroyFramebuffer")) return (PFN_vkVoidFunction)DestroyFramebuffer;
-    if (!strcmp(name, "CreateRenderPass")) return (PFN_vkVoidFunction)CreateRenderPass;
-    if (!strcmp(name, "DestroyRenderPass")) return (PFN_vkVoidFunction)DestroyRenderPass;
-    if (!strcmp(name, "GetRenderAreaGranularity")) return (PFN_vkVoidFunction)GetRenderAreaGranularity;
-    if (!strcmp(name, "CreateCommandPool")) return (PFN_vkVoidFunction)CreateCommandPool;
-    if (!strcmp(name, "DestroyCommandPool")) return (PFN_vkVoidFunction)DestroyCommandPool;
-    if (!strcmp(name, "ResetCommandPool")) return (PFN_vkVoidFunction)ResetCommandPool;
-    if (!strcmp(name, "AllocateCommandBuffers")) return (PFN_vkVoidFunction)AllocateCommandBuffers;
-    if (!strcmp(name, "FreeCommandBuffers")) return (PFN_vkVoidFunction)FreeCommandBuffers;
-    if (!strcmp(name, "BeginCommandBuffer")) return (PFN_vkVoidFunction)BeginCommandBuffer;
-    if (!strcmp(name, "EndCommandBuffer")) return (PFN_vkVoidFunction)EndCommandBuffer;
-    if (!strcmp(name, "ResetCommandBuffer")) return (PFN_vkVoidFunction)ResetCommandBuffer;
-    if (!strcmp(name, "CmdBindPipeline")) return (PFN_vkVoidFunction)CmdBindPipeline;
-    if (!strcmp(name, "CmdSetViewport")) return (PFN_vkVoidFunction)CmdSetViewport;
-    if (!strcmp(name, "CmdSetScissor")) return (PFN_vkVoidFunction)CmdSetScissor;
-    if (!strcmp(name, "CmdSetLineWidth")) return (PFN_vkVoidFunction)CmdSetLineWidth;
-    if (!strcmp(name, "CmdSetDepthBias")) return (PFN_vkVoidFunction)CmdSetDepthBias;
-    if (!strcmp(name, "CmdSetBlendConstants")) return (PFN_vkVoidFunction)CmdSetBlendConstants;
-    if (!strcmp(name, "CmdSetDepthBounds")) return (PFN_vkVoidFunction)CmdSetDepthBounds;
-    if (!strcmp(name, "CmdSetStencilCompareMask")) return (PFN_vkVoidFunction)CmdSetStencilCompareMask;
-    if (!strcmp(name, "CmdSetStencilWriteMask")) return (PFN_vkVoidFunction)CmdSetStencilWriteMask;
-    if (!strcmp(name, "CmdSetStencilReference")) return (PFN_vkVoidFunction)CmdSetStencilReference;
-    if (!strcmp(name, "CmdBindDescriptorSets")) return (PFN_vkVoidFunction)CmdBindDescriptorSets;
-    if (!strcmp(name, "CmdBindIndexBuffer")) return (PFN_vkVoidFunction)CmdBindIndexBuffer;
-    if (!strcmp(name, "CmdBindVertexBuffers")) return (PFN_vkVoidFunction)CmdBindVertexBuffers;
-    if (!strcmp(name, "CmdDraw")) return (PFN_vkVoidFunction)CmdDraw;
-    if (!strcmp(name, "CmdDrawIndexed")) return (PFN_vkVoidFunction)CmdDrawIndexed;
-    if (!strcmp(name, "CmdDrawIndirect")) return (PFN_vkVoidFunction)CmdDrawIndirect;
-    if (!strcmp(name, "CmdDrawIndexedIndirect")) return (PFN_vkVoidFunction)CmdDrawIndexedIndirect;
-    if (!strcmp(name, "CmdDispatch")) return (PFN_vkVoidFunction)CmdDispatch;
-    if (!strcmp(name, "CmdDispatchIndirect")) return (PFN_vkVoidFunction)CmdDispatchIndirect;
-    if (!strcmp(name, "CmdCopyBuffer")) return (PFN_vkVoidFunction)CmdCopyBuffer;
-    if (!strcmp(name, "CmdCopyImage")) return (PFN_vkVoidFunction)CmdCopyImage;
-    if (!strcmp(name, "CmdBlitImage")) return (PFN_vkVoidFunction)CmdBlitImage;
-    if (!strcmp(name, "CmdCopyBufferToImage")) return (PFN_vkVoidFunction)CmdCopyBufferToImage;
-    if (!strcmp(name, "CmdCopyImageToBuffer")) return (PFN_vkVoidFunction)CmdCopyImageToBuffer;
-    if (!strcmp(name, "CmdUpdateBuffer")) return (PFN_vkVoidFunction)CmdUpdateBuffer;
-    if (!strcmp(name, "CmdFillBuffer")) return (PFN_vkVoidFunction)CmdFillBuffer;
-    if (!strcmp(name, "CmdClearColorImage")) return (PFN_vkVoidFunction)CmdClearColorImage;
-    if (!strcmp(name, "CmdClearDepthStencilImage")) return (PFN_vkVoidFunction)CmdClearDepthStencilImage;
-    if (!strcmp(name, "CmdClearAttachments")) return (PFN_vkVoidFunction)CmdClearAttachments;
-    if (!strcmp(name, "CmdResolveImage")) return (PFN_vkVoidFunction)CmdResolveImage;
-    if (!strcmp(name, "CmdSetEvent")) return (PFN_vkVoidFunction)CmdSetEvent;
-    if (!strcmp(name, "CmdResetEvent")) return (PFN_vkVoidFunction)CmdResetEvent;
-    if (!strcmp(name, "CmdWaitEvents")) return (PFN_vkVoidFunction)CmdWaitEvents;
-    if (!strcmp(name, "CmdPipelineBarrier")) return (PFN_vkVoidFunction)CmdPipelineBarrier;
-    if (!strcmp(name, "CmdBeginQuery")) return (PFN_vkVoidFunction)CmdBeginQuery;
-    if (!strcmp(name, "CmdEndQuery")) return (PFN_vkVoidFunction)CmdEndQuery;
-    if (!strcmp(name, "CmdResetQueryPool")) return (PFN_vkVoidFunction)CmdResetQueryPool;
-    if (!strcmp(name, "CmdWriteTimestamp")) return (PFN_vkVoidFunction)CmdWriteTimestamp;
-    if (!strcmp(name, "CmdCopyQueryPoolResults")) return (PFN_vkVoidFunction)CmdCopyQueryPoolResults;
-    if (!strcmp(name, "CmdPushConstants")) return (PFN_vkVoidFunction)CmdPushConstants;
-    if (!strcmp(name, "CmdBeginRenderPass")) return (PFN_vkVoidFunction)CmdBeginRenderPass;
-    if (!strcmp(name, "CmdNextSubpass")) return (PFN_vkVoidFunction)CmdNextSubpass;
-    if (!strcmp(name, "CmdEndRenderPass")) return (PFN_vkVoidFunction)CmdEndRenderPass;
-    if (!strcmp(name, "CmdExecuteCommands")) return (PFN_vkVoidFunction)CmdExecuteCommands;
-    if (!strcmp(name, "DebugMarkerSetObjectTagEXT")) return (PFN_vkVoidFunction)DebugMarkerSetObjectTagEXT;
-    if (!strcmp(name, "DebugMarkerSetObjectNameEXT")) return (PFN_vkVoidFunction)DebugMarkerSetObjectNameEXT;
-    if (!strcmp(name, "CmdDebugMarkerBeginEXT")) return (PFN_vkVoidFunction)CmdDebugMarkerBeginEXT;
-    if (!strcmp(name, "CmdDebugMarkerEndEXT")) return (PFN_vkVoidFunction)CmdDebugMarkerEndEXT;
-    if (!strcmp(name, "CmdDebugMarkerInsertEXT")) return (PFN_vkVoidFunction)CmdDebugMarkerInsertEXT;
-#ifdef VK_USE_PLATFORM_WIN32_KHR
-    if (!strcmp(name, "GetMemoryWin32HandleNV")) return (PFN_vkVoidFunction)GetMemoryWin32HandleNV;
-#endif  // VK_USE_PLATFORM_WIN32_KHR
-    if (!strcmp(name, "CmdDrawIndirectCountAMD")) return (PFN_vkVoidFunction)CmdDrawIndirectCountAMD;
-    if (!strcmp(name, "CmdDrawIndexedIndirectCountAMD")) return (PFN_vkVoidFunction)CmdDrawIndexedIndirectCountAMD;
-    if (!strcmp(name, "SetHdrMetadataEXT")) return (PFN_vkVoidFunction)SetHdrMetadataEXT;
-
-    return NULL;
-}
-
-static inline PFN_vkVoidFunction InterceptCoreInstanceCommand(const char *name) {
-    if (!name || name[0] != 'v' || name[1] != 'k') return NULL;
-
-    name += 2;
-    if (!strcmp(name, "CreateInstance")) return (PFN_vkVoidFunction)CreateInstance;
-    if (!strcmp(name, "DestroyInstance")) return (PFN_vkVoidFunction)DestroyInstance;
-    if (!strcmp(name, "EnumeratePhysicalDevices")) return (PFN_vkVoidFunction)EnumeratePhysicalDevices;
-    if (!strcmp(name, "_layerGetPhysicalDeviceProcAddr")) return (PFN_vkVoidFunction)GetPhysicalDeviceProcAddr;
-    if (!strcmp(name, "GetPhysicalDeviceFeatures")) return (PFN_vkVoidFunction)GetPhysicalDeviceFeatures;
-    if (!strcmp(name, "GetPhysicalDeviceFormatProperties")) return (PFN_vkVoidFunction)GetPhysicalDeviceFormatProperties;
-    if (!strcmp(name, "GetPhysicalDeviceImageFormatProperties")) return (PFN_vkVoidFunction)GetPhysicalDeviceImageFormatProperties;
-    if (!strcmp(name, "GetPhysicalDeviceProperties")) return (PFN_vkVoidFunction)GetPhysicalDeviceProperties;
-    if (!strcmp(name, "GetPhysicalDeviceQueueFamilyProperties")) return (PFN_vkVoidFunction)GetPhysicalDeviceQueueFamilyProperties;
-    if (!strcmp(name, "GetPhysicalDeviceMemoryProperties")) return (PFN_vkVoidFunction)GetPhysicalDeviceMemoryProperties;
-    if (!strcmp(name, "GetInstanceProcAddr")) return (PFN_vkVoidFunction)GetInstanceProcAddr;
-    if (!strcmp(name, "CreateDevice")) return (PFN_vkVoidFunction)CreateDevice;
-    if (!strcmp(name, "EnumerateInstanceExtensionProperties")) return (PFN_vkVoidFunction)EnumerateInstanceExtensionProperties;
-    if (!strcmp(name, "EnumerateInstanceLayerProperties")) return (PFN_vkVoidFunction)EnumerateInstanceLayerProperties;
-    if (!strcmp(name, "EnumerateDeviceLayerProperties")) return (PFN_vkVoidFunction)EnumerateDeviceLayerProperties;
-    if (!strcmp(name, "GetPhysicalDeviceSparseImageFormatProperties"))
-        return (PFN_vkVoidFunction)GetPhysicalDeviceSparseImageFormatProperties;
-    if (!strcmp(name, "GetPhysicalDeviceExternalImageFormatPropertiesNV"))
-        return (PFN_vkVoidFunction)GetPhysicalDeviceExternalImageFormatPropertiesNV;
-
-    return NULL;
-}
-
-static inline PFN_vkVoidFunction InterceptInstanceExtensionCommand(const char *name) {
-    if (!name || name[0] != 'v' || name[1] != 'k') return NULL;
-
-    name += 2;
-
-    // VK_KHR_get_physical_device_properties2 Extension
-    if (!strcmp(name, "GetPhysicalDeviceFeatures2KHR")) return (PFN_vkVoidFunction)GetPhysicalDeviceFeatures2KHR;
-    if (!strcmp(name, "GetPhysicalDeviceProperties2KHR")) return (PFN_vkVoidFunction)GetPhysicalDeviceProperties2KHR;
-    if (!strcmp(name, "GetPhysicalDeviceFormatProperties2KHR")) return (PFN_vkVoidFunction)GetPhysicalDeviceFormatProperties2KHR;
-    if (!strcmp(name, "GetPhysicalDeviceImageFormatProperties2KHR"))
-        return (PFN_vkVoidFunction)GetPhysicalDeviceImageFormatProperties2KHR;
-    if (!strcmp(name, "GetPhysicalDeviceQueueFamilyProperties2KHR"))
-        return (PFN_vkVoidFunction)GetPhysicalDeviceQueueFamilyProperties2KHR;
-    // VK_KHX_device_group Extension
-    if (!strcmp(name, "GetPhysicalDevicePresentRectanglesKHX")) return (PFN_vkVoidFunction)GetPhysicalDevicePresentRectanglesKHX;
-    // VK_KHX_device_group_creation Extension
-    if (!strcmp(name, "EnumeratePhysicalDeviceGroupsKHX")) return (PFN_vkVoidFunction)EnumeratePhysicalDeviceGroupsKHX;
-    // VK_KHX_external_memory_capabilities Extension
-    if (!strcmp(name, "GetPhysicalDeviceExternalBufferPropertiesKHX"))
-        return (PFN_vkVoidFunction)GetPhysicalDeviceExternalBufferPropertiesKHX;
-    // VK_KHX_external_semaphore_capabilities Extension
-    if (!strcmp(name, "GetPhysicalDeviceExternalSemaphorePropertiesKHX"))
-        return (PFN_vkVoidFunction)GetPhysicalDeviceExternalSemaphorePropertiesKHX;
+// Map of all APIs to be intercepted by this layer
+static const std::unordered_map<std::string, void*> name_to_funcptr_map = {
+    {"vkGetDeviceProcAddr", (void*)GetDeviceProcAddr},
+    {"vkDestroyDevice", (void*)DestroyDevice},
+    {"vkGetDeviceQueue", (void*)GetDeviceQueue},
+    {"vkQueueSubmit", (void*)QueueSubmit},
+    {"vkQueueWaitIdle", (void*)QueueWaitIdle},
+    {"vkDeviceWaitIdle", (void*)DeviceWaitIdle},
+    {"vkAllocateMemory", (void*)AllocateMemory},
+    {"vkFreeMemory", (void*)FreeMemory},
+    {"vkMapMemory", (void*)MapMemory},
+    {"vkUnmapMemory", (void*)UnmapMemory},
+    {"vkFlushMappedMemoryRanges", (void*)FlushMappedMemoryRanges},
+    {"vkInvalidateMappedMemoryRanges", (void*)InvalidateMappedMemoryRanges},
+    {"vkGetDeviceMemoryCommitment", (void*)GetDeviceMemoryCommitment},
+    {"vkBindBufferMemory", (void*)BindBufferMemory},
+    {"vkBindImageMemory", (void*)BindImageMemory},
+    {"vkGetBufferMemoryRequirements", (void*)GetBufferMemoryRequirements},
+    {"vkGetImageMemoryRequirements", (void*)GetImageMemoryRequirements},
+    {"vkGetImageSparseMemoryRequirements", (void*)GetImageSparseMemoryRequirements},
+    {"vkQueueBindSparse", (void*)QueueBindSparse},
+    {"vkCreateFence", (void*)CreateFence},
+    {"vkDestroyFence", (void*)DestroyFence},
+    {"vkResetFences", (void*)ResetFences},
+    {"vkGetFenceStatus", (void*)GetFenceStatus},
+    {"vkWaitForFences", (void*)WaitForFences},
+    {"vkCreateSemaphore", (void*)CreateSemaphore},
+    {"vkDestroySemaphore", (void*)DestroySemaphore},
+    {"vkCreateEvent", (void*)CreateEvent},
+    {"vkDestroyEvent", (void*)DestroyEvent},
+    {"vkGetEventStatus", (void*)GetEventStatus},
+    {"vkSetEvent", (void*)SetEvent},
+    {"vkResetEvent", (void*)ResetEvent},
+    {"vkCreateQueryPool", (void*)CreateQueryPool},
+    {"vkDestroyQueryPool", (void*)DestroyQueryPool},
+    {"vkGetQueryPoolResults", (void*)GetQueryPoolResults},
+    {"vkCreateBuffer", (void*)CreateBuffer},
+    {"vkDestroyBuffer", (void*)DestroyBuffer},
+    {"vkCreateBufferView", (void*)CreateBufferView},
+    {"vkDestroyBufferView", (void*)DestroyBufferView},
+    {"vkCreateImage", (void*)CreateImage},
+    {"vkDestroyImage", (void*)DestroyImage},
+    {"vkGetImageSubresourceLayout", (void*)GetImageSubresourceLayout},
+    {"vkCreateImageView", (void*)CreateImageView},
+    {"vkDestroyImageView", (void*)DestroyImageView},
+    {"vkCreateShaderModule", (void*)CreateShaderModule},
+    {"vkDestroyShaderModule", (void*)DestroyShaderModule},
+    {"vkCreatePipelineCache", (void*)CreatePipelineCache},
+    {"vkDestroyPipelineCache", (void*)DestroyPipelineCache},
+    {"vkGetPipelineCacheData", (void*)GetPipelineCacheData},
+    {"vkMergePipelineCaches", (void*)MergePipelineCaches},
+    {"vkCreateGraphicsPipelines", (void*)CreateGraphicsPipelines},
+    {"vkCreateComputePipelines", (void*)CreateComputePipelines},
+    {"vkDestroyPipeline", (void*)DestroyPipeline},
+    {"vkCreatePipelineLayout", (void*)CreatePipelineLayout},
+    {"vkDestroyPipelineLayout", (void*)DestroyPipelineLayout},
+    {"vkCreateSampler", (void*)CreateSampler},
+    {"vkDestroySampler", (void*)DestroySampler},
+    {"vkCreateDescriptorSetLayout", (void*)CreateDescriptorSetLayout},
+    {"vkDestroyDescriptorSetLayout", (void*)DestroyDescriptorSetLayout},
+    {"vkCreateDescriptorPool", (void*)CreateDescriptorPool},
+    {"vkDestroyDescriptorPool", (void*)DestroyDescriptorPool},
+    {"vkResetDescriptorPool", (void*)ResetDescriptorPool},
+    {"vkAllocateDescriptorSets", (void*)AllocateDescriptorSets},
+    {"vkFreeDescriptorSets", (void*)FreeDescriptorSets},
+    {"vkUpdateDescriptorSets", (void*)UpdateDescriptorSets},
+    {"vkCreateFramebuffer", (void*)CreateFramebuffer},
+    {"vkDestroyFramebuffer", (void*)DestroyFramebuffer},
+    {"vkCreateRenderPass", (void*)CreateRenderPass},
+    {"vkDestroyRenderPass", (void*)DestroyRenderPass},
+    {"vkGetRenderAreaGranularity", (void*)GetRenderAreaGranularity},
+    {"vkCreateCommandPool", (void*)CreateCommandPool},
+    {"vkDestroyCommandPool", (void*)DestroyCommandPool},
+    {"vkResetCommandPool", (void*)ResetCommandPool},
+    {"vkAllocateCommandBuffers", (void*)AllocateCommandBuffers},
+    {"vkFreeCommandBuffers", (void*)FreeCommandBuffers},
+    {"vkBeginCommandBuffer", (void*)BeginCommandBuffer},
+    {"vkEndCommandBuffer", (void*)EndCommandBuffer},
+    {"vkResetCommandBuffer", (void*)ResetCommandBuffer},
+    {"vkCmdBindPipeline", (void*)CmdBindPipeline},
+    {"vkCmdSetViewport", (void*)CmdSetViewport},
+    {"vkCmdSetScissor", (void*)CmdSetScissor},
+    {"vkCmdSetLineWidth", (void*)CmdSetLineWidth},
+    {"vkCmdSetDepthBias", (void*)CmdSetDepthBias},
+    {"vkCmdSetBlendConstants", (void*)CmdSetBlendConstants},
+    {"vkCmdSetDepthBounds", (void*)CmdSetDepthBounds},
+    {"vkCmdSetStencilCompareMask", (void*)CmdSetStencilCompareMask},
+    {"vkCmdSetStencilWriteMask", (void*)CmdSetStencilWriteMask},
+    {"vkCmdSetStencilReference", (void*)CmdSetStencilReference},
+    {"vkCmdBindDescriptorSets", (void*)CmdBindDescriptorSets},
+    {"vkCmdBindIndexBuffer", (void*)CmdBindIndexBuffer},
+    {"vkCmdBindVertexBuffers", (void*)CmdBindVertexBuffers},
+    {"vkCmdDraw", (void*)CmdDraw},
+    {"vkCmdDrawIndexed", (void*)CmdDrawIndexed},
+    {"vkCmdDrawIndirect", (void*)CmdDrawIndirect},
+    {"vkCmdDrawIndexedIndirect", (void*)CmdDrawIndexedIndirect},
+    {"vkCmdDispatch", (void*)CmdDispatch},
+    {"vkCmdDispatchIndirect", (void*)CmdDispatchIndirect},
+    {"vkCmdCopyBuffer", (void*)CmdCopyBuffer},
+    {"vkCmdCopyImage", (void*)CmdCopyImage},
+    {"vkCmdBlitImage", (void*)CmdBlitImage},
+    {"vkCmdCopyBufferToImage", (void*)CmdCopyBufferToImage},
+    {"vkCmdCopyImageToBuffer", (void*)CmdCopyImageToBuffer},
+    {"vkCmdUpdateBuffer", (void*)CmdUpdateBuffer},
+    {"vkCmdFillBuffer", (void*)CmdFillBuffer},
+    {"vkCmdClearColorImage", (void*)CmdClearColorImage},
+    {"vkCmdClearDepthStencilImage", (void*)CmdClearDepthStencilImage},
+    {"vkCmdClearAttachments", (void*)CmdClearAttachments},
+    {"vkCmdResolveImage", (void*)CmdResolveImage},
+    {"vkCmdSetEvent", (void*)CmdSetEvent},
+    {"vkCmdResetEvent", (void*)CmdResetEvent},
+    {"vkCmdWaitEvents", (void*)CmdWaitEvents},
+    {"vkCmdPipelineBarrier", (void*)CmdPipelineBarrier},
+    {"vkCmdBeginQuery", (void*)CmdBeginQuery},
+    {"vkCmdEndQuery", (void*)CmdEndQuery},
+    {"vkCmdResetQueryPool", (void*)CmdResetQueryPool},
+    {"vkCmdWriteTimestamp", (void*)CmdWriteTimestamp},
+    {"vkCmdCopyQueryPoolResults", (void*)CmdCopyQueryPoolResults},
+    {"vkCmdPushConstants", (void*)CmdPushConstants},
+    {"vkCmdBeginRenderPass", (void*)CmdBeginRenderPass},
+    {"vkCmdNextSubpass", (void*)CmdNextSubpass},
+    {"vkCmdEndRenderPass", (void*)CmdEndRenderPass},
+    {"vkCmdExecuteCommands", (void*)CmdExecuteCommands},
+    {"vkDebugMarkerSetObjectTagEXT", (void*)DebugMarkerSetObjectTagEXT},
+    {"vkDebugMarkerSetObjectNameEXT", (void*)DebugMarkerSetObjectNameEXT},
+    {"vkCmdDebugMarkerBeginEXT", (void*)CmdDebugMarkerBeginEXT},
+    {"vkCmdDebugMarkerEndEXT", (void*)CmdDebugMarkerEndEXT},
+    {"vkCmdDebugMarkerInsertEXT", (void*)CmdDebugMarkerInsertEXT},
+    {"vkCmdDrawIndirectCountAMD", (void*)CmdDrawIndirectCountAMD},
+    {"vkCmdDrawIndexedIndirectCountAMD", (void*)CmdDrawIndexedIndirectCountAMD},
+    {"vkSetHdrMetadataEXT", (void*)SetHdrMetadataEXT},
+    {"vkCreateInstance", (void*)CreateInstance},
+    {"vkDestroyInstance", (void*)DestroyInstance},
+    {"vkEnumeratePhysicalDevices", (void*)EnumeratePhysicalDevices},
+    {"vk_layerGetPhysicalDeviceProcAddr", (void*)GetPhysicalDeviceProcAddr},
+    {"vkGetPhysicalDeviceFeatures", (void*)GetPhysicalDeviceFeatures},
+    {"vkGetPhysicalDeviceFormatProperties", (void*)GetPhysicalDeviceFormatProperties},
+    {"vkGetPhysicalDeviceImageFormatProperties", (void*)GetPhysicalDeviceImageFormatProperties},
+    {"vkGetPhysicalDeviceProperties", (void*)GetPhysicalDeviceProperties},
+    {"vkGetPhysicalDeviceQueueFamilyProperties", (void*)GetPhysicalDeviceQueueFamilyProperties},
+    {"vkGetPhysicalDeviceMemoryProperties", (void*)GetPhysicalDeviceMemoryProperties},
+    {"vkGetInstanceProcAddr", (void*)GetInstanceProcAddr},
+    {"vkCreateDevice", (void*)CreateDevice},
+    {"vkEnumerateInstanceExtensionProperties", (void*)EnumerateInstanceExtensionProperties},
+    {"vkEnumerateInstanceLayerProperties", (void*)EnumerateInstanceLayerProperties},
+    {"vkEnumerateDeviceLayerProperties", (void*)EnumerateDeviceLayerProperties},
+    {"vkGetPhysicalDeviceSparseImageFormatProperties", (void*)GetPhysicalDeviceSparseImageFormatProperties},
+    {"vkGetPhysicalDeviceExternalImageFormatPropertiesNV", (void*)GetPhysicalDeviceExternalImageFormatPropertiesNV},
+    {"vkGetPhysicalDeviceFeatures2KHR", (void*)GetPhysicalDeviceFeatures2KHR},
+    {"vkGetPhysicalDeviceProperties2KHR", (void*)GetPhysicalDeviceProperties2KHR},
+    {"vkGetPhysicalDeviceFormatProperties2KHR", (void*)GetPhysicalDeviceFormatProperties2KHR},
+    {"vkGetPhysicalDeviceImageFormatProperties2KHR", (void*)GetPhysicalDeviceImageFormatProperties2KHR},
+    {"vkGetPhysicalDeviceQueueFamilyProperties2KHR", (void*)GetPhysicalDeviceQueueFamilyProperties2KHR},
+    {"vkGetPhysicalDevicePresentRectanglesKHX", (void*)GetPhysicalDevicePresentRectanglesKHX},
+    {"vkEnumeratePhysicalDeviceGroupsKHX", (void*)EnumeratePhysicalDeviceGroupsKHX},
+    {"vkGetPhysicalDeviceExternalBufferPropertiesKHX", (void*)GetPhysicalDeviceExternalBufferPropertiesKHX},
+    {"vkGetPhysicalDeviceExternalSemaphorePropertiesKHX", (void*)GetPhysicalDeviceExternalSemaphorePropertiesKHX},
+    {"vkReleaseDisplayEXT", (void*)ReleaseDisplayEXT},
+    {"vkGetPhysicalDeviceSurfaceCapabilities2EXT", (void*)GetPhysicalDeviceSurfaceCapabilities2EXT},
+    {"vkCmdSetViewportWScalingNV", (void*)CmdSetViewportWScalingNV},
+    {"vkGetPhysicalDeviceGeneratedCommandsPropertiesNVX", (void*)GetPhysicalDeviceGeneratedCommandsPropertiesNVX},
+    {"vkCreateDescriptorUpdateTemplateKHR", (void*)CreateDescriptorUpdateTemplateKHR},
+    {"vkDestroyDescriptorUpdateTemplateKHR", (void*)DestroyDescriptorUpdateTemplateKHR},
+    {"vkUpdateDescriptorSetWithTemplateKHR", (void*)UpdateDescriptorSetWithTemplateKHR},
+    {"vkCmdPushDescriptorSetWithTemplateKHR", (void*)CmdPushDescriptorSetWithTemplateKHR},
+    {"vkTrimCommandPoolKHR", (void*)TrimCommandPoolKHR},
+    {"vkCmdPushDescriptorSetKHR", (void*)CmdPushDescriptorSetKHR},
+    {"vkGetDeviceGroupPeerMemoryFeaturesKHX", (void*)GetDeviceGroupPeerMemoryFeaturesKHX},
+    {"vkBindBufferMemory2KHX", (void*)BindBufferMemory2KHX},
+    {"vkBindImageMemory2KHX", (void*)BindImageMemory2KHX},
+    {"vkCmdSetDeviceMaskKHX", (void*)CmdSetDeviceMaskKHX},
+    {"vkGetDeviceGroupPresentCapabilitiesKHX", (void*)GetDeviceGroupPresentCapabilitiesKHX},
+    {"vkGetDeviceGroupSurfacePresentModesKHX", (void*)GetDeviceGroupSurfacePresentModesKHX},
+    {"vkAcquireNextImage2KHX", (void*)AcquireNextImage2KHX},
+    {"vkCmdDispatchBaseKHX", (void*)CmdDispatchBaseKHX},
+    {"vkGetMemoryFdKHX", (void*)GetMemoryFdKHX},
+    {"vkGetMemoryFdPropertiesKHX", (void*)GetMemoryFdPropertiesKHX},
+    {"vkImportSemaphoreFdKHX", (void*)ImportSemaphoreFdKHX},
+    {"vkGetSemaphoreFdKHX", (void*)GetSemaphoreFdKHX},
+    {"vkCmdSetDiscardRectangleEXT", (void*)CmdSetDiscardRectangleEXT},
+    {"vkDisplayPowerControlEXT", (void*)DisplayPowerControlEXT},
+    {"vkRegisterDeviceEventEXT", (void*)RegisterDeviceEventEXT},
+    {"vkRegisterDisplayEventEXT", (void*)RegisterDisplayEventEXT},
+    {"vkGetSwapchainCounterEXT", (void*)GetSwapchainCounterEXT},
+    {"vkCmdProcessCommandsNVX", (void*)CmdProcessCommandsNVX},
+    {"vkCmdReserveSpaceForCommandsNVX", (void*)CmdReserveSpaceForCommandsNVX},
+    {"vkCreateIndirectCommandsLayoutNVX", (void*)CreateIndirectCommandsLayoutNVX},
+    {"vkDestroyIndirectCommandsLayoutNVX", (void*)DestroyIndirectCommandsLayoutNVX},
+    {"vkCreateObjectTableNVX", (void*)CreateObjectTableNVX},
+    {"vkDestroyObjectTableNVX", (void*)DestroyObjectTableNVX},
+    {"vkRegisterObjectsNVX", (void*)RegisterObjectsNVX},
+    {"vkUnregisterObjectsNVX", (void*)UnregisterObjectsNVX},
+    {"vkGetPastPresentationTimingGOOGLE", (void*)GetPastPresentationTimingGOOGLE},
+    {"vkGetRefreshCycleDurationGOOGLE", (void*)GetRefreshCycleDurationGOOGLE},
+    {"vkCreateSwapchainKHR", (void*)CreateSwapchainKHR},
+    {"vkDestroySwapchainKHR", (void*)DestroySwapchainKHR},
+    {"vkGetSwapchainImagesKHR", (void*)GetSwapchainImagesKHR},
+    {"vkAcquireNextImageKHR", (void*)AcquireNextImageKHR},
+    {"vkQueuePresentKHR", (void*)QueuePresentKHR},
+    {"vkCreateSharedSwapchainsKHR", (void*)CreateSharedSwapchainsKHR},
+    {"vkGetPhysicalDeviceDisplayPropertiesKHR", (void*)GetPhysicalDeviceDisplayPropertiesKHR},
+    {"vkGetPhysicalDeviceDisplayPlanePropertiesKHR", (void*)GetPhysicalDeviceDisplayPlanePropertiesKHR},
+    {"vkGetDisplayPlaneSupportedDisplaysKHR", (void*)GetDisplayPlaneSupportedDisplaysKHR},
+    {"vkGetDisplayModePropertiesKHR", (void*)GetDisplayModePropertiesKHR},
+    {"vkCreateDisplayModeKHR", (void*)CreateDisplayModeKHR},
+    {"vkGetDisplayPlaneCapabilitiesKHR", (void*)GetDisplayPlaneCapabilitiesKHR},
+    {"vkCreateDisplayPlaneSurfaceKHR", (void*)CreateDisplayPlaneSurfaceKHR},
+    {"vkDestroySurfaceKHR", (void*)DestroySurfaceKHR},
+    {"vkGetPhysicalDeviceSurfaceSupportKHR", (void*)GetPhysicalDeviceSurfaceSupportKHR},
+    {"vkGetPhysicalDeviceSurfaceCapabilitiesKHR", (void*)GetPhysicalDeviceSurfaceCapabilitiesKHR},
+    {"vkGetPhysicalDeviceSurfaceFormatsKHR", (void*)GetPhysicalDeviceSurfaceFormatsKHR},
+    {"vkGetPhysicalDeviceSurfacePresentModesKHR", (void*)GetPhysicalDeviceSurfacePresentModesKHR},
+    {"vkCreateDisplayPlaneSurfaceKHR", (void*)CreateDisplayPlaneSurfaceKHR},
+    {"vkCreateDebugReportCallbackEXT", (void*)CreateDebugReportCallbackEXT},
+    {"vkDestroyDebugReportCallbackEXT", (void*)DestroyDebugReportCallbackEXT},
+    {"vkDebugReportMessageEXT", (void*)DebugReportMessageEXT},
 #ifdef VK_USE_PLATFORM_XLIB_XRANDR_EXT
-    // VK_EXT_acquire_xlib_display Extension
-    if (!strcmp(name, "AcquireXlibDisplayEXT")) return (PFN_vkVoidFunction)AcquireXlibDisplayEXT;
-    if (!strcmp(name, "GetRandROutputDisplayEXT")) return (PFN_vkVoidFunction)GetRandROutputDisplayEXT;
+    {"vkAcquireXlibDisplayEXT", (void*)AcquireXlibDisplayEXT},
+    {"vkGetRandROutputDisplayEXT", (void*)GetRandROutputDisplayEXT},
 #endif  // VK_USE_PLATFORM_XLIB_XRANDR_EXT
-    // VK_EXT_direct_mode_display Extension
-    if (!strcmp(name, "ReleaseDisplayEXT")) return (PFN_vkVoidFunction)ReleaseDisplayEXT;
-    // VK_EXT_display_surface_counter Extension
-    if (!strcmp(name, "GetPhysicalDeviceSurfaceCapabilities2EXT"))
-        return (PFN_vkVoidFunction)GetPhysicalDeviceSurfaceCapabilities2EXT;
-    // VK_NV_clip_space_w_scaling Extension
-    if (!strcmp(name, "CmdSetViewportWScalingNV")) return (PFN_vkVoidFunction)CmdSetViewportWScalingNV;
-    // VK_NVX_device_generated_commands Extension
-    if (!strcmp(name, "GetPhysicalDeviceGeneratedCommandsPropertiesNVX"))
-        return (PFN_vkVoidFunction)GetPhysicalDeviceGeneratedCommandsPropertiesNVX;
-
-    return NULL;
-}
-
-static inline PFN_vkVoidFunction InterceptDeviceExtensionCommand(const char *name, VkDevice device) {
-    if (device) {
-        layer_data *device_data = GetLayerDataPtr(get_dispatch_key(device), layer_data_map);
-
-        if (!name || name[0] != 'v' || name[1] != 'k') return NULL;
-
-        name += 2;
-
-        if (device_data->enables.khr_descriptor_update_template) {
-            if (!strcmp(name, "CreateDescriptorUpdateTemplateKHR")) return (PFN_vkVoidFunction)CreateDescriptorUpdateTemplateKHR;
-            if (!strcmp(name, "DestroyDescriptorUpdateTemplateKHR")) return (PFN_vkVoidFunction)DestroyDescriptorUpdateTemplateKHR;
-            if (!strcmp(name, "UpdateDescriptorSetWithTemplateKHR")) return (PFN_vkVoidFunction)UpdateDescriptorSetWithTemplateKHR;
-            if (!strcmp(name, "CmdPushDescriptorSetWithTemplateKHR"))
-                return (PFN_vkVoidFunction)CmdPushDescriptorSetWithTemplateKHR;
-        }
-        if (device_data->enables.khr_maintenance1) {
-            if (!strcmp(name, "TrimCommandPoolKHR")) return (PFN_vkVoidFunction)TrimCommandPoolKHR;
-        }
-        if (device_data->enables.khr_push_descriptor) {
-            if (!strcmp(name, "CmdPushDescriptorSetKHR")) return (PFN_vkVoidFunction)CmdPushDescriptorSetKHR;
-        }
-        if (device_data->enables.khx_device_group) {
-            // VK_KHX_device_group Extension
-            if (!strcmp(name, "GetDeviceGroupPeerMemoryFeaturesKHX"))
-                return (PFN_vkVoidFunction)GetDeviceGroupPeerMemoryFeaturesKHX;
-            if (!strcmp(name, "BindBufferMemory2KHX")) return (PFN_vkVoidFunction)BindBufferMemory2KHX;
-            if (!strcmp(name, "BindImageMemory2KHX")) return (PFN_vkVoidFunction)BindImageMemory2KHX;
-            if (!strcmp(name, "CmdSetDeviceMaskKHX")) return (PFN_vkVoidFunction)CmdSetDeviceMaskKHX;
-            if (!strcmp(name, "GetDeviceGroupPresentCapabilitiesKHX"))
-                return (PFN_vkVoidFunction)GetDeviceGroupPresentCapabilitiesKHX;
-            if (!strcmp(name, "GetDeviceGroupSurfacePresentModesKHX"))
-                return (PFN_vkVoidFunction)GetDeviceGroupSurfacePresentModesKHX;
-            if (!strcmp(name, "AcquireNextImage2KHX")) return (PFN_vkVoidFunction)AcquireNextImage2KHX;
-            if (!strcmp(name, "CmdDispatchBaseKHX")) return (PFN_vkVoidFunction)CmdDispatchBaseKHX;
-        }
 #ifdef VK_USE_PLATFORM_WIN32_KHX
-        if (device_data->enables.khx_external_memory_win32) {
-            if (!strcmp(name, "GetMemoryWin32HandleKHX")) return (PFN_vkVoidFunction)GetMemoryWin32HandleKHX;
-            if (!strcmp(name, "GetMemoryWin32HandlePropertiesKHX")) return (PFN_vkVoidFunction)GetMemoryWin32HandlePropertiesKHX;
-        }
-#endif  // VK_USE_PLATFORM_WIN32_KHX
-        if (device_data->enables.khx_external_memory_fd) {
-            if (!strcmp(name, "GetMemoryFdKHX")) return (PFN_vkVoidFunction)GetMemoryFdKHX;
-            if (!strcmp(name, "GetMemoryFdPropertiesKHX")) return (PFN_vkVoidFunction)GetMemoryFdPropertiesKHX;
-        }
-#ifdef VK_USE_PLATFORM_WIN32_KHX
-        if (device_data->enables.khx_external_semaphore_win32) {
-            if (!strcmp(name, "ImportSemaphoreWin32HandleKHX")) return (PFN_vkVoidFunction)ImportSemaphoreWin32HandleKHX;
-            if (!strcmp(name, "GetSemaphoreWin32HandleKHX")) return (PFN_vkVoidFunction)GetSemaphoreWin32HandleKHX;
-        }
-#endif  // VK_USE_PLATFORM_WIN32_KHX
-        if (device_data->enables.khx_external_semaphore_fd) {
-            if (!strcmp(name, "ImportSemaphoreFdKHX")) return (PFN_vkVoidFunction)ImportSemaphoreFdKHX;
-            if (!strcmp(name, "GetSemaphoreFdKHX")) return (PFN_vkVoidFunction)GetSemaphoreFdKHX;
-        }
-        if (device_data->enables.ext_discard_rectangles) {
-            if (!strcmp(name, "CmdSetDiscardRectangleEXT")) return (PFN_vkVoidFunction)CmdSetDiscardRectangleEXT;
-        }
-        if (device_data->enables.ext_display_control) {
-            if (!strcmp(name, "DisplayPowerControlEXT")) return (PFN_vkVoidFunction)DisplayPowerControlEXT;
-            if (!strcmp(name, "RegisterDeviceEventEXT")) return (PFN_vkVoidFunction)RegisterDeviceEventEXT;
-            if (!strcmp(name, "RegisterDisplayEventEXT")) return (PFN_vkVoidFunction)RegisterDisplayEventEXT;
-            if (!strcmp(name, "GetSwapchainCounterEXT")) return (PFN_vkVoidFunction)GetSwapchainCounterEXT;
-        }
-        if (device_data->enables.nvx_device_generated_commands) {
-            if (!strcmp(name, "CmdProcessCommandsNVX")) return (PFN_vkVoidFunction)CmdProcessCommandsNVX;
-            if (!strcmp(name, "CmdReserveSpaceForCommandsNVX")) return (PFN_vkVoidFunction)CmdReserveSpaceForCommandsNVX;
-            if (!strcmp(name, "CreateIndirectCommandsLayoutNVX")) return (PFN_vkVoidFunction)CreateIndirectCommandsLayoutNVX;
-            if (!strcmp(name, "DestroyIndirectCommandsLayoutNVX")) return (PFN_vkVoidFunction)DestroyIndirectCommandsLayoutNVX;
-            if (!strcmp(name, "CreateObjectTableNVX")) return (PFN_vkVoidFunction)CreateObjectTableNVX;
-            if (!strcmp(name, "DestroyObjectTableNVX")) return (PFN_vkVoidFunction)DestroyObjectTableNVX;
-            if (!strcmp(name, "RegisterObjectsNVX")) return (PFN_vkVoidFunction)RegisterObjectsNVX;
-            if (!strcmp(name, "UnregisterObjectsNVX")) return (PFN_vkVoidFunction)UnregisterObjectsNVX;
-        }
-        if (device_data->enables.google_display_timing) {
-            if (!strcmp(name, "GetPastPresentationTimingGOOGLE")) return (PFN_vkVoidFunction)GetPastPresentationTimingGOOGLE;
-            if (!strcmp(name, "GetRefreshCycleDurationGOOGLE")) return (PFN_vkVoidFunction)GetRefreshCycleDurationGOOGLE;
-        }
-    }
-
-    return NULL;
-}
-
-static inline PFN_vkVoidFunction InterceptWsiEnabledCommand(const char *name, VkDevice device) {
-    if (device) {
-        layer_data *device_data = GetLayerDataPtr(get_dispatch_key(device), layer_data_map);
-
-        if (device_data->enables.wsi) {
-            if (!strcmp("vkCreateSwapchainKHR", name)) return reinterpret_cast<PFN_vkVoidFunction>(CreateSwapchainKHR);
-            if (!strcmp("vkDestroySwapchainKHR", name)) return reinterpret_cast<PFN_vkVoidFunction>(DestroySwapchainKHR);
-            if (!strcmp("vkGetSwapchainImagesKHR", name)) return reinterpret_cast<PFN_vkVoidFunction>(GetSwapchainImagesKHR);
-            if (!strcmp("vkAcquireNextImageKHR", name)) return reinterpret_cast<PFN_vkVoidFunction>(AcquireNextImageKHR);
-            if (!strcmp("vkQueuePresentKHR", name)) return reinterpret_cast<PFN_vkVoidFunction>(QueuePresentKHR);
-        }
-
-        if (device_data->enables.wsi_display_swapchain) {
-            if (!strcmp("vkCreateSharedSwapchainsKHR", name)) {
-                return reinterpret_cast<PFN_vkVoidFunction>(CreateSharedSwapchainsKHR);
-            }
-        }
-
-        if (device_data->enables.wsi_display_extension) {
-            if (!strcmp("vkGetPhysicalDeviceDisplayPropertiesKHR", name))
-                return reinterpret_cast<PFN_vkVoidFunction>(GetPhysicalDeviceDisplayPropertiesKHR);
-            if (!strcmp("vkGetPhysicalDeviceDisplayPlanePropertiesKHR", name))
-                return reinterpret_cast<PFN_vkVoidFunction>(GetPhysicalDeviceDisplayPlanePropertiesKHR);
-            if (!strcmp("vkGetDisplayPlaneSupportedDisplaysKHR", name))
-                return reinterpret_cast<PFN_vkVoidFunction>(GetDisplayPlaneSupportedDisplaysKHR);
-            if (!strcmp("vkGetDisplayModePropertiesKHR", name))
-                return reinterpret_cast<PFN_vkVoidFunction>(GetDisplayModePropertiesKHR);
-            if (!strcmp("vkCreateDisplayModeKHR", name)) return reinterpret_cast<PFN_vkVoidFunction>(CreateDisplayModeKHR);
-            if (!strcmp("vkGetDisplayPlaneCapabilitiesKHR", name))
-                return reinterpret_cast<PFN_vkVoidFunction>(GetDisplayPlaneCapabilitiesKHR);
-            if (!strcmp("vkCreateDisplayPlaneSurfaceKHR", name))
-                return reinterpret_cast<PFN_vkVoidFunction>(CreateDisplayPlaneSurfaceKHR);
-        }
-    }
-
-    return nullptr;
-}
+    {"vkGetMemoryWin32HandleKHX", (void*)GetMemoryWin32HandleKHX},
+    {"vkGetMemoryWin32HandlePropertiesKHX", (void*)GetMemoryWin32HandlePropertiesKHX},
+    {"vkImportSemaphoreWin32HandleKHX", (void*)ImportSemaphoreWin32HandleKHX},
+    {"vkGetSemaphoreWin32HandleKHX", (void*)GetSemaphoreWin32HandleKHX},
+#endif
+#ifdef VK_USE_PLATFORM_WIN32_KHR
+    {"vkCreateWin32SurfaceKHR", (void*)CreateWin32SurfaceKHR},
+    {"vkGetPhysicalDeviceWin32PresentationSupportKHR", (void*)GetPhysicalDeviceWin32PresentationSupportKHR},
+    {"vkGetMemoryWin32HandleNV", (void*)GetMemoryWin32HandleNV},
+#endif  // VK_USE_PLATFORM_WIN32_KHR
+#ifdef VK_USE_PLATFORM_XCB_KHR
+    {"vkCreateXcbSurfaceKHR", (void*)CreateXcbSurfaceKHR},
+    {"vkGetPhysicalDeviceXcbPresentationSupportKHR", (void*)GetPhysicalDeviceXcbPresentationSupportKHR},
+#endif
+#ifdef VK_USE_PLATFORM_XLIB_KHR
+    {"vkCreateXlibSurfaceKHR", (void*)CreateXlibSurfaceKHR},
+    {"vkGetPhysicalDeviceXlibPresentationSupportKHR", (void*)GetPhysicalDeviceXlibPresentationSupportKHR},
+#endif
+#ifdef VK_USE_PLATFORM_MIR_KHR
+    {"vkCreateMirSurfaceKHR", (void*)CreateMirSurfaceKHR},
+    {"vkGetPhysicalDeviceMirPresentationSupportKHR", (void*)GetPhysicalDeviceMirPresentationSupportKHR},
+#endif
+#ifdef VK_USE_PLATFORM_WAYLAND_KHR
+    {"vkCreateWaylandSurfaceKHR", (void*)CreateWaylandSurfaceKHR},
+    {"vkGetPhysicalDeviceWaylandPresentationSupportKHR", (void*)GetPhysicalDeviceWaylandPresentationSupportKHR},
+#endif 
+#ifdef VK_USE_PLATFORM_ANDROID_KHR
+    {"vkCreateAndroidSurfaceKHR", (void*)CreateAndroidSurfaceKHR},
+#endif
+};
 
 VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL GetDeviceProcAddr(VkDevice device, const char *funcName) {
-    PFN_vkVoidFunction addr;
-    addr = InterceptCoreDeviceCommand(funcName);
-    if (addr) {
-        return addr;
+    const auto item = name_to_funcptr_map.find(funcName);
+    if (item != name_to_funcptr_map.end()) {
+        return reinterpret_cast<PFN_vkVoidFunction>(item->second);
     }
-    assert(device);
 
-    addr = InterceptWsiEnabledCommand(funcName, device);
-    if (addr) {
-        return addr;
-    }
-    addr = InterceptDeviceExtensionCommand(funcName, device);
-    if (addr) {
-        return addr;
-    }
-    if (get_dispatch_table(ot_device_table_map, device)->GetDeviceProcAddr == NULL) {
-        return NULL;
-    }
-    return get_dispatch_table(ot_device_table_map, device)->GetDeviceProcAddr(device, funcName);
+    auto table = get_dispatch_table(ot_device_table_map, device);
+    if (!table->GetDeviceProcAddr) return NULL;
+    return table->GetDeviceProcAddr(device, funcName);
 }
 
 VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL GetInstanceProcAddr(VkInstance instance, const char *funcName) {
-    PFN_vkVoidFunction addr;
-    addr = InterceptCoreInstanceCommand(funcName);
-    if (!addr) {
-        addr = InterceptCoreDeviceCommand(funcName);
+    const auto item = name_to_funcptr_map.find(funcName);
+    if (item != name_to_funcptr_map.end()) {
+        return reinterpret_cast<PFN_vkVoidFunction>(item->second);
     }
-    if (!addr) {
-        addr = InterceptWsiEnabledCommand(funcName, VkDevice(VK_NULL_HANDLE));
-    }
-    if (addr) {
-        return addr;
-    }
-    assert(instance);
 
-    addr = InterceptMsgCallbackGetProcAddrCommand(funcName, instance);
-    if (addr) {
-        return addr;
-    }
-    addr = InterceptWsiEnabledCommand(funcName, instance);
-    if (addr) {
-        return addr;
-    }
-    addr = InterceptInstanceExtensionCommand(funcName);
-    if (addr) {
-        return addr;
-    }
-    if (get_dispatch_table(ot_instance_table_map, instance)->GetInstanceProcAddr == NULL) {
-        return NULL;
-    }
-    return get_dispatch_table(ot_instance_table_map, instance)->GetInstanceProcAddr(instance, funcName);
+    auto table = get_dispatch_table(ot_instance_table_map, instance);
+    if (!table->GetInstanceProcAddr) return nullptr;
+    return table->GetInstanceProcAddr(instance, funcName);
 }
 
 VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL GetPhysicalDeviceProcAddr(VkInstance instance, const char *funcName) {
@@ -5569,25 +5317,6 @@ VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL GetPhysicalDeviceProcAddr(VkInstance in
 }
 
 }  // namespace object_tracker
-
-// vk_layer_logging.h expects these to be defined
-VKAPI_ATTR VkResult VKAPI_CALL vkCreateDebugReportCallbackEXT(VkInstance instance,
-                                                              const VkDebugReportCallbackCreateInfoEXT *pCreateInfo,
-                                                              const VkAllocationCallbacks *pAllocator,
-                                                              VkDebugReportCallbackEXT *pMsgCallback) {
-    return object_tracker::CreateDebugReportCallbackEXT(instance, pCreateInfo, pAllocator, pMsgCallback);
-}
-
-VKAPI_ATTR void VKAPI_CALL vkDestroyDebugReportCallbackEXT(VkInstance instance, VkDebugReportCallbackEXT msgCallback,
-                                                           const VkAllocationCallbacks *pAllocator) {
-    object_tracker::DestroyDebugReportCallbackEXT(instance, msgCallback, pAllocator);
-}
-
-VKAPI_ATTR void VKAPI_CALL vkDebugReportMessageEXT(VkInstance instance, VkDebugReportFlagsEXT flags,
-                                                   VkDebugReportObjectTypeEXT objType, uint64_t object, size_t location,
-                                                   int32_t msgCode, const char *pLayerPrefix, const char *pMsg) {
-    object_tracker::DebugReportMessageEXT(instance, flags, objType, object, location, msgCode, pLayerPrefix, pMsg);
-}
 
 // Loader-layer interface v0, just wrappers since there is only a layer
 VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkEnumerateInstanceExtensionProperties(const char *pLayerName, uint32_t *pCount,

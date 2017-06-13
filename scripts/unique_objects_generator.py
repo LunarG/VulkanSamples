@@ -258,8 +258,8 @@ class UniqueObjectsOutputGenerator(OutputGenerator):
         self.newline()
 
         # Record intercepted procedures
-        write('// intercepts', file=self.outFile)
-        write('struct { const char* name; PFN_vkVoidFunction pFunc;} procmap[] = {', file=self.outFile)
+        write('// Map of all APIs to be intercepted by this layer', file=self.outFile)
+        write('static const std::unordered_map<std::string, void*> name_to_funcptr_map = {', file=self.outFile)
         write('\n'.join(self.intercepts), file=self.outFile)
         write('};\n', file=self.outFile)
         self.newline()
@@ -850,7 +850,7 @@ class UniqueObjectsOutputGenerator(OutputGenerator):
                 self.appendSection('command', '')
                 self.appendSection('command', '// Declare only')
                 self.appendSection('command', decls[0])
-                self.intercepts += [ '    {"%s", reinterpret_cast<PFN_vkVoidFunction>(%s)},' % (cmdname,cmdname[2:]) ]
+                self.intercepts += [ '    {"%s", (void *)%s},' % (cmdname,cmdname[2:]) ]
                 continue
             # Generate NDO wrapping/unwrapping code for all parameters
             (api_decls, api_pre, api_post) = self.generate_wrapping_code(cmdinfo.elem)
@@ -863,7 +863,7 @@ class UniqueObjectsOutputGenerator(OutputGenerator):
                 self.appendSection('command', '#ifdef '+ feature_extra_protect)
                 self.intercepts += [ '#ifdef %s' % feature_extra_protect ]
             # Add intercept to procmap
-            self.intercepts += [ '    {"%s", reinterpret_cast<PFN_vkVoidFunction>(%s)},' % (cmdname,cmdname[2:]) ]
+            self.intercepts += [ '    {"%s", (void*)%s},' % (cmdname,cmdname[2:]) ]
             decls = self.makeCDecls(cmdinfo.elem)
             self.appendSection('command', '')
             self.appendSection('command', decls[0][:-1])
