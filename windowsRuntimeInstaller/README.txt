@@ -21,9 +21,10 @@ To build the Vulkan Runtime Installer:
        Instructions for building NSIS are available at
        http://nsis//sourceforge.net/Docs/AppendixG.html.
 
-       The security changes to NSIS involve adding the /DYMANICBASE and /GS options
-       to the NSIS compile/link steps, so that the Runtime Installer and Uninstaller
-       are built with address space layout randomization and buffer overrun checks.
+       The security changes to NSIS involve adding the /DYMANICBASE, /GS and
+       /guard:cf options to the NSIS compile/link steps, so that the Runtime
+       Installer and Uninstaller are built with address space layout randomization,
+       buffer overrun checks and control flow guard.
 
        The security changes to NSIS can be made by applying the patch in the
        NSIS_Security.patch file in this folder.
