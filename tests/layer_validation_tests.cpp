@@ -1017,35 +1017,18 @@ TEST_F(VkLayerTest, UnrecognizedValueBadFlag) {
 }
 
 TEST_F(VkLayerTest, UnrecognizedValueBadBool) {
-    ASSERT_NO_FATAL_FAILURE(Init());
-
-    // Sneak in a test to make sure using VK_SAMPLER_ADDRESS_MODE_MIRROR_CLAMP_TO_EDGE
-    // doesn't trigger a false positive.
-    uint32_t extension_count = 0;
-    bool supports_mirror_clamp = false;
-    VkResult err = vkEnumerateDeviceExtensionProperties(gpu(), nullptr, &extension_count, nullptr);
-    ASSERT_VK_SUCCESS(err);
-    if (extension_count > 0) {
-        std::vector<VkExtensionProperties> available_extensions(extension_count);
-
-        err = vkEnumerateDeviceExtensionProperties(gpu(), nullptr, &extension_count, &available_extensions[0]);
-        ASSERT_VK_SUCCESS(err);
-        for (const auto &extension_props : available_extensions) {
-            if (strcmp(extension_props.extensionName, VK_KHR_SAMPLER_MIRROR_CLAMP_TO_EDGE_EXTENSION_NAME) == 0) {
-                supports_mirror_clamp = true;
-            }
-        }
+    // Make sure using VK_SAMPLER_ADDRESS_MODE_MIRROR_CLAMP_TO_EDGE doesn't trigger a false positive.
+    ASSERT_NO_FATAL_FAILURE(InitFramework(myDbgFunc, m_errorMonitor));
+    if (DeviceExtensionSupported(gpu(), VK_KHR_SAMPLER_MIRROR_CLAMP_TO_EDGE_EXTENSION_NAME)) {
+        m_device_extension_names.push_back(VK_KHR_SAMPLER_MIRROR_CLAMP_TO_EDGE_EXTENSION_NAME);
+    } else {
+        printf("             VK_KHR_sampler_mirror_clamp_to_edge extension not supported, skipping test\n");
+        return;
     }
-    VkSamplerAddressMode address_mode = VK_SAMPLER_ADDRESS_MODE_MIRROR_CLAMP_TO_EDGE;
-    if (!supports_mirror_clamp) {
-        printf("             mirror_clamp_to_edge Extension not supported, skipping tests\n");
-        address_mode = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
-    }
+    ASSERT_NO_FATAL_FAILURE(InitState());
 
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_WARNING_BIT_EXT, "is neither VK_TRUE nor VK_FALSE");
-    // Specify an invalid VkBool32 value
-    // Expected to trigger a warning with
-    // parameter_validation::validate_bool32
+    // Specify an invalid VkBool32 value, expecting a warning with parameter_validation::validate_bool32
     VkSampler sampler = VK_NULL_HANDLE;
     VkSamplerCreateInfo sampler_info = {};
     sampler_info.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
@@ -1053,9 +1036,9 @@ TEST_F(VkLayerTest, UnrecognizedValueBadBool) {
     sampler_info.magFilter = VK_FILTER_NEAREST;
     sampler_info.minFilter = VK_FILTER_NEAREST;
     sampler_info.mipmapMode = VK_SAMPLER_MIPMAP_MODE_NEAREST;
-    sampler_info.addressModeU = address_mode;
-    sampler_info.addressModeV = address_mode;
-    sampler_info.addressModeW = address_mode;
+    sampler_info.addressModeU = VK_SAMPLER_ADDRESS_MODE_MIRROR_CLAMP_TO_EDGE;
+    sampler_info.addressModeV = VK_SAMPLER_ADDRESS_MODE_MIRROR_CLAMP_TO_EDGE;
+    sampler_info.addressModeW = VK_SAMPLER_ADDRESS_MODE_MIRROR_CLAMP_TO_EDGE;
     sampler_info.mipLodBias = 1.0;
     sampler_info.maxAnisotropy = 1;
     sampler_info.compareEnable = VK_FALSE;
@@ -2258,8 +2241,6 @@ TEST_F(VkLayerTest, LeakAnObject) {
         qi.pQueuePriorities = queue_priorities[i].data();
         queue_info.push_back(qi);
     }
-
-    std::vector<const char *> device_extension_names;
 
     // The sacrificial device object
     VkDevice testDevice;
@@ -12467,8 +12448,6 @@ TEST_F(VkLayerTest, InvalidQueryPoolCreate) {
         queue_info.push_back(qi);
     }
 
-    std::vector<const char *> device_extension_names;
-
     VkDevice local_device;
     VkDeviceCreateInfo device_create_info = {};
     auto features = m_device->phy().features();
@@ -18146,6 +18125,7 @@ TEST_F(VkLayerTest, CopyImageTypeExtentMismatch) {
     m_errorMonitor->VerifyFound();
     copy_region.dstOffset.z = 0;
 
+
     // 2D texture w/ extent.depth > 1. Source = VU 09c00128, dest = 09c00134
     copy_region.extent.depth = 8;
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_09c00128);
@@ -18172,35 +18152,107 @@ TEST_F(VkLayerTest, CopyImageTypeExtentMismatch) {
                                &copy_region);
     m_errorMonitor->VerifyFound();
 
-#if 0  // TODO: these should be re-added, with an appropriate extension guard, once the spec issue is resolved
-    if (supports_maintenance1_extension) {
-        // Copy from layer not present - VU 09c0012a
-        // TODO: this VU is redundant with VU 0a600154. Gitlab issue 812 submitted to have it removed.
-        copy_region.srcSubresource.baseArrayLayer = 4;
-        copy_region.srcSubresource.layerCount = 6;
-        m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_09c0012a);
-        m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_0a600154);
-        m_commandBuffer->CopyImage(image_2D_array.image(), VK_IMAGE_LAYOUT_GENERAL, image_3D.image(), VK_IMAGE_LAYOUT_GENERAL, 1,
-                                   &copy_region);
-        m_errorMonitor->VerifyFound();
-        copy_region.srcSubresource.baseArrayLayer = 0;
-        copy_region.srcSubresource.layerCount = 1;
+    m_commandBuffer->end();
+}
 
-        // Copy to layer not present - VU 09c00136
-        // TODO: this VU is redundant with 0a600154. Gitlab issue 812 submitted to have it removed.
-        copy_region.dstSubresource.baseArrayLayer = 1;
-        copy_region.dstSubresource.layerCount = 8;
-        m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_09c00136);
-        m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_0a600154);
-        m_commandBuffer->CopyImage(image_3D.image(), VK_IMAGE_LAYOUT_GENERAL, image_2D_array.image(), VK_IMAGE_LAYOUT_GENERAL, 1,
-                                   &copy_region);
-        m_errorMonitor->VerifyFound();
-        copy_region.dstSubresource.layerCount = 1;
+TEST_F(VkLayerTest, CopyImageTypeExtentMismatchMaintenance1) {
+    // Image copy tests where format type and extents don't match and the Maintenance1 extension is enabled
+    ASSERT_NO_FATAL_FAILURE(InitFramework(myDbgFunc, m_errorMonitor));
+    if (DeviceExtensionSupported(gpu(), VK_KHR_MAINTENANCE1_EXTENSION_NAME)) {
+        m_device_extension_names.push_back(VK_KHR_MAINTENANCE1_EXTENSION_NAME);
+    } else {
+        printf("             Maintenance1 extension cannot be enabled, test skipped.\n");
+        return;
     }
-#endif
+    ASSERT_NO_FATAL_FAILURE(InitState());
+
+    VkImageCreateInfo ci;
+    ci.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+    ci.pNext = NULL;
+    ci.flags = 0;
+    ci.imageType = VK_IMAGE_TYPE_1D;
+    ci.format = VK_FORMAT_R8G8B8A8_UNORM;
+    ci.extent = { 32, 1, 1 };
+    ci.mipLevels = 1;
+    ci.arrayLayers = 1;
+    ci.samples = VK_SAMPLE_COUNT_1_BIT;
+    ci.tiling = VK_IMAGE_TILING_OPTIMAL;
+    ci.usage = VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+    ci.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+    ci.queueFamilyIndexCount = 0;
+    ci.pQueueFamilyIndices = NULL;
+    ci.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+
+    // Create 1D image
+    VkImageObj image_1D(m_device);
+    image_1D.init(&ci);
+    ASSERT_TRUE(image_1D.initialized());
+
+    // 2D image
+    ci.imageType = VK_IMAGE_TYPE_2D;
+    ci.extent = { 32, 32, 1 };
+    VkImageObj image_2D(m_device);
+    image_2D.init(&ci);
+    ASSERT_TRUE(image_2D.initialized());
+
+    // 3D image
+    ci.imageType = VK_IMAGE_TYPE_3D;
+    ci.extent = { 32, 32, 8 };
+    VkImageObj image_3D(m_device);
+    image_3D.init(&ci);
+    ASSERT_TRUE(image_3D.initialized());
+
+    // 2D image array
+    ci.imageType = VK_IMAGE_TYPE_2D;
+    ci.extent = { 32, 32, 1 };
+    ci.arrayLayers = 8;
+    VkImageObj image_2D_array(m_device);
+    image_2D_array.init(&ci);
+    ASSERT_TRUE(image_2D_array.initialized());
+
+    m_commandBuffer->begin();
+
+    VkImageCopy copy_region;
+    copy_region.extent = { 32, 1, 1 };
+    copy_region.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    copy_region.dstSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    copy_region.srcSubresource.mipLevel = 0;
+    copy_region.dstSubresource.mipLevel = 0;
+    copy_region.srcSubresource.baseArrayLayer = 0;
+    copy_region.dstSubresource.baseArrayLayer = 0;
+    copy_region.srcSubresource.layerCount = 1;
+    copy_region.dstSubresource.layerCount = 1;
+    copy_region.srcOffset = { 0, 0, 0 };
+    copy_region.dstOffset = { 0, 0, 0 };
+
+    // Copy from layer not present - VU 09c0012a
+    // TODO: this VU is redundant with VU 0a600154. Gitlab issue 812 submitted to have it removed.
+    copy_region.srcSubresource.baseArrayLayer = 4;
+    copy_region.srcSubresource.layerCount = 6;
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_09c0012a);
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_0a600154);
+    m_commandBuffer->CopyImage(image_2D_array.image(), VK_IMAGE_LAYOUT_GENERAL, image_3D.image(), VK_IMAGE_LAYOUT_GENERAL, 1,
+                               &copy_region);
+    m_errorMonitor->VerifyFound();
+    copy_region.srcSubresource.baseArrayLayer = 0;
+    copy_region.srcSubresource.layerCount = 1;
+
+    // Copy to layer not present - VU 09c00136
+    // TODO: this VU is redundant with 0a600154. Gitlab issue 812 submitted to have it removed.
+    copy_region.dstSubresource.baseArrayLayer = 1;
+    copy_region.dstSubresource.layerCount = 8;
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_09c00136);
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_0a600154);
+    m_commandBuffer->CopyImage(image_3D.image(), VK_IMAGE_LAYOUT_GENERAL, image_2D_array.image(), VK_IMAGE_LAYOUT_GENERAL, 1,
+                               &copy_region);
+    m_errorMonitor->VerifyFound();
+    copy_region.dstSubresource.layerCount = 1;
 
     m_commandBuffer->end();
 }
+
+
+
 
 TEST_F(VkLayerTest, CopyImageCompressedBlockAlignment) {
     // Image copy tests on compressed images with block alignment errors
@@ -24279,124 +24331,103 @@ TEST_F(VkPositiveLayerTest, Maintenance1Tests) {
 TEST_F(VkLayerTest, DuplicateValidPNextStructures) {
     TEST_DESCRIPTION("Create a pNext chain containing valid strutures, but with a duplicate structure type");
 
-    ASSERT_NO_FATAL_FAILURE(Init());
-
-    uint32_t extension_count = 0;
-    VkResult err = vkEnumerateDeviceExtensionProperties(gpu(), nullptr, &extension_count, nullptr);
-    ASSERT_VK_SUCCESS(err);
-
-    if (extension_count > 0) {
-        std::vector<VkExtensionProperties> available_extensions(extension_count);
-        err = vkEnumerateDeviceExtensionProperties(gpu(), nullptr, &extension_count, &available_extensions[0]);
-        ASSERT_VK_SUCCESS(err);
-
-        for (const auto &extension_props : available_extensions) {
-            if (strcmp(extension_props.extensionName, VK_NV_DEDICATED_ALLOCATION_EXTENSION_NAME) == 0) {
-                // Create two pNext structures which by themselves would be valid
-                VkDedicatedAllocationBufferCreateInfoNV dedicated_buffer_create_info = {};
-                VkDedicatedAllocationBufferCreateInfoNV dedicated_buffer_create_info_2 = {};
-                dedicated_buffer_create_info.sType = VK_STRUCTURE_TYPE_DEDICATED_ALLOCATION_BUFFER_CREATE_INFO_NV;
-                dedicated_buffer_create_info.pNext = &dedicated_buffer_create_info_2;
-                dedicated_buffer_create_info.dedicatedAllocation = VK_TRUE;
-
-                dedicated_buffer_create_info_2.sType = VK_STRUCTURE_TYPE_DEDICATED_ALLOCATION_BUFFER_CREATE_INFO_NV;
-                dedicated_buffer_create_info_2.pNext = nullptr;
-                dedicated_buffer_create_info_2.dedicatedAllocation = VK_TRUE;
-
-                uint32_t queue_family_index = 0;
-                VkBufferCreateInfo buffer_create_info = {};
-                buffer_create_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-                buffer_create_info.pNext = &dedicated_buffer_create_info;
-                buffer_create_info.size = 1024;
-                buffer_create_info.usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
-                buffer_create_info.queueFamilyIndexCount = 1;
-                buffer_create_info.pQueueFamilyIndices = &queue_family_index;
-
-                m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, "chain contains duplicate structure types");
-                VkBuffer buffer;
-                err = vkCreateBuffer(m_device->device(), &buffer_create_info, NULL, &buffer);
-                m_errorMonitor->VerifyFound();
-            }
-        }
+    ASSERT_NO_FATAL_FAILURE(InitFramework(myDbgFunc, m_errorMonitor));
+    if (DeviceExtensionSupported(gpu(), VK_NV_DEDICATED_ALLOCATION_EXTENSION_NAME)) {
+        m_device_extension_names.push_back(VK_NV_DEDICATED_ALLOCATION_EXTENSION_NAME);
+    } else {
+        printf("             VK_NV_dedicated_allocation extension not supported, skipping test\n");
+        return;
     }
+    ASSERT_NO_FATAL_FAILURE(InitState());
+
+    // Create two pNext structures which by themselves would be valid
+    VkDedicatedAllocationBufferCreateInfoNV dedicated_buffer_create_info = {};
+    VkDedicatedAllocationBufferCreateInfoNV dedicated_buffer_create_info_2 = {};
+    dedicated_buffer_create_info.sType = VK_STRUCTURE_TYPE_DEDICATED_ALLOCATION_BUFFER_CREATE_INFO_NV;
+    dedicated_buffer_create_info.pNext = &dedicated_buffer_create_info_2;
+    dedicated_buffer_create_info.dedicatedAllocation = VK_TRUE;
+
+    dedicated_buffer_create_info_2.sType = VK_STRUCTURE_TYPE_DEDICATED_ALLOCATION_BUFFER_CREATE_INFO_NV;
+    dedicated_buffer_create_info_2.pNext = nullptr;
+    dedicated_buffer_create_info_2.dedicatedAllocation = VK_TRUE;
+
+    uint32_t queue_family_index = 0;
+    VkBufferCreateInfo buffer_create_info = {};
+    buffer_create_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+    buffer_create_info.pNext = &dedicated_buffer_create_info;
+    buffer_create_info.size = 1024;
+    buffer_create_info.usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
+    buffer_create_info.queueFamilyIndexCount = 1;
+    buffer_create_info.pQueueFamilyIndices = &queue_family_index;
+
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, "chain contains duplicate structure types");
+    VkBuffer buffer;
+    vkCreateBuffer(m_device->device(), &buffer_create_info, NULL, &buffer);
+    m_errorMonitor->VerifyFound();
 }
 
 TEST_F(VkPositiveLayerTest, ValidStructPNext) {
     TEST_DESCRIPTION("Verify that a valid pNext value is handled correctly");
 
-    ASSERT_NO_FATAL_FAILURE(Init());
+    // Positive test to check parameter_validation and unique_objects support for NV_dedicated_allocation
+    ASSERT_NO_FATAL_FAILURE(InitFramework(myDbgFunc, m_errorMonitor));
+    if (DeviceExtensionSupported(gpu(), VK_NV_DEDICATED_ALLOCATION_EXTENSION_NAME)) {
+        m_device_extension_names.push_back(VK_NV_DEDICATED_ALLOCATION_EXTENSION_NAME);
+    } else {
+        printf("             VK_NV_DEDICATED_ALLOCATION_EXTENSION_NAME Extension not supported, skipping test\n");
+        return;
+    }
+    ASSERT_NO_FATAL_FAILURE(InitState());
 
-    // Positive test to check parameter_validation and unique_objects support
-    // for NV_dedicated_allocation
-    uint32_t extension_count = 0;
-    bool supports_nv_dedicated_allocation = false;
-    VkResult err = vkEnumerateDeviceExtensionProperties(gpu(), nullptr, &extension_count, nullptr);
+    m_errorMonitor->ExpectSuccess();
+
+    VkDedicatedAllocationBufferCreateInfoNV dedicated_buffer_create_info = {};
+    dedicated_buffer_create_info.sType = VK_STRUCTURE_TYPE_DEDICATED_ALLOCATION_BUFFER_CREATE_INFO_NV;
+    dedicated_buffer_create_info.pNext = nullptr;
+    dedicated_buffer_create_info.dedicatedAllocation = VK_TRUE;
+
+    uint32_t queue_family_index = 0;
+    VkBufferCreateInfo buffer_create_info = {};
+    buffer_create_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+    buffer_create_info.pNext = &dedicated_buffer_create_info;
+    buffer_create_info.size = 1024;
+    buffer_create_info.usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
+    buffer_create_info.queueFamilyIndexCount = 1;
+    buffer_create_info.pQueueFamilyIndices = &queue_family_index;
+
+    VkBuffer buffer;
+    VkResult err = vkCreateBuffer(m_device->device(), &buffer_create_info, NULL, &buffer);
     ASSERT_VK_SUCCESS(err);
 
-    if (extension_count > 0) {
-        std::vector<VkExtensionProperties> available_extensions(extension_count);
+    VkMemoryRequirements memory_reqs;
+    vkGetBufferMemoryRequirements(m_device->device(), buffer, &memory_reqs);
 
-        err = vkEnumerateDeviceExtensionProperties(gpu(), nullptr, &extension_count, &available_extensions[0]);
-        ASSERT_VK_SUCCESS(err);
+    VkDedicatedAllocationMemoryAllocateInfoNV dedicated_memory_info = {};
+    dedicated_memory_info.sType = VK_STRUCTURE_TYPE_DEDICATED_ALLOCATION_MEMORY_ALLOCATE_INFO_NV;
+    dedicated_memory_info.pNext = nullptr;
+    dedicated_memory_info.buffer = buffer;
+    dedicated_memory_info.image = VK_NULL_HANDLE;
 
-        for (const auto &extension_props : available_extensions) {
-            if (strcmp(extension_props.extensionName, VK_NV_DEDICATED_ALLOCATION_EXTENSION_NAME) == 0) {
-                supports_nv_dedicated_allocation = true;
-            }
-        }
-    }
+    VkMemoryAllocateInfo memory_info = {};
+    memory_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+    memory_info.pNext = &dedicated_memory_info;
+    memory_info.allocationSize = memory_reqs.size;
 
-    if (supports_nv_dedicated_allocation) {
-        m_errorMonitor->ExpectSuccess();
+    bool pass;
+    pass = m_device->phy().set_memory_type(memory_reqs.memoryTypeBits, &memory_info, 0);
+    ASSERT_TRUE(pass);
 
-        VkDedicatedAllocationBufferCreateInfoNV dedicated_buffer_create_info = {};
-        dedicated_buffer_create_info.sType = VK_STRUCTURE_TYPE_DEDICATED_ALLOCATION_BUFFER_CREATE_INFO_NV;
-        dedicated_buffer_create_info.pNext = nullptr;
-        dedicated_buffer_create_info.dedicatedAllocation = VK_TRUE;
+    VkDeviceMemory buffer_memory;
+    err = vkAllocateMemory(m_device->device(), &memory_info, NULL, &buffer_memory);
+    ASSERT_VK_SUCCESS(err);
 
-        uint32_t queue_family_index = 0;
-        VkBufferCreateInfo buffer_create_info = {};
-        buffer_create_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-        buffer_create_info.pNext = &dedicated_buffer_create_info;
-        buffer_create_info.size = 1024;
-        buffer_create_info.usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
-        buffer_create_info.queueFamilyIndexCount = 1;
-        buffer_create_info.pQueueFamilyIndices = &queue_family_index;
+    err = vkBindBufferMemory(m_device->device(), buffer, buffer_memory, 0);
+    ASSERT_VK_SUCCESS(err);
 
-        VkBuffer buffer;
-        err = vkCreateBuffer(m_device->device(), &buffer_create_info, NULL, &buffer);
-        ASSERT_VK_SUCCESS(err);
+    vkDestroyBuffer(m_device->device(), buffer, NULL);
+    vkFreeMemory(m_device->device(), buffer_memory, NULL);
 
-        VkMemoryRequirements memory_reqs;
-        vkGetBufferMemoryRequirements(m_device->device(), buffer, &memory_reqs);
-
-        VkDedicatedAllocationMemoryAllocateInfoNV dedicated_memory_info = {};
-        dedicated_memory_info.sType = VK_STRUCTURE_TYPE_DEDICATED_ALLOCATION_MEMORY_ALLOCATE_INFO_NV;
-        dedicated_memory_info.pNext = nullptr;
-        dedicated_memory_info.buffer = buffer;
-        dedicated_memory_info.image = VK_NULL_HANDLE;
-
-        VkMemoryAllocateInfo memory_info = {};
-        memory_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-        memory_info.pNext = &dedicated_memory_info;
-        memory_info.allocationSize = memory_reqs.size;
-
-        bool pass;
-        pass = m_device->phy().set_memory_type(memory_reqs.memoryTypeBits, &memory_info, 0);
-        ASSERT_TRUE(pass);
-
-        VkDeviceMemory buffer_memory;
-        err = vkAllocateMemory(m_device->device(), &memory_info, NULL, &buffer_memory);
-        ASSERT_VK_SUCCESS(err);
-
-        err = vkBindBufferMemory(m_device->device(), buffer, buffer_memory, 0);
-        ASSERT_VK_SUCCESS(err);
-
-        vkDestroyBuffer(m_device->device(), buffer, NULL);
-        vkFreeMemory(m_device->device(), buffer_memory, NULL);
-
-        m_errorMonitor->VerifyNotFound();
-    }
+    m_errorMonitor->VerifyNotFound();
 }
 
 TEST_F(VkPositiveLayerTest, PSOPolygonModeValid) {
