@@ -324,7 +324,7 @@ struct Demo {
 
     uint32_t swapchainImageCount;
     vk::SwapchainKHR swapchain;
-    std::unique_ptr<SwapchainBuffers[]> buffers;
+    std::unique_ptr<SwapchainImageResources[]> swapchain_image_resources;
     vk::PresentModeKHR presentMode;
     vk::Fence fences[FRAME_LAG];
     uint32_t frame_index;
@@ -410,7 +410,7 @@ static void pointer_handle_motion(void *data, struct wl_pointer *pointer, uint32
 
 static void pointer_handle_button(void *data, struct wl_pointer *wl_pointer, uint32_t serial, uint32_t time, uint32_t button,
                                   uint32_t state) {
-    Demo *demo = (Demo *)data;    
+    Demo *demo = (Demo *)data;
     if (button == BTN_LEFT && state == WL_POINTER_BUTTON_STATE_PRESSED) {
         wl_shell_surface_move(demo->shell_surface, demo->seat, serial);
     }
