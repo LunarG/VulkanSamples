@@ -590,13 +590,6 @@ static std::map<location_t, interface_var> collect_interface_by_location(shader_
             bool is_patch = var_patch.find(id) != var_patch.end();
             bool is_relaxed_precision = var_relaxed_precision.find(id) != var_relaxed_precision.end();
 
-            // All variables and interface block members in the Input or Output storage classes must be decorated with either
-            // a builtin or an explicit location.
-            //
-            // TODO: integrate the interface block support here. For now, don't complain -- a valid SPIRV module will only hit
-            // this path for the interface block case, as the individual members of the type are decorated, rather than
-            // variable declarations.
-
             if (builtin != -1) continue;
             else if (!collect_interface_block_members(src, &out, blocks, is_array_of_verts, id, type, is_patch, location)) {
                 // A user-defined interface variable, with a location. Where a variable occupied multiple locations, emit
