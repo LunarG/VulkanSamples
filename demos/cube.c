@@ -957,8 +957,6 @@ static void demo_draw(struct demo *demo) {
     vkWaitForFences(demo->device, 1, &demo->fences[demo->frame_index], VK_TRUE, UINT64_MAX);
     vkResetFences(demo->device, 1, &demo->fences[demo->frame_index]);
 
-    demo_update_data_buffer(demo);
-
     err = !(VK_SUCCESS);
     while (err != VK_SUCCESS) {
         // Get the index of the next available swapchain image:
@@ -978,6 +976,8 @@ static void demo_draw(struct demo *demo) {
             assert(!err);
         }
     }
+
+    demo_update_data_buffer(demo);
 
     if (demo->VK_GOOGLE_display_timing_enabled) {
         // Look at what happened to previous presents, and make appropriate
