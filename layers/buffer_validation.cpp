@@ -2890,10 +2890,7 @@ bool PreCallValidateCreateBuffer(layer_data *device_data, const VkBufferCreateIn
     bool skip = false;
     const debug_report_data *report_data = core_validation::GetReportData(device_data);
 
-    // TODO: Add check for VALIDATION_ERROR_1ec0071e
-    // TODO: Add check for VALIDATION_ERROR_01400728
-    // TODO: Add check for VALIDATION_ERROR_0140072a
-    // TODO: Add check for VALIDATION_ERROR_0140072c
+    // TODO: Add check for VALIDATION_ERROR_1ec0071e        (sparse address space accounting)
 
     if ((pCreateInfo->flags & VK_BUFFER_CREATE_SPARSE_BINDING_BIT) && (!GetEnabledFeatures(device_data)->sparseBinding)) {
         skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
@@ -2906,17 +2903,19 @@ bool PreCallValidateCreateBuffer(layer_data *device_data, const VkBufferCreateIn
     if ((pCreateInfo->flags & VK_BUFFER_CREATE_SPARSE_RESIDENCY_BIT) && (!GetEnabledFeatures(device_data)->sparseResidencyBuffer)) {
         skip |=
             log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
-                    DRAWSTATE_INVALID_FEATURE, "DS",
+                    VALIDATION_ERROR_01400728, "DS",
                     "vkCreateBuffer(): the sparseResidencyBuffer device feature is disabled: Buffers cannot be created with the "
-                    "VK_BUFFER_CREATE_SPARSE_RESIDENCY_BIT set.");
+                    "VK_BUFFER_CREATE_SPARSE_RESIDENCY_BIT set. %s",
+                    validation_error_map[VALIDATION_ERROR_01400728]);
     }
 
     if ((pCreateInfo->flags & VK_BUFFER_CREATE_SPARSE_ALIASED_BIT) && (!GetEnabledFeatures(device_data)->sparseResidencyAliased)) {
         skip |=
             log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
-                    DRAWSTATE_INVALID_FEATURE, "DS",
+                    VALIDATION_ERROR_0140072a, "DS",
                     "vkCreateBuffer(): the sparseResidencyAliased device feature is disabled: Buffers cannot be created with the "
-                    "VK_BUFFER_CREATE_SPARSE_ALIASED_BIT set.");
+                    "VK_BUFFER_CREATE_SPARSE_ALIASED_BIT set. %s",
+                    validation_error_map[VALIDATION_ERROR_0140072a]);
     }
     return skip;
 }
