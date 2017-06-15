@@ -316,17 +316,17 @@ cvdescriptorset::DescriptorSet::DescriptorSet(const VkDescriptorSet set, const V
     : some_update_(false),
       set_(set),
       pool_state_(nullptr),
-      p_layout_(layout),
+      p_layout_(*layout),
       device_data_(dev_data),
       limits_(GetPhysDevProperties(dev_data)->properties.limits) {
     pool_state_ = GetDescriptorPoolState(dev_data, pool);
     // Foreach binding, create default descriptors of given type
-    for (uint32_t i = 0; i < p_layout_->GetBindingCount(); ++i) {
-        auto type = p_layout_->GetTypeFromIndex(i);
+    for (uint32_t i = 0; i < p_layout_.GetBindingCount(); ++i) {
+        auto type = p_layout_.GetTypeFromIndex(i);
         switch (type) {
             case VK_DESCRIPTOR_TYPE_SAMPLER: {
-                auto immut_sampler = p_layout_->GetImmutableSamplerPtrFromIndex(i);
-                for (uint32_t di = 0; di < p_layout_->GetDescriptorCountFromIndex(i); ++di) {
+                auto immut_sampler = p_layout_.GetImmutableSamplerPtrFromIndex(i);
+                for (uint32_t di = 0; di < p_layout_.GetDescriptorCountFromIndex(i); ++di) {
                     if (immut_sampler) {
                         descriptors_.emplace_back(new SamplerDescriptor(immut_sampler + di));
                         some_update_ = true;  // Immutable samplers are updated at creation
@@ -336,8 +336,8 @@ cvdescriptorset::DescriptorSet::DescriptorSet(const VkDescriptorSet set, const V
                 break;
             }
             case VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER: {
-                auto immut = p_layout_->GetImmutableSamplerPtrFromIndex(i);
-                for (uint32_t di = 0; di < p_layout_->GetDescriptorCountFromIndex(i); ++di) {
+                auto immut = p_layout_.GetImmutableSamplerPtrFromIndex(i);
+                for (uint32_t di = 0; di < p_layout_.GetDescriptorCountFromIndex(i); ++di) {
                     if (immut) {
                         descriptors_.emplace_back(new ImageSamplerDescriptor(immut + di));
                         some_update_ = true;  // Immutable samplers are updated at creation
@@ -350,19 +350,19 @@ cvdescriptorset::DescriptorSet::DescriptorSet(const VkDescriptorSet set, const V
             case VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE:
             case VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT:
             case VK_DESCRIPTOR_TYPE_STORAGE_IMAGE:
-                for (uint32_t di = 0; di < p_layout_->GetDescriptorCountFromIndex(i); ++di)
+                for (uint32_t di = 0; di < p_layout_.GetDescriptorCountFromIndex(i); ++di)
                     descriptors_.emplace_back(new ImageDescriptor(type));
                 break;
             case VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER:
             case VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER:
-                for (uint32_t di = 0; di < p_layout_->GetDescriptorCountFromIndex(i); ++di)
+                for (uint32_t di = 0; di < p_layout_.GetDescriptorCountFromIndex(i); ++di)
                     descriptors_.emplace_back(new TexelDescriptor(type));
                 break;
             case VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER:
             case VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC:
             case VK_DESCRIPTOR_TYPE_STORAGE_BUFFER:
             case VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC:
-                for (uint32_t di = 0; di < p_layout_->GetDescriptorCountFromIndex(i); ++di)
+                for (uint32_t di = 0; di < p_layout_.GetDescriptorCountFromIndex(i); ++di)
                     descriptors_.emplace_back(new BufferDescriptor(type));
                 break;
             default:
@@ -390,7 +390,7 @@ static std::string string_descriptor_req_view_type(descriptor_req req) {
 
 // Is this sets underlying layout compatible with passed in layout according to "Pipeline Layout Compatibility" in spec?
 bool cvdescriptorset::DescriptorSet::IsCompatible(const DescriptorSetLayout *layout, std::string *error) const {
-    return layout->IsCompatible(p_layout_, error);
+    return layout->IsCompatible(&p_layout_, error);
 }
 
 // Validate that the state of this set is appropriate for the given bindings and dynamic_offsets at Draw time
@@ -402,15 +402,15 @@ bool cvdescriptorset::DescriptorSet::ValidateDrawState(const std::map<uint32_t, 
                                                        const char *caller, std::string *error) const {
     for (auto binding_pair : bindings) {
         auto binding = binding_pair.first;
-        if (!p_layout_->HasBinding(binding)) {
+        if (!p_layout_.HasBinding(binding)) {
             std::stringstream error_str;
             error_str << "Attempting to validate DrawState for binding #" << binding
                       << " which is an invalid binding for this descriptor set.";
             *error = error_str.str();
             return false;
         }
-        auto start_idx = p_layout_->GetGlobalStartIndexFromBinding(binding);
-        auto end_idx = p_layout_->GetGlobalEndIndexFromBinding(binding);
+        auto start_idx = p_layout_.GetGlobalStartIndexFromBinding(binding);
+        auto end_idx = p_layout_.GetGlobalEndIndexFromBinding(binding);
         auto array_idx = 0;  // Track array idx if we're dealing with array descriptors
         for (uint32_t i = start_idx; i <= end_idx; ++i, ++array_idx) {
             if (!descriptors_[i]->updated) {
@@ -552,20 +552,20 @@ uint32_t cvdescriptorset::DescriptorSet::GetStorageUpdates(const std::map<uint32
     for (auto binding_pair : bindings) {
         auto binding = binding_pair.first;
         // If a binding doesn't exist, skip it
-        if (!p_layout_->HasBinding(binding)) {
+        if (!p_layout_.HasBinding(binding)) {
             continue;
         }
-        auto start_idx = p_layout_->GetGlobalStartIndexFromBinding(binding);
+        auto start_idx = p_layout_.GetGlobalStartIndexFromBinding(binding);
         if (descriptors_[start_idx]->IsStorage()) {
             if (Image == descriptors_[start_idx]->descriptor_class) {
-                for (uint32_t i = 0; i < p_layout_->GetDescriptorCountFromBinding(binding); ++i) {
+                for (uint32_t i = 0; i < p_layout_.GetDescriptorCountFromBinding(binding); ++i) {
                     if (descriptors_[start_idx + i]->updated) {
                         image_set->insert(static_cast<ImageDescriptor *>(descriptors_[start_idx + i].get())->GetImageView());
                         num_updates++;
                     }
                 }
             } else if (TexelBuffer == descriptors_[start_idx]->descriptor_class) {
-                for (uint32_t i = 0; i < p_layout_->GetDescriptorCountFromBinding(binding); ++i) {
+                for (uint32_t i = 0; i < p_layout_.GetDescriptorCountFromBinding(binding); ++i) {
                     if (descriptors_[start_idx + i]->updated) {
                         auto bufferview = static_cast<TexelDescriptor *>(descriptors_[start_idx + i].get())->GetBufferView();
                         auto bv_state = GetBufferViewState(device_data_, bufferview);
@@ -576,7 +576,7 @@ uint32_t cvdescriptorset::DescriptorSet::GetStorageUpdates(const std::map<uint32
                     }
                 }
             } else if (GeneralBuffer == descriptors_[start_idx]->descriptor_class) {
-                for (uint32_t i = 0; i < p_layout_->GetDescriptorCountFromBinding(binding); ++i) {
+                for (uint32_t i = 0; i < p_layout_.GetDescriptorCountFromBinding(binding); ++i) {
                     if (descriptors_[start_idx + i]->updated) {
                         buffer_set->insert(static_cast<BufferDescriptor *>(descriptors_[start_idx + i].get())->GetBuffer());
                         num_updates++;
@@ -599,7 +599,7 @@ void cvdescriptorset::DescriptorSet::PerformWriteUpdate(const VkWriteDescriptorS
     auto offset = update->dstArrayElement;
     while (descriptors_remaining) {
         uint32_t update_count = std::min(descriptors_remaining, GetDescriptorCountFromBinding(binding_being_updated));
-        auto global_idx = p_layout_->GetGlobalStartIndexFromBinding(binding_being_updated) + offset;
+        auto global_idx = p_layout_.GetGlobalStartIndexFromBinding(binding_being_updated) + offset;
         // Loop over the updates for a single binding at a time
         for (uint32_t di = 0; di < update_count; ++di) {
             descriptors_[global_idx + di]->WriteUpdate(update, di);
@@ -627,7 +627,7 @@ bool cvdescriptorset::DescriptorSet::ValidateCopyUpdate(const debug_report_data 
         *error_msg = error_str.str();
         return false;
     }
-    if (!p_layout_->HasBinding(update->dstBinding)) {
+    if (!p_layout_.HasBinding(update->dstBinding)) {
         *error_code = VALIDATION_ERROR_032002b6;
         std::stringstream error_str;
         error_str << "DescriptorSet " << set_ << " does not have copy update dest binding of " << update->dstBinding;
@@ -655,15 +655,15 @@ bool cvdescriptorset::DescriptorSet::ValidateCopyUpdate(const debug_report_data 
         *error_msg = error_str.str();
         return false;
     }
-    auto dst_start_idx = p_layout_->GetGlobalStartIndexFromBinding(update->dstBinding) + update->dstArrayElement;
-    if ((dst_start_idx + update->descriptorCount) > p_layout_->GetTotalDescriptorCount()) {
+    auto dst_start_idx = p_layout_.GetGlobalStartIndexFromBinding(update->dstBinding) + update->dstArrayElement;
+    if ((dst_start_idx + update->descriptorCount) > p_layout_.GetTotalDescriptorCount()) {
         // DST update out of bounds
         *error_code = VALIDATION_ERROR_032002b8;
         std::stringstream error_str;
         error_str << "Attempting copy update to descriptorSet " << set_ << " binding#" << update->dstBinding
-                  << " with offset index of " << p_layout_->GetGlobalStartIndexFromBinding(update->dstBinding)
+                  << " with offset index of " << p_layout_.GetGlobalStartIndexFromBinding(update->dstBinding)
                   << " plus update array offset of " << update->dstArrayElement << " and update of " << update->descriptorCount
-                  << " descriptors oversteps total number of descriptors in set: " << p_layout_->GetTotalDescriptorCount();
+                  << " descriptors oversteps total number of descriptors in set: " << p_layout_.GetTotalDescriptorCount();
         *error_msg = error_str.str();
         return false;
     }
@@ -672,7 +672,7 @@ bool cvdescriptorset::DescriptorSet::ValidateCopyUpdate(const debug_report_data 
     // fine-grained error codes
     *error_code = VALIDATION_ERROR_032002ba;
     auto src_type = src_set->GetTypeFromBinding(update->srcBinding);
-    auto dst_type = p_layout_->GetTypeFromBinding(update->dstBinding);
+    auto dst_type = p_layout_.GetTypeFromBinding(update->dstBinding);
     if (src_type != dst_type) {
         std::stringstream error_str;
         error_str << "Attempting copy update to descriptorSet " << set_ << " binding #" << update->dstBinding << " with type "
@@ -684,7 +684,7 @@ bool cvdescriptorset::DescriptorSet::ValidateCopyUpdate(const debug_report_data 
     // Verify consistency of src & dst bindings if update crosses binding boundaries
     if ((!src_set->GetLayout()->VerifyUpdateConsistency(update->srcBinding, update->srcArrayElement, update->descriptorCount,
                                                         "copy update from", src_set->GetSet(), error_msg)) ||
-        (!p_layout_->VerifyUpdateConsistency(update->dstBinding, update->dstArrayElement, update->descriptorCount, "copy update to",
+        (!p_layout_.VerifyUpdateConsistency(update->dstBinding, update->dstArrayElement, update->descriptorCount, "copy update to",
                                              set_, error_msg))) {
         return false;
     }
@@ -707,7 +707,7 @@ bool cvdescriptorset::DescriptorSet::ValidateCopyUpdate(const debug_report_data 
 // Perform Copy update
 void cvdescriptorset::DescriptorSet::PerformCopyUpdate(const VkCopyDescriptorSet *update, const DescriptorSet *src_set) {
     auto src_start_idx = src_set->GetGlobalStartIndexFromBinding(update->srcBinding) + update->srcArrayElement;
-    auto dst_start_idx = p_layout_->GetGlobalStartIndexFromBinding(update->dstBinding) + update->dstArrayElement;
+    auto dst_start_idx = p_layout_.GetGlobalStartIndexFromBinding(update->dstBinding) + update->dstArrayElement;
     // Update parameters all look good so perform update
     for (uint32_t di = 0; di < update->descriptorCount; ++di) {
         descriptors_[dst_start_idx + di]->CopyUpdate(src_set->descriptors_[src_start_idx + di].get());
@@ -732,8 +732,8 @@ void cvdescriptorset::DescriptorSet::BindCommandBuffer(GLOBAL_CB_NODE *cb_node,
     // resources
     for (auto binding_req_pair : binding_req_map) {
         auto binding = binding_req_pair.first;
-        auto start_idx = p_layout_->GetGlobalStartIndexFromBinding(binding);
-        auto end_idx = p_layout_->GetGlobalEndIndexFromBinding(binding);
+        auto start_idx = p_layout_.GetGlobalStartIndexFromBinding(binding);
+        auto end_idx = p_layout_.GetGlobalEndIndexFromBinding(binding);
         for (uint32_t i = start_idx; i <= end_idx; ++i) {
             descriptors_[i]->BindCommandBuffer(device_data_, cb_node);
         }
@@ -1242,7 +1242,7 @@ bool cvdescriptorset::DescriptorSet::ValidateWriteUpdate(const debug_report_data
         return false;
     }
     // Verify dst binding exists
-    if (!p_layout_->HasBinding(update->dstBinding)) {
+    if (!p_layout_.HasBinding(update->dstBinding)) {
         *error_code = VALIDATION_ERROR_15c00276;
         std::stringstream error_str;
         error_str << "DescriptorSet " << set_ << " does not have binding " << update->dstBinding;
@@ -1250,7 +1250,7 @@ bool cvdescriptorset::DescriptorSet::ValidateWriteUpdate(const debug_report_data
         return false;
     } else {
         // Make sure binding isn't empty
-        if (0 == p_layout_->GetDescriptorCountFromBinding(update->dstBinding)) {
+        if (0 == p_layout_.GetDescriptorCountFromBinding(update->dstBinding)) {
             *error_code = VALIDATION_ERROR_15c00278;
             std::stringstream error_str;
             error_str << "DescriptorSet " << set_ << " cannot updated binding " << update->dstBinding << " that has 0 descriptors";
@@ -1259,8 +1259,8 @@ bool cvdescriptorset::DescriptorSet::ValidateWriteUpdate(const debug_report_data
         }
     }
     // We know that binding is valid, verify update and do update on each descriptor
-    auto start_idx = p_layout_->GetGlobalStartIndexFromBinding(update->dstBinding) + update->dstArrayElement;
-    auto type = p_layout_->GetTypeFromBinding(update->dstBinding);
+    auto start_idx = p_layout_.GetGlobalStartIndexFromBinding(update->dstBinding) + update->dstArrayElement;
+    auto type = p_layout_.GetTypeFromBinding(update->dstBinding);
     if (type != update->descriptorType) {
         *error_code = VALIDATION_ERROR_15c0027e;
         std::stringstream error_str;
@@ -1281,7 +1281,7 @@ bool cvdescriptorset::DescriptorSet::ValidateWriteUpdate(const debug_report_data
         return false;
     }
     // Verify consecutive bindings match (if needed)
-    if (!p_layout_->VerifyUpdateConsistency(update->dstBinding, update->dstArrayElement, update->descriptorCount, "write update to",
+    if (!p_layout_.VerifyUpdateConsistency(update->dstBinding, update->dstArrayElement, update->descriptorCount, "write update to",
                                             set_, error_msg)) {
         // TODO : Should break out "consecutive binding updates" language into valid usage statements
         *error_code = VALIDATION_ERROR_15c00282;
@@ -1694,14 +1694,12 @@ void cvdescriptorset::PerformAllocateDescriptorSets(const VkDescriptorSetAllocat
                                                     std::unordered_map<VkDescriptorSet, cvdescriptorset::DescriptorSet *> *set_map,
                                                     const layer_data *dev_data) {
     auto pool_state = (*pool_map)[p_alloc_info->descriptorPool];
-    /* Account for sets and individual descriptors allocated from pool */
+    // Account for sets and individual descriptors allocated from pool
     pool_state->availableSets -= p_alloc_info->descriptorSetCount;
     for (uint32_t i = 0; i < VK_DESCRIPTOR_TYPE_RANGE_SIZE; i++) {
         pool_state->availableDescriptorTypeCount[i] -= ds_data->required_descriptors_by_type[i];
     }
-    /* Create tracking object for each descriptor set; insert into
-     * global map and the pool's set.
-     */
+    // Create tracking object for each descriptor set; insert into global map and the pool's set.
     for (uint32_t i = 0; i < p_alloc_info->descriptorSetCount; i++) {
         auto new_ds = new cvdescriptorset::DescriptorSet(descriptor_sets[i], p_alloc_info->descriptorPool, ds_data->layout_nodes[i],
                                                          dev_data);

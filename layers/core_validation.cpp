@@ -4754,6 +4754,7 @@ static void PostCallRecordAllocateDescriptorSets(layer_data *dev_data, const VkD
                                                    &dev_data->setMap, dev_data);
 }
 
+// TODO: PostCallRecord routine is dependent on data generated in PreCallValidate -- needs to be moved out
 VKAPI_ATTR VkResult VKAPI_CALL AllocateDescriptorSets(VkDevice device, const VkDescriptorSetAllocateInfo *pAllocateInfo,
                                                       VkDescriptorSet *pDescriptorSets) {
     layer_data *dev_data = GetLayerDataPtr(get_dispatch_key(device), layer_data_map);
