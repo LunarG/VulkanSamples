@@ -307,16 +307,16 @@ LOADER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateInstance(const VkInstanceCr
         goto out;
     }
 
-    ptr_instance->disp =
-        loader_instance_heap_alloc(ptr_instance, sizeof(VkLayerInstanceDispatchTable), VK_SYSTEM_ALLOCATION_SCOPE_INSTANCE);
+    ptr_instance->disp = loader_instance_heap_alloc(ptr_instance, sizeof(struct loader_instance_dispatch_table),
+                                                    VK_SYSTEM_ALLOCATION_SCOPE_INSTANCE);
     if (ptr_instance->disp == NULL) {
         loader_log(ptr_instance, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
-                   "vkCreateInstance:  Failed to allocate Instance dispatch"
-                   " table.");
+                   "vkCreateInstance:  Failed to allocate Loader's full Instance dispatch table.");
         res = VK_ERROR_OUT_OF_HOST_MEMORY;
         goto out;
     }
-    memcpy(ptr_instance->disp, &instance_disp, sizeof(instance_disp));
+    memcpy(&ptr_instance->disp->layer_inst_disp, &instance_disp, sizeof(instance_disp));
+
     ptr_instance->next = loader.instances;
     loader.instances = ptr_instance;
 
