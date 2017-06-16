@@ -457,8 +457,17 @@ void Shell::acquire_back_buffer() {
     // reset the fence
     vk::assert_success(vk::ResetFences(ctx_.dev, 1, &buf.present_fence));
 
-    vk::assert_success(
-        vk::AcquireNextImageKHR(ctx_.dev, ctx_.swapchain, UINT64_MAX, buf.acquire_semaphore, VK_NULL_HANDLE, &buf.image_index));
+    VkResult res = VK_TIMEOUT; // Anything but VK_SUCCESS
+    while (res != VK_SUCCESS) {
+        res = vk::AcquireNextImageKHR(ctx_.dev, ctx_.swapchain, UINT64_MAX, buf.acquire_semaphore, VK_NULL_HANDLE, &buf.image_index);
+        if (res == VK_ERROR_OUT_OF_DATE_KHR) {
+            // Swapchain is out of date (e.g. the window was resized) and
+            // must be recreated:
+            resize_swapchain(0, 0); // width and height hints should be ignored
+        } else {
+            assert(!res);
+        }
+    }
 
     ctx_.acquired_back_buffer = buf;
     ctx_.back_buffers.pop();
