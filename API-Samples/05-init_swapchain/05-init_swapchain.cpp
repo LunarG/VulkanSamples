@@ -74,7 +74,14 @@ int sample_main(int argc, char *argv[]) {
     createInfo.flags = 0;
     createInfo.window = AndroidGetApplicationWindow();
     res = info.fpCreateAndroidSurfaceKHR(info.inst, &createInfo, nullptr, &info.surface);
-#else   // !__ANDROID__ && !_WIN32
+#elif defined(VK_USE_PLATFORM_WAYLAND_KHR)
+    VkWaylandSurfaceCreateInfoKHR createInfo = {};
+    createInfo.sType = VK_STRUCTURE_TYPE_WAYLAND_SURFACE_CREATE_INFO_KHR;
+    createInfo.pNext = NULL;
+    createInfo.display = info.display;
+    createInfo.surface = info.window;
+    res = vkCreateWaylandSurfaceKHR(info.inst, &createInfo, NULL, &info.surface);
+#else
     VkXcbSurfaceCreateInfoKHR createInfo = {};
     createInfo.sType = VK_STRUCTURE_TYPE_XCB_SURFACE_CREATE_INFO_KHR;
     createInfo.pNext = NULL;
