@@ -1021,7 +1021,7 @@ bool PreCallValidateCmdClearColorImage(layer_data *dev_data, VkCommandBuffer com
 
 // This state recording routine is shared between ClearColorImage and ClearDepthStencilImage
 void PreCallRecordCmdClearImage(layer_data *dev_data, VkCommandBuffer commandBuffer, VkImage image, VkImageLayout imageLayout,
-                                uint32_t rangeCount, const VkImageSubresourceRange *pRanges, CMD_TYPE cmd_type) {
+                                uint32_t rangeCount, const VkImageSubresourceRange *pRanges) {
     auto cb_node = GetCBNode(dev_data, commandBuffer);
     auto image_state = GetImageState(dev_data, image);
     if (cb_node && image_state) {
