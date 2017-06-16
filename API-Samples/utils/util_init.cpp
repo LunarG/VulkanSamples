@@ -29,6 +29,10 @@ samples "init" utility functions
 #include "util_init.hpp"
 #include "cube_data.h"
 
+#if defined(VK_USE_PLATFORM_WAYLAND_KHR)
+#include <linux/input.h>
+#endif
+
 using namespace std;
 
 /*
@@ -172,6 +176,8 @@ void init_instance_extension_names(struct sample_info &info) {
     info.instance_extension_names.push_back(VK_MVK_IOS_SURFACE_EXTENSION_NAME);
 #elif defined(VK_USE_PLATFORM_MACOS_MVK)
     info.instance_extension_names.push_back(VK_MVK_MACOS_SURFACE_EXTENSION_NAME);
+#elif defined(VK_USE_PLATFORM_WAYLAND_KHR)
+    info.instance_extension_names.push_back(VK_KHR_WAYLAND_SURFACE_EXTENSION_NAME);
 #else
     info.instance_extension_names.push_back(VK_KHR_XCB_SURFACE_EXTENSION_NAME);
 #endif
@@ -339,9 +345,36 @@ void destroy_debug_report_callback(struct sample_info &info) {
     }
 }
 
+#if defined(VK_USE_PLATFORM_WAYLAND_KHR)
+
+static void handle_ping(void *data, wl_shell_surface *shell_surface, uint32_t serial) {
+    wl_shell_surface_pong(shell_surface, serial);
+}
+
+static void handle_configure(void *data, wl_shell_surface *shell_surface, uint32_t edges, int32_t width, int32_t height) {}
+
+static void handle_popup_done(void *data, wl_shell_surface *shell_surface) {}
+
+static const wl_shell_surface_listener shell_surface_listener = {handle_ping, handle_configure, handle_popup_done};
+
+static void registry_handle_global(void *data, wl_registry *registry, uint32_t id, const char *interface, uint32_t version) {
+    sample_info *info = (sample_info *)data;
+    // pickup wayland objects when they appear
+    if (strcmp(interface, "wl_compositor") == 0) {
+        info->compositor = (wl_compositor *)wl_registry_bind(registry, id, &wl_compositor_interface, 1);
+    } else if (strcmp(interface, "wl_shell") == 0) {
+        info->shell = (wl_shell *)wl_registry_bind(registry, id, &wl_shell_interface, 1);
+    }
+}
+
+static void registry_handle_global_remove(void *data, wl_registry *registry, uint32_t name) {}
+
+static const wl_registry_listener registry_listener = {registry_handle_global, registry_handle_global_remove};
+
+#endif
+
 void init_connection(struct sample_info &info) {
-#if !(defined(_WIN32) || defined(__ANDROID__) || defined(VK_USE_PLATFORM_IOS_MVK) || defined(VK_USE_PLATFORM_MACOS_MVK))
-// Do nothing on Android, Apple, or Windows.
+#if defined(VK_USE_PLATFORM_XCB_KHR)
     const xcb_setup_t *setup;
     xcb_screen_iterator_t iter;
     int scr;
@@ -357,6 +390,20 @@ void init_connection(struct sample_info &info) {
     while (scr-- > 0) xcb_screen_next(&iter);
 
     info.screen = iter.data;
+#elif defined(VK_USE_PLATFORM_WAYLAND_KHR)
+    info.display = wl_display_connect(nullptr);
+
+    if (info.display == nullptr) {
+        printf(
+            "Cannot find a compatible Vulkan installable client driver "
+            "(ICD).\nExiting ...\n");
+        fflush(stdout);
+        exit(1);
+    }
+
+    info.registry = wl_display_get_registry(info.display);
+    wl_registry_add_listener(info.registry, &registry_listener, &info);
+    wl_display_dispatch(info.display);
 #endif
 }
 #ifdef _WIN32
@@ -449,7 +496,42 @@ void destroy_window(struct sample_info &info) {
 void init_window(struct sample_info &info) {}
 
 void destroy_window(struct sample_info &info) {}
+
+#elif defined(VK_USE_PLATFORM_WAYLAND_KHR)
+
+void init_window(struct sample_info &info) {
+    assert(info.width > 0);
+    assert(info.height > 0);
+
+    info.window = wl_compositor_create_surface(info.compositor);
+    if (!info.window) {
+        printf("Can not create wayland_surface from compositor!\n");
+        fflush(stdout);
+        exit(1);
+    }
+
+    info.shell_surface = wl_shell_get_shell_surface(info.shell, info.window);
+    if (!info.shell_surface) {
+        printf("Can not get shell_surface from wayland_surface!\n");
+        fflush(stdout);
+        exit(1);
+    }
+
+    wl_shell_surface_add_listener(info.shell_surface, &shell_surface_listener, &info);
+    wl_shell_surface_set_toplevel(info.shell_surface);
+}
+
+void destroy_window(struct sample_info &info) {
+    wl_shell_surface_destroy(info.shell_surface);
+    wl_surface_destroy(info.window);
+    wl_shell_destroy(info.shell);
+    wl_compositor_destroy(info.compositor);
+    wl_registry_destroy(info.registry);
+    wl_display_disconnect(info.display);
+}
+
 #else
+
 void init_window(struct sample_info &info) {
     assert(info.width > 0);
     assert(info.height > 0);
@@ -644,6 +726,13 @@ void init_swapchain_extension(struct sample_info &info) {
     createInfo.flags = 0;
     createInfo.pView = info.window;
     res = vkCreateMacOSSurfaceMVK(info.inst, &createInfo, NULL, &info.surface);
+#elif defined(VK_USE_PLATFORM_WAYLAND_KHR)
+    VkWaylandSurfaceCreateInfoKHR createInfo = {};
+    createInfo.sType = VK_STRUCTURE_TYPE_WAYLAND_SURFACE_CREATE_INFO_KHR;
+    createInfo.pNext = NULL;
+    createInfo.display = info.display;
+    createInfo.surface = info.window;
+    res = vkCreateWaylandSurfaceKHR(info.inst, &createInfo, NULL, &info.surface);
 #else
     VkXcbSurfaceCreateInfoKHR createInfo = {};
     createInfo.sType = VK_STRUCTURE_TYPE_XCB_SURFACE_CREATE_INFO_KHR;

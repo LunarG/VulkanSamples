@@ -145,7 +145,14 @@ struct sample_info {
 	void* window;
 #elif defined(__ANDROID__)
     PFN_vkCreateAndroidSurfaceKHR fpCreateAndroidSurfaceKHR;
-#else  // _WIN32
+#elif defined(VK_USE_PLATFORM_WAYLAND_KHR)
+    wl_display *display;
+    wl_registry *registry;
+    wl_compositor *compositor;
+    wl_surface *window;
+    wl_shell *shell;
+    wl_shell_surface *shell_surface;
+#else
     xcb_connection_t *connection;
     xcb_screen_t *screen;
     xcb_window_t window;
