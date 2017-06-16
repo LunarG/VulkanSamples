@@ -3703,6 +3703,7 @@ TEST_F(VkLayerTest, FramebufferCreateErrors) {
     VkAttachmentDescription attach_desc = {};
     attach_desc.format = VK_FORMAT_B8G8R8A8_UNORM;
     attach_desc.samples = VK_SAMPLE_COUNT_1_BIT;
+    attach_desc.finalLayout = VK_IMAGE_LAYOUT_GENERAL;
     rpci.pAttachments = &attach_desc;
     rpci.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
     VkRenderPass rp;
@@ -5034,6 +5035,7 @@ TEST_F(VkLayerTest, RenderPassInUseDestroyedSignaled) {
     VkAttachmentDescription attach_desc = {};
     attach_desc.format = VK_FORMAT_B8G8R8A8_UNORM;
     attach_desc.samples = VK_SAMPLE_COUNT_1_BIT;
+    attach_desc.finalLayout = VK_IMAGE_LAYOUT_GENERAL;
     rpci.pAttachments = &attach_desc;
     rpci.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
     VkRenderPass rp;
@@ -9099,6 +9101,7 @@ TEST_F(VkLayerTest, RenderPassClearOpMismatch) {
     // Set loadOp to CLEAR
     attach_desc.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
     attach_desc.samples = VK_SAMPLE_COUNT_1_BIT;
+    attach_desc.finalLayout = VK_IMAGE_LAYOUT_GENERAL;
     rpci.pAttachments = &attach_desc;
     rpci.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
     VkRenderPass rp;
@@ -11647,6 +11650,7 @@ TEST_F(VkLayerTest, RenderPassIncompatible) {
     attach_desc.samples = VK_SAMPLE_COUNT_1_BIT;
     // Format incompatible with PSO RP color attach format B8G8R8A8_UNORM
     attach_desc.format = VK_FORMAT_R8G8B8A8_UNORM;
+    attach_desc.finalLayout = VK_IMAGE_LAYOUT_GENERAL;
     rpci.pAttachments = &attach_desc;
     rpci.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
     VkRenderPass rp;
@@ -12605,6 +12609,7 @@ TEST_F(VkLayerTest, InvalidImageLayout) {
     VkAttachmentDescription attach_desc = {};
     attach_desc.format = VK_FORMAT_UNDEFINED;
     attach_desc.samples = VK_SAMPLE_COUNT_1_BIT;
+    attach_desc.finalLayout = VK_IMAGE_LAYOUT_GENERAL;
     rpci.pAttachments = &attach_desc;
     rpci.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
     VkRenderPass rp;
@@ -16340,6 +16345,7 @@ TEST_F(VkLayerTest, AttachmentDescriptionUndefinedFormat) {
     VkAttachmentDescription attach_desc = {};
     attach_desc.format = VK_FORMAT_UNDEFINED;
     attach_desc.samples = VK_SAMPLE_COUNT_1_BIT;
+    attach_desc.finalLayout = VK_IMAGE_LAYOUT_GENERAL;
     rpci.pAttachments = &attach_desc;
     rpci.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
     VkRenderPass rp;
@@ -16348,6 +16354,51 @@ TEST_F(VkLayerTest, AttachmentDescriptionUndefinedFormat) {
     m_errorMonitor->VerifyFound();
 
     if (result == VK_SUCCESS) {
+        vkDestroyRenderPass(m_device->device(), rp, NULL);
+    }
+}
+
+TEST_F(VkLayerTest, AttachmentDescriptionInvalidFinalLayout) {
+    TEST_DESCRIPTION("VkAttachmentDescription's finalLayout must not be UNDEFINED or PREINITIALIZED");
+
+    ASSERT_NO_FATAL_FAILURE(Init());
+
+    VkAttachmentDescription attach_desc = {};
+    attach_desc.format = VK_FORMAT_R8G8B8A8_UNORM;
+    attach_desc.samples = VK_SAMPLE_COUNT_1_BIT;
+    attach_desc.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+    attach_desc.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+    attach_desc.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+    attach_desc.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+    attach_desc.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+    attach_desc.finalLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+    VkAttachmentReference attach_ref = {};
+    attach_ref.attachment = 0;
+    attach_ref.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+    VkSubpassDescription subpass = {};
+    subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
+    subpass.colorAttachmentCount = 1;
+    subpass.pColorAttachments = &attach_ref;
+    VkRenderPassCreateInfo rpci = {};
+    rpci.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
+    rpci.attachmentCount = 1;
+    rpci.pAttachments = &attach_desc;
+    rpci.subpassCount = 1;
+    rpci.pSubpasses = &subpass;
+    VkRenderPass rp = VK_NULL_HANDLE;
+
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_00800696);
+    VkResult result = vkCreateRenderPass(m_device->device(), &rpci, NULL, &rp);
+    m_errorMonitor->VerifyFound();
+    if (rp != VK_NULL_HANDLE) {
+        vkDestroyRenderPass(m_device->device(), rp, NULL);
+    }
+
+    attach_desc.finalLayout = VK_IMAGE_LAYOUT_PREINITIALIZED;
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_00800696);
+    result = vkCreateRenderPass(m_device->device(), &rpci, NULL, &rp);
+    m_errorMonitor->VerifyFound();
+    if (rp != VK_NULL_HANDLE) {
         vkDestroyRenderPass(m_device->device(), rp, NULL);
     }
 }

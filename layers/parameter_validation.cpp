@@ -2848,6 +2848,14 @@ static bool PreCreateRenderPass(layer_data *dev_data, const VkRenderPassCreateIn
             skip |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_WARNING_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0,
                             __LINE__, VALIDATION_ERROR_00809201, "IMAGE", "%s", ss.str().c_str());
         }
+        if (pCreateInfo->pAttachments[i].finalLayout == VK_IMAGE_LAYOUT_UNDEFINED ||
+            pCreateInfo->pAttachments[i].finalLayout == VK_IMAGE_LAYOUT_PREINITIALIZED) {
+            skip |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0,
+                            __LINE__, VALIDATION_ERROR_00800696, "DL",
+                            "pCreateInfo->pAttachments[%d].finalLayout must not be VK_IMAGE_LAYOUT_UNDEFINED or "
+                            "VK_IMAGE_LAYOUT_PREINITIALIZED. %s",
+                            i, validation_error_map[VALIDATION_ERROR_00800696]);
+        }
     }
 
     for (uint32_t i = 0; i < pCreateInfo->subpassCount; ++i) {
