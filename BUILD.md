@@ -142,6 +142,7 @@ This list may vary depending on your distro and which windowing systems you are 
 Set up your environment for building 32-bit targets:
 
 ```
+export ASFLAGS=--32
 export CFLAGS=-m32
 export CXXFLAGS=-m32
 export PKG_CONFIG_LIBDIR=/usr/lib/i386-linux-gnu

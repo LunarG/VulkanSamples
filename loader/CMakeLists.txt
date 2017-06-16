@@ -107,6 +107,7 @@ else()
     if (CMAKE_ASM-ATT_COMPILER_WORKS)
         set(OPT_LOADER_SRCS ${OPT_LOADER_SRCS} phys_dev_chain_gas.asm)
 
+        set(CMAKE_ASM-ATT_FLAGS "${CMAKE_ASM-ATT_FLAGS} $ENV{ASFLAGS}")
         set(CMAKE_ASM-ATT_FLAGS "${CMAKE_ASM-ATT_FLAGS} -I${CMAKE_CURRENT_BINARY_DIR}")
         add_executable(asm_offset asm_offset.c)
         add_dependencies(asm_offset generate_helper_files loader_gen_files)
