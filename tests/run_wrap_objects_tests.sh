@@ -127,16 +127,19 @@ then
    exit 1
 fi
 
+filter=-VkLayerTest.ExceedMemoryAllocationCount
 # Run the layer validation tests with and without the wrap-objects layer. Diff the results.
 # Filter out the "Unexpected:" lines because they contain varying object handles.
 GTEST_PRINT_TIME=0 \
    VK_LAYER_PATH=$vk_layer_path \
    LD_LIBRARY_PATH=$ld_library_path \
+   GTEST_FILTER=$filter \
    ./vk_layer_validation_tests | grep -v "^Unexpected: " > unwrapped.out
 GTEST_PRINT_TIME=0 \
    VK_LAYER_PATH=$vk_layer_path \
    LD_LIBRARY_PATH=$ld_library_path \
    VK_INSTANCE_LAYERS=VK_LAYER_LUNARG_wrap_objects \
+   GTEST_FILTER=$filter \
    ./vk_layer_validation_tests | grep -v "^Unexpected: " > wrapped.out
 diff unwrapped.out wrapped.out
 ec=$?

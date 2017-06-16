@@ -79,6 +79,14 @@ class DispatchTableHelperOutputGenerator(OutputGenerator):
     # Called once at the beginning of each run
     def beginFile(self, genOpts):
         OutputGenerator.beginFile(self, genOpts)
+        # Protect against multiple inclusions
+        self.protect_header = False
+        if (genOpts.protectFile and genOpts.filename):
+            self.protect_header = True
+            headerSym = '__' + re.sub('\.h', '_h_', os.path.basename(genOpts.filename))
+            write('#ifndef', headerSym, file=self.outFile)
+            write('#define', headerSym, '1', file=self.outFile)
+            self.newline()
         # User-supplied prefix text, if any (list of strings)
         if (genOpts.prefixText):
             for s in genOpts.prefixText:
@@ -130,6 +138,9 @@ class DispatchTableHelperOutputGenerator(OutputGenerator):
         write("\n", file=self.outFile)
         write(instance_table, file=self.outFile);
 
+        if self.protect_header:
+            self.newline()
+            write('#endif', file=self.outFile)
         # Finish processing in superclass
         OutputGenerator.endFile(self)
     #

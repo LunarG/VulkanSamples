@@ -5,12 +5,16 @@
 version: "{build}"
 
 os:
-  - Visual Studio 2013
   - Visual Studio 2015
 
 environment:
   PYTHON_PATH: "C:/Python35"
   PYTHON_PACKAGE_PATH: "C:/Python35/Scripts"
+
+# Cache the external directory to improve build times.
+# If the appveyor config file changes, invalidate the cache.
+cache:
+    - external -> .appveyor.yml
 
 branches:
   only:

@@ -40,7 +40,7 @@ Note that some layers are code-generated and will therefore exist in the directo
 For complete details of current validation layers, including all of the validation checks that they perform, please refer to the document `layers/vk_validation_layer_details.md`. Below is a brief overview of each layer.
 
 ### Standard Validation
-This is a meta-layer managed by the loader. (name = `VK_LAYER_LUNARG_standard_validation`) - specifying this layer name will cause the loader to load the all of the standard validation layers (listed below) in the following optimal order:  `VK_LAYER_GOOGLE_threading`, `VK_LAYER_LUNARG_parameter_validation`, `VK_LAYER_LUNARG_object_tracker`, `VK_LAYER_LUNARG_core_validation`,` VK_LAYER_LUNARG_swapchain`, and `VK_LAYER_GOOGLE_unique_objects`. Other layers can be specified and the loader will remove duplicates.
+This is a meta-layer managed by the loader. (name = `VK_LAYER_LUNARG_standard_validation`) - specifying this layer name will cause the loader to load the all of the standard validation layers (listed below) in the following optimal order:  `VK_LAYER_GOOGLE_threading`, `VK_LAYER_LUNARG_parameter_validation`, `VK_LAYER_LUNARG_object_tracker`, `VK_LAYER_LUNARG_core_validation`, and `VK_LAYER_GOOGLE_unique_objects`. Other layers can be specified and the loader will remove duplicates.
 
 ### Object Validation and Statistics
 (build dir)/layers/object_tracker.cpp (name=`VK_LAYER_LUNARG_object_tracker`) - Track object creation, use, and destruction. As objects are created they are stored in a map. As objects are used the layer verifies they exist in the map, flagging errors for unknown objects. As objects are destroyed they are removed from the map. At `vkDestroyDevice()` and `vkDestroyInstance()` times, if any objects have not been destroyed they are reported as leaked objects. If a Dbg callback function is registered this layer will use callback function(s) for reporting, otherwise it will use stdout.
@@ -53,9 +53,6 @@ layers/parameter_validation.cpp (name=`VK_LAYER_LUNARG_parameter_validation`) - 
 
 ### Check threading
 layers/threading.cpp (name=`VK_LAYER_GOOGLE_threading`) - Check multithreading of API calls for validity. Currently this checks that only one thread at a time uses an object in free-threaded API calls. If a Dbg callback function is registered, this layer will use callback function(s) for reporting, otherwise uses stdout.
-
-### Swapchain
-layers/swapchain.cpp (name=`VK_LAYER_LUNARG_swapchain`) - Check that WSI extensions are being used correctly.
 
 ### Unique Objects
 (build dir)/layers/unique_objects.cpp (name=`VK_LAYER_GOOGLE_unique_objects`) - The Vulkan specification allows objects that have non-unique handles. This makes tracking object lifetimes difficult in that it is unclear which object is being referenced on deletion. The unique_objects layer was created to address this problem. If loaded in the correct position (last, which is closest to the display driver) it will alias all objects with a unique object representation, allowing proper object lifetime tracking. This layer does no validation on its own and may not be required for the proper operation of all layers or all platforms. One sign that it is needed is the appearance of errors emitted from the object_tracker layer indicating the use of previously destroyed objects.

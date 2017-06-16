@@ -63,6 +63,7 @@ set(COMMON_CPP
    )
 
 include_directories(
+    "${PROJECT_SOURCE_DIR}/tests"
     "${PROJECT_SOURCE_DIR}/tests/gtest-1.7.0/include"
     "${PROJECT_SOURCE_DIR}/icd/common"
     "${PROJECT_SOURCE_DIR}/layers"
@@ -120,7 +121,6 @@ endif()
 add_dependencies(vk_layer_validation_tests
    VkLayer_core_validation
    VkLayer_object_tracker
-   VkLayer_swapchain
    VkLayer_threading
    VkLayer_unique_objects
    VkLayer_parameter_validation

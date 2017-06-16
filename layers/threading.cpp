@@ -121,7 +121,7 @@ VKAPI_ATTR void VKAPI_CALL DestroyInstance(VkInstance instance, const VkAllocati
 
     layer_debug_report_destroy_instance(my_data->report_data);
     delete my_data->instance_dispatch_table;
-    layer_data_map.erase(key);
+    FreeLayerDataPtr(key, layer_data_map);
 }
 
 VKAPI_ATTR VkResult VKAPI_CALL CreateDevice(VkPhysicalDevice gpu, const VkDeviceCreateInfo *pCreateInfo,
@@ -168,7 +168,9 @@ VKAPI_ATTR void VKAPI_CALL DestroyDevice(VkDevice device, const VkAllocationCall
     } else {
         finishMultiThread();
     }
-    layer_data_map.erase(key);
+
+    delete dev_data->device_dispatch_table;
+    FreeLayerDataPtr(key, layer_data_map);
 }
 
 VKAPI_ATTR VkResult VKAPI_CALL GetSwapchainImagesKHR(VkDevice device, VkSwapchainKHR swapchain, uint32_t *pSwapchainImageCount,
@@ -200,13 +202,6 @@ static const VkLayerProperties layerProps = {
     VK_LAYER_API_VERSION,  // specVersion
     1, "Google Validation Layer",
 };
-
-static inline PFN_vkVoidFunction layer_intercept_proc(const char *name) {
-    for (unsigned int i = 0; i < sizeof(procmap) / sizeof(procmap[0]); i++) {
-        if (!strcmp(name, procmap[i].name)) return procmap[i].pFunc;
-    }
-    return NULL;
-}
 
 VKAPI_ATTR VkResult VKAPI_CALL EnumerateInstanceLayerProperties(uint32_t *pCount, VkLayerProperties *pProperties) {
     return util_GetLayerProperties(1, &layerProps, pCount, pProperties);
@@ -241,62 +236,28 @@ VKAPI_ATTR VkResult VKAPI_CALL EnumerateDeviceExtensionProperties(VkPhysicalDevi
 // Need to prototype this call because it's internal and does not show up in vk.xml
 VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL GetPhysicalDeviceProcAddr(VkInstance instance, const char *funcName);
 
-static inline PFN_vkVoidFunction layer_intercept_instance_proc(const char *name) {
-    if (!name || name[0] != 'v' || name[1] != 'k') return NULL;
-
-    name += 2;
-    if (!strcmp(name, "CreateInstance")) return (PFN_vkVoidFunction)CreateInstance;
-    if (!strcmp(name, "DestroyInstance")) return (PFN_vkVoidFunction)DestroyInstance;
-    if (!strcmp(name, "EnumerateInstanceLayerProperties")) return (PFN_vkVoidFunction)EnumerateInstanceLayerProperties;
-    if (!strcmp(name, "EnumerateInstanceExtensionProperties")) return (PFN_vkVoidFunction)EnumerateInstanceExtensionProperties;
-    if (!strcmp(name, "EnumerateDeviceLayerProperties")) return (PFN_vkVoidFunction)EnumerateDeviceLayerProperties;
-    if (!strcmp(name, "EnumerateDeviceExtensionProperties")) return (PFN_vkVoidFunction)EnumerateDeviceExtensionProperties;
-    if (!strcmp(name, "CreateDevice")) return (PFN_vkVoidFunction)CreateDevice;
-    if (!strcmp(name, "GetInstanceProcAddr")) return (PFN_vkVoidFunction)GetInstanceProcAddr;
-    if (!strcmp(name, "GetPhysicalDeviceProcAddr")) return (PFN_vkVoidFunction)GetPhysicalDeviceProcAddr;
-
-    return NULL;
-}
-
 VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL GetDeviceProcAddr(VkDevice device, const char *funcName) {
-    PFN_vkVoidFunction addr;
-    layer_data *dev_data;
+    const auto item = name_to_funcptr_map.find(funcName);
+    if (item != name_to_funcptr_map.end()) {
+        return reinterpret_cast<PFN_vkVoidFunction>(item->second);
+    }
 
-    assert(device);
-
-    addr = layer_intercept_proc(funcName);
-    if (addr) return addr;
-
-    dev_data = GetLayerDataPtr(get_dispatch_key(device), layer_data_map);
-    VkLayerDispatchTable *pTable = dev_data->device_dispatch_table;
-
-    if (pTable->GetDeviceProcAddr == NULL) return NULL;
-    return pTable->GetDeviceProcAddr(device, funcName);
+    layer_data *device_data = GetLayerDataPtr(get_dispatch_key(device), layer_data_map);
+    auto &table = device_data->device_dispatch_table;
+    if (!table->GetDeviceProcAddr) return nullptr;
+    return table->GetDeviceProcAddr(device, funcName);
 }
 
 VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL GetInstanceProcAddr(VkInstance instance, const char *funcName) {
-    PFN_vkVoidFunction addr;
-    layer_data *my_data;
-
-    addr = layer_intercept_instance_proc(funcName);
-    if (!addr) addr = layer_intercept_proc(funcName);
-    if (addr) {
-        return addr;
+    const auto item = name_to_funcptr_map.find(funcName);
+    if (item != name_to_funcptr_map.end()) {
+        return reinterpret_cast<PFN_vkVoidFunction>(item->second);
     }
 
-    assert(instance);
-
-    my_data = GetLayerDataPtr(get_dispatch_key(instance), layer_data_map);
-    addr = debug_report_get_instance_proc_addr(my_data->report_data, funcName);
-    if (addr) {
-        return addr;
-    }
-
-    VkLayerInstanceDispatchTable *pTable = my_data->instance_dispatch_table;
-    if (pTable->GetInstanceProcAddr == NULL) {
-        return NULL;
-    }
-    return pTable->GetInstanceProcAddr(instance, funcName);
+    auto instance_data = GetLayerDataPtr(get_dispatch_key(instance), layer_data_map);
+    auto &table = instance_data->instance_dispatch_table;
+    if (!table->GetInstanceProcAddr) return nullptr;
+    return table->GetInstanceProcAddr(instance, funcName);
 }
 
 VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL GetPhysicalDeviceProcAddr(VkInstance instance, const char *funcName) {

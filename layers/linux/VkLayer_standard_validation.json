@@ -3,7 +3,7 @@
     "layer": {
         "name": "VK_LAYER_LUNARG_standard_validation",
         "type": "GLOBAL",
-        "api_version": "1.0.50",
+        "api_version": "1.0.51",
         "implementation_version": "1",
         "description": "LunarG Standard Validation",
         "component_layers": [
@@ -11,7 +11,6 @@
             "VK_LAYER_LUNARG_parameter_validation",
             "VK_LAYER_LUNARG_object_tracker",
             "VK_LAYER_LUNARG_core_validation",
-            "VK_LAYER_LUNARG_swapchain",
             "VK_LAYER_GOOGLE_unique_objects"
         ]
     }

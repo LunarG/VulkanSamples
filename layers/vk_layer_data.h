@@ -20,6 +20,7 @@
 #ifndef LAYER_DATA_H
 #define LAYER_DATA_H
 
+#include <cassert>
 #include <unordered_map>
 #include "vk_layer_table.h"
 
@@ -40,6 +41,15 @@ DATA_T *GetLayerDataPtr(void *data_key, std::unordered_map<void *, DATA_T *> &la
     }
 
     return debug_data;
+}
+
+template <typename DATA_T>
+void FreeLayerDataPtr(void *data_key, std::unordered_map<void *, DATA_T *> &layer_data_map) {
+    auto got = layer_data_map.find(data_key);
+    assert(got != layer_data_map.end());
+
+    delete got->second;
+    layer_data_map.erase(got);
 }
 
 #endif  // LAYER_DATA_H

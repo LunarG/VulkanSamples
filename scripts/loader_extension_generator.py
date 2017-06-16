@@ -842,7 +842,13 @@ class LoaderExtensionOutputGenerator(OutputGenerator):
                                'vkGetPhysicalDeviceImageFormatProperties2KHR',
                                'vkGetPhysicalDeviceQueueFamilyProperties2KHR',
                                'vkGetPhysicalDeviceMemoryProperties2KHR',
-                               'vkGetPhysicalDeviceSparseImageFormatProperties2KHR']
+                               'vkGetPhysicalDeviceSparseImageFormatProperties2KHR',
+                               'vkGetPhysicalDeviceSurfaceCapabilities2KHR',
+                               'vkGetPhysicalDeviceSurfaceFormats2KHR',
+                               'vkGetPhysicalDeviceSurfaceCapabilities2EXT',
+                               'vkReleaseDisplayEXT',
+                               'vkAcquireXlibDisplayEXT',
+                               'vkGetRandROutputDisplayEXT']
 
         for ext_cmd in self.ext_commands:
             if (ext_cmd.ext_name in WSI_EXT_NAMES or

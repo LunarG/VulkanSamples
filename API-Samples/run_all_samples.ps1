@@ -23,6 +23,8 @@ function Exec
     }
 }
 
+Copy-Item -force ..\loader\$dPath\vulkan-1.dll $dPath
+
 echo "Initialize Instance"
 Exec "01-init_instance"
 echo "Enumerate Devices"

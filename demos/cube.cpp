@@ -732,8 +732,8 @@ struct Demo {
         char const *const instance_validation_layers_alt1[] = {"VK_LAYER_LUNARG_standard_validation"};
 
         char const *const instance_validation_layers_alt2[] = {
-            "VK_LAYER_GOOGLE_threading",     "VK_LAYER_LUNARG_parameter_validation", "VK_LAYER_LUNARG_object_tracker",
-            "VK_LAYER_LUNARG_core_validation",      "VK_LAYER_LUNARG_swapchain", "VK_LAYER_GOOGLE_unique_objects"};
+            "VK_LAYER_GOOGLE_threading", "VK_LAYER_LUNARG_parameter_validation", "VK_LAYER_LUNARG_object_tracker",
+            "VK_LAYER_LUNARG_core_validation", "VK_LAYER_GOOGLE_unique_objects"};
 
         // Look for validation layers
         vk::Bool32 validation_found = VK_FALSE;
