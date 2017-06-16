@@ -68,8 +68,8 @@ void destroy_dispatch_table(device_table_map &map, dispatch_key key) {
 }
 
 void destroy_dispatch_table(instance_table_map &map, dispatch_key key) {
-#if DISPATCH_MAP_DEBUG
     instance_table_map::const_iterator it = map.find((void *)key);
+#if DISPATCH_MAP_DEBUG
     if (it != map.end()) {
         fprintf(stderr, "destroy instance dispatch_table: map:  0x%p, key:  0x%p, table:  0x%p\n", &map, key, it->second);
     } else {
@@ -77,7 +77,10 @@ void destroy_dispatch_table(instance_table_map &map, dispatch_key key) {
         assert(it != map.end());
     }
 #endif
-    map.erase(key);
+    if (it != map.end()) {
+        delete it->second;
+        map.erase(it);
+    }
 }
 
 void destroy_device_dispatch_table(dispatch_key key) { destroy_dispatch_table(tableMap, key); }
