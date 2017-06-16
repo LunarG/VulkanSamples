@@ -1579,7 +1579,8 @@ bool ValidateCmd(layer_data *dev_data, GLOBAL_CB_NODE *cb_state, const CMD_TYPE 
         case CB_RECORDING:
             return ValidateCmdSubpassState(dev_data, cb_state, cmd);
 
-        case CB_INVALID:
+        case CB_INVALID_COMPLETE:
+        case CB_INVALID_INCOMPLETE:
             return ReportInvalidCommandBuffer(dev_data, cb_state, caller_name);
 
         default:
@@ -2373,20 +2374,28 @@ static bool validateCommandBufferState(layer_data *dev_data, GLOBAL_CB_NODE *cb_
     }
 
     // Validate that cmd buffers have been updated
-    if (CB_RECORDED != cb_state->state) {
-        if (CB_INVALID == cb_state->state) {
+    switch (cb_state->state) {
+        case CB_INVALID_INCOMPLETE:
+        case CB_INVALID_COMPLETE:
             skip |= ReportInvalidCommandBuffer(dev_data, cb_state, call_source);
-        } else if (CB_NEW == cb_state->state) {
+            break;
+
+        case CB_NEW:
             skip |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
                             (uint64_t)(cb_state->commandBuffer), __LINE__, vu_id, "DS",
                             "Command buffer 0x%p used in the call to %s is unrecorded and contains no commands. %s",
                             cb_state->commandBuffer, call_source, validation_error_map[vu_id]);
-        } else {  // Flag error for using CB w/o vkEndCommandBuffer() called
+            break;
+
+        case CB_RECORDING:
             skip |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
                             HandleToUint64(cb_state->commandBuffer), __LINE__, DRAWSTATE_NO_END_COMMAND_BUFFER, "DS",
                             "You must call vkEndCommandBuffer() on command buffer 0x%p before this call to %s!",
                             cb_state->commandBuffer, call_source);
-        }
+            break;
+
+        default: /* recorded */
+            break;
     }
     return skip;
 }
@@ -4083,8 +4092,11 @@ void invalidateCommandBuffers(const layer_data *dev_data, std::unordered_set<GLO
             log_msg(dev_data->report_data, VK_DEBUG_REPORT_WARNING_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
                     HandleToUint64(cb_node->commandBuffer), __LINE__, DRAWSTATE_INVALID_COMMAND_BUFFER, "DS",
                     "Invalidating a command buffer that's currently being recorded: 0x%p.", cb_node->commandBuffer);
+            cb_node->state = CB_INVALID_INCOMPLETE;
         }
-        cb_node->state = CB_INVALID;
+        else {
+            cb_node->state = CB_INVALID_COMPLETE;
+        }
         cb_node->broken_bindings.push_back(obj);
 
         // if secondary, then propagate the invalidation to the primaries that will call us.
@@ -5007,7 +5019,7 @@ VKAPI_ATTR VkResult VKAPI_CALL BeginCommandBuffer(VkCommandBuffer commandBuffer,
                             "vkBeginCommandBuffer(): Cannot call Begin on command buffer (0x%p"
                             ") in the RECORDING state. Must first call vkEndCommandBuffer(). %s",
                             commandBuffer, validation_error_map[VALIDATION_ERROR_16e00062]);
-        } else if (CB_RECORDED == cb_node->state || (CB_INVALID == cb_node->state && CMD_END == cb_node->last_cmd)) {
+        } else if (CB_RECORDED == cb_node->state || CB_INVALID_COMPLETE == cb_node->state) {
             VkCommandPool cmdPool = cb_node->createInfo.commandPool;
             auto pPool = GetCommandPoolNode(dev_data, cmdPool);
             if (!(VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT & pPool->createFlags)) {

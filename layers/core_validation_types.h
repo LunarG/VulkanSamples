@@ -443,7 +443,8 @@ enum CB_STATE {
     CB_NEW,        // Newly created CB w/o any cmds
     CB_RECORDING,  // BeginCB has been called on this CB
     CB_RECORDED,   // EndCB has been called on this CB
-    CB_INVALID     // CB had a bound descriptor set destroyed or updated
+    CB_INVALID_COMPLETE,     // had a complete recording, but was since invalidated
+    CB_INVALID_INCOMPLETE,   // fouled before recording was completed
 };
 
 // CB Status -- used to track status of various bindings on cmd buffer objects
