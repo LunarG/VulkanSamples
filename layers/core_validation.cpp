@@ -491,7 +491,6 @@ static void clear_cmd_buf_and_mem_references(layer_data *dev_data, GLOBAL_CB_NOD
             }
             cb_node->memObjs.clear();
         }
-        cb_node->validate_functions.clear();
     }
 }
 
@@ -1730,6 +1729,7 @@ static void resetCB(layer_data *dev_data, const VkCommandBuffer cb) {
         pCB->updateImages.clear();
         pCB->updateBuffers.clear();
         clear_cmd_buf_and_mem_references(dev_data, pCB);
+        pCB->validate_functions.clear();
         pCB->eventUpdates.clear();
         pCB->queryUpdates.clear();
 
