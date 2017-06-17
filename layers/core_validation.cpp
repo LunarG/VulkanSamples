@@ -5613,16 +5613,14 @@ static bool ValidateCmdDrawType(layer_data *dev_data, VkCommandBuffer cmd_buffer
 }
 
 // Generic function to handle state update for all CmdDraw* and CmdDispatch* type functions
-static void UpdateStateCmdDrawDispatchType(layer_data *dev_data, GLOBAL_CB_NODE *cb_state, VkPipelineBindPoint bind_point,
-                                           CMD_TYPE cmd_type) {
+static void UpdateStateCmdDrawDispatchType(layer_data *dev_data, GLOBAL_CB_NODE *cb_state, VkPipelineBindPoint bind_point) {
     UpdateDrawState(dev_data, cb_state, bind_point);
     MarkStoreImagesAndBuffersAsWritten(dev_data, cb_state);
 }
 
 // Generic function to handle state update for all CmdDraw* type functions
-static void UpdateStateCmdDrawType(layer_data *dev_data, GLOBAL_CB_NODE *cb_state, VkPipelineBindPoint bind_point,
-                                   CMD_TYPE cmd_type) {
-    UpdateStateCmdDrawDispatchType(dev_data, cb_state, bind_point, cmd_type);
+static void UpdateStateCmdDrawType(layer_data *dev_data, GLOBAL_CB_NODE *cb_state, VkPipelineBindPoint bind_point) {
+    UpdateStateCmdDrawDispatchType(dev_data, cb_state, bind_point);
     updateResourceTrackingOnDraw(cb_state);
     cb_state->hasDrawCmd = true;
 }
@@ -5634,7 +5632,7 @@ static bool PreCallValidateCmdDraw(layer_data *dev_data, VkCommandBuffer cmd_buf
 }
 
 static void PostCallRecordCmdDraw(layer_data *dev_data, GLOBAL_CB_NODE *cb_state, VkPipelineBindPoint bind_point) {
-    UpdateStateCmdDrawType(dev_data, cb_state, bind_point, CMD_DRAW);
+    UpdateStateCmdDrawType(dev_data, cb_state, bind_point);
 }
 
 VKAPI_ATTR void VKAPI_CALL CmdDraw(VkCommandBuffer commandBuffer, uint32_t vertexCount, uint32_t instanceCount,
@@ -5659,7 +5657,7 @@ static bool PreCallValidateCmdDrawIndexed(layer_data *dev_data, VkCommandBuffer 
 }
 
 static void PostCallRecordCmdDrawIndexed(layer_data *dev_data, GLOBAL_CB_NODE *cb_state, VkPipelineBindPoint bind_point) {
-    UpdateStateCmdDrawType(dev_data, cb_state, bind_point, CMD_DRAWINDEXED);
+    UpdateStateCmdDrawType(dev_data, cb_state, bind_point);
 }
 
 VKAPI_ATTR void VKAPI_CALL CmdDrawIndexed(VkCommandBuffer commandBuffer, uint32_t indexCount, uint32_t instanceCount,
@@ -5693,7 +5691,7 @@ static bool PreCallValidateCmdDrawIndirect(layer_data *dev_data, VkCommandBuffer
 
 static void PostCallRecordCmdDrawIndirect(layer_data *dev_data, GLOBAL_CB_NODE *cb_state, VkPipelineBindPoint bind_point,
                                           BUFFER_STATE *buffer_state) {
-    UpdateStateCmdDrawType(dev_data, cb_state, bind_point, CMD_DRAWINDIRECT);
+    UpdateStateCmdDrawType(dev_data, cb_state, bind_point);
     AddCommandBufferBindingBuffer(dev_data, cb_state, buffer_state);
 }
 
@@ -5730,7 +5728,7 @@ static bool PreCallValidateCmdDrawIndexedIndirect(layer_data *dev_data, VkComman
 
 static void PostCallRecordCmdDrawIndexedIndirect(layer_data *dev_data, GLOBAL_CB_NODE *cb_state, VkPipelineBindPoint bind_point,
                                                  BUFFER_STATE *buffer_state) {
-    UpdateStateCmdDrawType(dev_data, cb_state, bind_point, CMD_DRAWINDEXEDINDIRECT);
+    UpdateStateCmdDrawType(dev_data, cb_state, bind_point);
     AddCommandBufferBindingBuffer(dev_data, cb_state, buffer_state);
 }
 
@@ -5758,7 +5756,7 @@ static bool PreCallValidateCmdDispatch(layer_data *dev_data, VkCommandBuffer cmd
 }
 
 static void PostCallRecordCmdDispatch(layer_data *dev_data, GLOBAL_CB_NODE *cb_state, VkPipelineBindPoint bind_point) {
-    UpdateStateCmdDrawDispatchType(dev_data, cb_state, bind_point, CMD_DISPATCH);
+    UpdateStateCmdDrawDispatchType(dev_data, cb_state, bind_point);
 }
 
 VKAPI_ATTR void VKAPI_CALL CmdDispatch(VkCommandBuffer commandBuffer, uint32_t x, uint32_t y, uint32_t z) {
@@ -5789,7 +5787,7 @@ static bool PreCallValidateCmdDispatchIndirect(layer_data *dev_data, VkCommandBu
 
 static void PostCallRecordCmdDispatchIndirect(layer_data *dev_data, GLOBAL_CB_NODE *cb_state, VkPipelineBindPoint bind_point,
                                               BUFFER_STATE *buffer_state) {
-    UpdateStateCmdDrawDispatchType(dev_data, cb_state, bind_point, CMD_DISPATCHINDIRECT);
+    UpdateStateCmdDrawDispatchType(dev_data, cb_state, bind_point);
     AddCommandBufferBindingBuffer(dev_data, cb_state, buffer_state);
 }
 
