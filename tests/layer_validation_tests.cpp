@@ -16417,7 +16417,7 @@ TEST_F(VkLayerTest, AttachmentDescriptionInvalidFinalLayout) {
     VkRenderPass rp = VK_NULL_HANDLE;
 
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_00800696);
-    VkResult result = vkCreateRenderPass(m_device->device(), &rpci, NULL, &rp);
+    vkCreateRenderPass(m_device->device(), &rpci, NULL, &rp);
     m_errorMonitor->VerifyFound();
     if (rp != VK_NULL_HANDLE) {
         vkDestroyRenderPass(m_device->device(), rp, NULL);
@@ -16425,7 +16425,7 @@ TEST_F(VkLayerTest, AttachmentDescriptionInvalidFinalLayout) {
 
     attach_desc.finalLayout = VK_IMAGE_LAYOUT_PREINITIALIZED;
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_00800696);
-    result = vkCreateRenderPass(m_device->device(), &rpci, NULL, &rp);
+    vkCreateRenderPass(m_device->device(), &rpci, NULL, &rp);
     m_errorMonitor->VerifyFound();
     if (rp != VK_NULL_HANDLE) {
         vkDestroyRenderPass(m_device->device(), rp, NULL);
