@@ -149,7 +149,7 @@ struct layer_data {
     unordered_map<VkCommandPool, COMMAND_POOL_NODE> commandPoolMap;
     unordered_map<VkDescriptorPool, DESCRIPTOR_POOL_STATE *> descriptorPoolMap;
     unordered_map<VkDescriptorSet, cvdescriptorset::DescriptorSet *> setMap;
-    unordered_map<VkDescriptorSetLayout, std::unique_ptr<cvdescriptorset::DescriptorSetLayout>> descriptorSetLayoutMap;
+    unordered_map<VkDescriptorSetLayout, std::shared_ptr<cvdescriptorset::DescriptorSetLayout>> descriptorSetLayoutMap;
     unordered_map<VkPipelineLayout, PIPELINE_LAYOUT_NODE> pipelineLayoutMap;
     unordered_map<VkDeviceMemory, unique_ptr<DEVICE_MEM_INFO>> memObjMap;
     unordered_map<VkFence, FENCE_NODE> fenceMap;
@@ -4529,8 +4529,8 @@ static bool PreCallValidateCreateDescriptorSetLayout(layer_data *dev_data, const
 
 static void PostCallRecordCreateDescriptorSetLayout(layer_data *dev_data, const VkDescriptorSetLayoutCreateInfo *create_info,
                                                     VkDescriptorSetLayout set_layout) {
-    dev_data->descriptorSetLayoutMap[set_layout] = std::unique_ptr<cvdescriptorset::DescriptorSetLayout>(
-        new cvdescriptorset::DescriptorSetLayout(create_info, set_layout));
+    dev_data->descriptorSetLayoutMap[set_layout] =
+        std::shared_ptr<cvdescriptorset::DescriptorSetLayout>(new cvdescriptorset::DescriptorSetLayout(create_info, set_layout));
 }
 
 VKAPI_ATTR VkResult VKAPI_CALL CreateDescriptorSetLayout(VkDevice device, const VkDescriptorSetLayoutCreateInfo *pCreateInfo,
