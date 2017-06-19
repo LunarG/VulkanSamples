@@ -5331,7 +5331,12 @@ VKAPI_ATTR VkResult VKAPI_CALL DebugMarkerSetObjectNameEXT(VkDevice device, VkDe
     bool skip = false;
     auto my_data = GetLayerDataPtr(get_dispatch_key(device), layer_data_map);
     assert(my_data != NULL);
-
+    if (pNameInfo->pObjectName) {
+        my_data->report_data->debugObjectNameMap->insert(
+            std::make_pair<uint64_t, std::string>((uint64_t &&)pNameInfo->object, pNameInfo->pObjectName));
+    } else {
+        my_data->report_data->debugObjectNameMap->erase(pNameInfo->object);
+    }
     skip |= parameter_validation_vkDebugMarkerSetObjectNameEXT(my_data, pNameInfo);
 
     if (!skip) {

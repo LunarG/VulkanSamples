@@ -912,6 +912,49 @@ TEST_F(VkLayerTest, ReservedParameter) {
     m_errorMonitor->VerifyFound();
 }
 
+TEST_F(VkLayerTest, DebugMarkerNameTest) {
+    ASSERT_NO_FATAL_FAILURE(InitFramework(myDbgFunc, m_errorMonitor));
+    if (DeviceExtensionSupported(gpu(), "VK_LAYER_LUNARG_core_validation", VK_EXT_DEBUG_MARKER_EXTENSION_NAME)) {
+        m_device_extension_names.push_back(VK_EXT_DEBUG_MARKER_EXTENSION_NAME);
+    } else {
+        printf("             Debug Marker Extension not supported, skipping test\n");
+        return;
+    }
+    ASSERT_NO_FATAL_FAILURE(InitState());
+
+    PFN_vkDebugMarkerSetObjectNameEXT fpvkDebugMarkerSetObjectNameEXT =
+        (PFN_vkDebugMarkerSetObjectNameEXT)vkGetInstanceProcAddr(instance(), "vkDebugMarkerSetObjectNameEXT");
+    if (!(fpvkDebugMarkerSetObjectNameEXT)) {
+        printf("             Can't find fpvkDebugMarkerSetObjectNameEXT; skipped.\n");
+        return;
+    }
+
+    VkEvent event_handle = VK_NULL_HANDLE;
+    VkEventCreateInfo event_info = {};
+    event_info.sType = VK_STRUCTURE_TYPE_EVENT_CREATE_INFO;
+    vkCreateEvent(device(), &event_info, NULL, &event_handle);
+    VkDebugMarkerObjectNameInfoEXT name_info = {};
+    name_info.sType = VK_STRUCTURE_TYPE_DEBUG_MARKER_OBJECT_NAME_INFO_EXT;
+    name_info.pNext = nullptr;
+    name_info.object = (uint64_t)event_handle;
+    name_info.objectType = VK_DEBUG_REPORT_OBJECT_TYPE_EVENT_EXT;
+    name_info.pObjectName = "UnimaginablyImprobableString";
+    fpvkDebugMarkerSetObjectNameEXT(device(), &name_info);
+
+    m_commandBuffer->begin();
+    vkCmdSetEvent(m_commandBuffer->handle(), event_handle, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT);
+    m_commandBuffer->end();
+    VkSubmitInfo submit_info = {};
+    submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+    submit_info.commandBufferCount = 1;
+    submit_info.pCommandBuffers = &m_commandBuffer->handle();
+    vkQueueSubmit(m_device->m_queue, 1, &submit_info, VK_NULL_HANDLE);
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, "UnimaginablyImprobableString");
+    vkDestroyEvent(m_device->device(), event_handle, NULL);
+    m_errorMonitor->VerifyFound();
+    vkQueueWaitIdle(m_device->m_queue);
+}
+
 TEST_F(VkLayerTest, InvalidStructSType) {
     TEST_DESCRIPTION(
         "Specify an invalid VkStructureType for a Vulkan "
