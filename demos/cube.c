@@ -2395,7 +2395,6 @@ static void demo_cleanup(struct demo *demo) {
         demo->DestroyDebugReportCallback(demo->inst, demo->msg_callback, NULL);
     }
     vkDestroySurfaceKHR(demo->inst, demo->surface, NULL);
-    vkDestroyInstance(demo->inst, NULL);
 
 #if defined(VK_USE_PLATFORM_XLIB_KHR)
     XDestroyWindow(demo->display, demo->xlib_window);
@@ -2413,6 +2412,8 @@ static void demo_cleanup(struct demo *demo) {
     wl_display_disconnect(demo->display);
 #elif defined(VK_USE_PLATFORM_MIR_KHR)
 #endif
+
+    vkDestroyInstance(demo->inst, NULL);
 }
 
 static void demo_resize(struct demo *demo) {

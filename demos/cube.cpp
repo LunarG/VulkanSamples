@@ -382,7 +382,6 @@ struct Demo {
         device.waitIdle();
         device.destroy(nullptr);
         inst.destroySurfaceKHR(surface, nullptr);
-        inst.destroy(nullptr);
 
 #if defined(VK_USE_PLATFORM_XLIB_KHR)
         XDestroyWindow(display, xlib_window);
@@ -400,6 +399,8 @@ struct Demo {
         wl_display_disconnect(display);
 #elif defined(VK_USE_PLATFORM_MIR_KHR)
 #endif
+
+        inst.destroy(nullptr);
     }
 
     void create_device() {
