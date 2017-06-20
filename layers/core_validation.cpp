@@ -1178,7 +1178,7 @@ static bool verifyLineWidth(layer_data *dev_data, DRAW_STATE_ERROR dsError, Vulk
 }
 
 // Verify that create state for a pipeline is valid
-static bool verifyPipelineCreateState(layer_data *dev_data, std::vector<PIPELINE_STATE *> pPipelines, int pipelineIndex) {
+static bool verifyPipelineCreateState(layer_data *dev_data, std::vector<PIPELINE_STATE *> const &pPipelines, int pipelineIndex) {
     bool skip = false;
 
     PIPELINE_STATE *pPipeline = pPipelines[pipelineIndex];
