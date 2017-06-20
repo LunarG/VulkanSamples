@@ -93,7 +93,7 @@ function(sampleWithSingleFile)
             if(NOT LEADING_DIGIT STREQUAL "")
                 set(PACKAGE_NAME "T${PACKAGE_NAME}")
             endif()
-            set (PACKAGE_NAME org.khronos.vulkan.samples.${PACKAGE_NAME})
+            set (PACKAGE_NAME vulkan.samples.${PACKAGE_NAME})
             set (SAMPLE_DESCRIPTION "Vulkan sample: ${SAMPLE_NAME}")
             file(COPY ./android/project_template/ DESTINATION ./android/${SAMPLE_NAME}/)
 
