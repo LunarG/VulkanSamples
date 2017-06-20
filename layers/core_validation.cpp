@@ -709,12 +709,13 @@ FRAMEBUFFER_STATE *GetFramebufferState(const layer_data *dev_data, VkFramebuffer
     return it->second.get();
 }
 
-cvdescriptorset::DescriptorSetLayout const *GetDescriptorSetLayout(layer_data const *dev_data, VkDescriptorSetLayout dsLayout) {
+std::shared_ptr<cvdescriptorset::DescriptorSetLayout> const GetDescriptorSetLayout(layer_data const *dev_data,
+                                                                                   VkDescriptorSetLayout dsLayout) {
     auto it = dev_data->descriptorSetLayoutMap.find(dsLayout);
     if (it == dev_data->descriptorSetLayoutMap.end()) {
         return nullptr;
     }
-    return it->second.get();
+    return it->second;
 }
 
 static PIPELINE_LAYOUT_NODE const *getPipelineLayout(layer_data const *dev_data, VkPipelineLayout pipeLayout) {
