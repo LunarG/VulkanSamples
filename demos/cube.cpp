@@ -453,6 +453,7 @@ struct Demo {
             } else if (result == vk::Result::eSuboptimalKHR) {
                 // swapchain is not as optimal as it could be, but the platform's
                 // presentation engine will still present the image correctly.
+                break;
             } else {
                 VERIFY(result == vk::Result::eSuccess);
             }
