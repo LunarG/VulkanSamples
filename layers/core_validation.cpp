@@ -1215,6 +1215,19 @@ static bool verifyPipelineCreateState(layer_data *dev_data, std::vector<PIPELINE
         }
     }
 
+    // Ensure the subpass index is valid. If not, then validate_and_capture_pipeline_shader_state
+    // produces nonsense errors that confuse users. Other layers should already
+    // emit errors for renderpass being invalid.
+    auto renderPass = GetRenderPassState(dev_data, pPipeline->graphicsPipelineCI.renderPass);
+    if (renderPass && pPipeline->graphicsPipelineCI.subpass >= renderPass->createInfo.subpassCount) {
+        skip |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_PIPELINE_EXT,
+                        HandleToUint64(pPipeline->pipeline), __LINE__, VALIDATION_ERROR_096005ee, "DS",
+                        "Invalid Pipeline CreateInfo State: Subpass index %u "
+                            "is out of range for this renderpass (0..%u). %s",
+                        pPipeline->graphicsPipelineCI.subpass, renderPass->createInfo.subpassCount - 1,
+                        validation_error_map[VALIDATION_ERROR_096005ee]);
+    }
+
     if (pPipeline->graphicsPipelineCI.pColorBlendState != NULL) {
         const safe_VkPipelineColorBlendStateCreateInfo *color_blend_state = pPipeline->graphicsPipelineCI.pColorBlendState;
         auto const render_pass_info = GetRenderPassState(dev_data, pPipeline->graphicsPipelineCI.renderPass)->createInfo.ptr();
@@ -1256,19 +1269,6 @@ static bool verifyPipelineCreateState(layer_data *dev_data, std::vector<PIPELINE
                         "Invalid Pipeline CreateInfo: If logic operations feature not enabled, logicOpEnable must be VK_FALSE. %s",
                         validation_error_map[VALIDATION_ERROR_0f4004bc]);
         }
-    }
-
-    // Ensure the subpass index is valid. If not, then validate_and_capture_pipeline_shader_state
-    // produces nonsense errors that confuse users. Other layers should already
-    // emit errors for renderpass being invalid.
-    auto renderPass = GetRenderPassState(dev_data, pPipeline->graphicsPipelineCI.renderPass);
-    if (renderPass && pPipeline->graphicsPipelineCI.subpass >= renderPass->createInfo.subpassCount) {
-        skip |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_PIPELINE_EXT,
-                        HandleToUint64(pPipeline->pipeline), __LINE__, VALIDATION_ERROR_096005ee, "DS",
-                        "Invalid Pipeline CreateInfo State: Subpass index %u "
-                        "is out of range for this renderpass (0..%u). %s",
-                        pPipeline->graphicsPipelineCI.subpass, renderPass->createInfo.subpassCount - 1,
-                        validation_error_map[VALIDATION_ERROR_096005ee]);
     }
 
     if (validate_and_capture_pipeline_shader_state(dev_data, pPipeline)) {
