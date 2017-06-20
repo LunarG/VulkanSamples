@@ -4,6 +4,14 @@
 #    cd C:\src\Vulkan-LoaderAndValidationLayers\build\tests
 #    .\vkvalidatelayerdoc.ps1 [-Debug]
 
+if (-not (Test-Path -LiteralPath '..\..\layers')) {
+    write-host -background black -foreground green "[  SKIPPED  ] " -nonewline
+    write-host "vkvalidatelayerdoc.ps1: Validate layer documentation"
+    write-host "  To run validation DB checks you can manually execute"
+    write-host "  vk_validation_stats.py from the 'layers' dir of your source tree"
+    exit 0
+}
+
 if ($args[0] -eq "-Debug") {
     $dPath = "Debug"
 } else {
