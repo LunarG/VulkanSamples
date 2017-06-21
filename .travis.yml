@@ -36,7 +36,7 @@ cache:
 
 before_install:
   # Install the appropriate Linux packages.
-  - if [[ "$VULKAN_BUILD_TARGET" == "LINUX" ]]; then sudo apt-get -y install libxkbcommon-dev libwayland-dev libmirclient-dev libxrandr-dev; fi
+  - if [[ "$VULKAN_BUILD_TARGET" == "LINUX" ]]; then sudo apt-get -y install libxkbcommon-dev libwayland-dev libmirclient-dev libxrandr-dev libx11-xcb-dev; fi
 
   # Install the Android NDK.
   - if [[ "$VULKAN_BUILD_TARGET" == "ANDROID" ]]; then export ARCH=`uname -m`; fi
