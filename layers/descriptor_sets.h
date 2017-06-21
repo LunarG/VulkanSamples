@@ -110,7 +110,7 @@ class DescriptorSetLayout {
     bool HasBinding(const uint32_t binding) const { return binding_to_index_map_.count(binding) > 0; };
     // Return true if this layout is compatible with passed in layout,
     //   else return false and update error_msg with description of incompatibility
-    bool IsCompatible(std::shared_ptr<DescriptorSetLayout> const, std::string *) const;
+    bool IsCompatible(std::shared_ptr<DescriptorSetLayout const> const, std::string *) const;
     // Return true if binding 1 beyond given exists and has same type, stageFlags & immutable sampler use
     bool IsNextBindingConsistent(const uint32_t) const;
     // Various Get functions that can either be passed a binding#, which will
@@ -321,7 +321,7 @@ void PerformAllocateDescriptorSets(const VkDescriptorSetAllocateInfo *, const Vk
  */
 class DescriptorSet : public BASE_NODE {
    public:
-    DescriptorSet(const VkDescriptorSet, const VkDescriptorPool, const std::shared_ptr<DescriptorSetLayout> &,
+    DescriptorSet(const VkDescriptorSet, const VkDescriptorPool, const std::shared_ptr<DescriptorSetLayout const> &,
                   const core_validation::layer_data *);
     ~DescriptorSet();
     // A number of common Get* functions that return data based on layout from which this set was created
@@ -342,7 +342,7 @@ class DescriptorSet : public BASE_NODE {
     // Return true if given binding is present in this set
     bool HasBinding(const uint32_t binding) const { return p_layout_->HasBinding(binding); };
     // Is this set compatible with the given layout?
-    bool IsCompatible(std::shared_ptr<DescriptorSetLayout> const, std::string *) const;
+    bool IsCompatible(std::shared_ptr<DescriptorSetLayout const> const, std::string *) const;
     // For given bindings validate state at time of draw is correct, returning false on error and writing error details into string*
     bool ValidateDrawState(const std::map<uint32_t, descriptor_req> &, const std::vector<uint32_t> &, const GLOBAL_CB_NODE *,
                            const char *caller, std::string *) const;
@@ -363,7 +363,7 @@ class DescriptorSet : public BASE_NODE {
     // Perform a CopyUpdate whose contents were just validated using ValidateCopyUpdate
     void PerformCopyUpdate(const VkCopyDescriptorSet *, const DescriptorSet *);
 
-    std::shared_ptr<DescriptorSetLayout> const GetLayout() const { return p_layout_; };
+    std::shared_ptr<DescriptorSetLayout const> const GetLayout() const { return p_layout_; };
     VkDescriptorSet GetSet() const { return set_; };
     // Return unordered_set of all command buffers that this set is bound to
     std::unordered_set<GLOBAL_CB_NODE *> GetBoundCmdBuffers() const { return cb_bindings; }
@@ -397,7 +397,7 @@ class DescriptorSet : public BASE_NODE {
     bool some_update_;  // has any part of the set ever been updated?
     VkDescriptorSet set_;
     DESCRIPTOR_POOL_STATE *pool_state_;
-    const std::shared_ptr<DescriptorSetLayout> p_layout_;
+    const std::shared_ptr<DescriptorSetLayout const> p_layout_;
     std::vector<std::unique_ptr<Descriptor>> descriptors_;
     // Ptr to device data used for various data look-ups
     const core_validation::layer_data *device_data_;

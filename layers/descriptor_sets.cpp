@@ -209,7 +209,7 @@ VkSampler const *cvdescriptorset::DescriptorSetLayout::GetImmutableSamplerPtrFro
 }
 // If our layout is compatible with rh_ds_layout, return true,
 //  else return false and fill in error_msg will description of what causes incompatibility
-bool cvdescriptorset::DescriptorSetLayout::IsCompatible(std::shared_ptr<DescriptorSetLayout> const rh_ds_layout,
+bool cvdescriptorset::DescriptorSetLayout::IsCompatible(std::shared_ptr<DescriptorSetLayout const> const rh_ds_layout,
                                                         std::string *error_msg) const {
     // Trivial case
     if (layout_ == rh_ds_layout->GetDescriptorSetLayout()) return true;
@@ -313,7 +313,7 @@ cvdescriptorset::AllocateDescriptorSetsData::AllocateDescriptorSetsData(uint32_t
     : required_descriptors_by_type{}, layout_nodes(count, nullptr) {}
 
 cvdescriptorset::DescriptorSet::DescriptorSet(const VkDescriptorSet set, const VkDescriptorPool pool,
-                                              const std::shared_ptr<DescriptorSetLayout> &layout, const layer_data *dev_data)
+                                              const std::shared_ptr<DescriptorSetLayout const> &layout, const layer_data *dev_data)
     : some_update_(false),
       set_(set),
       pool_state_(nullptr),
@@ -390,7 +390,8 @@ static std::string string_descriptor_req_view_type(descriptor_req req) {
 }
 
 // Is this sets underlying layout compatible with passed in layout according to "Pipeline Layout Compatibility" in spec?
-bool cvdescriptorset::DescriptorSet::IsCompatible(std::shared_ptr<DescriptorSetLayout> const layout, std::string *error) const {
+bool cvdescriptorset::DescriptorSet::IsCompatible(std::shared_ptr<DescriptorSetLayout const> const layout,
+                                                  std::string *error) const {
     return layout->IsCompatible(p_layout_, error);
 }
 
