@@ -4390,9 +4390,6 @@ bool validate_dual_src_blend_feature(layer_data *device_data, PIPELINE_STATE *pi
 static bool PreCallCreateGraphicsPipelines(layer_data *device_data, uint32_t count,
                                            const VkGraphicsPipelineCreateInfo *create_infos, vector<PIPELINE_STATE *> const &pipe_state) {
     bool skip = false;
-    instance_layer_data *instance_data =
-        GetLayerDataPtr(get_dispatch_key(device_data->instance_data->instance), instance_layer_data_map);
-
     for (uint32_t i = 0; i < count; i++) {
         skip |= verifyPipelineCreateState(device_data, pipe_state, i);
         if (create_infos[i].pVertexInputState != NULL) {
@@ -4400,7 +4397,7 @@ static bool PreCallCreateGraphicsPipelines(layer_data *device_data, uint32_t cou
                 VkFormat format = create_infos[i].pVertexInputState->pVertexAttributeDescriptions[j].format;
                 // Internal call to get format info.  Still goes through layers, could potentially go directly to ICD.
                 VkFormatProperties properties;
-                instance_data->dispatch_table.GetPhysicalDeviceFormatProperties(device_data->physical_device, format, &properties);
+                device_data->instance_data->dispatch_table.GetPhysicalDeviceFormatProperties(device_data->physical_device, format, &properties);
                 if ((properties.bufferFeatures & VK_FORMAT_FEATURE_VERTEX_BUFFER_BIT) == 0) {
                     skip |= log_msg(
                         device_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0,
