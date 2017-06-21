@@ -209,7 +209,7 @@ VkSampler const *cvdescriptorset::DescriptorSetLayout::GetImmutableSamplerPtrFro
 }
 // If our layout is compatible with rh_ds_layout, return true,
 //  else return false and fill in error_msg will description of what causes incompatibility
-bool cvdescriptorset::DescriptorSetLayout::IsCompatible(std::shared_ptr<DescriptorSetLayout const> const rh_ds_layout,
+bool cvdescriptorset::DescriptorSetLayout::IsCompatible(DescriptorSetLayout const *const rh_ds_layout,
                                                         std::string *error_msg) const {
     // Trivial case
     if (layout_ == rh_ds_layout->GetDescriptorSetLayout()) return true;
@@ -390,9 +390,8 @@ static std::string string_descriptor_req_view_type(descriptor_req req) {
 }
 
 // Is this sets underlying layout compatible with passed in layout according to "Pipeline Layout Compatibility" in spec?
-bool cvdescriptorset::DescriptorSet::IsCompatible(std::shared_ptr<DescriptorSetLayout const> const layout,
-                                                  std::string *error) const {
-    return layout->IsCompatible(p_layout_, error);
+bool cvdescriptorset::DescriptorSet::IsCompatible(DescriptorSetLayout const *const layout, std::string *error) const {
+    return layout->IsCompatible(p_layout_.get(), error);
 }
 
 // Validate that the state of this set is appropriate for the given bindings and dynamic_offsets at Draw time

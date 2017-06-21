@@ -1061,7 +1061,7 @@ static bool verify_set_layout_compatibility(const cvdescriptorset::DescriptorSet
         return false;
     }
     auto layout_node = pipeline_layout->set_layouts[layoutIndex];
-    return descriptor_set->IsCompatible(layout_node, &errorMsg);
+    return descriptor_set->IsCompatible(layout_node.get(), &errorMsg);
 }
 
 // Validate overall state at the time of a draw call

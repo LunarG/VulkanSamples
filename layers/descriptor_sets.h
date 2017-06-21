@@ -110,7 +110,7 @@ class DescriptorSetLayout {
     bool HasBinding(const uint32_t binding) const { return binding_to_index_map_.count(binding) > 0; };
     // Return true if this layout is compatible with passed in layout,
     //   else return false and update error_msg with description of incompatibility
-    bool IsCompatible(std::shared_ptr<DescriptorSetLayout const> const, std::string *) const;
+    bool IsCompatible(DescriptorSetLayout const *const, std::string *) const;
     // Return true if binding 1 beyond given exists and has same type, stageFlags & immutable sampler use
     bool IsNextBindingConsistent(const uint32_t) const;
     // Various Get functions that can either be passed a binding#, which will
@@ -342,7 +342,7 @@ class DescriptorSet : public BASE_NODE {
     // Return true if given binding is present in this set
     bool HasBinding(const uint32_t binding) const { return p_layout_->HasBinding(binding); };
     // Is this set compatible with the given layout?
-    bool IsCompatible(std::shared_ptr<DescriptorSetLayout const> const, std::string *) const;
+    bool IsCompatible(DescriptorSetLayout const *const, std::string *) const;
     // For given bindings validate state at time of draw is correct, returning false on error and writing error details into string*
     bool ValidateDrawState(const std::map<uint32_t, descriptor_req> &, const std::vector<uint32_t> &, const GLOBAL_CB_NODE *,
                            const char *caller, std::string *) const;
