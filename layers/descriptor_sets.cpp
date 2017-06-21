@@ -313,7 +313,7 @@ cvdescriptorset::AllocateDescriptorSetsData::AllocateDescriptorSetsData(uint32_t
     : required_descriptors_by_type{}, layout_nodes(count, nullptr) {}
 
 cvdescriptorset::DescriptorSet::DescriptorSet(const VkDescriptorSet set, const VkDescriptorPool pool,
-                                              std::shared_ptr<DescriptorSetLayout> layout, const layer_data *dev_data)
+                                              const std::shared_ptr<DescriptorSetLayout> &layout, const layer_data *dev_data)
     : some_update_(false),
       set_(set),
       pool_state_(nullptr),
