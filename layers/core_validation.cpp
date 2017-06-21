@@ -4530,8 +4530,7 @@ static bool PreCallValidateCreateDescriptorSetLayout(layer_data *dev_data, const
 
 static void PostCallRecordCreateDescriptorSetLayout(layer_data *dev_data, const VkDescriptorSetLayoutCreateInfo *create_info,
                                                     VkDescriptorSetLayout set_layout) {
-    dev_data->descriptorSetLayoutMap[set_layout] =
-        std::shared_ptr<cvdescriptorset::DescriptorSetLayout>(new cvdescriptorset::DescriptorSetLayout(create_info, set_layout));
+    dev_data->descriptorSetLayoutMap[set_layout] = std::make_shared<cvdescriptorset::DescriptorSetLayout>(create_info, set_layout);
 }
 
 VKAPI_ATTR VkResult VKAPI_CALL CreateDescriptorSetLayout(VkDevice device, const VkDescriptorSetLayoutCreateInfo *pCreateInfo,
