@@ -1019,7 +1019,7 @@ TEST_F(VkLayerTest, UnrecognizedValueBadFlag) {
 TEST_F(VkLayerTest, UnrecognizedValueBadBool) {
     // Make sure using VK_SAMPLER_ADDRESS_MODE_MIRROR_CLAMP_TO_EDGE doesn't trigger a false positive.
     ASSERT_NO_FATAL_FAILURE(InitFramework(myDbgFunc, m_errorMonitor));
-    if (DeviceExtensionSupported(gpu(), VK_KHR_SAMPLER_MIRROR_CLAMP_TO_EDGE_EXTENSION_NAME)) {
+    if (DeviceExtensionSupported(gpu(), nullptr, VK_KHR_SAMPLER_MIRROR_CLAMP_TO_EDGE_EXTENSION_NAME)) {
         m_device_extension_names.push_back(VK_KHR_SAMPLER_MIRROR_CLAMP_TO_EDGE_EXTENSION_NAME);
     } else {
         printf("             VK_KHR_sampler_mirror_clamp_to_edge extension not supported, skipping test\n");
@@ -17855,7 +17855,7 @@ TEST_F(VkLayerTest, CopyImageTypeExtentMismatch) {
 TEST_F(VkLayerTest, CopyImageTypeExtentMismatchMaintenance1) {
     // Image copy tests where format type and extents don't match and the Maintenance1 extension is enabled
     ASSERT_NO_FATAL_FAILURE(InitFramework(myDbgFunc, m_errorMonitor));
-    if (DeviceExtensionSupported(gpu(), VK_KHR_MAINTENANCE1_EXTENSION_NAME)) {
+    if (DeviceExtensionSupported(gpu(), nullptr, VK_KHR_MAINTENANCE1_EXTENSION_NAME)) {
         m_device_extension_names.push_back(VK_KHR_MAINTENANCE1_EXTENSION_NAME);
     } else {
         printf("             Maintenance1 extension cannot be enabled, test skipped.\n");
@@ -23666,7 +23666,7 @@ TEST_F(VkPositiveLayerTest, Maintenance1Tests) {
     TEST_DESCRIPTION("Validate various special cases for the Maintenance1_KHR extension");
 
     ASSERT_NO_FATAL_FAILURE(InitFramework(myDbgFunc, m_errorMonitor));
-    if (DeviceExtensionSupported(gpu(), VK_KHR_MAINTENANCE1_EXTENSION_NAME)) {
+    if (DeviceExtensionSupported(gpu(), nullptr, VK_KHR_MAINTENANCE1_EXTENSION_NAME)) {
         m_device_extension_names.push_back(VK_KHR_MAINTENANCE1_EXTENSION_NAME);
     } else {
         printf("             Maintenance1 Extension not supported, skipping tests\n");
@@ -23690,7 +23690,7 @@ TEST_F(VkLayerTest, DuplicateValidPNextStructures) {
     TEST_DESCRIPTION("Create a pNext chain containing valid strutures, but with a duplicate structure type");
 
     ASSERT_NO_FATAL_FAILURE(InitFramework(myDbgFunc, m_errorMonitor));
-    if (DeviceExtensionSupported(gpu(), VK_NV_DEDICATED_ALLOCATION_EXTENSION_NAME)) {
+    if (DeviceExtensionSupported(gpu(), nullptr, VK_NV_DEDICATED_ALLOCATION_EXTENSION_NAME)) {
         m_device_extension_names.push_back(VK_NV_DEDICATED_ALLOCATION_EXTENSION_NAME);
     } else {
         printf("             VK_NV_dedicated_allocation extension not supported, skipping test\n");
@@ -23729,7 +23729,7 @@ TEST_F(VkPositiveLayerTest, ValidStructPNext) {
 
     // Positive test to check parameter_validation and unique_objects support for NV_dedicated_allocation
     ASSERT_NO_FATAL_FAILURE(InitFramework(myDbgFunc, m_errorMonitor));
-    if (DeviceExtensionSupported(gpu(), VK_NV_DEDICATED_ALLOCATION_EXTENSION_NAME)) {
+    if (DeviceExtensionSupported(gpu(), nullptr, VK_NV_DEDICATED_ALLOCATION_EXTENSION_NAME)) {
         m_device_extension_names.push_back(VK_NV_DEDICATED_ALLOCATION_EXTENSION_NAME);
     } else {
         printf("             VK_NV_DEDICATED_ALLOCATION_EXTENSION_NAME Extension not supported, skipping test\n");
