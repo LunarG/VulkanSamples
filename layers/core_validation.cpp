@@ -1416,6 +1416,24 @@ static bool verifyPipelineCreateState(layer_data *dev_data, std::vector<PIPELINE
         }
     }
 
+    auto vi = pPipeline->graphicsPipelineCI.pVertexInputState;
+    if (vi != NULL) {
+        for (uint32_t j = 0; j < vi->vertexAttributeDescriptionCount; j++) {
+            VkFormat format = vi->pVertexAttributeDescriptions[j].format;
+            // Internal call to get format info.  Still goes through layers, could potentially go directly to ICD.
+            VkFormatProperties properties;
+            dev_data->instance_data->dispatch_table.GetPhysicalDeviceFormatProperties(dev_data->physical_device, format, &properties);
+            if ((properties.bufferFeatures & VK_FORMAT_FEATURE_VERTEX_BUFFER_BIT) == 0) {
+                skip |= log_msg(
+                    dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0,
+                    __LINE__, VALIDATION_ERROR_14a004de, "IMAGE",
+                    "vkCreateGraphicsPipelines: pCreateInfo[%d].pVertexInputState->vertexAttributeDescriptions[%d].format "
+                        "(%s) is not a supported vertex buffer format. %s",
+                    pipelineIndex, j, string_VkFormat(format), validation_error_map[VALIDATION_ERROR_14a004de]);
+            }
+        }
+    }
+
     return skip;
 }
 
@@ -4392,22 +4410,6 @@ static bool PreCallCreateGraphicsPipelines(layer_data *device_data, uint32_t cou
     bool skip = false;
     for (uint32_t i = 0; i < count; i++) {
         skip |= verifyPipelineCreateState(device_data, pipe_state, i);
-        if (create_infos[i].pVertexInputState != NULL) {
-            for (uint32_t j = 0; j < create_infos[i].pVertexInputState->vertexAttributeDescriptionCount; j++) {
-                VkFormat format = create_infos[i].pVertexInputState->pVertexAttributeDescriptions[j].format;
-                // Internal call to get format info.  Still goes through layers, could potentially go directly to ICD.
-                VkFormatProperties properties;
-                device_data->instance_data->dispatch_table.GetPhysicalDeviceFormatProperties(device_data->physical_device, format, &properties);
-                if ((properties.bufferFeatures & VK_FORMAT_FEATURE_VERTEX_BUFFER_BIT) == 0) {
-                    skip |= log_msg(
-                        device_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0,
-                        __LINE__, VALIDATION_ERROR_14a004de, "IMAGE",
-                        "vkCreateGraphicsPipelines: pCreateInfo[%d].pVertexInputState->vertexAttributeDescriptions[%d].format "
-                        "(%s) is not a supported vertex buffer format. %s",
-                        i, j, string_VkFormat(format), validation_error_map[VALIDATION_ERROR_14a004de]);
-                }
-            }
-        }
     }
     return skip;
 }
