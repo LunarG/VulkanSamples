@@ -526,7 +526,7 @@ struct hash<ImageSubresourcePair> {
 // Store layouts and pushconstants for PipelineLayout
 struct PIPELINE_LAYOUT_NODE {
     VkPipelineLayout layout;
-    std::vector<std::shared_ptr<cvdescriptorset::DescriptorSetLayout>> set_layouts;
+    std::vector<std::shared_ptr<cvdescriptorset::DescriptorSetLayout const>> set_layouts;
     std::vector<VkPushConstantRange> push_constant_ranges;
 
     PIPELINE_LAYOUT_NODE() : layout(VK_NULL_HANDLE), set_layouts{}, push_constant_ranges{} {}
@@ -765,7 +765,7 @@ struct DeviceExtensions;
 namespace core_validation {
 struct layer_data;
 cvdescriptorset::DescriptorSet *GetSetNode(const layer_data *, VkDescriptorSet);
-std::shared_ptr<cvdescriptorset::DescriptorSetLayout> const GetDescriptorSetLayout(layer_data const *, VkDescriptorSetLayout);
+std::shared_ptr<cvdescriptorset::DescriptorSetLayout const> const GetDescriptorSetLayout(layer_data const *, VkDescriptorSetLayout);
 DESCRIPTOR_POOL_STATE *GetDescriptorPoolState(const layer_data *, const VkDescriptorPool);
 BUFFER_STATE *GetBufferState(const layer_data *, VkBuffer);
 IMAGE_STATE *GetImageState(const layer_data *, VkImage);

@@ -276,7 +276,7 @@ class BufferDescriptor : public Descriptor {
 // Structs to contain common elements that need to be shared between Validate* and Perform* calls below
 struct AllocateDescriptorSetsData {
     uint32_t required_descriptors_by_type[VK_DESCRIPTOR_TYPE_RANGE_SIZE];
-    std::vector<std::shared_ptr<DescriptorSetLayout>> layout_nodes;
+    std::vector<std::shared_ptr<DescriptorSetLayout const>> layout_nodes;
     AllocateDescriptorSetsData(uint32_t);
 };
 // Helper functions for descriptor set functions that cross multiple sets
