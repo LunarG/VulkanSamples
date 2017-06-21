@@ -4439,6 +4439,8 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateGraphicsPipelines(VkDevice device, VkPipeli
     }
     skip |= PreCallCreateGraphicsPipelines(dev_data, count, pCreateInfos, pipe_state);
 
+    lock.unlock();
+
     if (skip) {
         for (i = 0; i < count; i++) {
             delete pipe_state[i];
@@ -4447,7 +4449,6 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateGraphicsPipelines(VkDevice device, VkPipeli
         return VK_ERROR_VALIDATION_FAILED_EXT;
     }
 
-    lock.unlock();
     auto result =
         dev_data->dispatch_table.CreateGraphicsPipelines(device, pipelineCache, count, pCreateInfos, pAllocator, pPipelines);
     lock.lock();
