@@ -1179,7 +1179,7 @@ static bool verifyLineWidth(layer_data *dev_data, DRAW_STATE_ERROR dsError, Vulk
 }
 
 // Verify that create state for a pipeline is valid
-static bool verifyPipelineCreateState(layer_data *dev_data, std::vector<PIPELINE_STATE *> const &pPipelines, int pipelineIndex) {
+static bool ValidatePipelineLocked(layer_data *dev_data, std::vector<PIPELINE_STATE *> const &pPipelines, int pipelineIndex) {
     bool skip = false;
 
     PIPELINE_STATE *pPipeline = pPipelines[pipelineIndex];
@@ -4429,7 +4429,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateGraphicsPipelines(VkDevice device, VkPipeli
     }
 
     for (i = 0; i < count; i++) {
-        skip |= verifyPipelineCreateState(dev_data, pipe_state, i);
+        skip |= ValidatePipelineLocked(dev_data, pipe_state, i);
     }
 
     lock.unlock();
@@ -4478,7 +4478,6 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateComputePipelines(VkDevice device, VkPipelin
 
         // TODO: Add Compute Pipeline Verification
         skip |= validate_compute_pipeline(dev_data, pPipeState[i]);
-        // skip |= verifyPipelineCreateState(dev_data, pPipeState[i]);
     }
 
     if (skip) {
