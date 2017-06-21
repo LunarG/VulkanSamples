@@ -280,7 +280,8 @@ bool validate_array(debug_report_data *report_data, const char *apiName, const P
  */
 template <typename T>
 bool validate_struct_type(debug_report_data *report_data, const char *apiName, const ParameterName &parameterName,
-                          const char *sTypeName, const T *value, VkStructureType sType, bool required) {
+                          const char *sTypeName, const T *value, VkStructureType sType, bool required,
+                          UNIQUE_VALIDATION_ERROR_CODE vuid) {
     bool skip_call = false;
 
     if (value == NULL) {
@@ -290,9 +291,9 @@ bool validate_struct_type(debug_report_data *report_data, const char *apiName, c
                                  parameterName.get_name().c_str());
         }
     } else if (value->sType != sType) {
-        skip_call |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
-                             INVALID_STRUCT_STYPE, LayerName, "%s: parameter %s->sType must be %s", apiName,
-                             parameterName.get_name().c_str(), sTypeName);
+        skip_call |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__, vuid,
+                             LayerName, "%s: parameter %s->sType must be %s. %s", apiName, parameterName.get_name().c_str(),
+                             sTypeName, validation_error_map[vuid]);
     }
 
     return skip_call;

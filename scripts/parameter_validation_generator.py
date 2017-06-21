@@ -20,10 +20,12 @@
 # Author: Dustin Graves <dustin@lunarg.com>
 # Author: Mark Lobodzinski <mark@lunarg.com>
 
-import os,re,sys
+import os,re,sys,string
 import xml.etree.ElementTree as etree
 from generator import *
 from collections import namedtuple
+from vuid_mapping import *
+
 
 
 # ParamCheckerGeneratorOptions - subclass of GeneratorOptions.
@@ -159,7 +161,7 @@ class ParamCheckerOutputGenerator(OutputGenerator):
         self.required_extensions = []                     # List of required extensions for the current extension
         self.extension_type = ''                          # Type of active feature (extension), device or instance
         self.extension_names = dict()                     # Dictionary of extension names to extension name defines
-
+        self.valid_vuids = set()                          # Set of all valid VUIDs
         # Named tuples to store struct and command data
         self.StructType = namedtuple('StructType', ['name', 'value'])
         self.CommandParam = namedtuple('CommandParam', ['type', 'name', 'ispointer', 'isstaticarray', 'isbool', 'israngedenum',
@@ -167,6 +169,21 @@ class ParamCheckerOutputGenerator(OutputGenerator):
                                                         'condition', 'cdecl'])
         self.CommandData = namedtuple('CommandData', ['name', 'params', 'cdecl', 'extension_type'])
         self.StructMemberData = namedtuple('StructMemberData', ['name', 'members'])
+
+        self.vuid_file = None
+        # Cover cases where file is built from scripts directory, Lin/Win, or Android build structure
+        vuid_filename_locations = [
+            '../layers/vk_validation_error_messages.h',
+            '../../layers/vk_validation_error_messages.h',
+            '../../../layers/vk_validation_error_messages.h',
+            ]
+        for vuid_filename in vuid_filename_locations:
+            if os.path.isfile(vuid_filename):
+                self.vuid_file = open(vuid_filename, "r")
+                break
+        if self.vuid_file == None:
+            print("Error: Could not find vk_validation_error_messages.h")
+            quit()
     #
     def incIndent(self, indent):
         inc = ' ' * self.INDENT_SPACES
@@ -178,10 +195,28 @@ class ParamCheckerOutputGenerator(OutputGenerator):
         if indent and (len(indent) > self.INDENT_SPACES):
             return indent[:-self.INDENT_SPACES]
         return ''
+    # Convert decimal number to 8 digit hexadecimal lower-case representation
+    def IdToHex(self, dec_num):
+        if dec_num > 4294967295:
+            print ("ERROR: Decimal # %d can't be represented in 8 hex digits" % (dec_num))
+            sys.exit()
+        hex_num = hex(dec_num)
+        return hex_num[2:].zfill(8)
     #
     def beginFile(self, genOpts):
         OutputGenerator.beginFile(self, genOpts)
         # C-specific
+        #
+        # Open vk_validation_error_messages.h file to verify computed VUIDs
+        for line in self.vuid_file:
+            # Grab hex number from enum definition
+            vuid_list = line.split('0x')
+            # If this is a valid enumeration line, remove trailing comma and CR
+            if len(vuid_list) == 2:
+                vuid_num = vuid_list[1][:-2]
+                # Make sure this is a good hex number before adding to set
+                if len(vuid_num) == 8 and all(c in string.hexdigits for c in vuid_num):
+                    self.valid_vuids.add(vuid_num)
         #
         # User-supplied prefix text, if any (list of strings)
         if (genOpts.prefixText):
@@ -687,6 +722,15 @@ class ParamCheckerOutputGenerator(OutputGenerator):
         checkedExpr.append(localIndent + '}\n')
         return [checkedExpr]
     #
+    # Get VUID identifier from implicit VUID tag
+    def GetVuid(self, vuid_string):
+        vuid_num = self.IdToHex(convertVUID(vuid_string))
+        if vuid_num in self.valid_vuids:
+            vuid = "VALIDATION_ERROR_%s" % vuid_num
+        else:
+            vuid = "VALIDATION_ERROR_UNDEFINED"
+        return vuid
+    #
     # Generate the sType check string
     def makeStructTypeCheck(self, prefix, value, lenValue, valueRequired, lenValueRequired, lenPtrRequired, funcPrintName, lenPrintName, valuePrintName, postProcSpec):
         checkExpr = []
@@ -703,8 +747,9 @@ class ParamCheckerOutputGenerator(OutputGenerator):
                     funcPrintName, lenValueRequired, valueRequired, ln=lenValue.name, ldn=lenPrintName, dn=valuePrintName, vn=value.name, sv=stype.value, pf=prefix, **postProcSpec))
         # This is an individual struct
         else:
-            checkExpr.append('skipCall |= validate_struct_type(layer_data->report_data, "{}", {ppp}"{}"{pps}, "{sv}", {}{vn}, {sv}, {});\n'.format(
-                funcPrintName, valuePrintName, prefix, valueRequired, vn=value.name, sv=stype.value, **postProcSpec))
+            vuid = self.GetVuid("VUID-%s-sType-sType" % value.type)
+            checkExpr.append('skipCall |= validate_struct_type(layer_data->report_data, "{}", {ppp}"{}"{pps}, "{sv}", {}{vn}, {sv}, {}, {});\n'.format(
+                funcPrintName, valuePrintName, prefix, valueRequired, vuid, vn=value.name, sv=stype.value, vt=value.type, **postProcSpec))
         return checkExpr
     #
     # Generate the handle check string
@@ -965,8 +1010,9 @@ class ParamCheckerOutputGenerator(OutputGenerator):
                 else:
                     if value.type in self.structTypes:
                         stype = self.structTypes[value.type]
-                        usedLines.append('skipCall |= validate_struct_type(layer_data->report_data, "{}", {ppp}"{}"{pps}, "{sv}", &({}{vn}), {sv}, false);\n'.format(
-                            funcName, valueDisplayName, valuePrefix, vn=value.name, sv=stype.value, **postProcSpec))
+                        vuid = self.GetVuid("VUID-%s-sType-sType" % value.type)
+                        usedLines.append('skipCall |= validate_struct_type(layer_data->report_data, "{}", {ppp}"{}"{pps}, "{sv}", &({}{vn}), {sv}, false, {});\n'.format(
+                            funcName, valueDisplayName, valuePrefix, vuid, vn=value.name, sv=stype.value, vt=value.type, **postProcSpec))
                     elif value.type in self.handleTypes:
                         if not self.isHandleOptional(value, None):
                             usedLines.append('skipCall |= validate_required_handle(layer_data->report_data, "{}", {ppp}"{}"{pps}, {}{});\n'.format(funcName, valueDisplayName, valuePrefix, value.name, **postProcSpec))
