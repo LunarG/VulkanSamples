@@ -277,8 +277,9 @@ class bcolors:
     def endc(self):
         return self.ENDC
 
-def main(argv=None):
+def main(argv):
     result = 0 # Non-zero result indicates an error case
+    terse_mode = 'terse_mode' in sys.argv
     # parse db
     val_db = ValidationDatabase()
     val_db.read()
@@ -295,13 +296,16 @@ def main(argv=None):
     # Process stats - Just doing this inline in main, could make a fancy class to handle
     #   all the processing of data and then get results from that
     txt_color = bcolors()
-
-    print("Validation Statistics")
+    if terse_mode == False:
+        print("Validation Statistics")
+    else:
+        print("Validation/Documentation Consistency Test)")
     # First give number of checks in db & header and report any discrepancies
     db_enums = len(val_db.db_dict.keys())
     hdr_enums = len(val_header.enums)
-    print(" Database file includes %d unique checks" % (db_enums))
-    print(" Header file declares %d unique checks" % (hdr_enums))
+    if not terse_mode:
+        print(" Database file includes %d unique checks" % (db_enums))
+        print(" Header file declares %d unique checks" % (hdr_enums))
 
     # Report any checks that have an invalid check_implemented flag
     if len(val_db.db_invalid_implemented) > 0:
@@ -318,7 +322,8 @@ def main(argv=None):
         if not tmp_db_dict.pop(enum, False):
             db_missing.append(enum)
     if db_enums == hdr_enums and len(db_missing) == 0 and len(tmp_db_dict.keys()) == 0:
-        print(txt_color.green() + "  Database and Header match, GREAT!" + txt_color.endc())
+        if not terse_mode:
+            print(txt_color.green() + "  Database and Header match, GREAT!" + txt_color.endc())
     else:
         print(txt_color.red() + "  Uh oh, Database doesn't match Header :(" + txt_color.endc())
         result = 1
@@ -343,14 +348,16 @@ def main(argv=None):
             multiple_uses = True
         if src_enum not in val_db.db_implemented_enums:
             imp_not_claimed.append(src_enum)
-    print(" Database file claims that %d checks (%s) are implemented in source." % (len(val_db.db_implemented_enums), "{0:.0f}%".format(float(len(val_db.db_implemented_enums))/db_enums * 100)))
+    if not terse_mode:
+        print(" Database file claims that %d checks (%s) are implemented in source." % (len(val_db.db_implemented_enums), "{0:.0f}%".format(float(len(val_db.db_implemented_enums))/db_enums * 100)))
 
-    if len(val_db.db_unimplemented_implicit) > 0:
+    if len(val_db.db_unimplemented_implicit) > 0 and not terse_mode:
         print(" Database file claims %d implicit checks (%s) that are not implemented." % (len(val_db.db_unimplemented_implicit), "{0:.0f}%".format(float(len(val_db.db_unimplemented_implicit))/db_enums * 100)))
         total_checks = len(val_db.db_implemented_enums) + len(val_db.db_unimplemented_implicit)
         print(" If all implicit checks are handled by parameter validation this is a total of %d (%s) checks covered." % (total_checks, "{0:.0f}%".format(float(total_checks)/db_enums * 100)))
     if len(imp_not_found) == 0 and len(imp_not_claimed) == 0:
-        print(txt_color.green() + "  All claimed Database implemented checks have been found in source, and no source checks aren't claimed in Database, GREAT!" + txt_color.endc())
+        if not terse_mode:
+            print(txt_color.green() + "  All claimed Database implemented checks have been found in source, and no source checks aren't claimed in Database, GREAT!" + txt_color.endc())
     else:
         result = 1
         print(txt_color.red() + "  Uh oh, Database claimed implemented don't match Source :(" + txt_color.endc())
@@ -363,7 +370,7 @@ def main(argv=None):
             for imp_enum in imp_not_claimed:
                 print(txt_color.red() + "    %s" % (imp_enum) + txt_color.endc())
 
-    if multiple_uses:
+    if multiple_uses and not terse_mode:
         print(txt_color.yellow() + "  Note that some checks are used multiple times. These may be good candidates for new valid usage spec language." + txt_color.endc())
         print(txt_color.yellow() + "  Here is a list of each check used multiple times with its number of uses:" + txt_color.endc())
         for enum in val_source.enum_count_dict:
@@ -390,7 +397,7 @@ def main(argv=None):
                     if testname not in tests_missing_enum:
                         tests_missing_enum[testname] = []
                     tests_missing_enum[testname].append(enum)
-    if tests_missing_enum:
+    if tests_missing_enum and not terse_mode:
         print(txt_color.yellow() + "  \nThe following tests do not use their reported enums to check for the validation error. You may want to update these to pass the expected enum to SetDesiredFailureMsg:" + txt_color.endc())
         for testname in tests_missing_enum:
             print(txt_color.yellow() + "   Testname %s does not explicitly check for these ids:" % (testname) + txt_color.endc())
@@ -398,9 +405,11 @@ def main(argv=None):
                 print(txt_color.yellow() + "    %s" % (enum) + txt_color.endc())
 
     # TODO : Go through all enums found in the test file and make sure they're correctly documented in the database file
-    print(" Database file claims that %d checks have tests written." % len(val_db.db_enum_to_tests))
+    if not terse_mode:
+        print(" Database file claims that %d checks have tests written." % len(val_db.db_enum_to_tests))
     if len(bad_testnames) == 0:
-        print(txt_color.green() + "  All claimed tests have valid names. That's good!" + txt_color.endc())
+        if not terse_mode:
+            print(txt_color.green() + "  All claimed tests have valid names. That's good!" + txt_color.endc())
     else:
         print(txt_color.red() + "  The following testnames in Database appear to be invalid:")
         result = 1
@@ -410,5 +419,5 @@ def main(argv=None):
     return result
 
 if __name__ == "__main__":
-    sys.exit(main())
+    sys.exit(main(sys.argv[1:]))
 

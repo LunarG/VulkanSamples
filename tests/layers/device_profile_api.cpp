@@ -39,11 +39,10 @@ static std::unordered_map<VkPhysicalDevice, struct VkPhysicalDeviceProperties> d
 static std::unordered_map<VkPhysicalDevice, struct VkPhysicalDeviceProperties> device_profile_api_dev_org_data_map;
 
 // device_profile_api Layer EXT APIs
-typedef VkResult(VKAPI_PTR *PFN_vkGetOriginalPhysicalDeviceLimitsEXT)(VkPhysicalDevice physicalDevice,
-                                                                      const VkPhysicalDeviceLimits *limits);
+typedef void(VKAPI_PTR *PFN_vkGetOriginalPhysicalDeviceLimitsEXT)(VkPhysicalDevice physicalDevice,
+                                                                  const VkPhysicalDeviceLimits *limits);
 
-typedef VkResult(VKAPI_PTR *PFN_vkSetPhysicalDeviceLimitsEXT)(VkPhysicalDevice physicalDevice,
-                                                              const VkPhysicalDeviceLimits *newLimits);
+typedef void(VKAPI_PTR *PFN_vkSetPhysicalDeviceLimitsEXT)(VkPhysicalDevice physicalDevice, const VkPhysicalDeviceLimits *newLimits);
 
 VKAPI_ATTR void VKAPI_CALL GetOriginalPhysicalDeviceLimitsEXT(VkPhysicalDevice physicalDevice, VkPhysicalDeviceLimits *orgLimits) {
     std::lock_guard<std::mutex> lock(global_lock);

@@ -31,4 +31,6 @@ if ($lastexitcode -ne 0) {
 
 & $dPath\vk_layer_validation_tests --gtest_filter=-$TestExceptions
 
+& .\vkvalidatelayerdoc.ps1 terse_mode
+
 exit $lastexitcode

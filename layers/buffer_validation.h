@@ -62,7 +62,7 @@ bool PreCallValidateCmdClearColorImage(layer_data *dev_data, VkCommandBuffer com
                                        VkImageLayout imageLayout, uint32_t rangeCount, const VkImageSubresourceRange *pRanges);
 
 void PreCallRecordCmdClearImage(layer_data *dev_data, VkCommandBuffer commandBuffer, VkImage image, VkImageLayout imageLayout,
-                                uint32_t rangeCount, const VkImageSubresourceRange *pRanges, CMD_TYPE cmd_type);
+                                uint32_t rangeCount, const VkImageSubresourceRange *pRanges);
 
 bool PreCallValidateCmdClearDepthStencilImage(layer_data *dev_data, VkCommandBuffer commandBuffer, VkImage image,
                                               VkImageLayout imageLayout, uint32_t rangeCount,

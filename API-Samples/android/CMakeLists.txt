@@ -36,6 +36,12 @@ set_target_properties(shaderc_lib PROPERTIES IMPORTED_LOCATION
 
 # Build application's shared lib
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11  -Werror -D VK_USE_PLATFORM_ANDROID_KHR")
+
+# Force export ANativeActivity_onCreate(),
+# Refer to: https://github.com/android-ndk/ndk/issues/381.
+set(CMAKE_SHARED_LINKER_FLAGS
+    "${CMAKE_SHARED_LINKER_FLAGS} -u ANativeActivity_onCreate")
+
 add_library(vulkan_sample SHARED
             ${CMAKE_SOURCE_DIR}/../${SAMPLE_NAME}/${SAMPLE_NAME}.cpp
             ${CMAKE_SOURCE_DIR}/vulkan_wrapper/vulkan_wrapper.cpp)

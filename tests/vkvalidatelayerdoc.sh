@@ -1,5 +1,6 @@
 #!/bin/bash
 #set -x
+
 if [ -t 1 ] ; then
     RED='\033[0;31m'
     GREEN='\033[0;32m'
@@ -9,6 +10,13 @@ else
     GREEN=''
     NC=''
 fi
+# If we can't find the source dir then skip
+if [ ! -d "../../layers" ]; then
+    printf "$GREEN[ SKIPPED  ]$NC $0\n"
+    printf "  To run validation DB checks you can manually execute\n"
+    printf "  vk_validation_stats.py from the 'layers' dir of your source tree\n"
+    exit
+fi
 
 printf "$GREEN[ RUN      ]$NC $0\n"
 
@@ -16,7 +24,7 @@ printf "$GREEN[ RUN      ]$NC $0\n"
 pushd ../../layers
 
 # Validate that layer database matches source contents
-python vk_validation_stats.py
+python vk_validation_stats.py $1
 
 RES=$?
 

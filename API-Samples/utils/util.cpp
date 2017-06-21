@@ -857,8 +857,6 @@ bool Android_process_command() {
 }
 
 void android_main(struct android_app *app) {
-    // Magic call, please ignore it (Android specific).
-    app_dummy();
     // Set static variables.
     Android_application = app;
     // Set the callback to process system events

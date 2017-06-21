@@ -4,10 +4,22 @@
 #    cd C:\src\Vulkan-LoaderAndValidationLayers\build\tests
 #    .\vkvalidatelayerdoc.ps1 [-Debug]
 
+if (-not (Test-Path -LiteralPath '..\..\layers')) {
+    write-host -background black -foreground green "[  SKIPPED  ] " -nonewline
+    write-host "vkvalidatelayerdoc.ps1: Validate layer documentation"
+    write-host "  To run validation DB checks you can manually execute"
+    write-host "  vk_validation_stats.py from the 'layers' dir of your source tree"
+    exit 0
+}
+
 if ($args[0] -eq "-Debug") {
     $dPath = "Debug"
 } else {
     $dPath = "Release"
+}
+
+if (($args[0] -eq "terse_mode") -Or ($args[1] -eq "terse_mode")) {
+    $output_mode = "terse_mode"
 }
 
 write-host -background black -foreground green "[  RUN     ] " -nonewline
@@ -17,7 +29,7 @@ write-host "vkvalidatelayerdoc.ps1: Validate layer documentation"
 push-location ..\..\layers
 
 # Validate that layer documentation matches source contents
-python vk_validation_stats.py
+python vk_validation_stats.py $output_mode
 
 # Report result based on exit code
 if (!$LASTEXITCODE) {
