@@ -4388,7 +4388,7 @@ bool validate_dual_src_blend_feature(layer_data *device_data, PIPELINE_STATE *pi
 }
 
 static bool PreCallCreateGraphicsPipelines(layer_data *device_data, uint32_t count,
-                                           const VkGraphicsPipelineCreateInfo *create_infos, vector<PIPELINE_STATE *> &pipe_state) {
+                                           const VkGraphicsPipelineCreateInfo *create_infos, vector<PIPELINE_STATE *> const &pipe_state) {
     bool skip = false;
     instance_layer_data *instance_data =
         GetLayerDataPtr(get_dispatch_key(device_data->instance_data->instance), instance_layer_data_map);
