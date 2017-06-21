@@ -1178,7 +1178,6 @@ static bool verifyLineWidth(layer_data *dev_data, DRAW_STATE_ERROR dsError, Vulk
     return skip;
 }
 
-// Verify that create state for a pipeline is valid
 static bool ValidatePipelineLocked(layer_data *dev_data, std::vector<PIPELINE_STATE *> const &pPipelines, int pipelineIndex) {
     bool skip = false;
 
@@ -1215,6 +1214,15 @@ static bool ValidatePipelineLocked(layer_data *dev_data, std::vector<PIPELINE_ST
                             "Invalid Pipeline CreateInfo: base pipeline does not allow derivatives.");
         }
     }
+
+    return skip;
+}
+
+// UNLOCKED pipeline validation. DO NOT lookup objects in the layer_data->* maps in this function.
+static bool ValidatePipelineUnlocked(layer_data *dev_data, std::vector<PIPELINE_STATE *> const &pPipelines, int pipelineIndex) {
+    bool skip = false;
+
+        PIPELINE_STATE *pPipeline = pPipelines[pipelineIndex];
 
     // Ensure the subpass index is valid. If not, then validate_and_capture_pipeline_shader_state
     // produces nonsense errors that confuse users. Other layers should already
@@ -4433,6 +4441,10 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateGraphicsPipelines(VkDevice device, VkPipeli
     }
 
     lock.unlock();
+
+    for (i = 0; i < count; i++) {
+        skip |= ValidatePipelineUnlocked(dev_data, pipe_state, i);
+    }
 
     if (skip) {
         for (i = 0; i < count; i++) {
