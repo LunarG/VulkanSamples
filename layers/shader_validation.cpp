@@ -1301,10 +1301,8 @@ static bool validate_pipeline_shader_stage(
     // Validate descriptor set layout against what the entrypoint actually uses
     auto descriptor_uses = collect_interface_by_descriptor_slot(report_data, module, accessible_ids);
 
-    auto pipelineLayout = pipeline->pipeline_layout;
-
     skip |= validate_specialization_offsets(report_data, pStage);
-    skip |= validate_push_constant_usage(report_data, &pipelineLayout.push_constant_ranges, module, accessible_ids, pStage->stage);
+    skip |= validate_push_constant_usage(report_data, &pipeline->pipeline_layout.push_constant_ranges, module, accessible_ids, pStage->stage);
 
     // Validate descriptor use
     for (auto use : descriptor_uses) {
@@ -1313,7 +1311,7 @@ static bool validate_pipeline_shader_stage(
         reqs = descriptor_req(reqs | descriptor_type_to_reqs(module, use.second.type_id));
 
         // Verify given pipelineLayout has requested setLayout with requested binding
-        const auto &binding = get_descriptor_binding(&pipelineLayout, use.first);
+        const auto &binding = get_descriptor_binding(&pipeline->pipeline_layout, use.first);
         unsigned required_descriptor_count;
 
         if (!binding) {
