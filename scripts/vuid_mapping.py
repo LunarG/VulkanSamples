@@ -470,6 +470,16 @@ func_struct_id_map = {
 'vkUpdateDescriptorSetWithTemplateKHR' : 413,
 'vkUpdateDescriptorSets' : 414,
 'vkWaitForFences' : 415,
+'VkPhysicalDeviceProperties2KHR' : 416,
+'VkFormatProperties2KHR' : 417,
+'VkImageFormatProperties2KHR' : 418,
+'VkPhysicalDeviceMemoryProperties2KHR' : 419,
+'VkSurfaceCapabilities2KHR' : 420,
+'VkDeviceGroupPresentCapabilitiesKHX' : 421,
+'VkExternalBufferPropertiesKHX' : 422,
+'VkMemoryWin32HandlePropertiesKHX' : 423,
+'VkMemoryFdPropertiesKHX' : 424,
+'VkExternalSemaphorePropertiesKHX' : 425,
 ### ADD New func/struct mappings above this line
 }
 # Mapping of params to unique IDs
