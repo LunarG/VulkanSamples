@@ -43,16 +43,16 @@ import platform
 #  2. Could use notes to store custom fields (like TODO) and print those out here
 #  3. Update test code to check if tests use new, unique enums to check for errors instead of strings
 
-db_file = 'vk_validation_error_database.txt'
+db_file = '../layers/vk_validation_error_database.txt'
 layer_source_files = [
-'core_validation.cpp',
-'descriptor_sets.cpp',
-'parameter_validation.cpp',
-'object_tracker.cpp',
-'shader_validation.cpp',
-'buffer_validation.cpp',
+'../layers/core_validation.cpp',
+'../layers/descriptor_sets.cpp',
+'../layers/parameter_validation.cpp',
+'../layers/object_tracker.cpp',
+'../layers/shader_validation.cpp',
+'../layers/buffer_validation.cpp',
 ]
-header_file = 'vk_validation_error_messages.h'
+header_file = '../layers/vk_validation_error_messages.h'
 # TODO : Don't hardcode linux path format if we want this to run on windows
 test_file = '../tests/layer_validation_tests.cpp'
 # List of enums that are allowed to be used more than once so don't warn on their duplicates

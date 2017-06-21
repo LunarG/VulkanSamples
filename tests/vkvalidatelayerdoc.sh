@@ -11,17 +11,17 @@ else
     NC=''
 fi
 # If we can't find the source dir then skip
-if [ ! -d "../../layers" ]; then
+if [ ! -d "../../scripts" ]; then
     printf "$GREEN[ SKIPPED  ]$NC $0\n"
     printf "  To run validation DB checks you can manually execute\n"
-    printf "  vk_validation_stats.py from the 'layers' dir of your source tree\n"
+    printf "  vk_validation_stats.py from the 'scripts' dir of your source tree\n"
     exit
 fi
 
 printf "$GREEN[ RUN      ]$NC $0\n"
 
-# Run doc validation from project layers dir
-pushd ../../layers
+# Run doc validation from project scripts dir
+pushd ../../scripts
 
 # Validate that layer database matches source contents
 python vk_validation_stats.py $1
