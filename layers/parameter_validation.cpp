@@ -1882,7 +1882,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateGraphicsPipelines(VkDevice device, VkPipeli
                                         validation_error_map[VALIDATION_ERROR_14c004d4]);
                     }
 
-                    if (vertex_bind_desc.stride >= device_data->device_limits.maxVertexInputBindingStride) {
+                    if (vertex_bind_desc.stride > device_data->device_limits.maxVertexInputBindingStride) {
                         skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0,
                                         __LINE__, VALIDATION_ERROR_14c004d6, LayerName,
                                         "vkCreateGraphicsPipelines: parameter "
