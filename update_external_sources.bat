@@ -217,13 +217,12 @@ goto:finish
 :error
 echo.
 echo Halting due to error
+set errorCode=1
 goto:finish
 
 :finish
 if not "%cd%\" == "%BUILD_DIR%" ( cd %BUILD_DIR% )
-endlocal
-goto:eof
-
+exit /b %errorCode%
 
 
 REM // ======== Functions ======== //
