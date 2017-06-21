@@ -4405,15 +4405,6 @@ bool validate_dual_src_blend_feature(layer_data *device_data, PIPELINE_STATE *pi
     return skip;
 }
 
-static bool PreCallCreateGraphicsPipelines(layer_data *device_data, uint32_t count,
-                                           const VkGraphicsPipelineCreateInfo *create_infos, vector<PIPELINE_STATE *> const &pipe_state) {
-    bool skip = false;
-    for (uint32_t i = 0; i < count; i++) {
-        skip |= verifyPipelineCreateState(device_data, pipe_state, i);
-    }
-    return skip;
-}
-
 VKAPI_ATTR VkResult VKAPI_CALL CreateGraphicsPipelines(VkDevice device, VkPipelineCache pipelineCache, uint32_t count,
                                                        const VkGraphicsPipelineCreateInfo *pCreateInfos,
                                                        const VkAllocationCallbacks *pAllocator, VkPipeline *pPipelines) {
@@ -4436,7 +4427,10 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateGraphicsPipelines(VkDevice device, VkPipeli
         pipe_state[i]->render_pass_ci.initialize(GetRenderPassState(dev_data, pCreateInfos[i].renderPass)->createInfo.ptr());
         pipe_state[i]->pipeline_layout = *getPipelineLayout(dev_data, pCreateInfos[i].layout);
     }
-    skip |= PreCallCreateGraphicsPipelines(dev_data, count, pCreateInfos, pipe_state);
+
+    for (i = 0; i < count; i++) {
+        skip |= verifyPipelineCreateState(dev_data, pipe_state, i);
+    }
 
     lock.unlock();
 
