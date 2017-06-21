@@ -1017,35 +1017,18 @@ TEST_F(VkLayerTest, UnrecognizedValueBadFlag) {
 }
 
 TEST_F(VkLayerTest, UnrecognizedValueBadBool) {
-    ASSERT_NO_FATAL_FAILURE(Init());
-
-    // Sneak in a test to make sure using VK_SAMPLER_ADDRESS_MODE_MIRROR_CLAMP_TO_EDGE
-    // doesn't trigger a false positive.
-    uint32_t extension_count = 0;
-    bool supports_mirror_clamp = false;
-    VkResult err = vkEnumerateDeviceExtensionProperties(gpu(), nullptr, &extension_count, nullptr);
-    ASSERT_VK_SUCCESS(err);
-    if (extension_count > 0) {
-        std::vector<VkExtensionProperties> available_extensions(extension_count);
-
-        err = vkEnumerateDeviceExtensionProperties(gpu(), nullptr, &extension_count, &available_extensions[0]);
-        ASSERT_VK_SUCCESS(err);
-        for (const auto &extension_props : available_extensions) {
-            if (strcmp(extension_props.extensionName, VK_KHR_SAMPLER_MIRROR_CLAMP_TO_EDGE_EXTENSION_NAME) == 0) {
-                supports_mirror_clamp = true;
-            }
-        }
+    // Make sure using VK_SAMPLER_ADDRESS_MODE_MIRROR_CLAMP_TO_EDGE doesn't trigger a false positive.
+    ASSERT_NO_FATAL_FAILURE(InitFramework(myDbgFunc, m_errorMonitor));
+    if (DeviceExtensionSupported(gpu(), VK_KHR_SAMPLER_MIRROR_CLAMP_TO_EDGE_EXTENSION_NAME)) {
+        m_device_extension_names.push_back(VK_KHR_SAMPLER_MIRROR_CLAMP_TO_EDGE_EXTENSION_NAME);
+    } else {
+        printf("             VK_KHR_sampler_mirror_clamp_to_edge extension not supported, skipping test\n");
+        return;
     }
-    VkSamplerAddressMode address_mode = VK_SAMPLER_ADDRESS_MODE_MIRROR_CLAMP_TO_EDGE;
-    if (!supports_mirror_clamp) {
-        printf("             mirror_clamp_to_edge Extension not supported, skipping tests\n");
-        address_mode = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
-    }
+    ASSERT_NO_FATAL_FAILURE(InitState());
 
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_WARNING_BIT_EXT, "is neither VK_TRUE nor VK_FALSE");
-    // Specify an invalid VkBool32 value
-    // Expected to trigger a warning with
-    // parameter_validation::validate_bool32
+    // Specify an invalid VkBool32 value, expecting a warning with parameter_validation::validate_bool32
     VkSampler sampler = VK_NULL_HANDLE;
     VkSamplerCreateInfo sampler_info = {};
     sampler_info.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
@@ -1053,9 +1036,9 @@ TEST_F(VkLayerTest, UnrecognizedValueBadBool) {
     sampler_info.magFilter = VK_FILTER_NEAREST;
     sampler_info.minFilter = VK_FILTER_NEAREST;
     sampler_info.mipmapMode = VK_SAMPLER_MIPMAP_MODE_NEAREST;
-    sampler_info.addressModeU = address_mode;
-    sampler_info.addressModeV = address_mode;
-    sampler_info.addressModeW = address_mode;
+    sampler_info.addressModeU = VK_SAMPLER_ADDRESS_MODE_MIRROR_CLAMP_TO_EDGE;
+    sampler_info.addressModeV = VK_SAMPLER_ADDRESS_MODE_MIRROR_CLAMP_TO_EDGE;
+    sampler_info.addressModeW = VK_SAMPLER_ADDRESS_MODE_MIRROR_CLAMP_TO_EDGE;
     sampler_info.mipLodBias = 1.0;
     sampler_info.maxAnisotropy = 1;
     sampler_info.compareEnable = VK_FALSE;
@@ -1066,6 +1049,35 @@ TEST_F(VkLayerTest, UnrecognizedValueBadBool) {
     sampler_info.unnormalizedCoordinates = VK_FALSE;
     // Not VK_TRUE or VK_FALSE
     sampler_info.anisotropyEnable = 3;
+    vkCreateSampler(m_device->device(), &sampler_info, NULL, &sampler);
+    m_errorMonitor->VerifyFound();
+}
+
+TEST_F(VkLayerTest, MirrorClampToEdgeNotEnabled) {
+    TEST_DESCRIPTION("Validation should catch using CLAMP_TO_EDGE addressing mode if the extension is not enabled.");
+
+    ASSERT_NO_FATAL_FAILURE(Init());
+
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_1260086e);
+    VkSampler sampler = VK_NULL_HANDLE;
+    VkSamplerCreateInfo sampler_info = {};
+    sampler_info.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
+    sampler_info.pNext = NULL;
+    sampler_info.magFilter = VK_FILTER_NEAREST;
+    sampler_info.minFilter = VK_FILTER_NEAREST;
+    sampler_info.mipmapMode = VK_SAMPLER_MIPMAP_MODE_NEAREST;
+    sampler_info.addressModeU = VK_SAMPLER_ADDRESS_MODE_MIRROR_CLAMP_TO_EDGE;
+    sampler_info.addressModeV = VK_SAMPLER_ADDRESS_MODE_MIRROR_CLAMP_TO_EDGE;
+    sampler_info.addressModeW = VK_SAMPLER_ADDRESS_MODE_MIRROR_CLAMP_TO_EDGE;
+    sampler_info.mipLodBias = 1.0;
+    sampler_info.maxAnisotropy = 1;
+    sampler_info.compareEnable = VK_FALSE;
+    sampler_info.compareOp = VK_COMPARE_OP_NEVER;
+    sampler_info.minLod = 1.0;
+    sampler_info.maxLod = 1.0;
+    sampler_info.borderColor = VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE;
+    sampler_info.unnormalizedCoordinates = VK_FALSE;
+    sampler_info.anisotropyEnable = VK_FALSE;
     vkCreateSampler(m_device->device(), &sampler_info, NULL, &sampler);
     m_errorMonitor->VerifyFound();
 }
@@ -1214,105 +1226,6 @@ TEST_F(VkLayerTest, PSOPolygonModeInvalid) {
 
     vkDestroyPipelineLayout(test_device.device(), pipeline_layout, NULL);
 }
-
-#if 0
-TEST_F(VkLayerTest, CallResetCommandBufferBeforeCompletion)
-{
-    vk_testing::Fence testFence;
-    VkFenceCreateInfo fenceInfo = {};
-    fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
-    fenceInfo.pNext = NULL;
-    fenceInfo.flags = 0;
-
-    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, "Resetting command buffer");
-
-    ASSERT_NO_FATAL_FAILURE(Init());
-
-    VkMemoryPropertyFlags reqs = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
-    vk_testing::Buffer buffer;
-    buffer.init_as_dst(*m_device, (VkDeviceSize)20, reqs);
-
-    BeginCommandBuffer();
-    m_commandBuffer->FillBuffer(buffer.handle(), 0, 4, 0x11111111);
-    EndCommandBuffer();
-
-    testFence.init(*m_device, fenceInfo);
-
-    // Bypass framework since it does the waits automatically
-    VkResult err = VK_SUCCESS;
-    VkSubmitInfo submit_info;
-    submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-    submit_info.pNext = NULL;
-    submit_info.waitSemaphoreCount = 0;
-    submit_info.pWaitSemaphores = NULL;
-    submit_info.pWaitDstStageMask = NULL;
-    submit_info.commandBufferCount = 1;
-    submit_info.pCommandBuffers = &m_commandBuffer->handle();
-    submit_info.signalSemaphoreCount = 0;
-    submit_info.pSignalSemaphores = NULL;
-
-    err = vkQueueSubmit( m_device->m_queue, 1, &submit_info, testFence.handle());
-    ASSERT_VK_SUCCESS( err );
-
-    // Introduce failure by calling begin again before checking fence
-    vkResetCommandBuffer(m_commandBuffer->handle(), 0);
-
-    m_errorMonitor->VerifyFound();
-}
-
-TEST_F(VkLayerTest, CallBeginCommandBufferBeforeCompletion)
-{
-    vk_testing::Fence testFence;
-    VkFenceCreateInfo fenceInfo = {};
-    fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
-    fenceInfo.pNext = NULL;
-    fenceInfo.flags = 0;
-
-    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, "Calling vkBeginCommandBuffer() on active command buffer");
-
-    ASSERT_NO_FATAL_FAILURE(Init());
-    ASSERT_NO_FATAL_FAILURE(InitViewport());
-    ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
-
-    BeginCommandBuffer();
-    m_commandBuffer->ClearAllBuffers(m_clear_color, m_depth_clear_color, m_stencil_clear_color, NULL);
-    EndCommandBuffer();
-
-    testFence.init(*m_device, fenceInfo);
-
-    // Bypass framework since it does the waits automatically
-    VkResult err = VK_SUCCESS;
-    VkSubmitInfo submit_info;
-    submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-    submit_info.pNext = NULL;
-    submit_info.waitSemaphoreCount = 0;
-    submit_info.pWaitSemaphores = NULL;
-    submit_info.pWaitDstStageMask = NULL;
-    submit_info.commandBufferCount = 1;
-    submit_info.pCommandBuffers = &m_commandBuffer->handle();
-    submit_info.signalSemaphoreCount = 0;
-    submit_info.pSignalSemaphores = NULL;
-
-    err = vkQueueSubmit( m_device->m_queue, 1, &submit_info, testFence.handle());
-    ASSERT_VK_SUCCESS( err );
-
-    VkCommandBufferInheritanceInfo hinfo = {};
-    VkCommandBufferBeginInfo info = {};
-    info.flags       = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
-    info.sType       = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-    info.renderPass  = VK_NULL_HANDLE;
-    info.subpass     = 0;
-    info.framebuffer = VK_NULL_HANDLE;
-    info.occlusionQueryEnable = VK_FALSE;
-    info.queryFlags = 0;
-    info.pipelineStatistics = 0;
-
-    // Introduce failure by calling BCB again before checking fence
-    vkBeginCommandBuffer(m_commandBuffer->handle(), &info);
-
-    m_errorMonitor->VerifyFound();
-}
-#endif
 
 TEST_F(VkLayerTest, SparseBindingImageBufferCreate) {
     TEST_DESCRIPTION("Create buffer/image with sparse attributes but without the sparse_binding bit set");
@@ -1720,30 +1633,6 @@ TEST_F(VkLayerTest, InvalidMemoryMapping) {
     vkFlushMappedMemoryRanges(m_device->device(), 1, &mmr);
     m_errorMonitor->VerifyFound();
 
-#if 0  // Planning discussion with working group on this validation check.
-    // Some platforms have an atomsize of 1 which makes the test meaningless
-    if (atom_size > 3) {
-        // Now with an offset NOT a multiple of the device limit
-        vkUnmapMemory(m_device->device(), mem);
-        err = vkMapMemory(m_device->device(), mem, 0, 4 * atom_size, 0, (void **)&pData);
-        ASSERT_VK_SUCCESS(err);
-        mmr.offset = 3;    // Not a multiple of atom_size
-        mmr.size = VK_WHOLE_SIZE;
-        m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_0c20055e);
-        vkFlushMappedMemoryRanges(m_device->device(), 1, &mmr);
-        m_errorMonitor->VerifyFound();
-
-        // Now with a size NOT a multiple of the device limit
-        vkUnmapMemory(m_device->device(), mem);
-        err = vkMapMemory(m_device->device(), mem, 0, 4 * atom_size, 0, (void **)&pData);
-        ASSERT_VK_SUCCESS(err);
-        mmr.offset = atom_size;
-        mmr.size = 2 * atom_size + 1;    // Not a multiple of atom_size
-        m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_0c200560);
-        vkFlushMappedMemoryRanges(m_device->device(), 1, &mmr);
-        m_errorMonitor->VerifyFound();
-    }
-#endif
     pass = m_device->phy().set_memory_type(mem_reqs.memoryTypeBits, &alloc_info, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT,
                                            VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
     if (!pass) {
@@ -1757,237 +1646,6 @@ TEST_F(VkLayerTest, InvalidMemoryMapping) {
     vkDestroyBuffer(m_device->device(), buffer, NULL);
     vkFreeMemory(m_device->device(), mem, NULL);
 }
-
-#if 0  // disabled until PV gets real extension enable checks
-TEST_F(VkLayerTest, EnableWsiBeforeUse) {
-    VkResult err;
-    bool pass;
-
-    // FIXME: After we turn on this code for non-Linux platforms, uncomment the
-    // following declaration (which is temporarily being moved below):
-    //    VkSurfaceKHR surface = VK_NULL_HANDLE;
-    VkSwapchainKHR swapchain = VK_NULL_HANDLE;
-    VkSwapchainCreateInfoKHR swapchain_create_info = {VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR};
-    uint32_t swapchain_image_count = 0;
-    //    VkImage swapchain_images[1] = {VK_NULL_HANDLE};
-    uint32_t image_index = 0;
-    //    VkPresentInfoKHR present_info = {};
-
-    ASSERT_NO_FATAL_FAILURE(Init());
-
-#ifdef NEED_TO_TEST_THIS_ON_PLATFORM
-#if defined(VK_USE_PLATFORM_ANDROID_KHR)
-    // Use the functions from the VK_KHR_android_surface extension without
-    // enabling that extension:
-
-    // Create a surface:
-    VkAndroidSurfaceCreateInfoKHR android_create_info = {VK_STRUCTURE_TYPE_ANDROID_SURFACE_CREATE_INFO_KHR};
-    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, "extension was not enabled for this");
-    err = vkCreateAndroidSurfaceKHR(instance(), &android_create_info, NULL, &surface);
-    pass = (err != VK_SUCCESS);
-    ASSERT_TRUE(pass);
-    m_errorMonitor->VerifyFound();
-#endif  // VK_USE_PLATFORM_ANDROID_KHR
-
-#if defined(VK_USE_PLATFORM_MIR_KHR)
-    // Use the functions from the VK_KHR_mir_surface extension without enabling
-    // that extension:
-
-    // Create a surface:
-    VkMirSurfaceCreateInfoKHR mir_create_info = {VK_STRUCTURE_TYPE_MIR_SURFACE_CREATE_INFO_KHR};
-    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, "extension was not enabled for this");
-    err = vkCreateMirSurfaceKHR(instance(), &mir_create_info, NULL, &surface);
-    pass = (err != VK_SUCCESS);
-    ASSERT_TRUE(pass);
-    m_errorMonitor->VerifyFound();
-
-    // Tell whether an mir_connection supports presentation:
-    MirConnection *mir_connection = NULL;
-    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, "extension was not enabled for this");
-    vkGetPhysicalDeviceMirPresentationSupportKHR(gpu(), 0, mir_connection, visual_id);
-    m_errorMonitor->VerifyFound();
-#endif  // VK_USE_PLATFORM_MIR_KHR
-
-#if defined(VK_USE_PLATFORM_WAYLAND_KHR)
-    // Use the functions from the VK_KHR_wayland_surface extension without
-    // enabling that extension:
-
-    // Create a surface:
-    VkWaylandSurfaceCreateInfoKHR wayland_create_info = {VK_STRUCTURE_TYPE_WAYLAND_SURFACE_CREATE_INFO_KHR};
-    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, "extension was not enabled for this");
-    err = vkCreateWaylandSurfaceKHR(instance(), &wayland_create_info, NULL, &surface);
-    pass = (err != VK_SUCCESS);
-    ASSERT_TRUE(pass);
-    m_errorMonitor->VerifyFound();
-
-    // Tell whether an wayland_display supports presentation:
-    struct wl_display wayland_display = {};
-    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, "extension was not enabled for this");
-    vkGetPhysicalDeviceWaylandPresentationSupportKHR(gpu(), 0, &wayland_display);
-    m_errorMonitor->VerifyFound();
-#endif  // VK_USE_PLATFORM_WAYLAND_KHR
-#endif  // NEED_TO_TEST_THIS_ON_PLATFORM
-
-#if defined(VK_USE_PLATFORM_WIN32_KHR)
-    // FIXME: REMOVE THIS HERE, AND UNCOMMENT ABOVE, WHEN THIS TEST HAS BEEN PORTED
-    // TO NON-LINUX PLATFORMS:
-    VkSurfaceKHR surface = VK_NULL_HANDLE;
-    // Use the functions from the VK_KHR_win32_surface extension without
-    // enabling that extension:
-
-    // Create a surface:
-    VkWin32SurfaceCreateInfoKHR win32_create_info = {VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR};
-    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, "extension was not enabled for this");
-    err = vkCreateWin32SurfaceKHR(instance(), &win32_create_info, NULL, &surface);
-    pass = (err != VK_SUCCESS);
-    ASSERT_TRUE(pass);
-    m_errorMonitor->VerifyFound();
-
-    // Tell whether win32 supports presentation:
-    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, "extension was not enabled for this");
-    vkGetPhysicalDeviceWin32PresentationSupportKHR(gpu(), 0);
-    m_errorMonitor->VerifyFound();
-// Set this (for now, until all platforms are supported and tested):
-#define NEED_TO_TEST_THIS_ON_PLATFORM
-#endif  // VK_USE_PLATFORM_WIN32_KHR
-#if defined(VK_USE_PLATFORM_XCB_KHR) || defined(VK_USE_PLATFORM_XLIB_KHR)
-    // FIXME: REMOVE THIS HERE, AND UNCOMMENT ABOVE, WHEN THIS TEST HAS BEEN PORTED
-    // TO NON-LINUX PLATFORMS:
-    VkSurfaceKHR surface = VK_NULL_HANDLE;
-#endif
-#if defined(VK_USE_PLATFORM_XCB_KHR)
-    // Use the functions from the VK_KHR_xcb_surface extension without enabling
-    // that extension:
-
-    // Create a surface:
-    VkXcbSurfaceCreateInfoKHR xcb_create_info = {VK_STRUCTURE_TYPE_XCB_SURFACE_CREATE_INFO_KHR};
-    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, "extension was not enabled for this");
-    err = vkCreateXcbSurfaceKHR(instance(), &xcb_create_info, NULL, &surface);
-    pass = (err != VK_SUCCESS);
-    ASSERT_TRUE(pass);
-    m_errorMonitor->VerifyFound();
-
-    // Tell whether an xcb_visualid_t supports presentation:
-    xcb_connection_t *xcb_connection = NULL;
-    xcb_visualid_t visual_id = 0;
-    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, "extension was not enabled for this");
-    vkGetPhysicalDeviceXcbPresentationSupportKHR(gpu(), 0, xcb_connection, visual_id);
-    m_errorMonitor->VerifyFound();
-// Set this (for now, until all platforms are supported and tested):
-#define NEED_TO_TEST_THIS_ON_PLATFORM
-#endif  // VK_USE_PLATFORM_XCB_KHR
-
-#if defined(VK_USE_PLATFORM_XLIB_KHR)
-    // Use the functions from the VK_KHR_xlib_surface extension without enabling
-    // that extension:
-
-    // Create a surface:
-    VkXlibSurfaceCreateInfoKHR xlib_create_info = {VK_STRUCTURE_TYPE_XLIB_SURFACE_CREATE_INFO_KHR};
-    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, "extension was not enabled for this");
-    err = vkCreateXlibSurfaceKHR(instance(), &xlib_create_info, NULL, &surface);
-    pass = (err != VK_SUCCESS);
-    ASSERT_TRUE(pass);
-    m_errorMonitor->VerifyFound();
-
-    // Tell whether an Xlib VisualID supports presentation:
-    Display *dpy = NULL;
-    VisualID visual = 0;
-    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, "extension was not enabled for this");
-    vkGetPhysicalDeviceXlibPresentationSupportKHR(gpu(), 0, dpy, visual);
-    m_errorMonitor->VerifyFound();
-// Set this (for now, until all platforms are supported and tested):
-#define NEED_TO_TEST_THIS_ON_PLATFORM
-#endif  // VK_USE_PLATFORM_XLIB_KHR
-
-// Use the functions from the VK_KHR_surface extension without enabling
-// that extension:
-
-#ifdef NEED_TO_TEST_THIS_ON_PLATFORM
-    // Destroy a surface:
-    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, "extension was not enabled for this");
-    vkDestroySurfaceKHR(instance(), surface, NULL);
-    m_errorMonitor->VerifyFound();
-
-    // Check if surface supports presentation:
-    VkBool32 supported = false;
-    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, "extension was not enabled for this");
-    err = vkGetPhysicalDeviceSurfaceSupportKHR(gpu(), 0, surface, &supported);
-    pass = (err != VK_SUCCESS);
-    ASSERT_TRUE(pass);
-    m_errorMonitor->VerifyFound();
-
-    // Check surface capabilities:
-    VkSurfaceCapabilitiesKHR capabilities = {};
-    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, "extension was not enabled for this");
-    err = vkGetPhysicalDeviceSurfaceCapabilitiesKHR(gpu(), surface, &capabilities);
-    pass = (err != VK_SUCCESS);
-    ASSERT_TRUE(pass);
-    m_errorMonitor->VerifyFound();
-
-    // Check surface formats:
-    uint32_t format_count = 0;
-    VkSurfaceFormatKHR *formats = NULL;
-    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, "extension was not enabled for this");
-    err = vkGetPhysicalDeviceSurfaceFormatsKHR(gpu(), surface, &format_count, formats);
-    pass = (err != VK_SUCCESS);
-    ASSERT_TRUE(pass);
-    m_errorMonitor->VerifyFound();
-
-    // Check surface present modes:
-    uint32_t present_mode_count = 0;
-    VkSurfaceFormatKHR *present_modes = NULL;
-    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, "extension was not enabled for this");
-    err = vkGetPhysicalDeviceSurfaceFormatsKHR(gpu(), surface, &present_mode_count, present_modes);
-    pass = (err != VK_SUCCESS);
-    ASSERT_TRUE(pass);
-    m_errorMonitor->VerifyFound();
-#endif  // NEED_TO_TEST_THIS_ON_PLATFORM
-
-    // Use the functions from the VK_KHR_swapchain extension without enabling
-    // that extension:
-
-    // Create a swapchain:
-    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, "extension was not enabled for this");
-    swapchain_create_info.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
-    swapchain_create_info.pNext = NULL;
-    err = vkCreateSwapchainKHR(m_device->device(), &swapchain_create_info, NULL, &swapchain);
-    pass = (err != VK_SUCCESS);
-    ASSERT_TRUE(pass);
-    m_errorMonitor->VerifyFound();
-
-    // Get the images from the swapchain:
-    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, "extension was not enabled for this");
-    err = vkGetSwapchainImagesKHR(m_device->device(), swapchain, &swapchain_image_count, NULL);
-    pass = (err != VK_SUCCESS);
-    ASSERT_TRUE(pass);
-    m_errorMonitor->VerifyFound();
-
-    // Add a fence to avoid (justifiable) error about not providing fence OR semaphore
-    VkFenceCreateInfo fci = { VK_STRUCTURE_TYPE_FENCE_CREATE_INFO, nullptr, 0 };
-    VkFence fence;
-    err = vkCreateFence(m_device->device(), &fci, nullptr, &fence);
-
-    // Try to acquire an image:
-    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, "extension was not enabled for this");
-    err = vkAcquireNextImageKHR(m_device->device(), swapchain, 0, VK_NULL_HANDLE, fence, &image_index);
-    pass = (err != VK_SUCCESS);
-    ASSERT_TRUE(pass);
-    m_errorMonitor->VerifyFound();
-
-    vkDestroyFence(m_device->device(), fence, nullptr);
-
-    // Try to present an image:
-    //
-    // NOTE: Currently can't test this because a real swapchain is needed (as
-    // opposed to the fake one we created) in order for the layer to lookup the
-    // VkDevice used to enable the extension:
-
-    // Destroy the swapchain:
-    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, "extension was not enabled for this");
-    vkDestroySwapchainKHR(m_device->device(), swapchain, NULL);
-    m_errorMonitor->VerifyFound();
-}
-#endif
 
 TEST_F(VkLayerTest, MapMemWithoutHostVisibleBit) {
     VkResult err;
@@ -2258,8 +1916,6 @@ TEST_F(VkLayerTest, LeakAnObject) {
         qi.pQueuePriorities = queue_priorities[i].data();
         queue_info.push_back(qi);
     }
-
-    std::vector<const char *> device_extension_names;
 
     // The sacrificial device object
     VkDevice testDevice;
@@ -4076,6 +3732,7 @@ TEST_F(VkLayerTest, FramebufferCreateErrors) {
     VkAttachmentDescription attach_desc = {};
     attach_desc.format = VK_FORMAT_B8G8R8A8_UNORM;
     attach_desc.samples = VK_SAMPLE_COUNT_1_BIT;
+    attach_desc.finalLayout = VK_IMAGE_LAYOUT_GENERAL;
     rpci.pAttachments = &attach_desc;
     rpci.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
     VkRenderPass rp;
@@ -5407,6 +5064,7 @@ TEST_F(VkLayerTest, RenderPassInUseDestroyedSignaled) {
     VkAttachmentDescription attach_desc = {};
     attach_desc.format = VK_FORMAT_B8G8R8A8_UNORM;
     attach_desc.samples = VK_SAMPLE_COUNT_1_BIT;
+    attach_desc.finalLayout = VK_IMAGE_LAYOUT_GENERAL;
     rpci.pAttachments = &attach_desc;
     rpci.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
     VkRenderPass rp;
@@ -9472,6 +9130,7 @@ TEST_F(VkLayerTest, RenderPassClearOpMismatch) {
     // Set loadOp to CLEAR
     attach_desc.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
     attach_desc.samples = VK_SAMPLE_COUNT_1_BIT;
+    attach_desc.finalLayout = VK_IMAGE_LAYOUT_GENERAL;
     rpci.pAttachments = &attach_desc;
     rpci.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
     VkRenderPass rp;
@@ -12020,6 +11679,7 @@ TEST_F(VkLayerTest, RenderPassIncompatible) {
     attach_desc.samples = VK_SAMPLE_COUNT_1_BIT;
     // Format incompatible with PSO RP color attach format B8G8R8A8_UNORM
     attach_desc.format = VK_FORMAT_R8G8B8A8_UNORM;
+    attach_desc.finalLayout = VK_IMAGE_LAYOUT_GENERAL;
     rpci.pAttachments = &attach_desc;
     rpci.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
     VkRenderPass rp;
@@ -12466,8 +12126,6 @@ TEST_F(VkLayerTest, InvalidQueryPoolCreate) {
         qi.pQueuePriorities = queue_priorities[i].data();
         queue_info.push_back(qi);
     }
-
-    std::vector<const char *> device_extension_names;
 
     VkDevice local_device;
     VkDeviceCreateInfo device_create_info = {};
@@ -12980,6 +12638,7 @@ TEST_F(VkLayerTest, InvalidImageLayout) {
     VkAttachmentDescription attach_desc = {};
     attach_desc.format = VK_FORMAT_UNDEFINED;
     attach_desc.samples = VK_SAMPLE_COUNT_1_BIT;
+    attach_desc.finalLayout = VK_IMAGE_LAYOUT_GENERAL;
     rpci.pAttachments = &attach_desc;
     rpci.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
     VkRenderPass rp;
@@ -14484,35 +14143,6 @@ TEST_F(VkLayerTest, InvalidSPIRVMagic) {
 
     m_errorMonitor->VerifyFound();
 }
-
-#if 0
-// Not currently covered by SPIRV-Tools validator
-TEST_F(VkLayerTest, InvalidSPIRVVersion) {
-    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
-                                         "Invalid SPIR-V header");
-
-    ASSERT_NO_FATAL_FAILURE(Init());
-    ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
-
-    VkShaderModule module;
-    VkShaderModuleCreateInfo moduleCreateInfo;
-    struct icd_spv_header spv;
-
-    spv.magic = ICD_SPV_MAGIC;
-    spv.version = ~ICD_SPV_VERSION;
-    spv.gen_magic = 0;
-
-    moduleCreateInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
-    moduleCreateInfo.pNext = NULL;
-
-    moduleCreateInfo.pCode = (const uint32_t *)&spv;
-    moduleCreateInfo.codeSize = sizeof(spv) + 10;
-    moduleCreateInfo.flags = 0;
-    vkCreateShaderModule(m_device->device(), &moduleCreateInfo, NULL, &module);
-
-    m_errorMonitor->VerifyFound();
-}
-#endif
 
 TEST_F(VkLayerTest, CreatePipelineVertexOutputNotConsumed) {
     TEST_DESCRIPTION(
@@ -16744,6 +16374,7 @@ TEST_F(VkLayerTest, AttachmentDescriptionUndefinedFormat) {
     VkAttachmentDescription attach_desc = {};
     attach_desc.format = VK_FORMAT_UNDEFINED;
     attach_desc.samples = VK_SAMPLE_COUNT_1_BIT;
+    attach_desc.finalLayout = VK_IMAGE_LAYOUT_GENERAL;
     rpci.pAttachments = &attach_desc;
     rpci.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
     VkRenderPass rp;
@@ -16752,6 +16383,51 @@ TEST_F(VkLayerTest, AttachmentDescriptionUndefinedFormat) {
     m_errorMonitor->VerifyFound();
 
     if (result == VK_SUCCESS) {
+        vkDestroyRenderPass(m_device->device(), rp, NULL);
+    }
+}
+
+TEST_F(VkLayerTest, AttachmentDescriptionInvalidFinalLayout) {
+    TEST_DESCRIPTION("VkAttachmentDescription's finalLayout must not be UNDEFINED or PREINITIALIZED");
+
+    ASSERT_NO_FATAL_FAILURE(Init());
+
+    VkAttachmentDescription attach_desc = {};
+    attach_desc.format = VK_FORMAT_R8G8B8A8_UNORM;
+    attach_desc.samples = VK_SAMPLE_COUNT_1_BIT;
+    attach_desc.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+    attach_desc.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+    attach_desc.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+    attach_desc.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+    attach_desc.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+    attach_desc.finalLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+    VkAttachmentReference attach_ref = {};
+    attach_ref.attachment = 0;
+    attach_ref.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+    VkSubpassDescription subpass = {};
+    subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
+    subpass.colorAttachmentCount = 1;
+    subpass.pColorAttachments = &attach_ref;
+    VkRenderPassCreateInfo rpci = {};
+    rpci.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
+    rpci.attachmentCount = 1;
+    rpci.pAttachments = &attach_desc;
+    rpci.subpassCount = 1;
+    rpci.pSubpasses = &subpass;
+    VkRenderPass rp = VK_NULL_HANDLE;
+
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_00800696);
+    vkCreateRenderPass(m_device->device(), &rpci, NULL, &rp);
+    m_errorMonitor->VerifyFound();
+    if (rp != VK_NULL_HANDLE) {
+        vkDestroyRenderPass(m_device->device(), rp, NULL);
+    }
+
+    attach_desc.finalLayout = VK_IMAGE_LAYOUT_PREINITIALIZED;
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_00800696);
+    vkCreateRenderPass(m_device->device(), &rpci, NULL, &rp);
+    m_errorMonitor->VerifyFound();
+    if (rp != VK_NULL_HANDLE) {
         vkDestroyRenderPass(m_device->device(), rp, NULL);
     }
 }
@@ -18146,6 +17822,7 @@ TEST_F(VkLayerTest, CopyImageTypeExtentMismatch) {
     m_errorMonitor->VerifyFound();
     copy_region.dstOffset.z = 0;
 
+
     // 2D texture w/ extent.depth > 1. Source = VU 09c00128, dest = 09c00134
     copy_region.extent.depth = 8;
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_09c00128);
@@ -18172,35 +17849,107 @@ TEST_F(VkLayerTest, CopyImageTypeExtentMismatch) {
                                &copy_region);
     m_errorMonitor->VerifyFound();
 
-#if 0  // TODO: these should be re-added, with an appropriate extension guard, once the spec issue is resolved
-    if (supports_maintenance1_extension) {
-        // Copy from layer not present - VU 09c0012a
-        // TODO: this VU is redundant with VU 0a600154. Gitlab issue 812 submitted to have it removed.
-        copy_region.srcSubresource.baseArrayLayer = 4;
-        copy_region.srcSubresource.layerCount = 6;
-        m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_09c0012a);
-        m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_0a600154);
-        m_commandBuffer->CopyImage(image_2D_array.image(), VK_IMAGE_LAYOUT_GENERAL, image_3D.image(), VK_IMAGE_LAYOUT_GENERAL, 1,
-                                   &copy_region);
-        m_errorMonitor->VerifyFound();
-        copy_region.srcSubresource.baseArrayLayer = 0;
-        copy_region.srcSubresource.layerCount = 1;
+    m_commandBuffer->end();
+}
 
-        // Copy to layer not present - VU 09c00136
-        // TODO: this VU is redundant with 0a600154. Gitlab issue 812 submitted to have it removed.
-        copy_region.dstSubresource.baseArrayLayer = 1;
-        copy_region.dstSubresource.layerCount = 8;
-        m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_09c00136);
-        m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_0a600154);
-        m_commandBuffer->CopyImage(image_3D.image(), VK_IMAGE_LAYOUT_GENERAL, image_2D_array.image(), VK_IMAGE_LAYOUT_GENERAL, 1,
-                                   &copy_region);
-        m_errorMonitor->VerifyFound();
-        copy_region.dstSubresource.layerCount = 1;
+TEST_F(VkLayerTest, CopyImageTypeExtentMismatchMaintenance1) {
+    // Image copy tests where format type and extents don't match and the Maintenance1 extension is enabled
+    ASSERT_NO_FATAL_FAILURE(InitFramework(myDbgFunc, m_errorMonitor));
+    if (DeviceExtensionSupported(gpu(), VK_KHR_MAINTENANCE1_EXTENSION_NAME)) {
+        m_device_extension_names.push_back(VK_KHR_MAINTENANCE1_EXTENSION_NAME);
+    } else {
+        printf("             Maintenance1 extension cannot be enabled, test skipped.\n");
+        return;
     }
-#endif
+    ASSERT_NO_FATAL_FAILURE(InitState());
+
+    VkImageCreateInfo ci;
+    ci.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+    ci.pNext = NULL;
+    ci.flags = 0;
+    ci.imageType = VK_IMAGE_TYPE_1D;
+    ci.format = VK_FORMAT_R8G8B8A8_UNORM;
+    ci.extent = { 32, 1, 1 };
+    ci.mipLevels = 1;
+    ci.arrayLayers = 1;
+    ci.samples = VK_SAMPLE_COUNT_1_BIT;
+    ci.tiling = VK_IMAGE_TILING_OPTIMAL;
+    ci.usage = VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+    ci.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+    ci.queueFamilyIndexCount = 0;
+    ci.pQueueFamilyIndices = NULL;
+    ci.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+
+    // Create 1D image
+    VkImageObj image_1D(m_device);
+    image_1D.init(&ci);
+    ASSERT_TRUE(image_1D.initialized());
+
+    // 2D image
+    ci.imageType = VK_IMAGE_TYPE_2D;
+    ci.extent = { 32, 32, 1 };
+    VkImageObj image_2D(m_device);
+    image_2D.init(&ci);
+    ASSERT_TRUE(image_2D.initialized());
+
+    // 3D image
+    ci.imageType = VK_IMAGE_TYPE_3D;
+    ci.extent = { 32, 32, 8 };
+    VkImageObj image_3D(m_device);
+    image_3D.init(&ci);
+    ASSERT_TRUE(image_3D.initialized());
+
+    // 2D image array
+    ci.imageType = VK_IMAGE_TYPE_2D;
+    ci.extent = { 32, 32, 1 };
+    ci.arrayLayers = 8;
+    VkImageObj image_2D_array(m_device);
+    image_2D_array.init(&ci);
+    ASSERT_TRUE(image_2D_array.initialized());
+
+    m_commandBuffer->begin();
+
+    VkImageCopy copy_region;
+    copy_region.extent = { 32, 1, 1 };
+    copy_region.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    copy_region.dstSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    copy_region.srcSubresource.mipLevel = 0;
+    copy_region.dstSubresource.mipLevel = 0;
+    copy_region.srcSubresource.baseArrayLayer = 0;
+    copy_region.dstSubresource.baseArrayLayer = 0;
+    copy_region.srcSubresource.layerCount = 1;
+    copy_region.dstSubresource.layerCount = 1;
+    copy_region.srcOffset = { 0, 0, 0 };
+    copy_region.dstOffset = { 0, 0, 0 };
+
+    // Copy from layer not present - VU 09c0012a
+    // TODO: this VU is redundant with VU 0a600154. Gitlab issue 812 submitted to have it removed.
+    copy_region.srcSubresource.baseArrayLayer = 4;
+    copy_region.srcSubresource.layerCount = 6;
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_09c0012a);
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_0a600154);
+    m_commandBuffer->CopyImage(image_2D_array.image(), VK_IMAGE_LAYOUT_GENERAL, image_3D.image(), VK_IMAGE_LAYOUT_GENERAL, 1,
+                               &copy_region);
+    m_errorMonitor->VerifyFound();
+    copy_region.srcSubresource.baseArrayLayer = 0;
+    copy_region.srcSubresource.layerCount = 1;
+
+    // Copy to layer not present - VU 09c00136
+    // TODO: this VU is redundant with 0a600154. Gitlab issue 812 submitted to have it removed.
+    copy_region.dstSubresource.baseArrayLayer = 1;
+    copy_region.dstSubresource.layerCount = 8;
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_09c00136);
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_0a600154);
+    m_commandBuffer->CopyImage(image_3D.image(), VK_IMAGE_LAYOUT_GENERAL, image_2D_array.image(), VK_IMAGE_LAYOUT_GENERAL, 1,
+                               &copy_region);
+    m_errorMonitor->VerifyFound();
+    copy_region.dstSubresource.layerCount = 1;
 
     m_commandBuffer->end();
 }
+
+
+
 
 TEST_F(VkLayerTest, CopyImageCompressedBlockAlignment) {
     // Image copy tests on compressed images with block alignment errors
@@ -19446,345 +19195,6 @@ TEST_F(VkLayerTest, ExtensionNotEnabled) {
     vkTrimCommandPoolKHR(m_device->handle(), m_commandPool->handle(), (VkCommandPoolTrimFlagsKHR)0);
     m_errorMonitor->VerifyFound();
 }
-
-// WSI Enabled Tests
-//
-#if 0
-TEST_F(VkWsiEnabledLayerTest, TestEnabledWsi) {
-
-#if defined(VK_USE_PLATFORM_XCB_KHR)
-    VkSurfaceKHR surface = VK_NULL_HANDLE;
-
-    VkResult err;
-    bool pass;
-    VkSwapchainKHR swapchain = VK_NULL_HANDLE;
-    VkSwapchainCreateInfoKHR swapchain_create_info = {};
-    //    uint32_t swapchain_image_count = 0;
-    //    VkImage swapchain_images[1] = {VK_NULL_HANDLE};
-    //    uint32_t image_index = 0;
-    //    VkPresentInfoKHR present_info = {};
-
-    ASSERT_NO_FATAL_FAILURE(Init());
-
-    // Use the create function from one of the VK_KHR_*_surface extension in
-    // order to create a surface, testing all known errors in the process,
-    // before successfully creating a surface:
-    // First, try to create a surface without a VkXcbSurfaceCreateInfoKHR:
-    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, "required parameter pCreateInfo specified as NULL");
-    err = vkCreateXcbSurfaceKHR(instance(), NULL, NULL, &surface);
-    pass = (err != VK_SUCCESS);
-    ASSERT_TRUE(pass);
-    m_errorMonitor->VerifyFound();
-
-    // Next, try to create a surface with the wrong
-    // VkXcbSurfaceCreateInfoKHR::sType:
-    VkXcbSurfaceCreateInfoKHR xcb_create_info = {};
-    xcb_create_info.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
-    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, "parameter pCreateInfo->sType must be");
-    err = vkCreateXcbSurfaceKHR(instance(), &xcb_create_info, NULL, &surface);
-    pass = (err != VK_SUCCESS);
-    ASSERT_TRUE(pass);
-    m_errorMonitor->VerifyFound();
-
-    // Create a native window, and then correctly create a surface:
-    xcb_connection_t *connection;
-    xcb_screen_t *screen;
-    xcb_window_t xcb_window;
-    xcb_intern_atom_reply_t *atom_wm_delete_window;
-
-    const xcb_setup_t *setup;
-    xcb_screen_iterator_t iter;
-    int scr;
-    uint32_t value_mask, value_list[32];
-    int width = 1;
-    int height = 1;
-
-    connection = xcb_connect(NULL, &scr);
-    ASSERT_TRUE(connection != NULL);
-    setup = xcb_get_setup(connection);
-    iter = xcb_setup_roots_iterator(setup);
-    while (scr-- > 0)
-        xcb_screen_next(&iter);
-    screen = iter.data;
-
-    xcb_window = xcb_generate_id(connection);
-
-    value_mask = XCB_CW_BACK_PIXEL | XCB_CW_EVENT_MASK;
-    value_list[0] = screen->black_pixel;
-    value_list[1] = XCB_EVENT_MASK_KEY_RELEASE | XCB_EVENT_MASK_EXPOSURE | XCB_EVENT_MASK_STRUCTURE_NOTIFY;
-
-    xcb_create_window(connection, XCB_COPY_FROM_PARENT, xcb_window, screen->root, 0, 0, width, height, 0,
-        XCB_WINDOW_CLASS_INPUT_OUTPUT, screen->root_visual, value_mask, value_list);
-
-    /* Magic code that will send notification when window is destroyed */
-    xcb_intern_atom_cookie_t cookie = xcb_intern_atom(connection, 1, 12, "WM_PROTOCOLS");
-    xcb_intern_atom_reply_t *reply = xcb_intern_atom_reply(connection, cookie, 0);
-
-    xcb_intern_atom_cookie_t cookie2 = xcb_intern_atom(connection, 0, 16, "WM_DELETE_WINDOW");
-    atom_wm_delete_window = xcb_intern_atom_reply(connection, cookie2, 0);
-    xcb_change_property(connection, XCB_PROP_MODE_REPLACE, xcb_window, (*reply).atom, 4, 32, 1, &(*atom_wm_delete_window).atom);
-    free(reply);
-
-    xcb_map_window(connection, xcb_window);
-
-    // Force the x/y coordinates to 100,100 results are identical in consecutive
-    // runs
-    const uint32_t coords[] = { 100, 100 };
-    xcb_configure_window(connection, xcb_window, XCB_CONFIG_WINDOW_X | XCB_CONFIG_WINDOW_Y, coords);
-
-    // Finally, try to correctly create a surface:
-    xcb_create_info.sType = VK_STRUCTURE_TYPE_XCB_SURFACE_CREATE_INFO_KHR;
-    xcb_create_info.pNext = NULL;
-    xcb_create_info.flags = 0;
-    xcb_create_info.connection = connection;
-    xcb_create_info.window = xcb_window;
-    err = vkCreateXcbSurfaceKHR(instance(), &xcb_create_info, NULL, &surface);
-    pass = (err == VK_SUCCESS);
-    ASSERT_TRUE(pass);
-
-    // Check if surface supports presentation:
-
-    // 1st, do so without having queried the queue families:
-    VkBool32 supported = false;
-    // TODO: Get the following error to come out:
-    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
-        "called before calling the vkGetPhysicalDeviceQueueFamilyProperties "
-        "function");
-    err = vkGetPhysicalDeviceSurfaceSupportKHR(gpu(), 0, surface, &supported);
-    pass = (err != VK_SUCCESS);
-    //    ASSERT_TRUE(pass);
-    //    m_errorMonitor->VerifyFound();
-
-    // Next, query a queue family index that's too large:
-    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, "called with a queueFamilyIndex that is too large");
-    err = vkGetPhysicalDeviceSurfaceSupportKHR(gpu(), 100000, surface, &supported);
-    pass = (err != VK_SUCCESS);
-    ASSERT_TRUE(pass);
-    m_errorMonitor->VerifyFound();
-
-    // Finally, do so correctly:
-    // FIXME: THIS ISN'T CORRECT--MUST QUERY UNTIL WE FIND A QUEUE FAMILY THAT'S
-    // SUPPORTED
-    err = vkGetPhysicalDeviceSurfaceSupportKHR(gpu(), 0, surface, &supported);
-    pass = (err == VK_SUCCESS);
-    ASSERT_TRUE(pass);
-
-    // Before proceeding, try to create a swapchain without having called
-    // vkGetPhysicalDeviceSurfaceCapabilitiesKHR():
-    swapchain_create_info.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
-    swapchain_create_info.pNext = NULL;
-    swapchain_create_info.flags = 0;
-    swapchain_create_info.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
-    swapchain_create_info.surface = surface;
-    swapchain_create_info.imageArrayLayers = 1;
-    swapchain_create_info.preTransform = VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR;
-    swapchain_create_info.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
-    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
-        "called before calling vkGetPhysicalDeviceSurfaceCapabilitiesKHR().");
-    err = vkCreateSwapchainKHR(m_device->device(), &swapchain_create_info, NULL, &swapchain);
-    pass = (err != VK_SUCCESS);
-    ASSERT_TRUE(pass);
-    m_errorMonitor->VerifyFound();
-
-    // Get the surface capabilities:
-    VkSurfaceCapabilitiesKHR surface_capabilities;
-
-    // Do so correctly (only error logged by this entrypoint is if the
-    // extension isn't enabled):
-    err = vkGetPhysicalDeviceSurfaceCapabilitiesKHR(gpu(), surface, &surface_capabilities);
-    pass = (err == VK_SUCCESS);
-    ASSERT_TRUE(pass);
-
-    // Get the surface formats:
-    uint32_t surface_format_count;
-
-    // First, try without a pointer to surface_format_count:
-    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, "required parameter pSurfaceFormatCount "
-        "specified as NULL");
-    vkGetPhysicalDeviceSurfaceFormatsKHR(gpu(), surface, NULL, NULL);
-    pass = (err == VK_SUCCESS);
-    ASSERT_TRUE(pass);
-    m_errorMonitor->VerifyFound();
-
-    // Next, call with a non-NULL pSurfaceFormats, even though we haven't
-    // correctly done a 1st try (to get the count):
-    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_WARNING_BIT_EXT, "but no prior positive value has been seen for");
-    surface_format_count = 0;
-    vkGetPhysicalDeviceSurfaceFormatsKHR(gpu(), surface, &surface_format_count, (VkSurfaceFormatKHR *)&surface_format_count);
-    pass = (err == VK_SUCCESS);
-    ASSERT_TRUE(pass);
-    m_errorMonitor->VerifyFound();
-
-    // Next, correctly do a 1st try (with a NULL pointer to surface_formats):
-    vkGetPhysicalDeviceSurfaceFormatsKHR(gpu(), surface, &surface_format_count, NULL);
-    pass = (err == VK_SUCCESS);
-    ASSERT_TRUE(pass);
-
-    // Allocate memory for the correct number of VkSurfaceFormatKHR's:
-    VkSurfaceFormatKHR *surface_formats = (VkSurfaceFormatKHR *)malloc(surface_format_count * sizeof(VkSurfaceFormatKHR));
-
-    // Next, do a 2nd try with surface_format_count being set too high:
-    surface_format_count += 5;
-    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, "that is greater than the value");
-    vkGetPhysicalDeviceSurfaceFormatsKHR(gpu(), surface, &surface_format_count, surface_formats);
-    pass = (err == VK_SUCCESS);
-    ASSERT_TRUE(pass);
-    m_errorMonitor->VerifyFound();
-
-    // Finally, do a correct 1st and 2nd try:
-    vkGetPhysicalDeviceSurfaceFormatsKHR(gpu(), surface, &surface_format_count, NULL);
-    pass = (err == VK_SUCCESS);
-    ASSERT_TRUE(pass);
-    vkGetPhysicalDeviceSurfaceFormatsKHR(gpu(), surface, &surface_format_count, surface_formats);
-    pass = (err == VK_SUCCESS);
-    ASSERT_TRUE(pass);
-
-    // Get the surface present modes:
-    uint32_t surface_present_mode_count;
-
-    // First, try without a pointer to surface_format_count:
-    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, "required parameter pPresentModeCount "
-        "specified as NULL");
-
-    vkGetPhysicalDeviceSurfacePresentModesKHR(gpu(), surface, NULL, NULL);
-    pass = (err == VK_SUCCESS);
-    ASSERT_TRUE(pass);
-    m_errorMonitor->VerifyFound();
-
-    // Next, call with a non-NULL VkPresentModeKHR, even though we haven't
-    // correctly done a 1st try (to get the count):
-    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_WARNING_BIT_EXT, "but no prior positive value has been seen for");
-    surface_present_mode_count = 0;
-    vkGetPhysicalDeviceSurfacePresentModesKHR(gpu(), surface, &surface_present_mode_count,
-        (VkPresentModeKHR *)&surface_present_mode_count);
-    pass = (err == VK_SUCCESS);
-    ASSERT_TRUE(pass);
-    m_errorMonitor->VerifyFound();
-
-    // Next, correctly do a 1st try (with a NULL pointer to surface_formats):
-    vkGetPhysicalDeviceSurfacePresentModesKHR(gpu(), surface, &surface_present_mode_count, NULL);
-    pass = (err == VK_SUCCESS);
-    ASSERT_TRUE(pass);
-
-    // Allocate memory for the correct number of VkSurfaceFormatKHR's:
-    VkPresentModeKHR *surface_present_modes = (VkPresentModeKHR *)malloc(surface_present_mode_count * sizeof(VkPresentModeKHR));
-
-    // Next, do a 2nd try with surface_format_count being set too high:
-    surface_present_mode_count += 5;
-    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, "that is greater than the value");
-    vkGetPhysicalDeviceSurfacePresentModesKHR(gpu(), surface, &surface_present_mode_count, surface_present_modes);
-    pass = (err == VK_SUCCESS);
-    ASSERT_TRUE(pass);
-    m_errorMonitor->VerifyFound();
-
-    // Finally, do a correct 1st and 2nd try:
-    vkGetPhysicalDeviceSurfacePresentModesKHR(gpu(), surface, &surface_present_mode_count, NULL);
-    pass = (err == VK_SUCCESS);
-    ASSERT_TRUE(pass);
-    vkGetPhysicalDeviceSurfacePresentModesKHR(gpu(), surface, &surface_present_mode_count, surface_present_modes);
-    pass = (err == VK_SUCCESS);
-    ASSERT_TRUE(pass);
-
-    // Create a swapchain:
-
-    // First, try without a pointer to swapchain_create_info:
-    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, "required parameter pCreateInfo "
-        "specified as NULL");
-
-    err = vkCreateSwapchainKHR(m_device->device(), NULL, NULL, &swapchain);
-    pass = (err != VK_SUCCESS);
-    ASSERT_TRUE(pass);
-    m_errorMonitor->VerifyFound();
-
-    // Next, call with a non-NULL swapchain_create_info, that has the wrong
-    // sType:
-    swapchain_create_info.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
-    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, "parameter pCreateInfo->sType must be");
-
-    err = vkCreateSwapchainKHR(m_device->device(), &swapchain_create_info, NULL, &swapchain);
-    pass = (err != VK_SUCCESS);
-    ASSERT_TRUE(pass);
-    m_errorMonitor->VerifyFound();
-
-    // Next, call with a NULL swapchain pointer:
-    swapchain_create_info.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
-    swapchain_create_info.pNext = NULL;
-    swapchain_create_info.flags = 0;
-    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, "required parameter pSwapchain "
-        "specified as NULL");
-
-    err = vkCreateSwapchainKHR(m_device->device(), &swapchain_create_info, NULL, NULL);
-    pass = (err != VK_SUCCESS);
-    ASSERT_TRUE(pass);
-    m_errorMonitor->VerifyFound();
-
-    // TODO: Enhance swapchain layer so that
-    // swapchain_create_info.queueFamilyIndexCount is checked against something?
-
-    // Next, call with a queue family index that's too large:
-    uint32_t queueFamilyIndex[2] = { 100000, 0 };
-    swapchain_create_info.imageSharingMode = VK_SHARING_MODE_CONCURRENT;
-    swapchain_create_info.queueFamilyIndexCount = 2;
-    swapchain_create_info.pQueueFamilyIndices = queueFamilyIndex;
-    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, "called with a queueFamilyIndex that is too large");
-    err = vkCreateSwapchainKHR(m_device->device(), &swapchain_create_info, NULL, &swapchain);
-    pass = (err != VK_SUCCESS);
-    ASSERT_TRUE(pass);
-    m_errorMonitor->VerifyFound();
-
-    // Next, call a queueFamilyIndexCount that's too small for CONCURRENT:
-    swapchain_create_info.imageSharingMode = VK_SHARING_MODE_CONCURRENT;
-    swapchain_create_info.queueFamilyIndexCount = 1;
-    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
-        "but with a bad value(s) for pCreateInfo->queueFamilyIndexCount or "
-        "pCreateInfo->pQueueFamilyIndices).");
-    err = vkCreateSwapchainKHR(m_device->device(), &swapchain_create_info, NULL, &swapchain);
-    pass = (err != VK_SUCCESS);
-    ASSERT_TRUE(pass);
-    m_errorMonitor->VerifyFound();
-
-    // Next, call with an invalid imageSharingMode:
-    swapchain_create_info.imageSharingMode = VK_SHARING_MODE_MAX_ENUM;
-    swapchain_create_info.queueFamilyIndexCount = 1;
-    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
-        "called with a non-supported pCreateInfo->imageSharingMode (i.e.");
-    err = vkCreateSwapchainKHR(m_device->device(), &swapchain_create_info, NULL, &swapchain);
-    pass = (err != VK_SUCCESS);
-    ASSERT_TRUE(pass);
-    m_errorMonitor->VerifyFound();
-    // Fix for the future:
-    // FIXME: THIS ISN'T CORRECT--MUST QUERY UNTIL WE FIND A QUEUE FAMILY THAT'S
-    // SUPPORTED
-    swapchain_create_info.queueFamilyIndexCount = 0;
-    queueFamilyIndex[0] = 0;
-    swapchain_create_info.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
-
-    // TODO: CONTINUE TESTING VALIDATION OF vkCreateSwapchainKHR() ...
-    // Get the images from a swapchain:
-    // Acquire an image from a swapchain:
-    // Present an image to a swapchain:
-    // Destroy the swapchain:
-
-    // TODOs:
-    //
-    // - Try destroying the device without first destroying the swapchain
-    //
-    // - Try destroying the device without first destroying the surface
-    //
-    // - Try destroying the surface without first destroying the swapchain
-
-    // Destroy the surface:
-    vkDestroySurfaceKHR(instance(), surface, NULL);
-
-    // Tear down the window:
-    xcb_destroy_window(connection, xcb_window);
-    xcb_disconnect(connection);
-
-#else   // VK_USE_PLATFORM_XCB_KHR
-    return;
-#endif  // VK_USE_PLATFORM_XCB_KHR
-}
-#endif
 
 //
 // POSITIVE VALIDATION TESTS
@@ -24255,7 +23665,7 @@ TEST_F(VkPositiveLayerTest, CreateComputePipelineCombinedImageSamplerConsumedAsB
 TEST_F(VkPositiveLayerTest, Maintenance1Tests) {
     TEST_DESCRIPTION("Validate various special cases for the Maintenance1_KHR extension");
 
-    ASSERT_NO_FATAL_FAILURE(InitFramework());  // gpu() is not valid prior to InitFramework()
+    ASSERT_NO_FATAL_FAILURE(InitFramework(myDbgFunc, m_errorMonitor));
     if (DeviceExtensionSupported(gpu(), VK_KHR_MAINTENANCE1_EXTENSION_NAME)) {
         m_device_extension_names.push_back(VK_KHR_MAINTENANCE1_EXTENSION_NAME);
     } else {
@@ -24279,124 +23689,103 @@ TEST_F(VkPositiveLayerTest, Maintenance1Tests) {
 TEST_F(VkLayerTest, DuplicateValidPNextStructures) {
     TEST_DESCRIPTION("Create a pNext chain containing valid strutures, but with a duplicate structure type");
 
-    ASSERT_NO_FATAL_FAILURE(Init());
-
-    uint32_t extension_count = 0;
-    VkResult err = vkEnumerateDeviceExtensionProperties(gpu(), nullptr, &extension_count, nullptr);
-    ASSERT_VK_SUCCESS(err);
-
-    if (extension_count > 0) {
-        std::vector<VkExtensionProperties> available_extensions(extension_count);
-        err = vkEnumerateDeviceExtensionProperties(gpu(), nullptr, &extension_count, &available_extensions[0]);
-        ASSERT_VK_SUCCESS(err);
-
-        for (const auto &extension_props : available_extensions) {
-            if (strcmp(extension_props.extensionName, VK_NV_DEDICATED_ALLOCATION_EXTENSION_NAME) == 0) {
-                // Create two pNext structures which by themselves would be valid
-                VkDedicatedAllocationBufferCreateInfoNV dedicated_buffer_create_info = {};
-                VkDedicatedAllocationBufferCreateInfoNV dedicated_buffer_create_info_2 = {};
-                dedicated_buffer_create_info.sType = VK_STRUCTURE_TYPE_DEDICATED_ALLOCATION_BUFFER_CREATE_INFO_NV;
-                dedicated_buffer_create_info.pNext = &dedicated_buffer_create_info_2;
-                dedicated_buffer_create_info.dedicatedAllocation = VK_TRUE;
-
-                dedicated_buffer_create_info_2.sType = VK_STRUCTURE_TYPE_DEDICATED_ALLOCATION_BUFFER_CREATE_INFO_NV;
-                dedicated_buffer_create_info_2.pNext = nullptr;
-                dedicated_buffer_create_info_2.dedicatedAllocation = VK_TRUE;
-
-                uint32_t queue_family_index = 0;
-                VkBufferCreateInfo buffer_create_info = {};
-                buffer_create_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-                buffer_create_info.pNext = &dedicated_buffer_create_info;
-                buffer_create_info.size = 1024;
-                buffer_create_info.usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
-                buffer_create_info.queueFamilyIndexCount = 1;
-                buffer_create_info.pQueueFamilyIndices = &queue_family_index;
-
-                m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, "chain contains duplicate structure types");
-                VkBuffer buffer;
-                err = vkCreateBuffer(m_device->device(), &buffer_create_info, NULL, &buffer);
-                m_errorMonitor->VerifyFound();
-            }
-        }
+    ASSERT_NO_FATAL_FAILURE(InitFramework(myDbgFunc, m_errorMonitor));
+    if (DeviceExtensionSupported(gpu(), VK_NV_DEDICATED_ALLOCATION_EXTENSION_NAME)) {
+        m_device_extension_names.push_back(VK_NV_DEDICATED_ALLOCATION_EXTENSION_NAME);
+    } else {
+        printf("             VK_NV_dedicated_allocation extension not supported, skipping test\n");
+        return;
     }
+    ASSERT_NO_FATAL_FAILURE(InitState());
+
+    // Create two pNext structures which by themselves would be valid
+    VkDedicatedAllocationBufferCreateInfoNV dedicated_buffer_create_info = {};
+    VkDedicatedAllocationBufferCreateInfoNV dedicated_buffer_create_info_2 = {};
+    dedicated_buffer_create_info.sType = VK_STRUCTURE_TYPE_DEDICATED_ALLOCATION_BUFFER_CREATE_INFO_NV;
+    dedicated_buffer_create_info.pNext = &dedicated_buffer_create_info_2;
+    dedicated_buffer_create_info.dedicatedAllocation = VK_TRUE;
+
+    dedicated_buffer_create_info_2.sType = VK_STRUCTURE_TYPE_DEDICATED_ALLOCATION_BUFFER_CREATE_INFO_NV;
+    dedicated_buffer_create_info_2.pNext = nullptr;
+    dedicated_buffer_create_info_2.dedicatedAllocation = VK_TRUE;
+
+    uint32_t queue_family_index = 0;
+    VkBufferCreateInfo buffer_create_info = {};
+    buffer_create_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+    buffer_create_info.pNext = &dedicated_buffer_create_info;
+    buffer_create_info.size = 1024;
+    buffer_create_info.usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
+    buffer_create_info.queueFamilyIndexCount = 1;
+    buffer_create_info.pQueueFamilyIndices = &queue_family_index;
+
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, "chain contains duplicate structure types");
+    VkBuffer buffer;
+    vkCreateBuffer(m_device->device(), &buffer_create_info, NULL, &buffer);
+    m_errorMonitor->VerifyFound();
 }
 
 TEST_F(VkPositiveLayerTest, ValidStructPNext) {
     TEST_DESCRIPTION("Verify that a valid pNext value is handled correctly");
 
-    ASSERT_NO_FATAL_FAILURE(Init());
+    // Positive test to check parameter_validation and unique_objects support for NV_dedicated_allocation
+    ASSERT_NO_FATAL_FAILURE(InitFramework(myDbgFunc, m_errorMonitor));
+    if (DeviceExtensionSupported(gpu(), VK_NV_DEDICATED_ALLOCATION_EXTENSION_NAME)) {
+        m_device_extension_names.push_back(VK_NV_DEDICATED_ALLOCATION_EXTENSION_NAME);
+    } else {
+        printf("             VK_NV_DEDICATED_ALLOCATION_EXTENSION_NAME Extension not supported, skipping test\n");
+        return;
+    }
+    ASSERT_NO_FATAL_FAILURE(InitState());
 
-    // Positive test to check parameter_validation and unique_objects support
-    // for NV_dedicated_allocation
-    uint32_t extension_count = 0;
-    bool supports_nv_dedicated_allocation = false;
-    VkResult err = vkEnumerateDeviceExtensionProperties(gpu(), nullptr, &extension_count, nullptr);
+    m_errorMonitor->ExpectSuccess();
+
+    VkDedicatedAllocationBufferCreateInfoNV dedicated_buffer_create_info = {};
+    dedicated_buffer_create_info.sType = VK_STRUCTURE_TYPE_DEDICATED_ALLOCATION_BUFFER_CREATE_INFO_NV;
+    dedicated_buffer_create_info.pNext = nullptr;
+    dedicated_buffer_create_info.dedicatedAllocation = VK_TRUE;
+
+    uint32_t queue_family_index = 0;
+    VkBufferCreateInfo buffer_create_info = {};
+    buffer_create_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+    buffer_create_info.pNext = &dedicated_buffer_create_info;
+    buffer_create_info.size = 1024;
+    buffer_create_info.usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
+    buffer_create_info.queueFamilyIndexCount = 1;
+    buffer_create_info.pQueueFamilyIndices = &queue_family_index;
+
+    VkBuffer buffer;
+    VkResult err = vkCreateBuffer(m_device->device(), &buffer_create_info, NULL, &buffer);
     ASSERT_VK_SUCCESS(err);
 
-    if (extension_count > 0) {
-        std::vector<VkExtensionProperties> available_extensions(extension_count);
+    VkMemoryRequirements memory_reqs;
+    vkGetBufferMemoryRequirements(m_device->device(), buffer, &memory_reqs);
 
-        err = vkEnumerateDeviceExtensionProperties(gpu(), nullptr, &extension_count, &available_extensions[0]);
-        ASSERT_VK_SUCCESS(err);
+    VkDedicatedAllocationMemoryAllocateInfoNV dedicated_memory_info = {};
+    dedicated_memory_info.sType = VK_STRUCTURE_TYPE_DEDICATED_ALLOCATION_MEMORY_ALLOCATE_INFO_NV;
+    dedicated_memory_info.pNext = nullptr;
+    dedicated_memory_info.buffer = buffer;
+    dedicated_memory_info.image = VK_NULL_HANDLE;
 
-        for (const auto &extension_props : available_extensions) {
-            if (strcmp(extension_props.extensionName, VK_NV_DEDICATED_ALLOCATION_EXTENSION_NAME) == 0) {
-                supports_nv_dedicated_allocation = true;
-            }
-        }
-    }
+    VkMemoryAllocateInfo memory_info = {};
+    memory_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+    memory_info.pNext = &dedicated_memory_info;
+    memory_info.allocationSize = memory_reqs.size;
 
-    if (supports_nv_dedicated_allocation) {
-        m_errorMonitor->ExpectSuccess();
+    bool pass;
+    pass = m_device->phy().set_memory_type(memory_reqs.memoryTypeBits, &memory_info, 0);
+    ASSERT_TRUE(pass);
 
-        VkDedicatedAllocationBufferCreateInfoNV dedicated_buffer_create_info = {};
-        dedicated_buffer_create_info.sType = VK_STRUCTURE_TYPE_DEDICATED_ALLOCATION_BUFFER_CREATE_INFO_NV;
-        dedicated_buffer_create_info.pNext = nullptr;
-        dedicated_buffer_create_info.dedicatedAllocation = VK_TRUE;
+    VkDeviceMemory buffer_memory;
+    err = vkAllocateMemory(m_device->device(), &memory_info, NULL, &buffer_memory);
+    ASSERT_VK_SUCCESS(err);
 
-        uint32_t queue_family_index = 0;
-        VkBufferCreateInfo buffer_create_info = {};
-        buffer_create_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-        buffer_create_info.pNext = &dedicated_buffer_create_info;
-        buffer_create_info.size = 1024;
-        buffer_create_info.usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
-        buffer_create_info.queueFamilyIndexCount = 1;
-        buffer_create_info.pQueueFamilyIndices = &queue_family_index;
+    err = vkBindBufferMemory(m_device->device(), buffer, buffer_memory, 0);
+    ASSERT_VK_SUCCESS(err);
 
-        VkBuffer buffer;
-        err = vkCreateBuffer(m_device->device(), &buffer_create_info, NULL, &buffer);
-        ASSERT_VK_SUCCESS(err);
+    vkDestroyBuffer(m_device->device(), buffer, NULL);
+    vkFreeMemory(m_device->device(), buffer_memory, NULL);
 
-        VkMemoryRequirements memory_reqs;
-        vkGetBufferMemoryRequirements(m_device->device(), buffer, &memory_reqs);
-
-        VkDedicatedAllocationMemoryAllocateInfoNV dedicated_memory_info = {};
-        dedicated_memory_info.sType = VK_STRUCTURE_TYPE_DEDICATED_ALLOCATION_MEMORY_ALLOCATE_INFO_NV;
-        dedicated_memory_info.pNext = nullptr;
-        dedicated_memory_info.buffer = buffer;
-        dedicated_memory_info.image = VK_NULL_HANDLE;
-
-        VkMemoryAllocateInfo memory_info = {};
-        memory_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-        memory_info.pNext = &dedicated_memory_info;
-        memory_info.allocationSize = memory_reqs.size;
-
-        bool pass;
-        pass = m_device->phy().set_memory_type(memory_reqs.memoryTypeBits, &memory_info, 0);
-        ASSERT_TRUE(pass);
-
-        VkDeviceMemory buffer_memory;
-        err = vkAllocateMemory(m_device->device(), &memory_info, NULL, &buffer_memory);
-        ASSERT_VK_SUCCESS(err);
-
-        err = vkBindBufferMemory(m_device->device(), buffer, buffer_memory, 0);
-        ASSERT_VK_SUCCESS(err);
-
-        vkDestroyBuffer(m_device->device(), buffer, NULL);
-        vkFreeMemory(m_device->device(), buffer_memory, NULL);
-
-        m_errorMonitor->VerifyNotFound();
-    }
+    m_errorMonitor->VerifyNotFound();
 }
 
 TEST_F(VkPositiveLayerTest, PSOPolygonModeValid) {
@@ -24536,43 +23925,6 @@ TEST_F(VkPositiveLayerTest, ThreadNullFenceCollision) {
 
     m_errorMonitor->VerifyNotFound();
 }
-
-#if 0  // A few devices have issues with this test so disabling for now
-TEST_F(VkPositiveLayerTest, LongFenceChain)
-{
-    m_errorMonitor->ExpectSuccess();
-
-    ASSERT_NO_FATAL_FAILURE(Init());
-    VkResult err;
-
-    std::vector<VkFence> fences;
-
-    const int chainLength = 32768;
-
-    for (int i = 0; i < chainLength; i++) {
-        VkFenceCreateInfo fci = { VK_STRUCTURE_TYPE_FENCE_CREATE_INFO, nullptr, 0 };
-        VkFence fence;
-        err = vkCreateFence(m_device->device(), &fci, nullptr, &fence);
-        ASSERT_VK_SUCCESS(err);
-
-        fences.push_back(fence);
-
-        VkSubmitInfo si = { VK_STRUCTURE_TYPE_SUBMIT_INFO, nullptr, 0, nullptr, nullptr,
-            0, nullptr, 0, nullptr };
-        err = vkQueueSubmit(m_device->m_queue, 1, &si, fence);
-        ASSERT_VK_SUCCESS(err);
-
-    }
-
-    // BOOM, stack overflow.
-    vkWaitForFences(m_device->device(), 1, &fences.back(), VK_TRUE, UINT64_MAX);
-
-    for (auto fence : fences)
-        vkDestroyFence(m_device->device(), fence, nullptr);
-
-    m_errorMonitor->VerifyNotFound();
-}
-#endif
 
 TEST_F(VkPositiveLayerTest, ClearColorImageWithValidRange) {
     TEST_DESCRIPTION("Record clear color with a valid VkImageSubresourceRange");

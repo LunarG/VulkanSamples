@@ -1021,7 +1021,7 @@ bool PreCallValidateCmdClearColorImage(layer_data *dev_data, VkCommandBuffer com
 
 // This state recording routine is shared between ClearColorImage and ClearDepthStencilImage
 void PreCallRecordCmdClearImage(layer_data *dev_data, VkCommandBuffer commandBuffer, VkImage image, VkImageLayout imageLayout,
-                                uint32_t rangeCount, const VkImageSubresourceRange *pRanges, CMD_TYPE cmd_type) {
+                                uint32_t rangeCount, const VkImageSubresourceRange *pRanges) {
     auto cb_node = GetCBNode(dev_data, commandBuffer);
     auto image_state = GetImageState(dev_data, image);
     if (cb_node && image_state) {
@@ -1031,7 +1031,6 @@ void PreCallRecordCmdClearImage(layer_data *dev_data, VkCommandBuffer commandBuf
             return false;
         };
         cb_node->validate_functions.push_back(function);
-        core_validation::UpdateCmdBufferLastCmd(cb_node, cmd_type);
         for (uint32_t i = 0; i < rangeCount; ++i) {
             RecordClearImageLayout(dev_data, cb_node, image, pRanges[i], imageLayout);
         }
@@ -1975,7 +1974,6 @@ void PreCallRecordCmdCopyImage(layer_data *device_data, GLOBAL_CB_NODE *cb_node,
         return false;
     };
     cb_node->validate_functions.push_back(function);
-    core_validation::UpdateCmdBufferLastCmd(cb_node, CMD_COPYIMAGE);
 }
 
 // Returns true if sub_rect is entirely contained within rect
@@ -1996,7 +1994,6 @@ bool PreCallValidateCmdClearAttachments(layer_data *device_data, VkCommandBuffer
         skip |= ValidateCmdQueueFlags(device_data, cb_node, "vkCmdClearAttachments()", VK_QUEUE_GRAPHICS_BIT,
                                       VALIDATION_ERROR_18602415);
         skip |= ValidateCmd(device_data, cb_node, CMD_CLEARATTACHMENTS, "vkCmdClearAttachments()");
-        core_validation::UpdateCmdBufferLastCmd(cb_node, CMD_CLEARATTACHMENTS);
         // Warn if this is issued prior to Draw Cmd and clearing the entire attachment
         if (!cb_node->hasDrawCmd && (cb_node->activeRenderPassBeginInfo.renderArea.extent.width == pRects[0].rect.extent.width) &&
             (cb_node->activeRenderPassBeginInfo.renderArea.extent.height == pRects[0].rect.extent.height)) {
@@ -2193,7 +2190,6 @@ void PreCallRecordCmdResolveImage(layer_data *device_data, GLOBAL_CB_NODE *cb_no
         return false;
     };
     cb_node->validate_functions.push_back(function);
-    core_validation::UpdateCmdBufferLastCmd(cb_node, CMD_RESOLVEIMAGE);
 }
 
 bool PreCallValidateCmdBlitImage(layer_data *device_data, GLOBAL_CB_NODE *cb_node, IMAGE_STATE *src_image_state,
@@ -2464,7 +2460,6 @@ void PreCallRecordCmdBlitImage(layer_data *device_data, GLOBAL_CB_NODE *cb_node,
         return false;
     };
     cb_node->validate_functions.push_back(function);
-    core_validation::UpdateCmdBufferLastCmd(cb_node, CMD_BLITIMAGE);
 }
 
 // This validates that the initial layout specified in the command buffer for
@@ -2890,10 +2885,7 @@ bool PreCallValidateCreateBuffer(layer_data *device_data, const VkBufferCreateIn
     bool skip = false;
     const debug_report_data *report_data = core_validation::GetReportData(device_data);
 
-    // TODO: Add check for VALIDATION_ERROR_1ec0071e
-    // TODO: Add check for VALIDATION_ERROR_01400728
-    // TODO: Add check for VALIDATION_ERROR_0140072a
-    // TODO: Add check for VALIDATION_ERROR_0140072c
+    // TODO: Add check for VALIDATION_ERROR_1ec0071e        (sparse address space accounting)
 
     if ((pCreateInfo->flags & VK_BUFFER_CREATE_SPARSE_BINDING_BIT) && (!GetEnabledFeatures(device_data)->sparseBinding)) {
         skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
@@ -2906,17 +2898,19 @@ bool PreCallValidateCreateBuffer(layer_data *device_data, const VkBufferCreateIn
     if ((pCreateInfo->flags & VK_BUFFER_CREATE_SPARSE_RESIDENCY_BIT) && (!GetEnabledFeatures(device_data)->sparseResidencyBuffer)) {
         skip |=
             log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
-                    DRAWSTATE_INVALID_FEATURE, "DS",
+                    VALIDATION_ERROR_01400728, "DS",
                     "vkCreateBuffer(): the sparseResidencyBuffer device feature is disabled: Buffers cannot be created with the "
-                    "VK_BUFFER_CREATE_SPARSE_RESIDENCY_BIT set.");
+                    "VK_BUFFER_CREATE_SPARSE_RESIDENCY_BIT set. %s",
+                    validation_error_map[VALIDATION_ERROR_01400728]);
     }
 
     if ((pCreateInfo->flags & VK_BUFFER_CREATE_SPARSE_ALIASED_BIT) && (!GetEnabledFeatures(device_data)->sparseResidencyAliased)) {
         skip |=
             log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
-                    DRAWSTATE_INVALID_FEATURE, "DS",
+                    VALIDATION_ERROR_0140072a, "DS",
                     "vkCreateBuffer(): the sparseResidencyAliased device feature is disabled: Buffers cannot be created with the "
-                    "VK_BUFFER_CREATE_SPARSE_ALIASED_BIT set.");
+                    "VK_BUFFER_CREATE_SPARSE_ALIASED_BIT set. %s",
+                    validation_error_map[VALIDATION_ERROR_0140072a]);
     }
     return skip;
 }
@@ -3178,7 +3172,6 @@ void PreCallRecordCmdCopyBuffer(layer_data *device_data, GLOBAL_CB_NODE *cb_node
         return false;
     };
     cb_node->validate_functions.push_back(function);
-    core_validation::UpdateCmdBufferLastCmd(cb_node, CMD_COPYBUFFER);
 }
 
 static bool validateIdleBuffer(layer_data *device_data, VkBuffer buffer) {
@@ -3282,7 +3275,6 @@ void PreCallRecordCmdFillBuffer(layer_data *device_data, GLOBAL_CB_NODE *cb_node
     cb_node->validate_functions.push_back(function);
     // Update bindings between buffer and cmd buffer
     AddCommandBufferBindingBuffer(device_data, cb_node, buffer_state);
-    core_validation::UpdateCmdBufferLastCmd(cb_node, CMD_FILLBUFFER);
 }
 
 bool ValidateBufferImageCopyData(const debug_report_data *report_data, uint32_t regionCount, const VkBufferImageCopy *pRegions,
@@ -3657,7 +3649,6 @@ void PreCallRecordCmdCopyImageToBuffer(layer_data *device_data, GLOBAL_CB_NODE *
     };
     cb_node->validate_functions.push_back(function);
 
-    core_validation::UpdateCmdBufferLastCmd(cb_node, CMD_COPYIMAGETOBUFFER);
 }
 
 bool PreCallValidateCmdCopyBufferToImage(layer_data *device_data, VkImageLayout dstImageLayout, GLOBAL_CB_NODE *cb_node,
@@ -3727,7 +3718,6 @@ void PreCallRecordCmdCopyBufferToImage(layer_data *device_data, GLOBAL_CB_NODE *
     function = [=]() { return ValidateBufferMemoryIsValid(device_data, src_buffer_state, "vkCmdCopyBufferToImage()"); };
     cb_node->validate_functions.push_back(function);
 
-    core_validation::UpdateCmdBufferLastCmd(cb_node, CMD_COPYBUFFERTOIMAGE);
 }
 
 bool PreCallValidateGetImageSubresourceLayout(layer_data *device_data, VkImage image, const VkImageSubresource *pSubresource) {

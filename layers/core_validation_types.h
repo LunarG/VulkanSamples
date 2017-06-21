@@ -443,7 +443,8 @@ enum CB_STATE {
     CB_NEW,        // Newly created CB w/o any cmds
     CB_RECORDING,  // BeginCB has been called on this CB
     CB_RECORDED,   // EndCB has been called on this CB
-    CB_INVALID     // CB had a bound descriptor set destroyed or updated
+    CB_INVALID_COMPLETE,     // had a complete recording, but was since invalidated
+    CB_INVALID_INCOMPLETE,   // fouled before recording was completed
 };
 
 // CB Status -- used to track status of various bindings on cmd buffer objects
@@ -525,7 +526,7 @@ struct hash<ImageSubresourcePair> {
 // Store layouts and pushconstants for PipelineLayout
 struct PIPELINE_LAYOUT_NODE {
     VkPipelineLayout layout;
-    std::vector<cvdescriptorset::DescriptorSetLayout const *> set_layouts;
+    std::vector<std::shared_ptr<cvdescriptorset::DescriptorSetLayout const>> set_layouts;
     std::vector<VkPushConstantRange> push_constant_ranges;
 
     PIPELINE_LAYOUT_NODE() : layout(VK_NULL_HANDLE), set_layouts{}, push_constant_ranges{} {}
@@ -638,7 +639,6 @@ struct GLOBAL_CB_NODE : public BASE_NODE {
     CB_STATE state;                      // Track cmd buffer update state
     uint64_t submitCount;                // Number of times CB has been submitted
     CBStatusFlags status;                // Track status of various bindings on cmd buffer
-    CMD_TYPE last_cmd;                   // Last command written to the CB
     // Currently storing "lastBound" objects on per-CB basis
     //  long-term may want to create caches of "lastBound" states and could have
     //  each individual CMD_NODE referencing its own "lastBound" state
@@ -677,7 +677,6 @@ struct GLOBAL_CB_NODE : public BASE_NODE {
     // If primary, the secondary command buffers we will call.
     // If secondary, the primary command buffers we will be called by.
     std::unordered_set<GLOBAL_CB_NODE *> linkedCommandBuffers;
-    // MTMTODO : Scrub these data fields and merge active sets w/ lastBound as appropriate
     std::vector<std::function<bool()>> validate_functions;
     std::unordered_set<VkDeviceMemory> memObjs;
     std::vector<std::function<bool(VkQueue)>> eventUpdates;
@@ -766,7 +765,7 @@ struct DeviceExtensions;
 namespace core_validation {
 struct layer_data;
 cvdescriptorset::DescriptorSet *GetSetNode(const layer_data *, VkDescriptorSet);
-cvdescriptorset::DescriptorSetLayout const *GetDescriptorSetLayout(layer_data const *, VkDescriptorSetLayout);
+std::shared_ptr<cvdescriptorset::DescriptorSetLayout const> const GetDescriptorSetLayout(layer_data const *, VkDescriptorSetLayout);
 DESCRIPTOR_POOL_STATE *GetDescriptorPoolState(const layer_data *, const VkDescriptorPool);
 BUFFER_STATE *GetBufferState(const layer_data *, VkBuffer);
 IMAGE_STATE *GetImageState(const layer_data *, VkImage);
@@ -802,7 +801,6 @@ bool ValidateCmdQueueFlags(layer_data *dev_data, GLOBAL_CB_NODE *cb_node, const 
 bool ValidateCmd(layer_data *my_data, GLOBAL_CB_NODE *pCB, const CMD_TYPE cmd, const char *caller_name);
 bool insideRenderPass(const layer_data *my_data, GLOBAL_CB_NODE *pCB, const char *apiName, UNIQUE_VALIDATION_ERROR_CODE msgCode);
 void SetImageMemoryValid(layer_data *dev_data, IMAGE_STATE *image_state, bool valid);
-void UpdateCmdBufferLastCmd(GLOBAL_CB_NODE *cb_state, const CMD_TYPE cmd);
 bool outsideRenderPass(const layer_data *my_data, GLOBAL_CB_NODE *pCB, const char *apiName, UNIQUE_VALIDATION_ERROR_CODE msgCode);
 void SetLayout(GLOBAL_CB_NODE *pCB, ImageSubresourcePair imgpair, const IMAGE_CMD_BUF_LAYOUT_NODE &node);
 void SetLayout(GLOBAL_CB_NODE *pCB, ImageSubresourcePair imgpair, const VkImageLayout &layout);

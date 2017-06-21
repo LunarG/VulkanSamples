@@ -200,7 +200,11 @@ typedef struct {
     vk::CommandBuffer cmd;
     vk::CommandBuffer graphics_to_present_cmd;
     vk::ImageView view;
-} SwapchainBuffers;
+    vk::Buffer uniform_buffer;
+    vk::DeviceMemory uniform_memory;
+    vk::Framebuffer framebuffer;
+    vk::DescriptorSet descriptor_set;
+} SwapchainImageResources;
 
 #ifdef _WIN32
 // MS-Windows event handling function:
@@ -285,7 +289,7 @@ struct Demo {
 
     void build_image_ownership_cmd(uint32_t const &i) {
         auto const cmd_buf_info = vk::CommandBufferBeginInfo().setFlags(vk::CommandBufferUsageFlagBits::eSimultaneousUse);
-        auto result = buffers[i].graphics_to_present_cmd.begin(&cmd_buf_info);
+        auto result = swapchain_image_resources[i].graphics_to_present_cmd.begin(&cmd_buf_info);
         VERIFY(result == vk::Result::eSuccess);
 
         auto const image_ownership_barrier =
@@ -296,14 +300,14 @@ struct Demo {
                 .setNewLayout(vk::ImageLayout::ePresentSrcKHR)
                 .setSrcQueueFamilyIndex(graphics_queue_family_index)
                 .setDstQueueFamilyIndex(present_queue_family_index)
-                .setImage(buffers[i].image)
+                .setImage(swapchain_image_resources[i].image)
                 .setSubresourceRange(vk::ImageSubresourceRange(vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1));
 
-        buffers[i].graphics_to_present_cmd.pipelineBarrier(
+        swapchain_image_resources[i].graphics_to_present_cmd.pipelineBarrier(
             vk::PipelineStageFlagBits::eColorAttachmentOutput, vk::PipelineStageFlagBits::eColorAttachmentOutput,
             vk::DependencyFlagBits(), 0, nullptr, 0, nullptr, 1, &image_ownership_barrier);
 
-        result = buffers[i].graphics_to_present_cmd.end();
+        result = swapchain_image_resources[i].graphics_to_present_cmd.end();
         VERIFY(result == vk::Result::eSuccess);
     }
 
@@ -341,7 +345,7 @@ struct Demo {
         }
 
         for (uint32_t i = 0; i < swapchainImageCount; i++) {
-            device.destroyFramebuffer(framebuffers[i], nullptr);
+            device.destroyFramebuffer(swapchain_image_resources[i].framebuffer, nullptr);
         }
         device.destroyDescriptorPool(desc_pool, nullptr);
 
@@ -363,12 +367,11 @@ struct Demo {
         device.destroyImage(depth.image, nullptr);
         device.freeMemory(depth.mem, nullptr);
 
-        device.destroyBuffer(uniform_data.buf, nullptr);
-        device.freeMemory(uniform_data.mem, nullptr);
-
         for (uint32_t i = 0; i < swapchainImageCount; i++) {
-            device.destroyImageView(buffers[i].view, nullptr);
-            device.freeCommandBuffers(cmd_pool, 1, &buffers[i].cmd);
+            device.destroyImageView(swapchain_image_resources[i].view, nullptr);
+            device.freeCommandBuffers(cmd_pool, 1, &swapchain_image_resources[i].cmd);
+            device.destroyBuffer(swapchain_image_resources[i].uniform_buffer, nullptr);
+            device.freeMemory(swapchain_image_resources[i].uniform_memory, nullptr);
         }
 
         device.destroyCommandPool(cmd_pool, nullptr);
@@ -379,7 +382,6 @@ struct Demo {
         device.waitIdle();
         device.destroy(nullptr);
         inst.destroySurfaceKHR(surface, nullptr);
-        inst.destroy(nullptr);
 
 #if defined(VK_USE_PLATFORM_XLIB_KHR)
         XDestroyWindow(display, xlib_window);
@@ -397,6 +399,8 @@ struct Demo {
         wl_display_disconnect(display);
 #elif defined(VK_USE_PLATFORM_MIR_KHR)
 #endif
+
+        inst.destroy(nullptr);
     }
 
     void create_device() {
@@ -438,24 +442,24 @@ struct Demo {
         device.waitForFences(1, &fences[frame_index], VK_TRUE, UINT64_MAX);
         device.resetFences(1, &fences[frame_index]);
 
-        // Get the index of the next available swapchain image:
-        auto result = device.acquireNextImageKHR(swapchain, UINT64_MAX, image_acquired_semaphores[frame_index],
-                                                 vk::Fence(), &current_buffer);
-        if (result == vk::Result::eErrorOutOfDateKHR) {
-            // swapchain is out of date (e.g. the window was resized) and
-            // must be recreated:
-            frame_index += 1;
-            frame_index %= FRAME_LAG;
+        vk::Result result;
+        do {
+            result = device.acquireNextImageKHR(swapchain, UINT64_MAX, image_acquired_semaphores[frame_index],
+                    vk::Fence(), &current_buffer);
+            if (result == vk::Result::eErrorOutOfDateKHR) {
+                // demo->swapchain is out of date (e.g. the window was resized) and
+                // must be recreated:
+                resize();
+            } else if (result == vk::Result::eSuboptimalKHR) {
+                // swapchain is not as optimal as it could be, but the platform's
+                // presentation engine will still present the image correctly.
+                break;
+            } else {
+                VERIFY(result == vk::Result::eSuccess);
+            }
+        } while (result != vk::Result::eSuccess);
 
-            resize();
-            draw();
-            return;
-        } else if (result == vk::Result::eSuboptimalKHR) {
-            // swapchain is not as optimal as it could be, but the platform's
-            // presentation engine will still present the image correctly.
-        } else {
-            VERIFY(result == vk::Result::eSuccess);
-        }
+        update_data_buffer();
 
         // Wait for the image acquired semaphore to be signaled to ensure
         // that the image won't be rendered to until the presentation
@@ -467,7 +471,7 @@ struct Demo {
                                      .setWaitSemaphoreCount(1)
                                      .setPWaitSemaphores(&image_acquired_semaphores[frame_index])
                                      .setCommandBufferCount(1)
-                                     .setPCommandBuffers(&buffers[current_buffer].cmd)
+                                     .setPCommandBuffers(&swapchain_image_resources[current_buffer].cmd)
                                      .setSignalSemaphoreCount(1)
                                      .setPSignalSemaphores(&draw_complete_semaphores[frame_index]);
 
@@ -484,7 +488,7 @@ struct Demo {
                                                  .setWaitSemaphoreCount(1)
                                                  .setPWaitSemaphores(&draw_complete_semaphores[frame_index])
                                                  .setCommandBufferCount(1)
-                                                 .setPCommandBuffers(&buffers[current_buffer].graphics_to_present_cmd)
+                                                 .setPCommandBuffers(&swapchain_image_resources[current_buffer].graphics_to_present_cmd)
                                                  .setSignalSemaphoreCount(1)
                                                  .setPSignalSemaphores(&image_ownership_semaphores[frame_index]);
 
@@ -525,7 +529,7 @@ struct Demo {
 
         auto const passInfo = vk::RenderPassBeginInfo()
                                   .setRenderPass(render_pass)
-                                  .setFramebuffer(framebuffers[current_buffer])
+                                  .setFramebuffer(swapchain_image_resources[current_buffer].framebuffer)
                                   .setRenderArea(vk::Rect2D(vk::Offset2D(0, 0), vk::Extent2D((uint32_t)width, (uint32_t)height)))
                                   .setClearValueCount(2)
                                   .setPClearValues(clearValues);
@@ -535,7 +539,7 @@ struct Demo {
 
         commandBuffer.beginRenderPass(&passInfo, vk::SubpassContents::eInline);
         commandBuffer.bindPipeline(vk::PipelineBindPoint::eGraphics, pipeline);
-        commandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, pipeline_layout, 0, 1, &desc_set, 0, nullptr);
+        commandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, pipeline_layout, 0, 1, &swapchain_image_resources[current_buffer].descriptor_set, 0, nullptr);
 
         auto const viewport =
             vk::Viewport().setWidth((float)width).setHeight((float)height).setMinDepth((float)0.0f).setMaxDepth((float)1.0f);
@@ -566,7 +570,7 @@ struct Demo {
                     .setNewLayout(vk::ImageLayout::ePresentSrcKHR)
                     .setSrcQueueFamilyIndex(graphics_queue_family_index)
                     .setDstQueueFamilyIndex(present_queue_family_index)
-                    .setImage(buffers[current_buffer].image)
+                    .setImage(swapchain_image_resources[current_buffer].image)
                     .setSubresourceRange(vk::ImageSubresourceRange(vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1));
 
             commandBuffer.pipelineBarrier(vk::PipelineStageFlagBits::eColorAttachmentOutput,
@@ -592,7 +596,8 @@ struct Demo {
 
         auto const fenceInfo = vk::FenceCreateInfo();
         vk::Fence fence;
-        device.createFence(&fenceInfo, nullptr, &fence);
+        result = device.createFence(&fenceInfo, nullptr, &fence);
+        VERIFY(result == vk::Result::eSuccess);
 
         vk::CommandBuffer const commandBuffers[] = {cmd};
         auto const submitInfo = vk::SubmitInfo().setCommandBufferCount(1).setPCommandBuffers(commandBuffers);
@@ -1122,7 +1127,9 @@ struct Demo {
         // ahead of the image presents
         auto const fence_ci = vk::FenceCreateInfo().setFlags(vk::FenceCreateFlagBits::eSignaled);
         for (uint32_t i = 0; i < FRAME_LAG; i++) {
-            device.createFence(&fence_ci, nullptr, &fences[i]);
+            result = device.createFence(&fence_ci, nullptr, &fences[i]);
+            VERIFY(result == vk::Result::eSuccess);
+
             result = device.createSemaphore(&semaphoreCreateInfo, nullptr, &image_acquired_semaphores[i]);
             VERIFY(result == vk::Result::eSuccess);
 
@@ -1161,14 +1168,14 @@ struct Demo {
         prepare_buffers();
         prepare_depth();
         prepare_textures();
-        prepare_cube_data_buffer();
+        prepare_cube_data_buffers();
 
         prepare_descriptor_layout();
         prepare_render_pass();
         prepare_pipeline();
 
         for (uint32_t i = 0; i < swapchainImageCount; ++i) {
-            result = device.allocateCommandBuffers(&cmd, &buffers[i].cmd);
+            result = device.allocateCommandBuffers(&cmd, &swapchain_image_resources[i].cmd);
             VERIFY(result == vk::Result::eSuccess);
         }
 
@@ -1184,7 +1191,7 @@ struct Demo {
                                          .setCommandBufferCount(1);
 
             for (uint32_t i = 0; i < swapchainImageCount; i++) {
-                result = device.allocateCommandBuffers(&present_cmd, &buffers[i].graphics_to_present_cmd);
+                result = device.allocateCommandBuffers(&present_cmd, &swapchain_image_resources[i].graphics_to_present_cmd);
                 VERIFY(result == vk::Result::eSuccess);
 
                 build_image_ownership_cmd(i);
@@ -1198,7 +1205,7 @@ struct Demo {
 
         for (uint32_t i = 0; i < swapchainImageCount; ++i) {
             current_buffer = i;
-            draw_build_cmd(buffers[i].cmd);
+            draw_build_cmd(swapchain_image_resources[i].cmd);
         }
 
         /*
@@ -1293,17 +1300,20 @@ struct Demo {
             ERR_EXIT("Present mode specified is not supported\n", "Present mode unsupported");
         }
 
-        // Determine the number of VkImage's to use in the swap chain (we desire
-        // to
-        // own only 1 image at a time, besides the images being displayed and
-        // queued for display):
-        uint32_t desiredNumberOfSwapchainImages = surfCapabilities.minImageCount + 1;
+        // Determine the number of VkImages to use in the swap chain.
+        // Application desires to acquire 3 images at a time for triple
+        // buffering
+        uint32_t desiredNumOfSwapchainImages = 3;
+        if (desiredNumOfSwapchainImages < surfCapabilities.minImageCount) {
+            desiredNumOfSwapchainImages = surfCapabilities.minImageCount;
+        }
+
         // If maxImageCount is 0, we can ask for as many images as we want,
         // otherwise
         // we're limited to maxImageCount
-        if ((surfCapabilities.maxImageCount > 0) && (desiredNumberOfSwapchainImages > surfCapabilities.maxImageCount)) {
+        if ((surfCapabilities.maxImageCount > 0) && (desiredNumOfSwapchainImages > surfCapabilities.maxImageCount)) {
             // Application must settle for fewer images than desired:
-            desiredNumberOfSwapchainImages = surfCapabilities.maxImageCount;
+            desiredNumOfSwapchainImages = surfCapabilities.maxImageCount;
         }
 
         vk::SurfaceTransformFlagBitsKHR preTransform;
@@ -1313,9 +1323,24 @@ struct Demo {
             preTransform = surfCapabilities.currentTransform;
         }
 
+        // Find a supported composite alpha mode - one of these is guaranteed to be set
+        vk::CompositeAlphaFlagBitsKHR compositeAlpha = vk::CompositeAlphaFlagBitsKHR::eOpaque;
+        vk::CompositeAlphaFlagBitsKHR compositeAlphaFlags[4] = {
+            vk::CompositeAlphaFlagBitsKHR::eOpaque,
+            vk::CompositeAlphaFlagBitsKHR::ePreMultiplied,
+            vk::CompositeAlphaFlagBitsKHR::ePostMultiplied,
+            vk::CompositeAlphaFlagBitsKHR::eInherit,
+        };
+        for (uint32_t i = 0; i < sizeof(compositeAlphaFlags); i++) {
+            if (surfCapabilities.supportedCompositeAlpha & compositeAlphaFlags[i]) {
+                compositeAlpha = compositeAlphaFlags[i];
+                break;
+            }
+        }
+
         auto const swapchain_ci = vk::SwapchainCreateInfoKHR()
                                       .setSurface(surface)
-                                      .setMinImageCount(desiredNumberOfSwapchainImages)
+                                      .setMinImageCount(desiredNumOfSwapchainImages)
                                       .setImageFormat(format)
                                       .setImageColorSpace(color_space)
                                       .setImageExtent({swapchainExtent.width, swapchainExtent.height})
@@ -1325,7 +1350,7 @@ struct Demo {
                                       .setQueueFamilyIndexCount(0)
                                       .setPQueueFamilyIndices(nullptr)
                                       .setPreTransform(preTransform)
-                                      .setCompositeAlpha(vk::CompositeAlphaFlagBitsKHR::eOpaque)
+                                      .setCompositeAlpha(compositeAlpha)
                                       .setPresentMode(swapchainPresentMode)
                                       .setClipped(true)
                                       .setOldSwapchain(oldSwapchain);
@@ -1339,9 +1364,6 @@ struct Demo {
         // Note: destroying the swapchain also cleans up all its associated
         // presentable images once the platform is done with them.
         if (oldSwapchain) {
-            // AMD driver times out waiting on fences used in AcquireNextImage on
-            // a swapchain that is subsequently destroyed before the wait.
-            device.waitForFences(FRAME_LAG, fences, VK_TRUE, UINT64_MAX);
             device.destroySwapchainKHR(oldSwapchain, nullptr);
         }
 
@@ -1352,24 +1374,25 @@ struct Demo {
         result = device.getSwapchainImagesKHR(swapchain, &swapchainImageCount, swapchainImages.get());
         VERIFY(result == vk::Result::eSuccess);
 
-        buffers.reset(new SwapchainBuffers[swapchainImageCount]);
+        swapchain_image_resources.reset(new SwapchainImageResources[swapchainImageCount]);
 
         for (uint32_t i = 0; i < swapchainImageCount; ++i) {
-            auto const color_image_view =
+            auto color_image_view =
                 vk::ImageViewCreateInfo()
-                    .setImage(swapchainImages[i])
                     .setViewType(vk::ImageViewType::e2D)
                     .setFormat(format)
                     .setSubresourceRange(vk::ImageSubresourceRange(vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1));
 
-            buffers[i].image = swapchainImages[i];
+            swapchain_image_resources[i].image = swapchainImages[i];
 
-            result = device.createImageView(&color_image_view, nullptr, &buffers[i].view);
+            color_image_view.image = swapchain_image_resources[i].image;
+
+            result = device.createImageView(&color_image_view, nullptr, &swapchain_image_resources[i].view);
             VERIFY(result == vk::Result::eSuccess);
         }
     }
 
-    void prepare_cube_data_buffer() {
+    void prepare_cube_data_buffers() {
         mat4x4 VP;
         mat4x4_mul(VP, projection_matrix, view_matrix);
 
@@ -1379,6 +1402,7 @@ struct Demo {
         vktexcube_vs_uniform data;
         memcpy(data.mvp, MVP, sizeof(MVP));
         //    dumpMatrix("MVP", MVP)
+
         for (int32_t i = 0; i < 12 * 3; i++) {
             data.position[i][0] = g_vertex_buffer_data[i * 3];
             data.position[i][1] = g_vertex_buffer_data[i * 3 + 1];
@@ -1391,36 +1415,34 @@ struct Demo {
         }
 
         auto const buf_info = vk::BufferCreateInfo().setSize(sizeof(data)).setUsage(vk::BufferUsageFlagBits::eUniformBuffer);
-        auto result = device.createBuffer(&buf_info, nullptr, &uniform_data.buf);
-        VERIFY(result == vk::Result::eSuccess);
 
-        vk::MemoryRequirements mem_reqs;
-        device.getBufferMemoryRequirements(uniform_data.buf, &mem_reqs);
+        for (unsigned int i = 0; i < swapchainImageCount; i++) {
+            auto result = device.createBuffer(&buf_info, nullptr, &swapchain_image_resources[i].uniform_buffer);
+            VERIFY(result == vk::Result::eSuccess);
 
-        uniform_data.mem_alloc.setAllocationSize(mem_reqs.size);
-        uniform_data.mem_alloc.setMemoryTypeIndex(0);
+            vk::MemoryRequirements mem_reqs;
+            device.getBufferMemoryRequirements(swapchain_image_resources[i].uniform_buffer, &mem_reqs);
 
-        bool const pass = memory_type_from_properties(
-            mem_reqs.memoryTypeBits, vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent,
-            &uniform_data.mem_alloc.memoryTypeIndex);
-        VERIFY(pass);
+            auto mem_alloc = vk::MemoryAllocateInfo().setAllocationSize(mem_reqs.size).setMemoryTypeIndex(0);
 
-        result = device.allocateMemory(&uniform_data.mem_alloc, nullptr, &(uniform_data.mem));
-        VERIFY(result == vk::Result::eSuccess);
+            bool const pass = memory_type_from_properties(
+                mem_reqs.memoryTypeBits, vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent,
+                &mem_alloc.memoryTypeIndex);
+            VERIFY(pass);
 
-        auto pData = device.mapMemory(uniform_data.mem, 0, uniform_data.mem_alloc.allocationSize, vk::MemoryMapFlags());
-        VERIFY(pData.result == vk::Result::eSuccess);
+            result = device.allocateMemory(&mem_alloc, nullptr, &swapchain_image_resources[i].uniform_memory);
+            VERIFY(result == vk::Result::eSuccess);
 
-        memcpy(pData.value, &data, sizeof data);
+            auto pData = device.mapMemory(swapchain_image_resources[i].uniform_memory, 0, VK_WHOLE_SIZE, vk::MemoryMapFlags());
+            VERIFY(pData.result == vk::Result::eSuccess);
 
-        device.unmapMemory(uniform_data.mem);
+            memcpy(pData.value, &data, sizeof data);
 
-        result = device.bindBufferMemory(uniform_data.buf, uniform_data.mem, 0);
-        VERIFY(result == vk::Result::eSuccess);
+            device.unmapMemory(swapchain_image_resources[i].uniform_memory);
 
-        uniform_data.buffer_info.buffer = uniform_data.buf;
-        uniform_data.buffer_info.offset = 0;
-        uniform_data.buffer_info.range = sizeof(data);
+            result = device.bindBufferMemory(swapchain_image_resources[i].uniform_buffer, swapchain_image_resources[i].uniform_memory, 0);
+            VERIFY(result == vk::Result::eSuccess);
+        }
     }
 
     void prepare_depth() {
@@ -1495,10 +1517,10 @@ struct Demo {
 
     void prepare_descriptor_pool() {
         vk::DescriptorPoolSize const poolSizes[2] = {
-            vk::DescriptorPoolSize().setType(vk::DescriptorType::eUniformBuffer).setDescriptorCount(1),
-            vk::DescriptorPoolSize().setType(vk::DescriptorType::eCombinedImageSampler).setDescriptorCount(texture_count)};
+            vk::DescriptorPoolSize().setType(vk::DescriptorType::eUniformBuffer).setDescriptorCount(swapchainImageCount),
+            vk::DescriptorPoolSize().setType(vk::DescriptorType::eCombinedImageSampler).setDescriptorCount(swapchainImageCount * texture_count)};
 
-        auto const descriptor_pool = vk::DescriptorPoolCreateInfo().setMaxSets(1).setPoolSizeCount(2).setPPoolSizes(poolSizes);
+        auto const descriptor_pool = vk::DescriptorPoolCreateInfo().setMaxSets(swapchainImageCount).setPoolSizeCount(2).setPPoolSizes(poolSizes);
 
         auto result = device.createDescriptorPool(&descriptor_pool, nullptr, &desc_pool);
         VERIFY(result == vk::Result::eSuccess);
@@ -1507,8 +1529,8 @@ struct Demo {
     void prepare_descriptor_set() {
         auto const alloc_info =
             vk::DescriptorSetAllocateInfo().setDescriptorPool(desc_pool).setDescriptorSetCount(1).setPSetLayouts(&desc_layout);
-        auto result = device.allocateDescriptorSets(&alloc_info, &desc_set);
-        VERIFY(result == vk::Result::eSuccess);
+
+        auto buffer_info = vk::DescriptorBufferInfo().setOffset(0).setRange(sizeof(struct vktexcube_vs_uniform));
 
         vk::DescriptorImageInfo tex_descs[texture_count];
         for (uint32_t i = 0; i < texture_count; i++) {
@@ -1519,18 +1541,24 @@ struct Demo {
 
         vk::WriteDescriptorSet writes[2];
 
-        writes[0].setDstSet(desc_set);
         writes[0].setDescriptorCount(1);
         writes[0].setDescriptorType(vk::DescriptorType::eUniformBuffer);
-        writes[0].setPBufferInfo(&uniform_data.buffer_info);
+        writes[0].setPBufferInfo(&buffer_info);
 
-        writes[1].setDstSet(desc_set);
         writes[1].setDstBinding(1);
         writes[1].setDescriptorCount(texture_count);
         writes[1].setDescriptorType(vk::DescriptorType::eCombinedImageSampler);
         writes[1].setPImageInfo(tex_descs);
 
-        device.updateDescriptorSets(2, writes, 0, nullptr);
+        for (unsigned int i = 0; i < swapchainImageCount; i++) {
+            auto result = device.allocateDescriptorSets(&alloc_info, &swapchain_image_resources[i].descriptor_set);
+            VERIFY(result == vk::Result::eSuccess);
+
+            buffer_info.setBuffer(swapchain_image_resources[i].uniform_buffer);
+            writes[0].setDstSet(swapchain_image_resources[i].descriptor_set);
+            writes[1].setDstSet(swapchain_image_resources[i].descriptor_set);
+            device.updateDescriptorSets(2, writes, 0, nullptr);
+        }
     }
 
     void prepare_framebuffers() {
@@ -1545,11 +1573,9 @@ struct Demo {
                                  .setHeight((uint32_t)height)
                                  .setLayers(1);
 
-        framebuffers.reset(new vk::Framebuffer[swapchainImageCount]);
-
         for (uint32_t i = 0; i < swapchainImageCount; i++) {
-            attachments[0] = buffers[i].view;
-            auto const result = device.createFramebuffer(&fb_info, nullptr, &framebuffers[i]);
+            attachments[0] = swapchain_image_resources[i].view;
+            auto const result = device.createFramebuffer(&fb_info, nullptr, &swapchain_image_resources[i].framebuffer);
             VERIFY(result == vk::Result::eSuccess);
         }
     }
@@ -1917,7 +1943,7 @@ struct Demo {
         VERIFY(result == vk::Result::eSuccess);
 
         for (i = 0; i < swapchainImageCount; i++) {
-            device.destroyFramebuffer(framebuffers[i], nullptr);
+            device.destroyFramebuffer(swapchain_image_resources[i].framebuffer, nullptr);
         }
 
         device.destroyDescriptorPool(desc_pool, nullptr);
@@ -1939,12 +1965,11 @@ struct Demo {
         device.destroyImage(depth.image, nullptr);
         device.freeMemory(depth.mem, nullptr);
 
-        device.destroyBuffer(uniform_data.buf, nullptr);
-        device.freeMemory(uniform_data.mem, nullptr);
-
         for (i = 0; i < swapchainImageCount; i++) {
-            device.destroyImageView(buffers[i].view, nullptr);
-            device.freeCommandBuffers(cmd_pool, 1, &buffers[i].cmd);
+            device.destroyImageView(swapchain_image_resources[i].view, nullptr);
+            device.freeCommandBuffers(cmd_pool, 1, &swapchain_image_resources[i].cmd);
+            device.destroyBuffer(swapchain_image_resources[i].uniform_buffer, nullptr);
+            device.freeMemory(swapchain_image_resources[i].uniform_memory, nullptr);
         }
 
         device.destroyCommandPool(cmd_pool, nullptr);
@@ -2018,12 +2043,12 @@ struct Demo {
         mat4x4 MVP;
         mat4x4_mul(MVP, VP, model_matrix);
 
-        auto data = device.mapMemory(uniform_data.mem, 0, uniform_data.mem_alloc.allocationSize, vk::MemoryMapFlags());
+        auto data = device.mapMemory(swapchain_image_resources[current_buffer].uniform_memory, 0, VK_WHOLE_SIZE, vk::MemoryMapFlags());
         VERIFY(data.result == vk::Result::eSuccess);
 
         memcpy(data.value, (const void *)&MVP[0][0], sizeof(MVP));
 
-        device.unmapMemory(uniform_data.mem);
+        device.unmapMemory(swapchain_image_resources[current_buffer].uniform_memory);
     }
 
     bool loadTexture(const char *filename, uint8_t *rgba_data, vk::SubresourceLayout *layout, int32_t *width, int32_t *height) {
@@ -2100,7 +2125,6 @@ struct Demo {
             return;
         }
 
-        update_data_buffer();
         draw();
         curFrame++;
 
@@ -2239,7 +2263,6 @@ struct Demo {
                 handle_xlib_event(&event);
             }
 
-            update_data_buffer();
             draw();
             curFrame++;
 
@@ -2309,7 +2332,6 @@ struct Demo {
                 event = xcb_poll_for_event(connection);
             }
 
-            update_data_buffer();
             draw();
             curFrame++;
             if (frameCount != UINT32_MAX && curFrame == frameCount) {
@@ -2353,7 +2375,6 @@ struct Demo {
 
     void run() {
         while (!quit) {
-            update_data_buffer();
             draw();
             curFrame++;
             if (frameCount != UINT32_MAX && curFrame == frameCount) {
@@ -2497,6 +2518,23 @@ struct Demo {
 
         free(plane_props);
 
+        vk::DisplayPlaneCapabilitiesKHR planeCaps;
+        vk::getDisplayPlaneCapabilitiesKHR(gpu, mode_props.displayMode, plane_index, &planeCaps);
+        // Find a supported alpha mode
+        vk::CompositeAlphaFlagBitsKHR alphaMode = vk::CompositeAlphaFlagBitsKHR::eOpaque;
+        vk::CompositeAlphaFlagBitsKHR alphaModes[4] = {
+            vk::CompositeAlphaFlagBitsKHR::eOpaque,
+            vk::CompositeAlphaFlagBitsKHR::eGlobal,
+            vk::CompositeAlphaFlagBitsKHR::ePerPixel,
+            vk::CompositeAlphaFlagBitsKHR::ePerPixelPremultiplied,
+        };
+        for (uint32_t i = 0; i < sizeof(alphaModes); i++) {
+            if (planeCaps.supportedAlpha & alphaModes[i]) {
+                alphaMode = alphaModes[i];
+                break;
+            }
+        }
+
         image_extent.setWidth(mode_props.parameters.visibleRegion.width);
         image_extent.setHeight(mode_props.parameters.visibleRegion.height);
 
@@ -2504,6 +2542,8 @@ struct Demo {
                                     .setDisplayMode(mode_props.displayMode)
                                     .setPlaneIndex(plane_index)
                                     .setPlaneStackIndex(plane_props[plane_index].currentStackIndex)
+                                    .setGlobalAlpha(1.0f)
+                                    .setAlphaMode(alphaMode)
                                     .setImageExtent(image_extent);
 
         return inst.createDisplayPlaneSurfaceKHR(&createInfo, nullptr, &surface);
@@ -2511,7 +2551,6 @@ struct Demo {
 
     void run_display() {
         while (!quit) {
-            update_data_buffer();
             draw();
             curFrame++;
 
@@ -2578,7 +2617,7 @@ struct Demo {
 
     uint32_t swapchainImageCount;
     vk::SwapchainKHR swapchain;
-    std::unique_ptr<SwapchainBuffers[]> buffers;
+    std::unique_ptr<SwapchainImageResources[]> swapchain_image_resources;
     vk::PresentModeKHR presentMode;
     vk::Fence fences[FRAME_LAG];
     uint32_t frame_index;
@@ -2597,13 +2636,6 @@ struct Demo {
     static int32_t const texture_count = 1;
     texture_object textures[texture_count];
     texture_object staging_texture;
-
-    struct {
-        vk::Buffer buf;
-        vk::MemoryAllocateInfo mem_alloc;
-        vk::DeviceMemory mem;
-        vk::DescriptorBufferInfo buffer_info;
-    } uniform_data;
 
     vk::CommandBuffer cmd;  // Buffer for initialization commands
     vk::PipelineLayout pipeline_layout;
@@ -2624,9 +2656,6 @@ struct Demo {
     vk::ShaderModule frag_shader_module;
 
     vk::DescriptorPool desc_pool;
-    vk::DescriptorSet desc_set;
-
-    std::unique_ptr<vk::Framebuffer[]> framebuffers;
 
     bool quit;
     uint32_t curFrame;

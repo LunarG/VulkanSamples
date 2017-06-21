@@ -110,7 +110,7 @@ class DescriptorSetLayout {
     bool HasBinding(const uint32_t binding) const { return binding_to_index_map_.count(binding) > 0; };
     // Return true if this layout is compatible with passed in layout,
     //   else return false and update error_msg with description of incompatibility
-    bool IsCompatible(const DescriptorSetLayout *, std::string *) const;
+    bool IsCompatible(DescriptorSetLayout const *const, std::string *) const;
     // Return true if binding 1 beyond given exists and has same type, stageFlags & immutable sampler use
     bool IsNextBindingConsistent(const uint32_t) const;
     // Various Get functions that can either be passed a binding#, which will
@@ -276,7 +276,7 @@ class BufferDescriptor : public Descriptor {
 // Structs to contain common elements that need to be shared between Validate* and Perform* calls below
 struct AllocateDescriptorSetsData {
     uint32_t required_descriptors_by_type[VK_DESCRIPTOR_TYPE_RANGE_SIZE];
-    std::vector<cvdescriptorset::DescriptorSetLayout const *> layout_nodes;
+    std::vector<std::shared_ptr<DescriptorSetLayout const>> layout_nodes;
     AllocateDescriptorSetsData(uint32_t);
 };
 // Helper functions for descriptor set functions that cross multiple sets
@@ -321,35 +321,28 @@ void PerformAllocateDescriptorSets(const VkDescriptorSetAllocateInfo *, const Vk
  */
 class DescriptorSet : public BASE_NODE {
    public:
-    DescriptorSet(const VkDescriptorSet, const VkDescriptorPool, const DescriptorSetLayout *, const core_validation::layer_data *);
+    DescriptorSet(const VkDescriptorSet, const VkDescriptorPool, const std::shared_ptr<DescriptorSetLayout const> &,
+                  const core_validation::layer_data *);
     ~DescriptorSet();
     // A number of common Get* functions that return data based on layout from which this set was created
-    uint32_t GetTotalDescriptorCount() const { return p_layout_.GetTotalDescriptorCount(); };
-    uint32_t GetDynamicDescriptorCount() const { return p_layout_.GetDynamicDescriptorCount(); };
-    uint32_t GetBindingCount() const { return p_layout_.GetBindingCount(); };
-    VkDescriptorType GetTypeFromIndex(const uint32_t index) const {
-        return p_layout_.GetTypeFromIndex(index);
-    };
-    VkDescriptorType GetTypeFromGlobalIndex(const uint32_t index) const {
-        return p_layout_.GetTypeFromGlobalIndex(index);
-    };
-    VkDescriptorType GetTypeFromBinding(const uint32_t binding) const {
-        return p_layout_.GetTypeFromBinding(binding);
-    };
-    uint32_t GetDescriptorCountFromIndex(const uint32_t index) const {
-        return p_layout_.GetDescriptorCountFromIndex(index);
-    };
+    uint32_t GetTotalDescriptorCount() const { return p_layout_->GetTotalDescriptorCount(); };
+    uint32_t GetDynamicDescriptorCount() const { return p_layout_->GetDynamicDescriptorCount(); };
+    uint32_t GetBindingCount() const { return p_layout_->GetBindingCount(); };
+    VkDescriptorType GetTypeFromIndex(const uint32_t index) const { return p_layout_->GetTypeFromIndex(index); };
+    VkDescriptorType GetTypeFromGlobalIndex(const uint32_t index) const { return p_layout_->GetTypeFromGlobalIndex(index); };
+    VkDescriptorType GetTypeFromBinding(const uint32_t binding) const { return p_layout_->GetTypeFromBinding(binding); };
+    uint32_t GetDescriptorCountFromIndex(const uint32_t index) const { return p_layout_->GetDescriptorCountFromIndex(index); };
     uint32_t GetDescriptorCountFromBinding(const uint32_t binding) const {
-        return p_layout_.GetDescriptorCountFromBinding(binding);
+        return p_layout_->GetDescriptorCountFromBinding(binding);
     };
     // Return index into dynamic offset array for given binding
     int32_t GetDynamicOffsetIndexFromBinding(uint32_t binding) const {
-        return p_layout_.GetDynamicOffsetIndexFromBinding(binding);
+        return p_layout_->GetDynamicOffsetIndexFromBinding(binding);
     }
     // Return true if given binding is present in this set
-    bool HasBinding(const uint32_t binding) const { return p_layout_.HasBinding(binding); };
+    bool HasBinding(const uint32_t binding) const { return p_layout_->HasBinding(binding); };
     // Is this set compatible with the given layout?
-    bool IsCompatible(const DescriptorSetLayout *, std::string *) const;
+    bool IsCompatible(DescriptorSetLayout const *const, std::string *) const;
     // For given bindings validate state at time of draw is correct, returning false on error and writing error details into string*
     bool ValidateDrawState(const std::map<uint32_t, descriptor_req> &, const std::vector<uint32_t> &, const GLOBAL_CB_NODE *,
                            const char *caller, std::string *) const;
@@ -370,7 +363,7 @@ class DescriptorSet : public BASE_NODE {
     // Perform a CopyUpdate whose contents were just validated using ValidateCopyUpdate
     void PerformCopyUpdate(const VkCopyDescriptorSet *, const DescriptorSet *);
 
-    const DescriptorSetLayout *GetLayout() const { return &p_layout_; };
+    std::shared_ptr<DescriptorSetLayout const> const GetLayout() const { return p_layout_; };
     VkDescriptorSet GetSet() const { return set_; };
     // Return unordered_set of all command buffers that this set is bound to
     std::unordered_set<GLOBAL_CB_NODE *> GetBoundCmdBuffers() const { return cb_bindings; }
@@ -379,14 +372,14 @@ class DescriptorSet : public BASE_NODE {
     // If given cmd_buffer is in the cb_bindings set, remove it
     void RemoveBoundCommandBuffer(GLOBAL_CB_NODE *cb_node) { cb_bindings.erase(cb_node); }
     VkSampler const *GetImmutableSamplerPtrFromBinding(const uint32_t index) const {
-        return p_layout_.GetImmutableSamplerPtrFromBinding(index);
+        return p_layout_->GetImmutableSamplerPtrFromBinding(index);
     };
     // For a particular binding, get the global index
     uint32_t GetGlobalStartIndexFromBinding(const uint32_t binding) const {
-        return p_layout_.GetGlobalStartIndexFromBinding(binding);
+        return p_layout_->GetGlobalStartIndexFromBinding(binding);
     };
     uint32_t GetGlobalEndIndexFromBinding(const uint32_t binding) const {
-        return p_layout_.GetGlobalEndIndexFromBinding(binding);
+        return p_layout_->GetGlobalEndIndexFromBinding(binding);
     };
     // Return true if any part of set has ever been updated
     bool IsUpdated() const { return some_update_; };
@@ -404,7 +397,7 @@ class DescriptorSet : public BASE_NODE {
     bool some_update_;  // has any part of the set ever been updated?
     VkDescriptorSet set_;
     DESCRIPTOR_POOL_STATE *pool_state_;
-    const DescriptorSetLayout p_layout_;
+    const std::shared_ptr<DescriptorSetLayout const> p_layout_;
     std::vector<std::unique_ptr<Descriptor>> descriptors_;
     // Ptr to device data used for various data look-ups
     const core_validation::layer_data *device_data_;
