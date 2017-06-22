@@ -90,7 +90,9 @@ set(ASM_FAILURE_MSG "${ASM_FAILURE_MSG} extensions will suffer from a corrupted 
 if (WIN32)
     enable_language(ASM_MASM)
     if (CMAKE_ASM_MASM_COMPILER_WORKS)
-        set(CMAKE_ASM_MASM_FLAGS ${CMAKE_ASM_MASM_FLAGS} /safeseh)
+        if (NOT CMAKE_CL_64)
+            set(CMAKE_ASM_MASM_FLAGS ${CMAKE_ASM_MASM_FLAGS} /safeseh)
+        endif()
         set(OPT_LOADER_SRCS ${OPT_LOADER_SRCS} phys_dev_chain_masm.asm)
 
         add_executable(asm_offset asm_offset.c)
