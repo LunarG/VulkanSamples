@@ -6,7 +6,6 @@ try:
     import urllib.request as urllib2
 except ImportError:
     import urllib2
-from bs4 import BeautifulSoup
 import json
 
 #############################
