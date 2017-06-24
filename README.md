@@ -47,7 +47,7 @@ git clone git@github.com:LunarG/VulkanSamples.git
 cd VulkanSamples
 # This will fetch and build glslang and spriv-tools
 ./update_external_sources.sh         # linux
-./update_external_sources.bat --all  # windows
+update_external_sources.bat --all  # windows
 ```
 ## Linux Build
 
