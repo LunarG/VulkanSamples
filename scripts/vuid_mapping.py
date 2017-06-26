@@ -489,6 +489,7 @@ func_struct_id_map = {
 'VkPhysicalDeviceIDPropertiesKHX' : 433,
 'VkPhysicalDeviceMultiviewPerViewAttributesPropertiesNVX' : 434,
 'VkHdrMetadataEXT' : 435,
+'VkExternalMemoryPropertiesKHX' : 436,
 ### ADD New func/struct mappings above this line
 }
 # Mapping of params to unique IDs
@@ -888,6 +889,9 @@ implicit_param_map = {
 'x' : 392,
 'y' : 393,
 'z' : 394,
+'externalMemoryFeatures' : 395,
+'compatibleHandleTypes' : 396,
+'exportFromImportedHandleTypes' : 397,
 ### ADD New implicit param mappings above this line
 }
 
