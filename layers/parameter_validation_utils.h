@@ -524,11 +524,11 @@ static bool validate_struct_pnext(debug_report_data *report_data, const char *ap
     // Codegen a map of vectors containing the allowable pNext types for each struct and use that here -- also simplifies parms.
     if (next != NULL) {
         if (allowed_type_count == 0) {
-            std::string message = "%s: value of %s must be NULL.  ";
+            std::string message = "%s: value of %s must be NULL. %s ";
             message += disclaimer;
             skip_call |= log_msg(report_data, VK_DEBUG_REPORT_WARNING_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
-                                 INVALID_STRUCT_PNEXT, LayerName, message.c_str(), api_name, parameter_name.get_name().c_str(),
-                                 header_version, parameter_name.get_name().c_str());
+                                 vuid, LayerName, message.c_str(), api_name, parameter_name.get_name().c_str(),
+                                 validation_error_map[vuid], header_version, parameter_name.get_name().c_str());
         } else {
             const VkStructureType *start = allowed_types;
             const VkStructureType *end = allowed_types + allowed_type_count;
@@ -560,20 +560,21 @@ static bool validate_struct_pnext(debug_report_data *report_data, const char *ap
                 if (std::find(start, end, current->sType) == end) {
                     if (type_name == UnsupportedStructureTypeString) {
                         std::string message =
-                            "%s: %s chain includes a structure with unknown VkStructureType (%d); Allowed structures are [%s].  ";
+                            "%s: %s chain includes a structure with unknown VkStructureType (%d); Allowed structures are [%s]. %s ";
                         message += disclaimer;
                         skip_call |= log_msg(report_data, VK_DEBUG_REPORT_WARNING_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT,
-                                             0, __LINE__, INVALID_STRUCT_PNEXT, LayerName, message.c_str(), api_name,
+                                             0, __LINE__, vuid, LayerName, message.c_str(), api_name,
                                              parameter_name.get_name().c_str(), current->sType, allowed_struct_names,
-                                             header_version, parameter_name.get_name().c_str());
+                                             validation_error_map[vuid], header_version, parameter_name.get_name().c_str());
                     } else {
                         std::string message =
-                            "%s: %s chain includes a structure with unexpected VkStructureType %s; Allowed structures are [%s].  ";
+                            "%s: %s chain includes a structure with unexpected VkStructureType %s; Allowed structures are [%s]. "
+                            "%s ";
                         message += disclaimer;
                         skip_call |= log_msg(report_data, VK_DEBUG_REPORT_WARNING_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT,
-                                             0, __LINE__, INVALID_STRUCT_PNEXT, LayerName, message.c_str(), api_name,
+                                             0, __LINE__, vuid, LayerName, message.c_str(), api_name,
                                              parameter_name.get_name().c_str(), type_name.c_str(), allowed_struct_names,
-                                             header_version, parameter_name.get_name().c_str());
+                                             validation_error_map[vuid], header_version, parameter_name.get_name().c_str());
                     }
                 }
                 current = reinterpret_cast<const GenericHeader *>(current->pNext);
