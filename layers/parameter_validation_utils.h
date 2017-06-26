@@ -535,7 +535,6 @@ static bool validate_struct_pnext(debug_report_data *report_data, const char *ap
 
             cycle_check.insert(next);
 
-
             while (current != NULL) {
                 if (cycle_check.find(current->pNext) != cycle_check.end()) {
                     std::string message = "%s: %s chain contains a cycle -- pNext pointer " PRIx64 " is repeated.";
@@ -560,8 +559,7 @@ static bool validate_struct_pnext(debug_report_data *report_data, const char *ap
                 if (std::find(start, end, current->sType) == end) {
                     if (type_name == UnsupportedStructureTypeString) {
                         std::string message =
-                            "%s: %s chain includes a structure with unexpected VkStructureType (%d); Allowed "
-                            "structures are [%s].  ";
+                            "%s: %s chain includes a structure with unknown VkStructureType (%d); Allowed structures are [%s].  ";
                         message += disclaimer;
                         skip_call |= log_msg(report_data, VK_DEBUG_REPORT_WARNING_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT,
                                              0, __LINE__, INVALID_STRUCT_PNEXT, LayerName, message.c_str(), api_name,
