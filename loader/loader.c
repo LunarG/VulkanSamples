@@ -912,33 +912,37 @@ VkResult loader_add_to_dev_ext_list(const struct loader_instance *inst, struct l
 
     memcpy(&ext_list->list[idx].props, props, sizeof(*props));
     ext_list->list[idx].entrypoint_count = entry_count;
-    ext_list->list[idx].entrypoints =
-        loader_instance_heap_alloc(inst, sizeof(char *) * entry_count, VK_SYSTEM_ALLOCATION_SCOPE_INSTANCE);
-    if (ext_list->list[idx].entrypoints == NULL) {
-        loader_log(inst, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
-                   "loader_add_to_dev_ext_list: Failed to allocate space "
-                   "for device extension entrypoint list in list %d",
-                   idx);
-        ext_list->list[idx].entrypoint_count = 0;
-        return VK_ERROR_OUT_OF_HOST_MEMORY;
-    }
-    for (uint32_t i = 0; i < entry_count; i++) {
-        ext_list->list[idx].entrypoints[i] =
-            loader_instance_heap_alloc(inst, strlen(entrys[i]) + 1, VK_SYSTEM_ALLOCATION_SCOPE_INSTANCE);
-        if (ext_list->list[idx].entrypoints[i] == NULL) {
-            for (uint32_t j = 0; j < i; j++) {
-                loader_instance_heap_free(inst, ext_list->list[idx].entrypoints[j]);
-            }
-            loader_instance_heap_free(inst, ext_list->list[idx].entrypoints);
-            ext_list->list[idx].entrypoint_count = 0;
-            ext_list->list[idx].entrypoints = NULL;
+    if (entry_count == 0) {
+        ext_list->list[idx].entrypoints = NULL;
+    } else {
+        ext_list->list[idx].entrypoints =
+            loader_instance_heap_alloc(inst, sizeof(char *) * entry_count, VK_SYSTEM_ALLOCATION_SCOPE_INSTANCE);
+        if (ext_list->list[idx].entrypoints == NULL) {
             loader_log(inst, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
                        "loader_add_to_dev_ext_list: Failed to allocate space "
-                       "for device extension entrypoint %d name",
-                       i);
+                       "for device extension entrypoint list in list %d",
+                       idx);
+            ext_list->list[idx].entrypoint_count = 0;
             return VK_ERROR_OUT_OF_HOST_MEMORY;
         }
-        strcpy(ext_list->list[idx].entrypoints[i], entrys[i]);
+        for (uint32_t i = 0; i < entry_count; i++) {
+            ext_list->list[idx].entrypoints[i] =
+                loader_instance_heap_alloc(inst, strlen(entrys[i]) + 1, VK_SYSTEM_ALLOCATION_SCOPE_INSTANCE);
+            if (ext_list->list[idx].entrypoints[i] == NULL) {
+                for (uint32_t j = 0; j < i; j++) {
+                    loader_instance_heap_free(inst, ext_list->list[idx].entrypoints[j]);
+                }
+                loader_instance_heap_free(inst, ext_list->list[idx].entrypoints);
+                ext_list->list[idx].entrypoint_count = 0;
+                ext_list->list[idx].entrypoints = NULL;
+                loader_log(inst, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
+                           "loader_add_to_dev_ext_list: Failed to allocate space "
+                           "for device extension entrypoint %d name",
+                           i);
+                return VK_ERROR_OUT_OF_HOST_MEMORY;
+            }
+            strcpy(ext_list->list[idx].entrypoints[i], entrys[i]);
+        }
     }
     ext_list->count++;
 
