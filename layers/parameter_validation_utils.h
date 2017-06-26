@@ -508,7 +508,8 @@ static bool validate_string_array(debug_report_data *report_data, const char *ap
  */
 static bool validate_struct_pnext(debug_report_data *report_data, const char *api_name, const ParameterName &parameter_name,
                                   const char *allowed_struct_names, const void *next, size_t allowed_type_count,
-                                  const VkStructureType *allowed_types, uint32_t header_version) {
+                                  const VkStructureType *allowed_types, uint32_t header_version,
+                                  UNIQUE_VALIDATION_ERROR_CODE vuid) {
     bool skip_call = false;
     std::unordered_set<const void *> cycle_check;
     std::unordered_set<VkStructureType, std::hash<int>> unique_stype_check;
