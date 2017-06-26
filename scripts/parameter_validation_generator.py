@@ -1022,19 +1022,23 @@ class ParamCheckerOutputGenerator(OutputGenerator):
                         if not flagBitsName in self.flagBits:
                             usedLines.append('skipCall |= validate_reserved_flags(layer_data->report_data, "{}", {ppp}"{}"{pps}, {pf}{});\n'.format(funcName, valueDisplayName, value.name, pf=valuePrefix, **postProcSpec))
                         else:
-                            flagsRequired = 'false' if value.isoptional else 'true'
+                            if value.isoptional:
+                                flagsRequired = 'false'
+                                vuid = 'VALIDATION_ERROR_UNDEFINED'
+                            else:
+                                flagsRequired = 'true'
+                                vuid_name_tag = structTypeName if structTypeName is not None else funcName
+                                vuid = self.GetVuid("VUID-%s-%s-requiredbitmask" % (vuid_name_tag, value.name))
                             allFlagsName = 'All' + flagBitsName
-                            usedLines.append('skipCall |= validate_flags(layer_data->report_data, "{}", {ppp}"{}"{pps}, "{}", {}, {pf}{}, {}, false);\n'.format(funcName, valueDisplayName, flagBitsName, allFlagsName, value.name, flagsRequired, pf=valuePrefix, **postProcSpec))
+                            usedLines.append('skipCall |= validate_flags(layer_data->report_data, "{}", {ppp}"{}"{pps}, "{}", {}, {pf}{}, {}, false, {});\n'.format(funcName, valueDisplayName, flagBitsName, allFlagsName, value.name, flagsRequired, vuid, pf=valuePrefix, **postProcSpec))
                     elif value.type in self.flagBits:
                         flagsRequired = 'false' if value.isoptional else 'true'
                         allFlagsName = 'All' + value.type
-                        usedLines.append('skipCall |= validate_flags(layer_data->report_data, "{}", {ppp}"{}"{pps}, "{}", {}, {pf}{}, {}, true);\n'.format(funcName, valueDisplayName, value.type, allFlagsName, value.name, flagsRequired, pf=valuePrefix, **postProcSpec))
+                        usedLines.append('skipCall |= validate_flags(layer_data->report_data, "{}", {ppp}"{}"{pps}, "{}", {}, {pf}{}, {}, true, VALIDATION_ERROR_UNDEFINED);\n'.format(funcName, valueDisplayName, value.type, allFlagsName, value.name, flagsRequired, pf=valuePrefix, **postProcSpec))
                     elif value.isbool:
                         usedLines.append('skipCall |= validate_bool32(layer_data->report_data, "{}", {ppp}"{}"{pps}, {}{});\n'.format(funcName, valueDisplayName, valuePrefix, value.name, **postProcSpec))
                     elif value.israngedenum:
                         enumRange = self.enumRanges[value.type]
-                        if value.type == "VkObjectEntryTypeNVX":
-                            garbage = 2
                         usedLines.append('skipCall |= validate_ranged_enum(layer_data->report_data, "{}", {ppp}"{}"{pps}, "{}", {}, {}, {}{});\n'.format(funcName, valueDisplayName, value.type, enumRange[0], enumRange[1], valuePrefix, value.name, **postProcSpec))
                     #
                     # If this is a struct, see if it contains members that need to be checked

@@ -2320,12 +2320,13 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateGraphicsPipelines(VkDevice device, VkPipeli
                                 "VkBlendOp", VK_BLEND_OP_BEGIN_RANGE, VK_BLEND_OP_END_RANGE,
                                 pCreateInfos[i].pColorBlendState->pAttachments[attachmentIndex].alphaBlendOp);
 
-                            skip |= validate_flags(
-                                report_data, "vkCreateGraphicsPipelines",
-                                ParameterName("pCreateInfos[%i].pColorBlendState->pAttachments[%i].colorWriteMask",
-                                              ParameterName::IndexVector{i, attachmentIndex}),
-                                "VkColorComponentFlagBits", AllVkColorComponentFlagBits,
-                                pCreateInfos[i].pColorBlendState->pAttachments[attachmentIndex].colorWriteMask, false, false);
+                            skip |=
+                                validate_flags(report_data, "vkCreateGraphicsPipelines",
+                                               ParameterName("pCreateInfos[%i].pColorBlendState->pAttachments[%i].colorWriteMask",
+                                                             ParameterName::IndexVector{i, attachmentIndex}),
+                                               "VkColorComponentFlagBits", AllVkColorComponentFlagBits,
+                                               pCreateInfos[i].pColorBlendState->pAttachments[attachmentIndex].colorWriteMask,
+                                               false, false, VALIDATION_ERROR_UNDEFINED);
                         }
                     }
 
@@ -3027,10 +3028,10 @@ static bool PreBeginCommandBuffer(layer_data *dev_data, VkCommandBuffer commandB
                             "inheritedQueries. %s",
                             validation_error_map[VALIDATION_ERROR_02a00070]);
         }
-        // VALIDATION_ERROR_02a00072 check
         if ((dev_data->physical_device_features.inheritedQueries != VK_FALSE) && (pInfo->occlusionQueryEnable != VK_FALSE)) {
             skip |= validate_flags(dev_data->report_data, "vkBeginCommandBuffer", "pBeginInfo->pInheritanceInfo->queryFlags",
-                                   "VkQueryControlFlagBits", AllVkQueryControlFlagBits, pInfo->queryFlags, false, false);
+                                   "VkQueryControlFlagBits", AllVkQueryControlFlagBits, pInfo->queryFlags, false, false,
+                                   VALIDATION_ERROR_02a00072);
         }
     }
     return skip;
@@ -3066,7 +3067,7 @@ VKAPI_ATTR VkResult VKAPI_CALL BeginCommandBuffer(VkCommandBuffer commandBuffer,
         // TODO: This must be 0 if the pipeline statistics queries feature is not enabled
         skip |= validate_flags(report_data, "vkBeginCommandBuffer", "pBeginInfo->pInheritanceInfo->pipelineStatistics",
                                "VkQueryPipelineStatisticFlagBits", AllVkQueryPipelineStatisticFlagBits,
-                               pBeginInfo->pInheritanceInfo->pipelineStatistics, false, false);
+                               pBeginInfo->pInheritanceInfo->pipelineStatistics, false, false, VALIDATION_ERROR_UNDEFINED);
     }
 
     skip |= PreBeginCommandBuffer(device_data, commandBuffer, pBeginInfo);

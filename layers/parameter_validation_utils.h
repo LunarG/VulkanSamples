@@ -732,14 +732,15 @@ static bool validate_reserved_flags(debug_report_data *report_data, const char *
 * @return Boolean value indicating that the call should be skipped.
 */
 static bool validate_flags(debug_report_data *report_data, const char *api_name, const ParameterName &parameter_name,
-                           const char *flag_bits_name, VkFlags all_flags, VkFlags value, bool flags_required, bool singleFlag) {
+                           const char *flag_bits_name, VkFlags all_flags, VkFlags value, bool flags_required, bool singleFlag,
+                           UNIQUE_VALIDATION_ERROR_CODE vuid) {
     bool skip_call = false;
 
     if (value == 0) {
         if (flags_required) {
             skip_call |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
-                                 REQUIRED_PARAMETER, LayerName, "%s: value of %s must not be 0", api_name,
-                                 parameter_name.get_name().c_str());
+                                 vuid, LayerName, "%s: value of %s must not be 0. %s", api_name,
+                                 parameter_name.get_name().c_str(), validation_error_map[vuid]);
         }
     } else if ((value & (~all_flags)) != 0) {
         skip_call |=
