@@ -1009,6 +1009,7 @@ class ParamCheckerOutputGenerator(OutputGenerator):
                     # Log a diagnostic message when validation cannot be automatically generated and must be implemented manually
                     self.logMsg('diag', 'ParameterValidation: No validation for {} {}'.format(structTypeName if structTypeName else funcName, value.name))
                 else:
+                    vuid_name_tag = structTypeName if structTypeName is not None else funcName
                     if value.type in self.structTypes:
                         stype = self.structTypes[value.type]
                         vuid = self.GetVuid("VUID-%s-sType-sType" % value.type)
@@ -1024,17 +1025,17 @@ class ParamCheckerOutputGenerator(OutputGenerator):
                         else:
                             if value.isoptional:
                                 flagsRequired = 'false'
-                                vuid = 'VALIDATION_ERROR_UNDEFINED'
+                                vuid = self.GetVuid("VUID-%s-%s-parameter" % (vuid_name_tag, value.name))
                             else:
                                 flagsRequired = 'true'
-                                vuid_name_tag = structTypeName if structTypeName is not None else funcName
                                 vuid = self.GetVuid("VUID-%s-%s-requiredbitmask" % (vuid_name_tag, value.name))
                             allFlagsName = 'All' + flagBitsName
                             usedLines.append('skipCall |= validate_flags(layer_data->report_data, "{}", {ppp}"{}"{pps}, "{}", {}, {pf}{}, {}, false, {});\n'.format(funcName, valueDisplayName, flagBitsName, allFlagsName, value.name, flagsRequired, vuid, pf=valuePrefix, **postProcSpec))
                     elif value.type in self.flagBits:
                         flagsRequired = 'false' if value.isoptional else 'true'
                         allFlagsName = 'All' + value.type
-                        usedLines.append('skipCall |= validate_flags(layer_data->report_data, "{}", {ppp}"{}"{pps}, "{}", {}, {pf}{}, {}, true, VALIDATION_ERROR_UNDEFINED);\n'.format(funcName, valueDisplayName, value.type, allFlagsName, value.name, flagsRequired, pf=valuePrefix, **postProcSpec))
+                        vuid = self.GetVuid("VUID-%s-%s-parameter" % (vuid_name_tag, value.name))
+                        usedLines.append('skipCall |= validate_flags(layer_data->report_data, "{}", {ppp}"{}"{pps}, "{}", {}, {pf}{}, {}, true, {});\n'.format(funcName, valueDisplayName, value.type, allFlagsName, value.name, flagsRequired, vuid, pf=valuePrefix, **postProcSpec))
                     elif value.isbool:
                         usedLines.append('skipCall |= validate_bool32(layer_data->report_data, "{}", {ppp}"{}"{pps}, {}{});\n'.format(funcName, valueDisplayName, valuePrefix, value.name, **postProcSpec))
                     elif value.israngedenum:

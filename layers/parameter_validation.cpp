@@ -2326,7 +2326,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateGraphicsPipelines(VkDevice device, VkPipeli
                                                              ParameterName::IndexVector{i, attachmentIndex}),
                                                "VkColorComponentFlagBits", AllVkColorComponentFlagBits,
                                                pCreateInfos[i].pColorBlendState->pAttachments[attachmentIndex].colorWriteMask,
-                                               false, false, VALIDATION_ERROR_UNDEFINED);
+                                               false, false, VALIDATION_ERROR_0f202201);
                         }
                     }
 
