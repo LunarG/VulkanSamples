@@ -186,8 +186,9 @@ class ValidationSource:
                         qualified_paths.append(filepath)
                         continue
             if len(self.generated_source_files) != len(qualified_paths):
-                print("Error: Unable to locate one or more of the following source files in the build, dbuild, or release directories")
+                print("Error: Unable to locate one or more of the following source files in the %s directories" % (", ".join(generated_source_directories)))
                 print(self.generated_source_files)
+                print("Skipping documentation validation test")
                 quit()
             else:
                 self.source_files.extend(qualified_paths)
