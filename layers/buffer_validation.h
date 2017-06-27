@@ -153,7 +153,8 @@ void PreCallRecordCmdBlitImage(layer_data *device_data, GLOBAL_CB_NODE *cb_node,
                                IMAGE_STATE *dst_image_state);
 
 bool ValidateCmdBufImageLayouts(layer_data *device_data, GLOBAL_CB_NODE *pCB,
-                                std::unordered_map<ImageSubresourcePair, IMAGE_LAYOUT_NODE> &imageLayoutMap);
+                                std::unordered_map<ImageSubresourcePair, IMAGE_LAYOUT_NODE> const &globalImageLayoutMap,
+                                std::unordered_map<ImageSubresourcePair, IMAGE_LAYOUT_NODE> &overlayLayoutMap);
 
 void UpdateCmdBufImageLayouts(layer_data *device_data, GLOBAL_CB_NODE *pCB);
 

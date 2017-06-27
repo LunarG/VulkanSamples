@@ -2633,7 +2633,7 @@ static bool PreCallValidateQueueSubmit(layer_data *dev_data, VkQueue queue, uint
     unordered_set<VkSemaphore> signaled_semaphores;
     unordered_set<VkSemaphore> unsignaled_semaphores;
     vector<VkCommandBuffer> current_cmds;
-    unordered_map<ImageSubresourcePair, IMAGE_LAYOUT_NODE> localImageLayoutMap = dev_data->imageLayoutMap;
+    unordered_map<ImageSubresourcePair, IMAGE_LAYOUT_NODE> localImageLayoutMap;
     // Now verify each individual submit
     for (uint32_t submit_idx = 0; submit_idx < submitCount; submit_idx++) {
         const VkSubmitInfo *submit = &pSubmits[submit_idx];
@@ -2674,7 +2674,7 @@ static bool PreCallValidateQueueSubmit(layer_data *dev_data, VkQueue queue, uint
         for (uint32_t i = 0; i < submit->commandBufferCount; i++) {
             auto cb_node = GetCBNode(dev_data, submit->pCommandBuffers[i]);
             if (cb_node) {
-                skip |= ValidateCmdBufImageLayouts(dev_data, cb_node, localImageLayoutMap);
+                skip |= ValidateCmdBufImageLayouts(dev_data, cb_node, dev_data->imageLayoutMap, localImageLayoutMap);
                 current_cmds.push_back(submit->pCommandBuffers[i]);
                 skip |= validatePrimaryCommandBufferState(
                     dev_data, cb_node, (int)std::count(current_cmds.begin(), current_cmds.end(), submit->pCommandBuffers[i]));

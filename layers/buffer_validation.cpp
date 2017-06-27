@@ -2466,13 +2466,15 @@ void PreCallRecordCmdBlitImage(layer_data *device_data, GLOBAL_CB_NODE *cb_node,
 // the IMAGE is the same
 // as the global IMAGE layout
 bool ValidateCmdBufImageLayouts(layer_data *device_data, GLOBAL_CB_NODE *pCB,
-                                std::unordered_map<ImageSubresourcePair, IMAGE_LAYOUT_NODE> &imageLayoutMap) {
+                                std::unordered_map<ImageSubresourcePair, IMAGE_LAYOUT_NODE> const & globalImageLayoutMap,
+                                std::unordered_map<ImageSubresourcePair, IMAGE_LAYOUT_NODE> & overlayLayoutMap) {
     bool skip = false;
     const debug_report_data *report_data = core_validation::GetReportData(device_data);
     for (auto cb_image_data : pCB->imageLayoutMap) {
         VkImageLayout imageLayout;
 
-        if (FindLayout(imageLayoutMap, cb_image_data.first, imageLayout)) {
+        if (FindLayout(overlayLayoutMap, cb_image_data.first, imageLayout) ||
+            FindLayout(globalImageLayoutMap, cb_image_data.first, imageLayout)) {
             if (cb_image_data.second.initialLayout == VK_IMAGE_LAYOUT_UNDEFINED) {
                 // TODO: Set memory invalid which is in mem_tracker currently
             } else if (imageLayout != cb_image_data.second.initialLayout) {
@@ -2495,7 +2497,7 @@ bool ValidateCmdBufImageLayouts(layer_data *device_data, GLOBAL_CB_NODE *pCB,
                                     string_VkImageLayout(cb_image_data.second.initialLayout));
                 }
             }
-            SetLayout(imageLayoutMap, cb_image_data.first, cb_image_data.second.layout);
+            SetLayout(overlayLayoutMap, cb_image_data.first, cb_image_data.second.layout);
         }
     }
     return skip;
