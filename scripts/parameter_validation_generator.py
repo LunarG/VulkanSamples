@@ -734,19 +734,21 @@ class ParamCheckerOutputGenerator(OutputGenerator):
         return vuid
     #
     # Generate the sType check string
-    def makeStructTypeCheck(self, prefix, value, lenValue, valueRequired, lenValueRequired, lenPtrRequired, funcPrintName, lenPrintName, valuePrintName, postProcSpec):
+    def makeStructTypeCheck(self, prefix, value, lenValue, valueRequired, lenValueRequired, lenPtrRequired, funcPrintName, lenPrintName, valuePrintName, postProcSpec, struct_type_name):
         checkExpr = []
         stype = self.structTypes[value.type]
         if lenValue:
+            vuid_name = struct_type_name if struct_type_name is not None else funcPrintName
+            vuid = self.GetVuid("VUID-%s-%s-parameter" % (vuid_name, value.name))
             # This is an array with a pointer to a count value
             if lenValue.ispointer:
                 # When the length parameter is a pointer, there is an extra Boolean parameter in the function call to indicate if it is required
-                checkExpr.append('skipCall |= validate_struct_type_array(layer_data->report_data, "{}", {ppp}"{ldn}"{pps}, {ppp}"{dn}"{pps}, "{sv}", {pf}{ln}, {pf}{vn}, {sv}, {}, {}, {});\n'.format(
-                    funcPrintName, lenPtrRequired, lenValueRequired, valueRequired, ln=lenValue.name, ldn=lenPrintName, dn=valuePrintName, vn=value.name, sv=stype.value, pf=prefix, **postProcSpec))
+                checkExpr.append('skipCall |= validate_struct_type_array(layer_data->report_data, "{}", {ppp}"{ldn}"{pps}, {ppp}"{dn}"{pps}, "{sv}", {pf}{ln}, {pf}{vn}, {sv}, {}, {}, {}, {});\n'.format(
+                    funcPrintName, lenPtrRequired, lenValueRequired, valueRequired, vuid, ln=lenValue.name, ldn=lenPrintName, dn=valuePrintName, vn=value.name, sv=stype.value, pf=prefix, **postProcSpec))
             # This is an array with an integer count value
             else:
-                checkExpr.append('skipCall |= validate_struct_type_array(layer_data->report_data, "{}", {ppp}"{ldn}"{pps}, {ppp}"{dn}"{pps}, "{sv}", {pf}{ln}, {pf}{vn}, {sv}, {}, {});\n'.format(
-                    funcPrintName, lenValueRequired, valueRequired, ln=lenValue.name, ldn=lenPrintName, dn=valuePrintName, vn=value.name, sv=stype.value, pf=prefix, **postProcSpec))
+                checkExpr.append('skipCall |= validate_struct_type_array(layer_data->report_data, "{}", {ppp}"{ldn}"{pps}, {ppp}"{dn}"{pps}, "{sv}", {pf}{ln}, {pf}{vn}, {sv}, {}, {}, {});\n'.format(
+                    funcPrintName, lenValueRequired, valueRequired, vuid, ln=lenValue.name, ldn=lenPrintName, dn=valuePrintName, vn=value.name, sv=stype.value, pf=prefix, **postProcSpec))
         # This is an individual struct
         else:
             vuid = self.GetVuid("VUID-%s-sType-sType" % value.type)
@@ -987,7 +989,7 @@ class ParamCheckerOutputGenerator(OutputGenerator):
                     #
                     # If this is a pointer to a struct with an sType field, verify the type
                     if value.type in self.structTypes:
-                        usedLines += self.makeStructTypeCheck(valuePrefix, value, lenParam, req, cvReq, cpReq, funcName, lenDisplayName, valueDisplayName, postProcSpec)
+                        usedLines += self.makeStructTypeCheck(valuePrefix, value, lenParam, req, cvReq, cpReq, funcName, lenDisplayName, valueDisplayName, postProcSpec, structTypeName)
                     # If this is an input handle array that is not allowed to contain NULL handles, verify that none of the handles are VK_NULL_HANDLE
                     elif value.type in self.handleTypes and value.isconst and not self.isHandleOptional(value, lenParam):
                         usedLines += self.makeHandleCheck(valuePrefix, value, lenParam, req, cvReq, funcName, lenDisplayName, valueDisplayName, postProcSpec)

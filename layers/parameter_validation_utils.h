@@ -324,12 +324,12 @@ bool validate_struct_type(debug_report_data *report_data, const char *apiName, c
 template <typename T>
 bool validate_struct_type_array(debug_report_data *report_data, const char *apiName, const ParameterName &countName,
                                 const ParameterName &arrayName, const char *sTypeName, uint32_t count, const T *array,
-                                VkStructureType sType, bool countRequired, bool arrayRequired) {
+                                VkStructureType sType, bool countRequired, bool arrayRequired, UNIQUE_VALIDATION_ERROR_CODE vuid) {
     bool skip_call = false;
 
     if ((count == 0) || (array == NULL)) {
         skip_call |= validate_array(report_data, apiName, countName, arrayName, count, array, countRequired, arrayRequired,
-                                    VALIDATION_ERROR_UNDEFINED, VALIDATION_ERROR_UNDEFINED);
+                                    VALIDATION_ERROR_UNDEFINED, vuid);
     } else {
         // Verify that all structs in the array have the correct type
         for (uint32_t i = 0; i < count; ++i) {
@@ -368,7 +368,8 @@ bool validate_struct_type_array(debug_report_data *report_data, const char *apiN
 template <typename T>
 bool validate_struct_type_array(debug_report_data *report_data, const char *apiName, const ParameterName &countName,
                                 const ParameterName &arrayName, const char *sTypeName, uint32_t *count, const T *array,
-                                VkStructureType sType, bool countPtrRequired, bool countValueRequired, bool arrayRequired) {
+                                VkStructureType sType, bool countPtrRequired, bool countValueRequired, bool arrayRequired,
+                                UNIQUE_VALIDATION_ERROR_CODE vuid) {
     bool skip_call = false;
 
     if (count == NULL) {
@@ -379,7 +380,7 @@ bool validate_struct_type_array(debug_report_data *report_data, const char *apiN
         }
     } else {
         skip_call |= validate_struct_type_array(report_data, apiName, countName, arrayName, sTypeName, (*count), array, sType,
-                                                countValueRequired, arrayRequired);
+                                                countValueRequired, arrayRequired, vuid);
     }
 
     return skip_call;
