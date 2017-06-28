@@ -724,6 +724,8 @@ class ParamCheckerOutputGenerator(OutputGenerator):
     #
     # Get VUID identifier from implicit VUID tag
     def GetVuid(self, vuid_string):
+        if '->' in vuid_string:
+           return "VALIDATION_ERROR_UNDEFINED"
         vuid_num = self.IdToHex(convertVUID(vuid_string))
         if vuid_num in self.valid_vuids:
             vuid = "VALIDATION_ERROR_%s" % vuid_num
@@ -798,24 +800,30 @@ class ParamCheckerOutputGenerator(OutputGenerator):
         return checkExpr
     #
     # Generate the pointer check string
-    def makePointerCheck(self, prefix, value, lenValue, valueRequired, lenValueRequired, lenPtrRequired, funcPrintName, lenPrintName, valuePrintName, postProcSpec):
+    def makePointerCheck(self, prefix, value, lenValue, valueRequired, lenValueRequired, lenPtrRequired, funcPrintName, lenPrintName, valuePrintName, postProcSpec, struct_type_name):
         checkExpr = []
         if lenValue:
+            vuid_tag_name = struct_type_name if struct_type_name is not None else funcPrintName
+            count_required_vuid = self.GetVuid("VUID-%s-%s-arraylength" % (vuid_tag_name, lenValue.name))
+            array_required_vuid = self.GetVuid("VUID-%s-%s-parameter" % (vuid_tag_name, value.name))
             # This is an array with a pointer to a count value
             if lenValue.ispointer:
                 # If count and array parameters are optional, there will be no validation
                 if valueRequired == 'true' or lenPtrRequired == 'true' or lenValueRequired == 'true':
                     # When the length parameter is a pointer, there is an extra Boolean parameter in the function call to indicate if it is required
-                    checkExpr.append('skipCall |= validate_array(layer_data->report_data, "{}", {ppp}"{ldn}"{pps}, {ppp}"{dn}"{pps}, {pf}{ln}, {pf}{vn}, {}, {}, {});\n'.format(
-                        funcPrintName, lenPtrRequired, lenValueRequired, valueRequired, ln=lenValue.name, ldn=lenPrintName, dn=valuePrintName, vn=value.name, pf=prefix, **postProcSpec))
+                    checkExpr.append('skipCall |= validate_array(layer_data->report_data, "{}", {ppp}"{ldn}"{pps}, {ppp}"{dn}"{pps}, {pf}{ln}, {pf}{vn}, {}, {}, {}, {}, {});\n'.format(
+                        funcPrintName, lenPtrRequired, lenValueRequired, valueRequired, count_required_vuid, array_required_vuid, ln=lenValue.name, ldn=lenPrintName, dn=valuePrintName, vn=value.name, pf=prefix, **postProcSpec))
             # This is an array with an integer count value
             else:
                 # If count and array parameters are optional, there will be no validation
                 if valueRequired == 'true' or lenValueRequired == 'true':
-                    # Arrays of strings receive special processing
-                    validationFuncName = 'validate_array' if value.type != 'char' else 'validate_string_array'
-                    checkExpr.append('skipCall |= {}(layer_data->report_data, "{}", {ppp}"{ldn}"{pps}, {ppp}"{dn}"{pps}, {pf}{ln}, {pf}{vn}, {}, {});\n'.format(
-                        validationFuncName, funcPrintName, lenValueRequired, valueRequired, ln=lenValue.name, ldn=lenPrintName, dn=valuePrintName, vn=value.name, pf=prefix, **postProcSpec))
+                    if value.type != 'char':
+                        checkExpr.append('skipCall |= validate_array(layer_data->report_data, "{}", {ppp}"{ldn}"{pps}, {ppp}"{dn}"{pps}, {pf}{ln}, {pf}{vn}, {}, {}, {}, {});\n'.format(
+                            funcPrintName, lenValueRequired, valueRequired, count_required_vuid, array_required_vuid, ln=lenValue.name, ldn=lenPrintName, dn=valuePrintName, vn=value.name, pf=prefix, **postProcSpec))
+                    else:
+                        # Arrays of strings receive special processing
+                        checkExpr.append('skipCall |= validate_string_array(layer_data->report_data, "{}", {ppp}"{ldn}"{pps}, {ppp}"{dn}"{pps}, {pf}{ln}, {pf}{vn}, {}, {}, {}, {});\n'.format(
+                            funcPrintName, lenValueRequired, valueRequired, count_required_vuid, array_required_vuid, ln=lenValue.name, ldn=lenPrintName, dn=valuePrintName, vn=value.name, pf=prefix, **postProcSpec))
             if checkExpr:
                 if lenValue and ('->' in lenValue.name):
                     # Add checks to ensure the validation call does not dereference a NULL pointer to obtain the count
@@ -994,7 +1002,7 @@ class ParamCheckerOutputGenerator(OutputGenerator):
                         if not structTypeName in ['VkDeviceCreateInfo', 'VkInstanceCreateInfo']:
                             usedLines += self.makeStructNextCheck(valuePrefix, value, funcName, valueDisplayName, postProcSpec, structTypeName)
                     else:
-                        usedLines += self.makePointerCheck(valuePrefix, value, lenParam, req, cvReq, cpReq, funcName, lenDisplayName, valueDisplayName, postProcSpec)
+                        usedLines += self.makePointerCheck(valuePrefix, value, lenParam, req, cvReq, cpReq, funcName, lenDisplayName, valueDisplayName, postProcSpec, structTypeName)
                     #
                     # If this is a pointer to a struct (input), see if it contains members that need to be checked
                     if value.type in self.validatedStructs and value.isconst:

@@ -2130,7 +2130,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateGraphicsPipelines(VkDevice device, VkPipeli
                         ParameterName("pCreateInfos[%i].pMultisampleState->rasterizationSamples", ParameterName::IndexVector{i}),
                         ParameterName("pCreateInfos[%i].pMultisampleState->pSampleMask", ParameterName::IndexVector{i}),
                         pCreateInfos[i].pMultisampleState->rasterizationSamples, pCreateInfos[i].pMultisampleState->pSampleMask,
-                        true, false);
+                        true, false, VALIDATION_ERROR_UNDEFINED, VALIDATION_ERROR_UNDEFINED);
 
                     skip |= validate_bool32(
                         report_data, "vkCreateGraphicsPipelines",
@@ -2268,7 +2268,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateGraphicsPipelines(VkDevice device, VkPipeli
                         ParameterName("pCreateInfos[%i].pColorBlendState->attachmentCount", ParameterName::IndexVector{i}),
                         ParameterName("pCreateInfos[%i].pColorBlendState->pAttachments", ParameterName::IndexVector{i}),
                         pCreateInfos[i].pColorBlendState->attachmentCount, pCreateInfos[i].pColorBlendState->pAttachments, false,
-                        true);
+                        true, VALIDATION_ERROR_UNDEFINED, VALIDATION_ERROR_UNDEFINED);
 
                     if (pCreateInfos[i].pColorBlendState->pAttachments != NULL) {
                         for (uint32_t attachmentIndex = 0; attachmentIndex < pCreateInfos[i].pColorBlendState->attachmentCount;
@@ -2662,7 +2662,7 @@ VKAPI_ATTR VkResult VKAPI_CALL FreeDescriptorSets(VkDevice device, VkDescriptorP
     // This is an array of handles, where the elements are allowed to be VK_NULL_HANDLE, and does not require any validation beyond
     // validate_array()
     skip |= validate_array(report_data, "vkFreeDescriptorSets", "descriptorSetCount", "pDescriptorSets", descriptorSetCount,
-                           pDescriptorSets, true, true);
+                           pDescriptorSets, true, true, VALIDATION_ERROR_UNDEFINED, VALIDATION_ERROR_UNDEFINED);
 
     if (!skip) {
         result = device_data->dispatch_table.FreeDescriptorSets(device, descriptorPool, descriptorSetCount, pDescriptorSets);
@@ -3009,7 +3009,7 @@ VKAPI_ATTR void VKAPI_CALL FreeCommandBuffers(VkDevice device, VkCommandPool com
     // This is an array of handles, where the elements are allowed to be VK_NULL_HANDLE, and does not require any validation beyond
     // validate_array()
     skip |= validate_array(report_data, "vkFreeCommandBuffers", "commandBufferCount", "pCommandBuffers", commandBufferCount,
-                           pCommandBuffers, true, true);
+                           pCommandBuffers, true, true, VALIDATION_ERROR_UNDEFINED, VALIDATION_ERROR_UNDEFINED);
 
     if (!skip) {
         device_data->dispatch_table.FreeCommandBuffers(device, commandPool, commandBufferCount, pCommandBuffers);
@@ -3124,8 +3124,8 @@ VKAPI_ATTR void VKAPI_CALL CmdBindPipeline(VkCommandBuffer commandBuffer, VkPipe
 static bool preCmdSetViewport(layer_data *my_data, uint32_t first_viewport, uint32_t viewport_count, const VkViewport *viewports) {
     debug_report_data *report_data = my_data->report_data;
 
-    bool skip =
-        validate_array(report_data, "vkCmdSetViewport", "viewportCount", "pViewports", viewport_count, viewports, true, true);
+    bool skip = validate_array(report_data, "vkCmdSetViewport", "viewportCount", "pViewports", viewport_count, viewports, true,
+                               true, VALIDATION_ERROR_UNDEFINED, VALIDATION_ERROR_UNDEFINED);
 
     if (viewport_count > 0 && viewports != nullptr) {
         const VkPhysicalDeviceLimits &limits = my_data->device_limits;
@@ -4164,12 +4164,12 @@ VKAPI_ATTR VkResult VKAPI_CALL QueuePresentKHR(VkQueue queue, const VkPresentInf
                                               present_regions->pNext, 0, NULL, GeneratedHeaderVersion, VALIDATION_ERROR_1121c40d);
                 skip |= validate_array(my_data->report_data, "QueuePresentKHR", "pCreateInfo->pNext->swapchainCount",
                                        "pCreateInfo->pNext->pRegions", present_regions->swapchainCount, present_regions->pRegions,
-                                       true, false);
+                                       true, false, VALIDATION_ERROR_UNDEFINED, VALIDATION_ERROR_UNDEFINED);
                 for (uint32_t i = 0; i < present_regions->swapchainCount; ++i) {
-                    skip |=
-                        validate_array(my_data->report_data, "QueuePresentKHR", "pCreateInfo->pNext->pRegions[].rectangleCount",
-                                       "pCreateInfo->pNext->pRegions[].pRectangles", present_regions->pRegions[i].rectangleCount,
-                                       present_regions->pRegions[i].pRectangles, true, false);
+                    skip |= validate_array(my_data->report_data, "QueuePresentKHR", "pCreateInfo->pNext->pRegions[].rectangleCount",
+                                           "pCreateInfo->pNext->pRegions[].pRectangles",
+                                           present_regions->pRegions[i].rectangleCount, present_regions->pRegions[i].pRectangles,
+                                           true, false, VALIDATION_ERROR_UNDEFINED, VALIDATION_ERROR_UNDEFINED);
                 }
             }
             pnext = (std_header *)pnext->pNext;
