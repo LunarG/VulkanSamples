@@ -835,6 +835,14 @@ class ParamCheckerOutputGenerator(OutputGenerator):
             # Function pointers need a reinterpret_cast to void*
             ptr_required_vuid = self.GetVuid("VUID-%s-%s-parameter" % (vuid_tag_name, value.name))
             if value.type[:4] == 'PFN_':
+                allocator_dict = {'pfnAllocation': '002004f0',
+                                  'pfnReallocation': '002004f2',
+                                  'pfnFree': '002004f4',
+                                  'pfnInternalAllocation': '002004f6'
+                                 }
+                vuid = allocator_dict.get(value.name)
+                if vuid is not None:
+                    ptr_required_vuid = 'VALIDATION_ERROR_%s' % vuid
                 checkExpr.append('skipCall |= validate_required_pointer(layer_data->report_data, "{}", {ppp}"{}"{pps}, reinterpret_cast<const void*>({}{}), {});\n'.format(funcPrintName, valuePrintName, prefix, value.name, ptr_required_vuid, **postProcSpec))
             else:
                 checkExpr.append('skipCall |= validate_required_pointer(layer_data->report_data, "{}", {ppp}"{}"{pps}, {}{}, {});\n'.format(funcPrintName, valuePrintName, prefix, value.name, ptr_required_vuid, **postProcSpec))
