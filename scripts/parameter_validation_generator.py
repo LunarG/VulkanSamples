@@ -1029,7 +1029,8 @@ class ParamCheckerOutputGenerator(OutputGenerator):
                     elif value.type in self.flags:
                         flagBitsName = value.type.replace('Flags', 'FlagBits')
                         if not flagBitsName in self.flagBits:
-                            usedLines.append('skipCall |= validate_reserved_flags(layer_data->report_data, "{}", {ppp}"{}"{pps}, {pf}{});\n'.format(funcName, valueDisplayName, value.name, pf=valuePrefix, **postProcSpec))
+                            vuid = self.GetVuid("VUID-%s-%s-zerobitmask" % (vuid_name_tag, value.name))
+                            usedLines.append('skipCall |= validate_reserved_flags(layer_data->report_data, "{}", {ppp}"{}"{pps}, {pf}{}, {});\n'.format(funcName, valueDisplayName, value.name, vuid, pf=valuePrefix, **postProcSpec))
                         else:
                             if value.isoptional:
                                 flagsRequired = 'false'

@@ -711,13 +711,14 @@ static bool validate_ranged_enum_array(debug_report_data *report_data, const cha
 * @return Boolean value indicating that the call should be skipped.
 */
 static bool validate_reserved_flags(debug_report_data *report_data, const char *api_name, const ParameterName &parameter_name,
-                                    VkFlags value) {
+                                    VkFlags value, UNIQUE_VALIDATION_ERROR_CODE vuid) {
     bool skip_call = false;
 
     if (value != 0) {
         skip_call |=
             log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
-                    RESERVED_PARAMETER, LayerName, "%s: parameter %s must be 0", api_name, parameter_name.get_name().c_str());
+                    vuid, LayerName, "%s: parameter %s must be 0. %s", api_name, parameter_name.get_name().c_str(),
+                    validation_error_map[vuid]);
     }
 
     return skip_call;

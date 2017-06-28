@@ -1957,7 +1957,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateGraphicsPipelines(VkDevice device, VkPipeli
                         skip |= validate_reserved_flags(
                             report_data, "vkCreateGraphicsPipelines",
                             ParameterName("pCreateInfos[%i].pTessellationState->flags", ParameterName::IndexVector{i}),
-                            pCreateInfos[i].pTessellationState->flags);
+                            pCreateInfos[i].pTessellationState->flags, VALIDATION_ERROR_10809005);
 
                         if (pCreateInfos[i].pTessellationState->sType !=
                             VK_STRUCTURE_TYPE_PIPELINE_TESSELLATION_STATE_CREATE_INFO) {
@@ -2012,7 +2012,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateGraphicsPipelines(VkDevice device, VkPipeli
                     skip |= validate_reserved_flags(
                         report_data, "vkCreateGraphicsPipelines",
                         ParameterName("pCreateInfos[%i].pViewportState->flags", ParameterName::IndexVector{i}),
-                        pCreateInfos[i].pViewportState->flags);
+                        pCreateInfos[i].pViewportState->flags, VALIDATION_ERROR_10c09005);
 
                     if (pCreateInfos[i].pViewportState->sType != VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO) {
                         skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0,
@@ -2118,7 +2118,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateGraphicsPipelines(VkDevice device, VkPipeli
                     skip |= validate_reserved_flags(
                         report_data, "vkCreateGraphicsPipelines",
                         ParameterName("pCreateInfos[%i].pMultisampleState->flags", ParameterName::IndexVector{i}),
-                        pCreateInfos[i].pMultisampleState->flags);
+                        pCreateInfos[i].pMultisampleState->flags, VALIDATION_ERROR_10009005);
 
                     skip |= validate_bool32(
                         report_data, "vkCreateGraphicsPipelines",
@@ -2161,7 +2161,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateGraphicsPipelines(VkDevice device, VkPipeli
                     skip |= validate_reserved_flags(
                         report_data, "vkCreateGraphicsPipelines",
                         ParameterName("pCreateInfos[%i].pDepthStencilState->flags", ParameterName::IndexVector{i}),
-                        pCreateInfos[i].pDepthStencilState->flags);
+                        pCreateInfos[i].pDepthStencilState->flags, VALIDATION_ERROR_0f609005);
 
                     skip |= validate_bool32(
                         report_data, "vkCreateGraphicsPipelines",
@@ -2256,7 +2256,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateGraphicsPipelines(VkDevice device, VkPipeli
                     skip |= validate_reserved_flags(
                         report_data, "vkCreateGraphicsPipelines",
                         ParameterName("pCreateInfos[%i].pColorBlendState->flags", ParameterName::IndexVector{i}),
-                        pCreateInfos[i].pColorBlendState->flags);
+                        pCreateInfos[i].pColorBlendState->flags, VALIDATION_ERROR_0f409005);
 
                     skip |= validate_bool32(
                         report_data, "vkCreateGraphicsPipelines",
