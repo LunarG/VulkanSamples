@@ -19,6 +19,7 @@
  * Author: David Pinedo <david@lunarg.com>
  * Author: Mark Lobodzinski <mark@lunarg.com>
  * Author: Rene Lindsay <rene@lunarg.com>
+ * Author: Jeremy Kniager <jeremyk@lunarg.com>
  */
 
 #ifdef __GNUC__
@@ -93,6 +94,207 @@ static int ConsoleIsExclusive(void) {
 #define MAX_QUEUE_TYPES 5
 #define APP_SHORT_NAME "vulkaninfo"
 
+static const VkFormat format_check_list[] = {VK_FORMAT_UNDEFINED,
+                                             VK_FORMAT_R4G4_UNORM_PACK8,
+                                             VK_FORMAT_R4G4B4A4_UNORM_PACK16,
+                                             VK_FORMAT_B4G4R4A4_UNORM_PACK16,
+                                             VK_FORMAT_R5G6B5_UNORM_PACK16,
+                                             VK_FORMAT_B5G6R5_UNORM_PACK16,
+                                             VK_FORMAT_R5G5B5A1_UNORM_PACK16,
+                                             VK_FORMAT_B5G5R5A1_UNORM_PACK16,
+                                             VK_FORMAT_A1R5G5B5_UNORM_PACK16,
+                                             VK_FORMAT_R8_UNORM,
+                                             VK_FORMAT_R8_SNORM,
+                                             VK_FORMAT_R8_USCALED,
+                                             VK_FORMAT_R8_SSCALED,
+                                             VK_FORMAT_R8_UINT,
+                                             VK_FORMAT_R8_SINT,
+                                             VK_FORMAT_R8_SRGB,
+                                             VK_FORMAT_R8G8_UNORM,
+                                             VK_FORMAT_R8G8_SNORM,
+                                             VK_FORMAT_R8G8_USCALED,
+                                             VK_FORMAT_R8G8_SSCALED,
+                                             VK_FORMAT_R8G8_UINT,
+                                             VK_FORMAT_R8G8_SINT,
+                                             VK_FORMAT_R8G8_SRGB,
+                                             VK_FORMAT_R8G8B8_UNORM,
+                                             VK_FORMAT_R8G8B8_SNORM,
+                                             VK_FORMAT_R8G8B8_USCALED,
+                                             VK_FORMAT_R8G8B8_SSCALED,
+                                             VK_FORMAT_R8G8B8_UINT,
+                                             VK_FORMAT_R8G8B8_SINT,
+                                             VK_FORMAT_R8G8B8_SRGB,
+                                             VK_FORMAT_B8G8R8_UNORM,
+                                             VK_FORMAT_B8G8R8_SNORM,
+                                             VK_FORMAT_B8G8R8_USCALED,
+                                             VK_FORMAT_B8G8R8_SSCALED,
+                                             VK_FORMAT_B8G8R8_UINT,
+                                             VK_FORMAT_B8G8R8_SINT,
+                                             VK_FORMAT_B8G8R8_SRGB,
+                                             VK_FORMAT_R8G8B8A8_UNORM,
+                                             VK_FORMAT_R8G8B8A8_SNORM,
+                                             VK_FORMAT_R8G8B8A8_USCALED,
+                                             VK_FORMAT_R8G8B8A8_SSCALED,
+                                             VK_FORMAT_R8G8B8A8_UINT,
+                                             VK_FORMAT_R8G8B8A8_SINT,
+                                             VK_FORMAT_R8G8B8A8_SRGB,
+                                             VK_FORMAT_B8G8R8A8_UNORM,
+                                             VK_FORMAT_B8G8R8A8_SNORM,
+                                             VK_FORMAT_B8G8R8A8_USCALED,
+                                             VK_FORMAT_B8G8R8A8_SSCALED,
+                                             VK_FORMAT_B8G8R8A8_UINT,
+                                             VK_FORMAT_B8G8R8A8_SINT,
+                                             VK_FORMAT_B8G8R8A8_SRGB,
+                                             VK_FORMAT_A8B8G8R8_UNORM_PACK32,
+                                             VK_FORMAT_A8B8G8R8_SNORM_PACK32,
+                                             VK_FORMAT_A8B8G8R8_USCALED_PACK32,
+                                             VK_FORMAT_A8B8G8R8_SSCALED_PACK32,
+                                             VK_FORMAT_A8B8G8R8_UINT_PACK32,
+                                             VK_FORMAT_A8B8G8R8_SINT_PACK32,
+                                             VK_FORMAT_A8B8G8R8_SRGB_PACK32,
+                                             VK_FORMAT_A2R10G10B10_UNORM_PACK32,
+                                             VK_FORMAT_A2R10G10B10_SNORM_PACK32,
+                                             VK_FORMAT_A2R10G10B10_USCALED_PACK32,
+                                             VK_FORMAT_A2R10G10B10_SSCALED_PACK32,
+                                             VK_FORMAT_A2R10G10B10_UINT_PACK32,
+                                             VK_FORMAT_A2R10G10B10_SINT_PACK32,
+                                             VK_FORMAT_A2B10G10R10_UNORM_PACK32,
+                                             VK_FORMAT_A2B10G10R10_SNORM_PACK32,
+                                             VK_FORMAT_A2B10G10R10_USCALED_PACK32,
+                                             VK_FORMAT_A2B10G10R10_SSCALED_PACK32,
+                                             VK_FORMAT_A2B10G10R10_UINT_PACK32,
+                                             VK_FORMAT_A2B10G10R10_SINT_PACK32,
+                                             VK_FORMAT_R16_UNORM,
+                                             VK_FORMAT_R16_SNORM,
+                                             VK_FORMAT_R16_USCALED,
+                                             VK_FORMAT_R16_SSCALED,
+                                             VK_FORMAT_R16_UINT,
+                                             VK_FORMAT_R16_SINT,
+                                             VK_FORMAT_R16_SFLOAT,
+                                             VK_FORMAT_R16G16_UNORM,
+                                             VK_FORMAT_R16G16_SNORM,
+                                             VK_FORMAT_R16G16_USCALED,
+                                             VK_FORMAT_R16G16_SSCALED,
+                                             VK_FORMAT_R16G16_UINT,
+                                             VK_FORMAT_R16G16_SINT,
+                                             VK_FORMAT_R16G16_SFLOAT,
+                                             VK_FORMAT_R16G16B16_UNORM,
+                                             VK_FORMAT_R16G16B16_SNORM,
+                                             VK_FORMAT_R16G16B16_USCALED,
+                                             VK_FORMAT_R16G16B16_SSCALED,
+                                             VK_FORMAT_R16G16B16_UINT,
+                                             VK_FORMAT_R16G16B16_SINT,
+                                             VK_FORMAT_R16G16B16_SFLOAT,
+                                             VK_FORMAT_R16G16B16A16_UNORM,
+                                             VK_FORMAT_R16G16B16A16_SNORM,
+                                             VK_FORMAT_R16G16B16A16_USCALED,
+                                             VK_FORMAT_R16G16B16A16_SSCALED,
+                                             VK_FORMAT_R16G16B16A16_UINT,
+                                             VK_FORMAT_R16G16B16A16_SINT,
+                                             VK_FORMAT_R16G16B16A16_SFLOAT,
+                                             VK_FORMAT_R32_UINT,
+                                             VK_FORMAT_R32_SINT,
+                                             VK_FORMAT_R32_SFLOAT,
+                                             VK_FORMAT_R32G32_UINT,
+                                             VK_FORMAT_R32G32_SINT,
+                                             VK_FORMAT_R32G32_SFLOAT,
+                                             VK_FORMAT_R32G32B32_UINT,
+                                             VK_FORMAT_R32G32B32_SINT,
+                                             VK_FORMAT_R32G32B32_SFLOAT,
+                                             VK_FORMAT_R32G32B32A32_UINT,
+                                             VK_FORMAT_R32G32B32A32_SINT,
+                                             VK_FORMAT_R32G32B32A32_SFLOAT,
+                                             VK_FORMAT_R64_UINT,
+                                             VK_FORMAT_R64_SINT,
+                                             VK_FORMAT_R64_SFLOAT,
+                                             VK_FORMAT_R64G64_UINT,
+                                             VK_FORMAT_R64G64_SINT,
+                                             VK_FORMAT_R64G64_SFLOAT,
+                                             VK_FORMAT_R64G64B64_UINT,
+                                             VK_FORMAT_R64G64B64_SINT,
+                                             VK_FORMAT_R64G64B64_SFLOAT,
+                                             VK_FORMAT_R64G64B64A64_UINT,
+                                             VK_FORMAT_R64G64B64A64_SINT,
+                                             VK_FORMAT_R64G64B64A64_SFLOAT,
+                                             VK_FORMAT_B10G11R11_UFLOAT_PACK32,
+                                             VK_FORMAT_E5B9G9R9_UFLOAT_PACK32,
+                                             VK_FORMAT_D16_UNORM,
+                                             VK_FORMAT_X8_D24_UNORM_PACK32,
+                                             VK_FORMAT_D32_SFLOAT,
+                                             VK_FORMAT_S8_UINT,
+                                             VK_FORMAT_D16_UNORM_S8_UINT,
+                                             VK_FORMAT_D24_UNORM_S8_UINT,
+                                             VK_FORMAT_D32_SFLOAT_S8_UINT,
+                                             VK_FORMAT_BC1_RGB_UNORM_BLOCK,
+                                             VK_FORMAT_BC1_RGB_SRGB_BLOCK,
+                                             VK_FORMAT_BC1_RGBA_UNORM_BLOCK,
+                                             VK_FORMAT_BC1_RGBA_SRGB_BLOCK,
+                                             VK_FORMAT_BC2_UNORM_BLOCK,
+                                             VK_FORMAT_BC2_SRGB_BLOCK,
+                                             VK_FORMAT_BC3_UNORM_BLOCK,
+                                             VK_FORMAT_BC3_SRGB_BLOCK,
+                                             VK_FORMAT_BC4_UNORM_BLOCK,
+                                             VK_FORMAT_BC4_SNORM_BLOCK,
+                                             VK_FORMAT_BC5_UNORM_BLOCK,
+                                             VK_FORMAT_BC5_SNORM_BLOCK,
+                                             VK_FORMAT_BC6H_UFLOAT_BLOCK,
+                                             VK_FORMAT_BC6H_SFLOAT_BLOCK,
+                                             VK_FORMAT_BC7_UNORM_BLOCK,
+                                             VK_FORMAT_BC7_SRGB_BLOCK,
+                                             VK_FORMAT_ETC2_R8G8B8_UNORM_BLOCK,
+                                             VK_FORMAT_ETC2_R8G8B8_SRGB_BLOCK,
+                                             VK_FORMAT_ETC2_R8G8B8A1_UNORM_BLOCK,
+                                             VK_FORMAT_ETC2_R8G8B8A1_SRGB_BLOCK,
+                                             VK_FORMAT_ETC2_R8G8B8A8_UNORM_BLOCK,
+                                             VK_FORMAT_ETC2_R8G8B8A8_SRGB_BLOCK,
+                                             VK_FORMAT_EAC_R11_UNORM_BLOCK,
+                                             VK_FORMAT_EAC_R11_SNORM_BLOCK,
+                                             VK_FORMAT_EAC_R11G11_UNORM_BLOCK,
+                                             VK_FORMAT_EAC_R11G11_SNORM_BLOCK,
+                                             VK_FORMAT_ASTC_4x4_UNORM_BLOCK,
+                                             VK_FORMAT_ASTC_4x4_SRGB_BLOCK,
+                                             VK_FORMAT_ASTC_5x4_UNORM_BLOCK,
+                                             VK_FORMAT_ASTC_5x4_SRGB_BLOCK,
+                                             VK_FORMAT_ASTC_5x5_UNORM_BLOCK,
+                                             VK_FORMAT_ASTC_5x5_SRGB_BLOCK,
+                                             VK_FORMAT_ASTC_6x5_UNORM_BLOCK,
+                                             VK_FORMAT_ASTC_6x5_SRGB_BLOCK,
+                                             VK_FORMAT_ASTC_6x6_UNORM_BLOCK,
+                                             VK_FORMAT_ASTC_6x6_SRGB_BLOCK,
+                                             VK_FORMAT_ASTC_8x5_UNORM_BLOCK,
+                                             VK_FORMAT_ASTC_8x5_SRGB_BLOCK,
+                                             VK_FORMAT_ASTC_8x6_UNORM_BLOCK,
+                                             VK_FORMAT_ASTC_8x6_SRGB_BLOCK,
+                                             VK_FORMAT_ASTC_8x8_UNORM_BLOCK,
+                                             VK_FORMAT_ASTC_8x8_SRGB_BLOCK,
+                                             VK_FORMAT_ASTC_10x5_UNORM_BLOCK,
+                                             VK_FORMAT_ASTC_10x5_SRGB_BLOCK,
+                                             VK_FORMAT_ASTC_10x6_UNORM_BLOCK,
+                                             VK_FORMAT_ASTC_10x6_SRGB_BLOCK,
+                                             VK_FORMAT_ASTC_10x8_UNORM_BLOCK,
+                                             VK_FORMAT_ASTC_10x8_SRGB_BLOCK,
+                                             VK_FORMAT_ASTC_10x10_UNORM_BLOCK,
+                                             VK_FORMAT_ASTC_10x10_SRGB_BLOCK,
+                                             VK_FORMAT_ASTC_12x10_UNORM_BLOCK,
+                                             VK_FORMAT_ASTC_12x10_SRGB_BLOCK,
+                                             VK_FORMAT_ASTC_12x12_UNORM_BLOCK,
+                                             VK_FORMAT_ASTC_12x12_SRGB_BLOCK,
+                                             VK_FORMAT_PVRTC1_2BPP_UNORM_BLOCK_IMG,
+                                             VK_FORMAT_PVRTC1_4BPP_UNORM_BLOCK_IMG,
+                                             VK_FORMAT_PVRTC2_2BPP_UNORM_BLOCK_IMG,
+                                             VK_FORMAT_PVRTC2_4BPP_UNORM_BLOCK_IMG,
+                                             VK_FORMAT_PVRTC1_2BPP_SRGB_BLOCK_IMG,
+                                             VK_FORMAT_PVRTC1_4BPP_SRGB_BLOCK_IMG,
+                                             VK_FORMAT_PVRTC2_2BPP_SRGB_BLOCK_IMG,
+                                             VK_FORMAT_PVRTC2_4BPP_SRGB_BLOCK_IMG};
+
+static const uint32_t format_check_list_count = ARRAY_SIZE(format_check_list);
+
+struct VkStructureHeader {
+    VkStructureType sType;
+    void *pNext;
+};
+
 struct AppGpu;
 
 struct AppDev {
@@ -100,7 +302,8 @@ struct AppDev {
 
     VkDevice obj;
 
-    VkFormatProperties format_props[VK_FORMAT_RANGE_SIZE];
+    VkFormatProperties format_props[ARRAY_SIZE(format_check_list)];
+    VkFormatProperties2KHR format_props2[ARRAY_SIZE(format_check_list)];
 };
 
 struct LayerExtensionList {
@@ -116,10 +319,25 @@ struct AppInstance {
     uint32_t global_extension_count;
     VkExtensionProperties *global_extensions;  // Instance Extensions
 
+    const char **inst_extensions;
+    uint32_t inst_extensions_count;
+
     PFN_vkGetPhysicalDeviceSurfaceSupportKHR vkGetPhysicalDeviceSurfaceSupportKHR;
     PFN_vkGetPhysicalDeviceSurfaceCapabilitiesKHR vkGetPhysicalDeviceSurfaceCapabilitiesKHR;
     PFN_vkGetPhysicalDeviceSurfaceFormatsKHR vkGetPhysicalDeviceSurfaceFormatsKHR;
     PFN_vkGetPhysicalDeviceSurfacePresentModesKHR vkGetPhysicalDeviceSurfacePresentModesKHR;
+    PFN_vkGetPhysicalDeviceProperties2KHR vkGetPhysicalDeviceProperties2KHR;
+    PFN_vkGetPhysicalDeviceFormatProperties2KHR vkGetPhysicalDeviceFormatProperties2KHR;
+    PFN_vkGetPhysicalDeviceQueueFamilyProperties2KHR vkGetPhysicalDeviceQueueFamilyProperties2KHR;
+    PFN_vkGetPhysicalDeviceFeatures2KHR vkGetPhysicalDeviceFeatures2KHR;
+    PFN_vkGetPhysicalDeviceMemoryProperties2KHR vkGetPhysicalDeviceMemoryProperties2KHR;
+    PFN_vkGetPhysicalDeviceSurfaceCapabilities2KHR vkGetPhysicalDeviceSurfaceCapabilities2KHR;
+    PFN_vkGetPhysicalDeviceSurfaceCapabilities2EXT vkGetPhysicalDeviceSurfaceCapabilities2EXT;
+
+    VkSurfaceCapabilitiesKHR surface_capabilities;
+    VkSurfaceCapabilities2KHR surface_capabilities2;
+    VkSharedPresentSurfaceCapabilitiesKHR shared_surface_capabilities;
+    VkSurfaceCapabilities2EXT surface_capabilities2_ext;
 
     VkSurfaceKHR surface;
     int width, height;
@@ -144,13 +362,20 @@ struct AppGpu {
     VkPhysicalDevice obj;
 
     VkPhysicalDeviceProperties props;
+    VkPhysicalDeviceProperties2KHR props2;
 
     uint32_t queue_count;
     VkQueueFamilyProperties *queue_props;
+    VkQueueFamilyProperties2KHR *queue_props2;
     VkDeviceQueueCreateInfo *queue_reqs;
 
+    struct AppInstance *inst;
+
     VkPhysicalDeviceMemoryProperties memory_props;
+    VkPhysicalDeviceMemoryProperties2KHR memory_props2;
+
     VkPhysicalDeviceFeatures features;
+    VkPhysicalDeviceFeatures2KHR features2;
     VkPhysicalDevice limits;
 
     uint32_t device_extension_count;
@@ -437,13 +662,23 @@ static const char *VkPresentModeString(VkPresentModeKHR mode) {
 }
 #endif
 
+static bool CheckExtensionEnabled(const char *extension_to_check, const char **extension_list, uint32_t extension_count) {
+    for (uint32_t i = 0; i < extension_count; i++) {
+        if (!strcmp(extension_to_check, extension_list[i])) return true;
+    }
+    return false;
+}
+
 static void AppDevInitFormats(struct AppDev *dev) {
-    VkFormat f;
+    for (uint32_t i = 0; i < format_check_list_count; i++) {
+        vkGetPhysicalDeviceFormatProperties(dev->gpu->obj, format_check_list[i], &dev->format_props[i]);
 
-    for (f = 0; f < VK_FORMAT_RANGE_SIZE; f++) {
-        const VkFormat fmt = f;
-
-        vkGetPhysicalDeviceFormatProperties(dev->gpu->obj, fmt, &dev->format_props[f]);
+        if (CheckExtensionEnabled(VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME, dev->gpu->inst->inst_extensions,
+                                  dev->gpu->inst->inst_extensions_count)) {
+            dev->format_props2[i].sType = VK_STRUCTURE_TYPE_FORMAT_PROPERTIES_2_KHR;
+            dev->format_props2[i].pNext = NULL;
+            dev->gpu->inst->vkGetPhysicalDeviceFormatProperties2KHR(dev->gpu->obj, format_check_list[i], &dev->format_props2[i]);
+        }
     }
 }
 
@@ -591,50 +826,38 @@ static void AppCreateInstance(struct AppInstance *inst) {
     AppGetInstanceExtensions(inst);
 
 //---Build a list of extensions to load---
-#define MAX_EXTENSIONS 4
-    uint32_t i = 0;
-    uint32_t ext_count = 0;
-    const char *ext_names[MAX_EXTENSIONS];  // array of string pointers to
-                                            // extension names
-    for (i = 0; (i < inst->global_extension_count); i++) {
-        const char *found_name = inst->global_extensions[i].extensionName;
-        if (!strcmp(VK_KHR_SURFACE_EXTENSION_NAME, found_name)) {
-            ext_names[ext_count++] = VK_KHR_SURFACE_EXTENSION_NAME;
+
+    const char *info_instance_extensions[] = {VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME,
+                                              VK_EXT_DISPLAY_SURFACE_COUNTER_EXTENSION_NAME,
+                                              VK_KHR_SURFACE_EXTENSION_NAME,
+                                              VK_KHR_GET_SURFACE_CAPABILITIES_2_EXTENSION_NAME,
+                                              VK_KHR_SHARED_PRESENTABLE_IMAGE_EXTENSION_NAME,
+#ifdef VK_USE_PLATFORM_WIN32_KHR
+                                              VK_KHR_WIN32_SURFACE_EXTENSION_NAME
+#elif VK_USE_PLATFORM_XCB_KHR
+                                              VK_KHR_XCB_SURFACE_EXTENSION_NAME
+#elif VK_USE_PLATFORM_XLIB_KHR
+                                              VK_KHR_XLIB_SURFACE_EXTENSION_NAME
+#elif VK_USE_PLATFORM_WAYLAND_KHR
+                                              VK_KHR_WAYLAND_SURFACE_EXTENSION_NAME
+#elif VK_USE_PLATFORM_ANDROID_KHR
+                                              VK_KHR_ANDROID_SURFACE_EXTENSION_NAME
+#endif
+    };
+    uint32_t info_instance_extensions_count = ARRAY_SIZE(info_instance_extensions);
+    inst->inst_extensions = malloc(sizeof(char *) * ARRAY_SIZE(info_instance_extensions));
+    inst->inst_extensions_count = 0;
+
+    for (uint32_t k = 0; (k < info_instance_extensions_count); k++) {
+        for (uint32_t j = 0; (j < inst->global_extension_count); j++) {
+            const char *found_name = inst->global_extensions[j].extensionName;
+            if (!strcmp(info_instance_extensions[k], found_name)) {
+                inst->inst_extensions[inst->inst_extensions_count++] = info_instance_extensions[k];
+                break;
+            }
         }
     }
 
-#if defined(VK_USE_PLATFORM_XCB_KHR) || defined(VK_USE_PLATFORM_XLIB_KHR) || defined(VK_USE_PLATFORM_WAYLAND_KHR) || \
-    defined(VK_USE_PLATFORM_WIN32_KHR) || defined(VK_USE_PLATFORM_ANDROID_KHR)
-    if (ext_count)
-        for (i = 0; ((i < inst->global_extension_count) && (ext_count < MAX_EXTENSIONS)); i++) {
-            const char *found_name = inst->global_extensions[i].extensionName;
-#ifdef VK_USE_PLATFORM_WIN32_KHR
-            if (!strcmp(VK_KHR_WIN32_SURFACE_EXTENSION_NAME, found_name)) {
-                ext_names[ext_count++] = VK_KHR_WIN32_SURFACE_EXTENSION_NAME;
-            }
-#elif VK_USE_PLATFORM_XCB_KHR
-            if (!strcmp(VK_KHR_XCB_SURFACE_EXTENSION_NAME, found_name)) {
-                ext_names[ext_count++] = VK_KHR_XCB_SURFACE_EXTENSION_NAME;
-            }
-#elif VK_USE_PLATFORM_XLIB_KHR
-            if (!strcmp(VK_KHR_XLIB_SURFACE_EXTENSION_NAME, found_name)) {
-                ext_names[ext_count++] = VK_KHR_XLIB_SURFACE_EXTENSION_NAME;
-            }
-#elif VK_USE_PLATFORM_WAYLAND_KHR
-            if (!strcmp(VK_KHR_WAYLAND_SURFACE_EXTENSION_NAME, found_name)) {
-                ext_names[ext_count++] = VK_KHR_WAYLAND_SURFACE_EXTENSION_NAME;
-            }
-#elif VK_USE_PLATFORM_ANDROID_KHR
-            if (!strcmp(VK_KHR_ANDROID_SURFACE_EXTENSION_NAME, found_name)) {
-                ext_names[ext_count++] = VK_KHR_ANDROID_SURFACE_EXTENSION_NAME;
-            }
-#endif
-        }
-#endif
-    // If we don't find the KHR_SURFACE extension and at least one other
-    // device-specific extension,
-    // then give up on reporting presentable surface formats."
-    if (ext_count < 2) ext_count = 0;
     //----------------------------------------
 
     const VkApplicationInfo app_info = {
@@ -647,15 +870,13 @@ static void AppCreateInstance(struct AppInstance *inst) {
         .apiVersion = VK_API_VERSION_1_0,
     };
 
-    VkInstanceCreateInfo inst_info = {
-        .sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO,
-        .pNext = NULL,
-        .pApplicationInfo = &app_info,
-        .enabledLayerCount = 0,
-        .ppEnabledLayerNames = NULL,
-        .enabledExtensionCount = ext_count,
-        .ppEnabledExtensionNames = ext_names,
-    };
+    VkInstanceCreateInfo inst_info = {.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO,
+                                      .pNext = NULL,
+                                      .pApplicationInfo = &app_info,
+                                      .enabledLayerCount = 0,
+                                      .ppEnabledLayerNames = NULL,
+                                      .enabledExtensionCount = inst->inst_extensions_count,
+                                      .ppEnabledExtensionNames = inst->inst_extensions};
 
     VkDebugReportCallbackCreateInfoEXT dbg_info;
     memset(&dbg_info, 0, sizeof(dbg_info));
@@ -673,34 +894,60 @@ static void AppCreateInstance(struct AppInstance *inst) {
         ERR_EXIT(err);
     }
 
-    if (ext_count > 0) {
-//--Load Extensions--
-#define GET_INSTANCE_PROC_ADDR(ENTRYPOINT) \
-    { inst->ENTRYPOINT = (void *)vkGetInstanceProcAddr(inst->instance, #ENTRYPOINT); }
-        GET_INSTANCE_PROC_ADDR(vkGetPhysicalDeviceSurfaceSupportKHR)
-        GET_INSTANCE_PROC_ADDR(vkGetPhysicalDeviceSurfaceCapabilitiesKHR)
-        GET_INSTANCE_PROC_ADDR(vkGetPhysicalDeviceSurfaceFormatsKHR)
-        GET_INSTANCE_PROC_ADDR(vkGetPhysicalDeviceSurfacePresentModesKHR)
-#undef GET_INSTANCE_PROC_ADDR
-    }
+    inst->vkGetPhysicalDeviceSurfaceSupportKHR =
+        (PFN_vkGetPhysicalDeviceSurfaceSupportKHR)vkGetInstanceProcAddr(inst->instance, "vkGetPhysicalDeviceSurfaceSupportKHR");
+    inst->vkGetPhysicalDeviceSurfaceCapabilitiesKHR = (PFN_vkGetPhysicalDeviceSurfaceCapabilitiesKHR)vkGetInstanceProcAddr(
+        inst->instance, "vkGetPhysicalDeviceSurfaceCapabilitiesKHR");
+    inst->vkGetPhysicalDeviceSurfaceFormatsKHR =
+        (PFN_vkGetPhysicalDeviceSurfaceFormatsKHR)vkGetInstanceProcAddr(inst->instance, "vkGetPhysicalDeviceSurfaceFormatsKHR");
+    inst->vkGetPhysicalDeviceSurfacePresentModesKHR = (PFN_vkGetPhysicalDeviceSurfacePresentModesKHR)vkGetInstanceProcAddr(
+        inst->instance, "vkGetPhysicalDeviceSurfacePresentModesKHR");
+    inst->vkGetPhysicalDeviceProperties2KHR =
+        (PFN_vkGetPhysicalDeviceProperties2KHR)vkGetInstanceProcAddr(inst->instance, "vkGetPhysicalDeviceProperties2KHR");
+    inst->vkGetPhysicalDeviceFormatProperties2KHR = (PFN_vkGetPhysicalDeviceFormatProperties2KHR)vkGetInstanceProcAddr(
+        inst->instance, "vkGetPhysicalDeviceFormatProperties2KHR");
+    inst->vkGetPhysicalDeviceQueueFamilyProperties2KHR = (PFN_vkGetPhysicalDeviceQueueFamilyProperties2KHR)vkGetInstanceProcAddr(
+        inst->instance, "vkGetPhysicalDeviceQueueFamilyProperties2KHR");
+    inst->vkGetPhysicalDeviceFeatures2KHR =
+        (PFN_vkGetPhysicalDeviceFeatures2KHR)vkGetInstanceProcAddr(inst->instance, "vkGetPhysicalDeviceFeatures2KHR");
+    inst->vkGetPhysicalDeviceMemoryProperties2KHR = (PFN_vkGetPhysicalDeviceMemoryProperties2KHR)vkGetInstanceProcAddr(
+        inst->instance, "vkGetPhysicalDeviceMemoryProperties2KHR");
+    inst->vkGetPhysicalDeviceSurfaceCapabilities2KHR = (PFN_vkGetPhysicalDeviceSurfaceCapabilities2KHR)vkGetInstanceProcAddr(
+        inst->instance, "vkGetPhysicalDeviceSurfaceCapabilities2KHR");
+    inst->vkGetPhysicalDeviceSurfaceCapabilities2EXT = (PFN_vkGetPhysicalDeviceSurfaceCapabilities2EXT)vkGetInstanceProcAddr(
+        inst->instance, "vkGetPhysicalDeviceSurfaceCapabilities2EXT");
 }
 
 //-----------------------------------------------------------
 
 static void AppDestroyInstance(struct AppInstance *inst) {
     free(inst->global_extensions);
+    for (uint32_t i = 0; i < inst->global_layer_count; i++) {
+        free(inst->global_layers[i].extension_properties);
+    }
+    free(inst->global_layers);
+    free(inst->inst_extensions);
     vkDestroyInstance(inst->instance, NULL);
 }
 
-static void AppGpuInit(struct AppGpu *gpu, uint32_t id, VkPhysicalDevice obj) {
+static void AppGpuInit(struct AppGpu *gpu, struct AppInstance *inst, uint32_t id, VkPhysicalDevice obj) {
     uint32_t i;
 
     memset(gpu, 0, sizeof(*gpu));
 
     gpu->id = id;
     gpu->obj = obj;
+    gpu->inst = inst;
 
     vkGetPhysicalDeviceProperties(gpu->obj, &gpu->props);
+
+    if (CheckExtensionEnabled(VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME, gpu->inst->inst_extensions,
+                              gpu->inst->inst_extensions_count)) {
+        gpu->props2.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2_KHR;
+        gpu->props2.pNext = NULL;
+
+        inst->vkGetPhysicalDeviceProperties2KHR(gpu->obj, &gpu->props2);
+    }
 
     /* get queue count */
     vkGetPhysicalDeviceQueueFamilyProperties(gpu->obj, &gpu->queue_count, NULL);
@@ -710,6 +957,20 @@ static void AppGpuInit(struct AppGpu *gpu, uint32_t id, VkPhysicalDevice obj) {
     if (!gpu->queue_props) ERR_EXIT(VK_ERROR_OUT_OF_HOST_MEMORY);
     vkGetPhysicalDeviceQueueFamilyProperties(gpu->obj, &gpu->queue_count, gpu->queue_props);
 
+    if (CheckExtensionEnabled(VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME, gpu->inst->inst_extensions,
+                              gpu->inst->inst_extensions_count)) {
+        gpu->queue_props2 = malloc(sizeof(gpu->queue_props2[0]) * gpu->queue_count);
+
+        if (!gpu->queue_props2) ERR_EXIT(VK_ERROR_OUT_OF_HOST_MEMORY);
+
+        for (i = 0; i < gpu->queue_count; i++) {
+            gpu->queue_props2[i].sType = VK_STRUCTURE_TYPE_QUEUE_FAMILY_PROPERTIES_2_KHR;
+            gpu->queue_props2[i].pNext = NULL;
+        }
+
+        inst->vkGetPhysicalDeviceQueueFamilyProperties2KHR(gpu->obj, &gpu->queue_count, gpu->queue_props2);
+    }
+
     /* set up queue requests */
     gpu->queue_reqs = malloc(sizeof(*gpu->queue_reqs) * gpu->queue_count);
     if (!gpu->queue_reqs) ERR_EXIT(VK_ERROR_OUT_OF_HOST_MEMORY);
@@ -717,6 +978,7 @@ static void AppGpuInit(struct AppGpu *gpu, uint32_t id, VkPhysicalDevice obj) {
         float *queue_priorities = malloc(gpu->queue_props[i].queueCount * sizeof(float));
         if (!queue_priorities) ERR_EXIT(VK_ERROR_OUT_OF_HOST_MEMORY);
         memset(queue_priorities, 0, gpu->queue_props[i].queueCount * sizeof(float));
+
         gpu->queue_reqs[i].sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
         gpu->queue_reqs[i].pNext = NULL;
         gpu->queue_reqs[i].flags = 0;
@@ -728,6 +990,19 @@ static void AppGpuInit(struct AppGpu *gpu, uint32_t id, VkPhysicalDevice obj) {
     vkGetPhysicalDeviceMemoryProperties(gpu->obj, &gpu->memory_props);
 
     vkGetPhysicalDeviceFeatures(gpu->obj, &gpu->features);
+
+    if (CheckExtensionEnabled(VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME, gpu->inst->inst_extensions,
+                              gpu->inst->inst_extensions_count)) {
+        gpu->memory_props2.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MEMORY_PROPERTIES_2_KHR;
+        gpu->memory_props2.pNext = NULL;
+
+        inst->vkGetPhysicalDeviceMemoryProperties2KHR(gpu->obj, &gpu->memory_props2);
+
+        gpu->features2.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2_KHR;
+        gpu->features2.pNext = NULL;
+
+        inst->vkGetPhysicalDeviceFeatures2KHR(gpu->obj, &gpu->features2);
+    }
 
     AppDevInit(&gpu->dev, gpu);
     AppDevInitFormats(&gpu->dev);
@@ -741,7 +1016,12 @@ static void AppGpuDestroy(struct AppGpu *gpu) {
         free((void *)gpu->queue_reqs[i].pQueuePriorities);
     }
     free(gpu->queue_reqs);
+
     free(gpu->queue_props);
+    if (CheckExtensionEnabled(VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME, gpu->inst->inst_extensions,
+                              gpu->inst->inst_extensions_count)) {
+        free(gpu->queue_props2);
+    }
 }
 
 // clang-format off
@@ -958,6 +1238,8 @@ static int AppDumpSurfaceFormats(struct AppInstance *inst, struct AppGpu *gpu){
         printf("\t%s\n", VkFormatString(surf_formats[i].format));
     }
     fflush(stdout);
+
+    free(surf_formats);
     return format_count;
 }
 
@@ -980,8 +1262,128 @@ static int AppDumpSurfacePresentModes(struct AppInstance *inst, struct AppGpu *g
     }
     printf("\n");
     fflush(stdout);
+
+    free(surf_present_modes);
     return present_mode_count;
 }
+
+static void AppDumpSurfaceCapabilities(struct AppInstance *inst, struct AppGpu *gpu) {
+    if (CheckExtensionEnabled(VK_KHR_SURFACE_EXTENSION_NAME, gpu->inst->inst_extensions, gpu->inst->inst_extensions_count)) {
+
+        inst->vkGetPhysicalDeviceSurfaceCapabilitiesKHR(gpu->obj, inst->surface, &inst->surface_capabilities);
+
+        printf("\nVkSurfaceCapabilitiesKHR:\n");
+        printf("=========================\n\n");
+        printf("\tminImageCount       = %u\n", inst->surface_capabilities.minImageCount);
+        printf("\tmaxImageCount       = %u\n", inst->surface_capabilities.maxImageCount);
+        printf("\tcurrentExtent:\n");
+        printf("\t\twidth       = %u\n", inst->surface_capabilities.currentExtent.width);
+        printf("\t\theight      = %u\n", inst->surface_capabilities.currentExtent.height);
+        printf("\tminImageExtent:\n");
+        printf("\t\twidth       = %u\n", inst->surface_capabilities.minImageExtent.width);
+        printf("\t\theight      = %u\n", inst->surface_capabilities.minImageExtent.height);
+        printf("\tmaxImageExtent:\n");
+        printf("\t\twidth       = %u\n", inst->surface_capabilities.maxImageExtent.width);
+        printf("\t\theight      = %u\n", inst->surface_capabilities.maxImageExtent.height);
+        printf("\tmaxImageArrayLayers = %u\n", inst->surface_capabilities.maxImageArrayLayers);
+        printf("\tsupportedTransform:\n");
+        if (inst->surface_capabilities.supportedTransforms == 0) { printf("\t\tNone\n"); }
+        if (inst->surface_capabilities.supportedTransforms & VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR) { printf("\t\tVK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR\n"); }
+        if (inst->surface_capabilities.supportedTransforms & VK_SURFACE_TRANSFORM_ROTATE_90_BIT_KHR) { printf("\t\tVK_SURFACE_TRANSFORM_ROTATE_90_BIT_KHR\n"); }
+        if (inst->surface_capabilities.supportedTransforms & VK_SURFACE_TRANSFORM_ROTATE_180_BIT_KHR) { printf("\t\tVK_SURFACE_TRANSFORM_ROTATE_180_BIT_KHR\n"); }
+        if (inst->surface_capabilities.supportedTransforms & VK_SURFACE_TRANSFORM_ROTATE_270_BIT_KHR) { printf("\t\tVK_SURFACE_TRANSFORM_ROTATE_270_BIT_KHR\n"); }
+        if (inst->surface_capabilities.supportedTransforms & VK_SURFACE_TRANSFORM_HORIZONTAL_MIRROR_BIT_KHR) { printf("\t\tVK_SURFACE_TRANSFORM_HORIZONTAL_MIRROR_BIT_KHR\n"); }
+        if (inst->surface_capabilities.supportedTransforms & VK_SURFACE_TRANSFORM_HORIZONTAL_MIRROR_ROTATE_90_BIT_KHR) { printf("\t\tVK_SURFACE_TRANSFORM_HORIZONTAL_MIRROR_ROTATE_90_BIT_KHR\n"); }
+        if (inst->surface_capabilities.supportedTransforms & VK_SURFACE_TRANSFORM_HORIZONTAL_MIRROR_ROTATE_180_BIT_KHR) { printf("\t\tVK_SURFACE_TRANSFORM_HORIZONTAL_MIRROR_ROTATE_180_BIT_KHR\n"); }
+        if (inst->surface_capabilities.supportedTransforms & VK_SURFACE_TRANSFORM_HORIZONTAL_MIRROR_ROTATE_270_BIT_KHR) { printf("\t\tVK_SURFACE_TRANSFORM_HORIZONTAL_MIRROR_ROTATE_270_BIT_KHR\n"); }
+        if (inst->surface_capabilities.supportedTransforms & VK_SURFACE_TRANSFORM_INHERIT_BIT_KHR) { printf("\t\tVK_SURFACE_TRANSFORM_INHERIT_BIT_KHR\n"); }
+        printf("\tcurrentTransform:\n");
+        if (inst->surface_capabilities.currentTransform == 0) { printf("\t\tNone\n"); }
+        if (inst->surface_capabilities.currentTransform & VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR) { printf("\t\tVK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR\n"); }
+        else if (inst->surface_capabilities.currentTransform & VK_SURFACE_TRANSFORM_ROTATE_90_BIT_KHR) { printf("\t\tVK_SURFACE_TRANSFORM_ROTATE_90_BIT_KHR\n"); }
+        else if (inst->surface_capabilities.currentTransform & VK_SURFACE_TRANSFORM_ROTATE_180_BIT_KHR) { printf("\t\tVK_SURFACE_TRANSFORM_ROTATE_180_BIT_KHR\n"); }
+        else if (inst->surface_capabilities.currentTransform & VK_SURFACE_TRANSFORM_ROTATE_270_BIT_KHR) { printf("\t\tVK_SURFACE_TRANSFORM_ROTATE_270_BIT_KHR\n"); }
+        else if (inst->surface_capabilities.currentTransform & VK_SURFACE_TRANSFORM_HORIZONTAL_MIRROR_BIT_KHR) { printf("\t\tVK_SURFACE_TRANSFORM_HORIZONTAL_MIRROR_BIT_KHR\n"); }
+        else if (inst->surface_capabilities.currentTransform & VK_SURFACE_TRANSFORM_HORIZONTAL_MIRROR_ROTATE_90_BIT_KHR) { printf("\t\tVK_SURFACE_TRANSFORM_HORIZONTAL_MIRROR_ROTATE_90_BIT_KHR\n"); }
+        else if (inst->surface_capabilities.currentTransform & VK_SURFACE_TRANSFORM_HORIZONTAL_MIRROR_ROTATE_180_BIT_KHR) { printf("\t\tVK_SURFACE_TRANSFORM_HORIZONTAL_MIRROR_ROTATE_180_BIT_KHR\n"); }
+        else if (inst->surface_capabilities.currentTransform & VK_SURFACE_TRANSFORM_HORIZONTAL_MIRROR_ROTATE_270_BIT_KHR) { printf("\t\tVK_SURFACE_TRANSFORM_HORIZONTAL_MIRROR_ROTATE_270_BIT_KHR\n"); }
+        else if (inst->surface_capabilities.currentTransform & VK_SURFACE_TRANSFORM_INHERIT_BIT_KHR) { printf("\t\tVK_SURFACE_TRANSFORM_INHERIT_BIT_KHR\n"); }
+        printf("\tsupportedCompositeAlpha:\n");
+        if (inst->surface_capabilities.supportedCompositeAlpha == 0) { printf("\t\tNone\n"); }
+        if (inst->surface_capabilities.supportedCompositeAlpha & VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR) { printf("\t\tVK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR\n"); }
+        if (inst->surface_capabilities.supportedCompositeAlpha & VK_COMPOSITE_ALPHA_PRE_MULTIPLIED_BIT_KHR) { printf("\t\tVK_COMPOSITE_ALPHA_PRE_MULTIPLIED_BIT_KHR\n"); }
+        if (inst->surface_capabilities.supportedCompositeAlpha & VK_COMPOSITE_ALPHA_POST_MULTIPLIED_BIT_KHR) { printf("\t\tVK_COMPOSITE_ALPHA_POST_MULTIPLIED_BIT_KHR\n"); }
+        if (inst->surface_capabilities.supportedCompositeAlpha & VK_COMPOSITE_ALPHA_INHERIT_BIT_KHR) { printf("\t\tVK_COMPOSITE_ALPHA_INHERIT_BIT_KHR\n"); }
+        printf("\tsupportedUsageFlags:\n");
+        if (inst->surface_capabilities.supportedUsageFlags == 0) { printf("\t\tNone\n"); }
+        if (inst->surface_capabilities.supportedUsageFlags & VK_IMAGE_USAGE_TRANSFER_SRC_BIT) { printf("\t\tVK_IMAGE_USAGE_TRANSFER_SRC_BIT\n"); }
+        if (inst->surface_capabilities.supportedUsageFlags & VK_IMAGE_USAGE_TRANSFER_DST_BIT) { printf("\t\tVK_IMAGE_USAGE_TRANSFER_DST_BIT\n"); }
+        if (inst->surface_capabilities.supportedUsageFlags & VK_IMAGE_USAGE_SAMPLED_BIT) { printf("\t\tVK_IMAGE_USAGE_SAMPLED_BIT\n"); }
+        if (inst->surface_capabilities.supportedUsageFlags & VK_IMAGE_USAGE_STORAGE_BIT) { printf("\t\tVK_IMAGE_USAGE_STORAGE_BIT\n"); }
+        if (inst->surface_capabilities.supportedUsageFlags & VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT) { printf("\t\tVK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT\n"); }
+        if (inst->surface_capabilities.supportedUsageFlags & VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT) { printf("\t\tVK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT\n"); }
+        if (inst->surface_capabilities.supportedUsageFlags & VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT) { printf("\t\tVK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT\n"); }
+        if (inst->surface_capabilities.supportedUsageFlags & VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT) { printf("\t\tVK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT\n"); }
+
+        // Get additional surface capability information from vkGetPhysicalDeviceSurfaceCapabilities2EXT
+        if (CheckExtensionEnabled(VK_EXT_DISPLAY_SURFACE_COUNTER_EXTENSION_NAME, gpu->inst->inst_extensions, gpu->inst->inst_extensions_count)) {
+            memset(&inst->surface_capabilities2_ext, 0, sizeof(VkSurfaceCapabilities2EXT));
+            inst->surface_capabilities2_ext.sType = VK_STRUCTURE_TYPE_SURFACE_CAPABILITIES2_EXT;
+            inst->surface_capabilities2_ext.pNext = NULL;
+
+            inst->vkGetPhysicalDeviceSurfaceCapabilities2EXT(gpu->obj, inst->surface, &inst->surface_capabilities2_ext);
+
+            printf("\nVkSurfaceCapabilities2EXT:\n");
+            printf("==========================\n\n");
+            printf("\tsupportedSurfaceCounters:\n");
+            if (inst->surface_capabilities2_ext.supportedSurfaceCounters == 0) { printf("\t\tNone\n"); }
+            if (inst->surface_capabilities2_ext.supportedSurfaceCounters & VK_SURFACE_COUNTER_VBLANK_EXT) { printf("\t\tVK_SURFACE_COUNTER_VBLANK_EXT\n"); }
+        }
+
+        // Get additional surface capability information from vkGetPhysicalDeviceSurfaceCapabilities2KHR
+        if (CheckExtensionEnabled(VK_KHR_GET_SURFACE_CAPABILITIES_2_EXTENSION_NAME, gpu->inst->inst_extensions, gpu->inst->inst_extensions_count)) {
+            if (CheckExtensionEnabled(VK_KHR_SHARED_PRESENTABLE_IMAGE_EXTENSION_NAME, gpu->inst->inst_extensions, gpu->inst->inst_extensions_count)) {
+                inst->shared_surface_capabilities.sType = VK_STRUCTURE_TYPE_SHARED_PRESENT_SURFACE_CAPABILITIES_KHR;
+                inst->shared_surface_capabilities.pNext = NULL;
+                inst->surface_capabilities2.pNext = &inst->shared_surface_capabilities;
+            } else {
+                inst->surface_capabilities2.pNext = NULL;
+            }
+
+            inst->surface_capabilities2.sType = VK_STRUCTURE_TYPE_SURFACE_CAPABILITIES_2_KHR;
+
+            VkPhysicalDeviceSurfaceInfo2KHR surface_info;
+            surface_info.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SURFACE_INFO_2_KHR;
+            surface_info.pNext = NULL;
+            surface_info.surface = inst->surface;
+
+            inst->vkGetPhysicalDeviceSurfaceCapabilities2KHR(gpu->obj, &surface_info, &inst->surface_capabilities2);
+
+            void *place = inst->surface_capabilities2.pNext;
+            while (place) {
+                struct VkStructureHeader* work = (struct VkStructureHeader*) place;
+                if (work->sType == VK_STRUCTURE_TYPE_SHARED_PRESENT_SURFACE_CAPABILITIES_KHR) {
+                    printf("\nVkSharedPresentSurfaceCapabilitiesKHR:\n");
+                    printf("========================================\n");
+                    VkSharedPresentSurfaceCapabilitiesKHR* shared_surface_capabilities = (VkSharedPresentSurfaceCapabilitiesKHR*)place;
+                    printf("\tsharedPresentSupportedUsageFlags:\n");
+                    if (shared_surface_capabilities->sharedPresentSupportedUsageFlags == 0) { printf("\t\tNone\n"); }
+                    if (shared_surface_capabilities->sharedPresentSupportedUsageFlags & VK_IMAGE_USAGE_TRANSFER_SRC_BIT) { printf("\t\tVK_IMAGE_USAGE_TRANSFER_SRC_BIT\n"); }
+                    if (shared_surface_capabilities->sharedPresentSupportedUsageFlags & VK_IMAGE_USAGE_TRANSFER_DST_BIT) { printf("\t\tVK_IMAGE_USAGE_TRANSFER_DST_BIT\n"); }
+                    if (shared_surface_capabilities->sharedPresentSupportedUsageFlags & VK_IMAGE_USAGE_SAMPLED_BIT) { printf("\t\tVK_IMAGE_USAGE_SAMPLED_BIT\n"); }
+                    if (shared_surface_capabilities->sharedPresentSupportedUsageFlags & VK_IMAGE_USAGE_STORAGE_BIT) { printf("\t\tVK_IMAGE_USAGE_STORAGE_BIT\n"); }
+                    if (shared_surface_capabilities->sharedPresentSupportedUsageFlags & VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT) { printf("\t\tVK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT\n"); }
+                    if (shared_surface_capabilities->sharedPresentSupportedUsageFlags & VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT) { printf("\t\tVK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT\n"); }
+                    if (shared_surface_capabilities->sharedPresentSupportedUsageFlags & VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT) { printf("\t\tVK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT\n"); }
+                    if (shared_surface_capabilities->sharedPresentSupportedUsageFlags & VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT) { printf("\t\tVK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT\n"); }
+                }
+
+                place = work->pNext;
+            }
+        }
+    }
+}
+
 #endif
 
 static void AppDevDumpFormatProps(const struct AppDev *dev, VkFormat fmt)
@@ -1005,7 +1407,7 @@ static void AppDevDumpFormatProps(const struct AppDev *dev, VkFormat fmt)
         if (features[i].flags == 0) {
             printf("\n\t\tNone");
         } else {
-            printf("%s%s%s%s%s%s%s%s%s%s%s%s%s%s",
+            printf("%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s",
                ((features[i].flags & VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT)                  ? "\n\t\tVK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT"                  : ""),  //0x0001
                ((features[i].flags & VK_FORMAT_FEATURE_STORAGE_IMAGE_BIT)                  ? "\n\t\tVK_FORMAT_FEATURE_STORAGE_IMAGE_BIT"                  : ""),  //0x0002
                ((features[i].flags & VK_FORMAT_FEATURE_STORAGE_IMAGE_ATOMIC_BIT)           ? "\n\t\tVK_FORMAT_FEATURE_STORAGE_IMAGE_ATOMIC_BIT"           : ""),  //0x0004
@@ -1019,12 +1421,13 @@ static void AppDevDumpFormatProps(const struct AppDev *dev, VkFormat fmt)
                ((features[i].flags & VK_FORMAT_FEATURE_BLIT_SRC_BIT)                       ? "\n\t\tVK_FORMAT_FEATURE_BLIT_SRC_BIT"                       : ""),  //0x0400
                ((features[i].flags & VK_FORMAT_FEATURE_BLIT_DST_BIT)                       ? "\n\t\tVK_FORMAT_FEATURE_BLIT_DST_BIT"                       : ""),  //0x0800
                ((features[i].flags & VK_FORMAT_FEATURE_SAMPLED_IMAGE_FILTER_LINEAR_BIT)    ? "\n\t\tVK_FORMAT_FEATURE_SAMPLED_IMAGE_FILTER_LINEAR_BIT"    : ""),  //0x1000
-               ((features[i].flags & VK_FORMAT_FEATURE_SAMPLED_IMAGE_FILTER_CUBIC_BIT_IMG) ? "\n\t\tVK_FORMAT_FEATURE_SAMPLED_IMAGE_FILTER_CUBIC_BIT_IMG" : "")); //0x2000
+               ((features[i].flags & VK_FORMAT_FEATURE_SAMPLED_IMAGE_FILTER_CUBIC_BIT_IMG) ? "\n\t\tVK_FORMAT_FEATURE_SAMPLED_IMAGE_FILTER_CUBIC_BIT_IMG" : ""),  //0x2000
+               ((features[i].flags & VK_FORMAT_FEATURE_TRANSFER_SRC_BIT_KHR)               ? "\n\t\tVK_FORMAT_FEATURE_TRANSFER_SRC_BIT_KHR"               : ""),  //0x4000
+               ((features[i].flags & VK_FORMAT_FEATURE_TRANSFER_DST_BIT_KHR)               ? "\n\t\tVK_FORMAT_FEATURE_TRANSFER_DST_BIT_KHR"               : "")); //0x8000
         }
     }
     printf("\n");
 }
-
 
 static void
 AppDevDump(const struct AppDev *dev)
@@ -1283,17 +1686,6 @@ static void AppDumpExtensions(const char *indent, const char *layer_name, const 
     fflush(stdout);
 }
 
-#if defined(VK_USE_PLATFORM_XCB_KHR) || defined(VK_USE_PLATFORM_XLIB_KHR) || defined(VK_USE_PLATFORM_WIN32_KHR)
-// Returns true if the named extension is in the list of extensions.
-static bool HasExtension(const char *extension_name, const uint32_t extension_count,
-                         const VkExtensionProperties *extension_properties) {
-    for (uint32_t i = 0; i < extension_count; i++) {
-        if (!strcmp(extension_name, extension_properties[i].extensionName)) return true;
-    }
-    return false;
-}
-#endif
-
 static void AppGpuDumpQueueProps(const struct AppGpu *gpu, uint32_t id) {
     const VkQueueFamilyProperties *props = &gpu->queue_props[id];
 
@@ -1470,7 +1862,7 @@ int main(int argc, char **argv) {
     gpus = malloc(sizeof(gpus[0]) * gpu_count);
     if (!gpus) ERR_EXIT(VK_ERROR_OUT_OF_HOST_MEMORY);
     for (uint32_t i = 0; i < gpu_count; i++) {
-        AppGpuInit(&gpus[i], i, objs[i]);
+        AppGpuInit(&gpus[i], &inst, i, objs[i]);
         printf("\n\n");
     }
 
@@ -1521,7 +1913,7 @@ int main(int argc, char **argv) {
 #endif
 //--WIN32--
 #ifdef VK_USE_PLATFORM_WIN32_KHR
-    if (HasExtension(VK_KHR_WIN32_SURFACE_EXTENSION_NAME, inst.global_extension_count, inst.global_extensions)) {
+    if (CheckExtensionEnabled(VK_KHR_WIN32_SURFACE_EXTENSION_NAME, inst.inst_extensions, inst.inst_extensions_count)) {
         AppCreateWin32Window(&inst);
         for (uint32_t i = 0; i < gpu_count; i++) {
             AppCreateWin32Surface(&inst);
@@ -1529,13 +1921,14 @@ int main(int argc, char **argv) {
             printf("Surface type : %s\n", VK_KHR_WIN32_SURFACE_EXTENSION_NAME);
             format_count += AppDumpSurfaceFormats(&inst, &gpus[i]);
             present_mode_count += AppDumpSurfacePresentModes(&inst, &gpus[i]);
+            AppDumpSurfaceCapabilities(&inst, &gpus[i]);
             AppDestroySurface(&inst);
         }
         AppDestroyWin32Window(&inst);
     }
 //--XCB--
 #elif VK_USE_PLATFORM_XCB_KHR
-    if (HasExtension(VK_KHR_XCB_SURFACE_EXTENSION_NAME, inst.global_extension_count, inst.global_extensions)) {
+    if (CheckExtensionEnabled(VK_KHR_XCB_SURFACE_EXTENSION_NAME, inst.inst_extensions, inst.inst_extensions_count)) {
         AppCreateXcbWindow(&inst);
         for (uint32_t i = 0; i < gpu_count; i++) {
             AppCreateXcbSurface(&inst);
@@ -1543,13 +1936,14 @@ int main(int argc, char **argv) {
             printf("Surface type : %s\n", VK_KHR_XCB_SURFACE_EXTENSION_NAME);
             format_count += AppDumpSurfaceFormats(&inst, &gpus[i]);
             present_mode_count += AppDumpSurfacePresentModes(&inst, &gpus[i]);
+            AppDumpSurfaceCapabilities(&inst, &gpus[i]);
             AppDestroySurface(&inst);
         }
         AppDestroyXcbWindow(&inst);
     }
 //--XLIB--
 #elif VK_USE_PLATFORM_XLIB_KHR
-    if (HasExtension(VK_KHR_XLIB_SURFACE_EXTENSION_NAME, inst.global_extension_count, inst.global_extensions)) {
+    if (CheckExtensionEnabled(VK_KHR_XLIB_SURFACE_EXTENSION_NAME, inst.inst_extensions, inst.inst_extensions_count)) {
         AppCreateXlibWindow(&inst);
         for (uint32_t i = 0; i < gpu_count; i++) {
             AppCreateXlibSurface(&inst);
@@ -1557,6 +1951,7 @@ int main(int argc, char **argv) {
             printf("Surface type : %s\n", VK_KHR_XLIB_SURFACE_EXTENSION_NAME);
             format_count += AppDumpSurfaceFormats(&inst, &gpus[i]);
             present_mode_count += AppDumpSurfacePresentModes(&inst, &gpus[i]);
+            AppDumpSurfaceCapabilities(&inst, &gpus[i]);
             AppDestroySurface(&inst);
         }
         AppDestroyXlibWindow(&inst);
