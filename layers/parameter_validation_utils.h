@@ -172,13 +172,13 @@ bool ValidateGreaterThan(debug_report_data *report_data, const char *api_name, c
  * @return Boolean value indicating that the call should be skipped.
  */
 static bool validate_required_pointer(debug_report_data *report_data, const char *apiName, const ParameterName &parameterName,
-                                      const void *value) {
+                                      const void *value, UNIQUE_VALIDATION_ERROR_CODE vuid) {
     bool skip_call = false;
 
     if (value == NULL) {
         skip_call |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
-                             REQUIRED_PARAMETER, LayerName, "%s: required parameter %s specified as NULL", apiName,
-                             parameterName.get_name().c_str());
+                             vuid, LayerName, "%s: required parameter %s specified as NULL. %s", apiName,
+                             parameterName.get_name().c_str(), validation_error_map[vuid]);
     }
 
     return skip_call;

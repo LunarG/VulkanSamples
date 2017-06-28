@@ -802,8 +802,8 @@ class ParamCheckerOutputGenerator(OutputGenerator):
     # Generate the pointer check string
     def makePointerCheck(self, prefix, value, lenValue, valueRequired, lenValueRequired, lenPtrRequired, funcPrintName, lenPrintName, valuePrintName, postProcSpec, struct_type_name):
         checkExpr = []
+        vuid_tag_name = struct_type_name if struct_type_name is not None else funcPrintName
         if lenValue:
-            vuid_tag_name = struct_type_name if struct_type_name is not None else funcPrintName
             count_required_vuid = self.GetVuid("VUID-%s-%s-arraylength" % (vuid_tag_name, lenValue.name))
             array_required_vuid = self.GetVuid("VUID-%s-%s-parameter" % (vuid_tag_name, value.name))
             # This is an array with a pointer to a count value
@@ -831,10 +831,11 @@ class ParamCheckerOutputGenerator(OutputGenerator):
         # This is an individual struct that is not allowed to be NULL
         elif not value.isoptional:
             # Function pointers need a reinterpret_cast to void*
+            ptr_required_vuid = self.GetVuid("VUID-%s-%s-parameter" % (vuid_tag_name, value.name))
             if value.type[:4] == 'PFN_':
-                checkExpr.append('skipCall |= validate_required_pointer(layer_data->report_data, "{}", {ppp}"{}"{pps}, reinterpret_cast<const void*>({}{}));\n'.format(funcPrintName, valuePrintName, prefix, value.name, **postProcSpec))
+                checkExpr.append('skipCall |= validate_required_pointer(layer_data->report_data, "{}", {ppp}"{}"{pps}, reinterpret_cast<const void*>({}{}), {});\n'.format(funcPrintName, valuePrintName, prefix, value.name, ptr_required_vuid, **postProcSpec))
             else:
-                checkExpr.append('skipCall |= validate_required_pointer(layer_data->report_data, "{}", {ppp}"{}"{pps}, {}{});\n'.format(funcPrintName, valuePrintName, prefix, value.name, **postProcSpec))
+                checkExpr.append('skipCall |= validate_required_pointer(layer_data->report_data, "{}", {ppp}"{}"{pps}, {}{}, {});\n'.format(funcPrintName, valuePrintName, prefix, value.name, ptr_required_vuid, **postProcSpec))
         return checkExpr
     #
     # Process struct member validation code, performing name suibstitution if required
