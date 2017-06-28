@@ -502,6 +502,13 @@ func_struct_id_map = {
 'VkDisplayPlaneCapabilitiesKHR' : 446,
 'VkSharedPresentSurfaceCapabilitiesKHR' : 447,
 'VkExternalImageFormatPropertiesNV' : 448,
+'VkPhysicalDeviceBlendOperationAdvancedFeaturesEXT' : 449,
+'VkPhysicalDeviceBlendOperationAdvancedPropertiesEXT' : 450,
+'VkPhysicalDeviceSamplerFilterMinmaxPropertiesEXT' : 451,
+'VkPipelineColorBlendAdvancedStateCreateInfoEXT' : 452,
+'VkPipelineCoverageModulationStateCreateInfoNV' : 453,
+'VkPipelineCoverageToColorStateCreateInfoNV' : 454,
+'VkSamplerReductionModeCreateInfoEXT' : 455,
 ### ADD New func/struct mappings above this line
 }
 # Mapping of params to unique IDs
@@ -927,6 +934,10 @@ implicit_param_map = {
 'sharedPresentSupportedUsageFlags' : 418,
 'externalSemaphoreFeatures' : 419,
 'supportedSurfaceCounters' : 420,
+'blendOverlap' : 421,
+'coverageModulationMode' : 422,
+'coverageModulationTableCount' : 423,
+'reductionMode' : 424,
 ### ADD New implicit param mappings above this line
 }
 
