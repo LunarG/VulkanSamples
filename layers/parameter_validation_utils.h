@@ -637,15 +637,15 @@ static bool validate_bool32(debug_report_data *report_data, const char *apiName,
 */
 template <typename T>
 bool validate_ranged_enum(debug_report_data *report_data, const char *apiName, const ParameterName &parameterName,
-                          const char *enumName, T begin, T end, T value) {
+                          const char *enumName, T begin, T end, T value, UNIQUE_VALIDATION_ERROR_CODE vuid) {
     bool skip_call = false;
 
     if (((value < begin) || (value > end)) && !is_extension_added_token(value)) {
-        skip_call |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
-                             UNRECOGNIZED_VALUE, LayerName,
+        skip_call |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__, vuid,
+                             LayerName,
                              "%s: value of %s (%d) does not fall within the begin..end range of the core %s "
-                             "enumeration tokens and is not an extension added token",
-                             apiName, parameterName.get_name().c_str(), value, enumName);
+                             "enumeration tokens and is not an extension added token. %s",
+                             apiName, parameterName.get_name().c_str(), value, enumName, validation_error_map[vuid]);
     }
 
     return skip_call;

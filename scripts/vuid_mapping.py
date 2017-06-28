@@ -509,6 +509,8 @@ func_struct_id_map = {
 'VkPipelineCoverageModulationStateCreateInfoNV' : 453,
 'VkPipelineCoverageToColorStateCreateInfoNV' : 454,
 'VkSamplerReductionModeCreateInfoEXT' : 455,
+'VkPhysicalDeviceProperties' : 456,
+'VkSurfaceFormatKHR' : 457,
 ### ADD New func/struct mappings above this line
 }
 # Mapping of params to unique IDs
@@ -966,6 +968,8 @@ implicit_param_map = {
 'physicalDeviceCount' : 450,
 'waitSemaphoreValuesCount' : 451,
 'signalSemaphoreValuesCount' : 452,
+'deviceType' : 453,
+'colorSpace' : 454,
 ### ADD New implicit param mappings above this line
 }
 

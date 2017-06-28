@@ -1048,7 +1048,8 @@ class ParamCheckerOutputGenerator(OutputGenerator):
                         usedLines.append('skipCall |= validate_bool32(layer_data->report_data, "{}", {ppp}"{}"{pps}, {}{});\n'.format(funcName, valueDisplayName, valuePrefix, value.name, **postProcSpec))
                     elif value.israngedenum:
                         enumRange = self.enumRanges[value.type]
-                        usedLines.append('skipCall |= validate_ranged_enum(layer_data->report_data, "{}", {ppp}"{}"{pps}, "{}", {}, {}, {}{});\n'.format(funcName, valueDisplayName, value.type, enumRange[0], enumRange[1], valuePrefix, value.name, **postProcSpec))
+                        vuid = self.GetVuid("VUID-%s-%s-parameter" % (vuid_name_tag, value.name))
+                        usedLines.append('skipCall |= validate_ranged_enum(layer_data->report_data, "{}", {ppp}"{}"{pps}, "{}", {}, {}, {}{}, {});\n'.format(funcName, valueDisplayName, value.type, enumRange[0], enumRange[1], valuePrefix, value.name, vuid, **postProcSpec))
                     #
                     # If this is a struct, see if it contains members that need to be checked
                     if value.type in self.validatedStructs:
