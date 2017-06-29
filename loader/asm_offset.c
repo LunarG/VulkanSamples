@@ -68,6 +68,9 @@ int main(int argc, char **argv) {
 
     struct loader_dispatch_hash_entry hash;
     size_t func_name_offset = ((size_t) &hash.func_name) - ((size_t) &hash);
+    
+    struct loader_dev_dispatch_table dev_disp;
+    size_t dev_disp_offset = ((size_t) &dev_disp.ext_dispatch) - ((size_t) &dev_disp);
 
     struct ValueInfo values[] = {
         { .name = "VK_DEBUG_REPORT_ERROR_BIT_EXT", .value = (size_t) VK_DEBUG_REPORT_ERROR_BIT_EXT,
@@ -92,6 +95,8 @@ int main(int argc, char **argv) {
             .comment = "The offset of 'phys_dev_ext' within a 'loader_icd_term' struct" },
         { .name = "FUNC_NAME_OFFSET_HASH", .value = func_name_offset,
             .comment = "The offset of 'func_name' within a 'loader_dispatch_hash_entry' struct" },
+        { .name = "EXT_OFFSET_DEVICE_DISPATCH", .value = dev_disp_offset,
+            .comment = "The offset of 'ext_dispatch' within a 'loader_dev_dispatch_table' struct" },
     };
 
     FILE *file = fopen("gen_defines.asm", "w");
