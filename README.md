@@ -47,7 +47,7 @@ git clone git@github.com:LunarG/VulkanSamples.git
 cd VulkanSamples
 # This will fetch and build glslang and spriv-tools
 ./update_external_sources.sh         # linux
-./update_external_sources.bat --all  # windows
+update_external_sources.bat --all  # windows
 ```
 ## Linux Build
 
@@ -95,6 +95,7 @@ mkdir build
 cd build
 cmake -G "Visual Studio 12 Win64" ..
 ```
+Use the major version number reported by Visual Studio in Help->About.
 
 At this point, you can use Windows Explorer to launch Visual Studio by double-clicking on the "VULKAN.sln" file in the \build folder.  
 Once Visual Studio comes up, you can select "Debug" or "Release" from a drop-down list.  
