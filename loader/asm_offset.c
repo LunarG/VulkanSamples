@@ -101,10 +101,12 @@ int main(int argc, char **argv) {
             fprintf(file, "%-32s equ " SIZE_T_FMT "; %s\n", values[i].name, values[i].value, values[i].comment);
         }
     } else if (!strcmp(assembler, "GAS")) {
-        fprintf(file, "\n.set PHYS_DEV_DISP_OFFSET, " SIZE_T_FMT "\n", phys_dev_offset_dispatch);
 #ifdef __x86_64__
         fprintf(file, ".set X86_64, 1\n");
 #endif // __x86_64__
+        for (size_t i = 0; i < sizeof(values)/sizeof(values[0]); ++i) {
+            fprintf(file, ".set %-32s, " SIZE_T_FMT "# %s\n", values[i].name, values[i].value, values[i].comment);
+        }
     }
     return fclose(file);
 }
