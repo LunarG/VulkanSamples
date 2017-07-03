@@ -173,6 +173,7 @@ class ParamCheckerOutputGenerator(OutputGenerator):
         self.vuid_file = None
         # Cover cases where file is built from scripts directory, Lin/Win, or Android build structure
         vuid_filename_locations = [
+            './vk_validation_error_messages.h',
             '../layers/vk_validation_error_messages.h',
             '../../layers/vk_validation_error_messages.h',
             '../../../layers/vk_validation_error_messages.h',
