@@ -1922,6 +1922,27 @@ the value is 0, then the loader will attempt to load the file.  In this case,
 the loader will open the first and last listings, but not the middle.  This
 is because the value of 1 for vendorb_vk.json disables the driver.
 
+Additionaly the loader will scan through registry keys specific to Display
+Adapters and all SoftwareComponents assocatied with these adapters for the
+locations of JSON manifest files. These keys are reflecting HKR device hive
+created during driver installation and contain configuration for base settings,
+including OpenGL/D3D ICD location.
+
+The Device Adapter and SoftwareComponent key paths should be obtained via PnP
+Configuration Manager API. In each of this path, a "VulkanDriverName" (and
+"VulkanDriverNameWow" for 32-bit Windows on Windows compatibility) key can be
+present, what should look like:
+```
+   HKEY_LOCAL_MACHINE\System\CurrentControlSet\Control\Class\{Adapter GUID}\000X\VulkanDriverName
+   HKEY_LOCAL_MACHINE\System\CurrentControlSet\Control\Class\{Adapter GUID}\000X\VulkanDriverNameWow
+   
+   HKEY_LOCAL_MACHINE\System\CurrentControlSet\Control\Class\{SoftwareComponent GUID}\000X\VulkanDriverName
+   HKEY_LOCAL_MACHINE\System\CurrentControlSet\Control\Class\{SoftwareComponent GUID}\000X\VulkanDriverNameWow
+```
+If any of these keys exsist and is of type REG_SZ, the loader will open the JSON
+manifest file specified by the key valye. Each value must be a full absolute
+path to a JSON manifest file.
+
 The Vulkan loader will open each enabled manifest file found to obtain the name
 or pathname of an ICD shared library (".DLL") file.
 
