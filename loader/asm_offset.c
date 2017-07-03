@@ -68,7 +68,7 @@ int main(int argc, char **argv) {
 
     struct loader_dispatch_hash_entry hash;
     size_t func_name_offset = ((size_t) &hash.func_name) - ((size_t) &hash);
-    
+
     struct loader_dev_dispatch_table dev_disp;
     size_t dev_disp_offset = ((size_t) &dev_disp.ext_dispatch) - ((size_t) &dev_disp);
 

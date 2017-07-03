@@ -1,118 +1,131 @@
-#
-# Copyright (c) 2017 The Khronos Group Inc.
-# Copyright (c) 2017 Valve Corporation
-# Copyright (c) 2017 LunarG, Inc.
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-#
-# Author: Lenny Komow <lenny@lunarg.com>
-#
+;
+; Copyright (c) 2017 The Khronos Group Inc.
+; Copyright (c) 2017 Valve Corporation
+; Copyright (c) 2017 LunarG, Inc.
+;
+; Licensed under the Apache License, Version 2.0 (the "License");
+; you may not use this file except in compliance with the License.
+; You may obtain a copy of the License at
+;
+;     http://www.apache.org/licenses/LICENSE-2.0
+;
+; Unless required by applicable law or agreed to in writing, software
+; distributed under the License is distributed on an "AS IS" BASIS,
+; WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+; See the License for the specific language governing permissions and
+; limitations under the License.
+;
+; Author: Lenny Komow <lenny@lunarg.com>
+;
 
-# This code is used to pass on physical device extensions through the call chain. It must do this without creating a stack frame,
-# because the actual parameters of the call are not known. Since the first parameter is known to be a VkPhysicalDevice, it can
-# unwrap the physical device, overwriting the wrapped device, and then jump to the next function in the call chain
+; This code is used to pass on device (including physical device) extensions through the call chain. It must do this without
+; creating a stack frame, because the actual parameters of the call are not known. Since the first parameter is known to be a
+; VkPhysicalDevice or a dispatchable object it can unwrap the object, possibly overwriting the wrapped physical device, and then
+; jump to the next function in the call chain
 
-.intel_syntax noprefix
-.include "gen_defines.asm"
+; Codegen defines a number of values, chiefly offsets of members within structs and sizes of data types within gen_defines.asm.
+; Struct member offsets are defined in the format "XX_OFFSET_YY" where XX indicates the member within the struct and YY indicates
+; the struct type that it is a member of. Data type sizes are defined in the format "XX_SIZE" where XX indicates the data type.
+INCLUDE gen_defines.asm
 
-.ifdef X86_64
+; 64-bit values and macro
+IFDEF rax
 
-.macro PhysDevExtTramp num
-.global vkPhysDevExtTramp\num
-vkPhysDevExtTramp\num:
-    mov     rax, [rdi]
-    mov     rdi, [rdi + PHYS_DEV_OFFSET_PHYS_DEV_TRAMP]
-    jmp     [rax + (PHYS_DEV_OFFSET_INST_DISPATCH + (PTR_SIZE * \num))]
-.endm
+PhysDevExtTramp macro num:req
+public vkPhysDevExtTramp&num&
+vkPhysDevExtTramp&num&:
+    mov     rax, qword ptr [rcx]                            ; Dereference the wrapped VkPhysicalDevice to get the dispatch table in rax
+    mov     rcx, qword ptr [rcx + PHYS_DEV_OFFSET_PHYS_DEV_TRAMP]   ; Load the unwrapped VkPhysicalDevice into rcx
+    jmp     qword ptr [rax + (PHYS_DEV_OFFSET_INST_DISPATCH + (PTR_SIZE * num))] ; Jump to the next function in the chain, preserving the args in other registers
+endm
 
-.macro PhysDevExtTermin num
-.global vkPhysDevExtTermin\num
-vkPhysDevExtTermin\num:
-    mov     rax, [rdi + ICD_TERM_OFFSET_PHYS_DEV_TERM]                          # Store the loader_icd_term* in rax
-    cmp     qword ptr [rax + (DISPATCH_OFFSET_ICD_TERM + (PTR_SIZE * \num))], 0 # Check if the next function in the chain is NULL
-    je      terminError\num                                                     # Go to the error section if it is NULL
-    mov     rdi, [rdi + PHYS_DEV_OFFSET_PHYS_DEV_TERM]                          # Load the unwrapped VkPhysicalDevice into the first arg
-    jmp     [rax + (DISPATCH_OFFSET_ICD_TERM + (PTR_SIZE * \num))]              # Jump to the next function in the chain
-terminError\num:
-    sub     rsp, 56                                                             # Create the stack frame
-    mov     rdi, [rax + INSTANCE_OFFSET_ICD_TERM]                               # Load the loader_instance into rdi (first arg)
-    mov     r8, [rdi + (HASH_OFFSET_INSTANCE + (HASH_SIZE * \num) + FUNC_NAME_OFFSET_HASH)] # Load the func name into r8 (fifth arg)
-    lea     rcx, termin_error_string@GOTPCREL                                   # Load the error string into rcx (fourth arg)
-    xor     edx, edx                                                            # Set rdx to zero (third arg)
-    lea     esi, [rdx + VK_DEBUG_REPORT_ERROR_BIT_EXT]                          # Write the error logging bit to rsi (second arg)
-    call    loader_log                                                          # Log the error message before we crash
-    add     rsp, 56                                                             # Clean up the stack frame
+PhysDevExtTermin macro num
+public vkPhysDevExtTermin&num&
+vkPhysDevExtTermin&num&:
+    mov     rax, qword ptr [rcx + ICD_TERM_OFFSET_PHYS_DEV_TERM]                ; Store the loader_icd_term* in rax
+    cmp     qword ptr [rax + (DISPATCH_OFFSET_ICD_TERM + (PTR_SIZE * num))], 0  ; Check if the next function in the chain is NULL
+    je      terminError&num&                                                    ; Go to the error section if it is NULL
+    mov     rcx, qword ptr [rcx + PHYS_DEV_OFFSET_PHYS_DEV_TERM]                ; Load the unwrapped VkPhysicalDevice into the first arg
+    jmp     qword ptr [rax + (DISPATCH_OFFSET_ICD_TERM + (PTR_SIZE * num))]     ; Jump to the next function in the chain
+terminError&num&:
+    sub     rsp, 56                                                             ; Create the stack frame
+    mov     rcx, qword ptr [rax + INSTANCE_OFFSET_ICD_TERM]                     ; Load the loader_instance into rcx (first arg)
+    mov     rax, qword ptr [rcx + (HASH_OFFSET_INSTANCE + (HASH_SIZE * num) + FUNC_NAME_OFFSET_HASH)] ; Load the func name into rax
+    lea     r9, termin_error_string                                             ; Load the error string into r9 (fourth arg)
+    xor     r8d, r8d                                                            ; Set r8 to zero (third arg)
+    mov     qword ptr [rsp + 32], rax                                           ; Move the func name onto the stack (fifth arg)
+    lea     edx, [r8 + VK_DEBUG_REPORT_ERROR_BIT_EXT]                           ; Write the error logging bit to rdx (second arg)
+    call    loader_log                                                          ; Log the error message before we crash
+    add     rsp, 56                                                             ; Clean up the stack frame
     mov     rax, 0
-    jmp     rax                                                                 # Crash intentionally by jumping to address zero
-.endm
+    jmp     rax                                                                 ; Crash intentionally by jumping to address zero
+endm
 
-.macro DevExtTramp num
-.global vkdev_ext\num
-vkdev_ext\num:
-    mov     rax, [rdi]                                                          # Dereference the handle to get the dispatch table
-    jmp     [rax + (EXT_OFFSET_DEVICE_DISPATCH + (PTR_SIZE * \num))]            # Jump to the appropriate call chain
-.endm
+DevExtTramp macro num
+public vkdev_ext&num&
+vkdev_ext&num&:
+    mov     rax, qword ptr [rcx]                                               ; Dereference the handle to get the dispatch table
+    jmp     qword ptr [rax + (EXT_OFFSET_DEVICE_DISPATCH + (PTR_SIZE * num))]  ; Jump to the appropriate call chain
+endm
 
-.else
+; 32-bit values and macro
+ELSE
 
-.macro PhysDevExtTramp num
-.global vkPhysDevExtTramp\num
-vkPhysDevExtTramp\num:
-    mov     eax, [esp + 4]                              # Load the wrapped VkPhysicalDevice into eax
-    mov     ecx, [eax + PHYS_DEV_OFFSET_PHYS_DEV_TRAMP] # Load the unwrapped VkPhysicalDevice into ecx
-    mov     [esp + 4], ecx                              # Overwrite the wrapped VkPhysicalDevice with the unwrapped one (on the stack)
-    mov     eax, [eax]                                  # Dereference the wrapped VkPhysicalDevice to get the dispatch table in eax
-    jmp     [eax + (PHYS_DEV_OFFSET_INST_DISPATCH + (PTR_SIZE * \num))] # Dereference the wrapped VkPhysicalDevice to get the dispatch table in eax
-.endm
+PhysDevExtTramp macro num
+public _vkPhysDevExtTramp&num&@4
+_vkPhysDevExtTramp&num&@4:
+    mov     eax, dword ptr [esp + 4]                        ; Load the wrapped VkPhysicalDevice into eax
+    mov     ecx, [eax + PHYS_DEV_OFFSET_PHYS_DEV_TRAMP]     ; Load the unwrapped VkPhysicalDevice into ecx
+    mov     [esp + 4], ecx                                  ; Overwrite the wrapped VkPhysicalDevice with the unwrapped one (on the stack)
+    mov     eax, [eax]                                      ; Dereference the wrapped VkPhysicalDevice to get the dispatch table in eax
+    jmp     dword ptr [eax + (PHYS_DEV_OFFSET_INST_DISPATCH + (PTR_SIZE * num))] ; Jump to the next function in the chain, preserving the args on the stack
+endm
 
-.macro PhysDevExtTermin num
-.global vkPhysDevExtTermin\num
-vkPhysDevExtTermin\num:
-    mov     ecx, [esp + 4]                                                      # Move the wrapped VkPhysicalDevice into ecx
-    mov     eax, [ecx + ICD_TERM_OFFSET_PHYS_DEV_TERM]                          # Store the loader_icd_term* in eax
-    cmp     dword ptr [eax + (DISPATCH_OFFSET_ICD_TERM + (PTR_SIZE * \num))], 0 # Check if the next function in the chain is NULL
-    je      terminError\num                                                     # Go to the error section if it is NULL
-    mov     ecx, [ecx + PHYS_DEV_OFFSET_PHYS_DEV_TERM]                          # Unwrap the VkPhysicalDevice in ecx
-    mov     [esp + 4], ecx                                                      # Copy the unwrapped VkPhysicalDevice into the first arg
-    jmp     [eax + (DISPATCH_OFFSET_ICD_TERM + (PTR_SIZE * \num))]              # Jump to the next function in the chain
-terminError\num:
-    mov     eax, [eax + INSTANCE_OFFSET_ICD_TERM]                               # Load the loader_instance into eax
-    push    [eax + (HASH_OFFSET_INSTANCE + (HASH_SIZE * \num) + FUNC_NAME_OFFSET_HASH)] # Push the func name (fifth arg)
-    push    offset termin_error_string                                          # Push the error string (fourth arg)
-    push    0                                                                   # Push zero (third arg)
-    push    VK_DEBUG_REPORT_ERROR_BIT_EXT                                       # Push the error logging bit (second arg)
-    push    eax                                                                 # Push the loader_instance (first arg)
-    call    loader_log                                                          # Log the error message before we crash
-    add     esp, 20                                                             # Clean up the args
+PhysDevExtTermin macro num
+public _vkPhysDevExtTermin&num&@4
+_vkPhysDevExtTermin&num&@4:
+    mov     ecx, dword ptr [esp + 4]                                            ; Move the wrapped VkPhysicalDevice into ecx
+    mov     eax, dword ptr [ecx + ICD_TERM_OFFSET_PHYS_DEV_TERM]                ; Store the loader_icd_term* in eax
+    cmp     dword ptr [eax + (DISPATCH_OFFSET_ICD_TERM + (PTR_SIZE * num))], 0  ; Check if the next function in the chain is NULL
+    je      terminError&num&                                                    ; Go to the error section if it is NULL
+    mov     ecx, dword ptr [ecx + PHYS_DEV_OFFSET_PHYS_DEV_TERM]                ; Unwrap the VkPhysicalDevice in ecx
+    mov     dword ptr [esp + 4], ecx                                            ; Copy the unwrapped VkPhysicalDevice into the first arg
+    jmp     dword ptr [eax + (DISPATCH_OFFSET_ICD_TERM + (PTR_SIZE * num))]     ; Jump to the next function in the chain
+terminError&num&:
+    mov     eax, dword ptr [eax + INSTANCE_OFFSET_ICD_TERM]                     ; Load the loader_instance into eax
+    push    dword ptr [eax + (HASH_OFFSET_INSTANCE + (HASH_SIZE * num) + FUNC_NAME_OFFSET_HASH)] ; Push the func name (fifth arg)
+    push    offset termin_error_string                                          ; Push the error string (fourth arg)
+    push    0                                                                   ; Push zero (third arg)
+    push    VK_DEBUG_REPORT_ERROR_BIT_EXT                                       ; Push the error logging bit (second arg)
+    push    eax                                                                 ; Push the loader_instance (first arg)
+    call    _loader_log                                                         ; Log the error message before we crash
+    add     esp, 20                                                             ; Clean up the args
     mov     eax, 0
-    jmp     eax                                                                 # Crash intentionally by jumping to address zero
-.endm
+    jmp     eax                                                                 ; Crash intentionally by jumping to address zero
+endm
 
-.macro DevExtTramp num
-.global vkdev_ext\num
-vkdev_ext\num:
-    mov     eax, [esp + 4]                                                      # Dereference the handle to get the dispatch table
-    jmp     [eax + (EXT_OFFSET_DEVICE_DISPATCH + (PTR_SIZE * \num))]            # Jump to the appropriate call chain
-.endm
+DevExtTramp macro num
+public _vkdev_ext&num&@4
+_vkdev_ext&num&@4:
+    mov     eax, dword ptr [esp + 4]                                           ; Dereference the handle to get the dispatch table
+    jmp     dword ptr [eax + (EXT_OFFSET_DEVICE_DISPATCH + (PTR_SIZE * num))]  ; Jump to the appropriate call chain
+endm
 
-.endif
+; This is also needed for 32-bit only
+.model flat
 
-.data
+ENDIF
 
-termin_error_string:
-.string "Extension %s not supported for this physical device"
+.const
+    termin_error_string db 'Extension %s not supported for this physical device', 0
 
-.text
+.code
+
+IFDEF rax
+extrn loader_log:near
+ELSE
+extrn _loader_log:near
+ENDIF
 
     PhysDevExtTramp 0
     PhysDevExtTramp 1
@@ -866,3 +879,5 @@ termin_error_string:
     DevExtTramp 247
     DevExtTramp 248
     DevExtTramp 249
+
+end
