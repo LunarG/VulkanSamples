@@ -1077,28 +1077,7 @@ VkResult loader_add_to_layer_list(const struct loader_instance *inst, struct loa
 static void loader_add_implicit_layer(const struct loader_instance *inst, const struct loader_layer_properties *prop,
                                       struct loader_layer_list *target_list, struct loader_layer_list *expanded_target_list,
                                       const struct loader_layer_list *source_list) {
-    bool enable = false;
-    char *env_value = NULL;
-
-    // if no enable_environment variable is specified, this implicit layer
-    // should always be enabled. Otherwise check if the variable is set
-    if (prop->enable_env_var.name[0] == 0) {
-        enable = true;
-    } else {
-        env_value = loader_secure_getenv(prop->enable_env_var.name, inst);
-        if (env_value && !strcmp(prop->enable_env_var.value, env_value)) enable = true;
-        loader_free_getenv(env_value, inst);
-    }
-
-    // disable_environment has priority, i.e. if both enable and disable
-    // environment variables are set, the layer is disabled. Implicit
-    // layers are required to have a disable_environment variables
-    env_value = loader_secure_getenv(prop->disable_env_var.name, inst);
-    if (env_value) {
-        enable = false;
-    }
-    loader_free_getenv(env_value, inst);
-
+    bool enable = loader_is_implicit_layer_enabled(inst, prop);
     if (enable) {
         // If not a meta-layer, simply add it.
         if (0 == (prop->type_flags & VK_LAYER_TYPE_FLAG_META_LAYER)) {
@@ -3400,6 +3379,31 @@ void loader_implicit_layer_scan(const struct loader_instance *inst, struct loade
     }
     loader_instance_heap_free(inst, manifest_files.filename_list);
     loader_platform_thread_unlock_mutex(&loader_json_lock);
+}
+
+// Check if an implicit layer should be enabled.
+bool loader_is_implicit_layer_enabled(const struct loader_instance *inst, const struct loader_layer_properties *prop) {
+    bool enable = false;
+    char *env_value = NULL;
+
+    // if no enable_environment variable is specified, this implicit layer
+    // should always be enabled. Otherwise check if the variable is set
+    if (prop->enable_env_var.name[0] == 0) {
+        enable = true;
+    } else {
+        env_value = loader_secure_getenv(prop->enable_env_var.name, inst);
+        if (env_value && !strcmp(prop->enable_env_var.value, env_value)) enable = true;
+        loader_free_getenv(env_value, inst);
+    }
+
+    // disable_environment has priority, i.e. if both enable and disable
+    // environment variables are set, the layer is disabled. Implicit
+    // layers are required to have a disable_environment variables
+    env_value = loader_secure_getenv(prop->disable_env_var.name, inst);
+    if (env_value && !strcmp(prop->disable_env_var.value, env_value)) enable = false;
+    loader_free_getenv(env_value, inst);
+
+    return enable;
 }
 
 static VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL loader_gpdpa_instance_internal(VkInstance inst, const char *pName) {
