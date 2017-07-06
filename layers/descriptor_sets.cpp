@@ -216,7 +216,8 @@ bool cvdescriptorset::DescriptorSetLayout::IsCompatible(DescriptorSetLayout cons
     if (descriptor_count_ != rh_ds_layout->descriptor_count_) {
         std::stringstream error_str;
         error_str << "DescriptorSetLayout " << layout_ << " has " << descriptor_count_ << " descriptors, but DescriptorSetLayout "
-                  << rh_ds_layout->GetDescriptorSetLayout() << " has " << rh_ds_layout->descriptor_count_ << " descriptors.";
+                  << rh_ds_layout->GetDescriptorSetLayout() << ", which comes from pipelineLayout, has "
+                  << rh_ds_layout->descriptor_count_ << " descriptors.";
         *error_msg = error_str.str();
         return false;  // trivial fail case
     }
@@ -229,7 +230,7 @@ bool cvdescriptorset::DescriptorSetLayout::IsCompatible(DescriptorSetLayout cons
             std::stringstream error_str;
             error_str << "Binding " << binding.binding << " for DescriptorSetLayout " << layout_ << " has a descriptorCount of "
                       << binding.descriptorCount << " but binding " << binding.binding << " for DescriptorSetLayout "
-                      << rh_ds_layout->GetDescriptorSetLayout() << " has a descriptorCount of "
+                      << rh_ds_layout->GetDescriptorSetLayout() << ", which comes from pipelineLayout, has a descriptorCount of "
                       << rh_ds_layout->GetDescriptorCountFromBinding(binding.binding);
             *error_msg = error_str.str();
             return false;
@@ -237,7 +238,8 @@ bool cvdescriptorset::DescriptorSetLayout::IsCompatible(DescriptorSetLayout cons
             std::stringstream error_str;
             error_str << "Binding " << binding.binding << " for DescriptorSetLayout " << layout_ << " is type '"
                       << string_VkDescriptorType(binding.descriptorType) << "' but binding " << binding.binding
-                      << " for DescriptorSetLayout " << rh_ds_layout->GetDescriptorSetLayout() << " is type '"
+                      << " for DescriptorSetLayout " << rh_ds_layout->GetDescriptorSetLayout()
+                      << ", which comes from pipelineLayout, is type '"
                       << string_VkDescriptorType(rh_ds_layout->GetTypeFromBinding(binding.binding)) << "'";
             *error_msg = error_str.str();
             return false;
@@ -245,7 +247,7 @@ bool cvdescriptorset::DescriptorSetLayout::IsCompatible(DescriptorSetLayout cons
             std::stringstream error_str;
             error_str << "Binding " << binding.binding << " for DescriptorSetLayout " << layout_ << " has stageFlags "
                       << binding.stageFlags << " but binding " << binding.binding << " for DescriptorSetLayout "
-                      << rh_ds_layout->GetDescriptorSetLayout() << " has stageFlags "
+                      << rh_ds_layout->GetDescriptorSetLayout() << ", which comes from pipelineLayout, has stageFlags "
                       << rh_ds_layout->GetStageFlagsFromBinding(binding.binding);
             *error_msg = error_str.str();
             return false;
