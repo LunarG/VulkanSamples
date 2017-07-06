@@ -2456,12 +2456,11 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateSampler(VkDevice device, const VkSamplerCre
     skip |= parameter_validation_vkCreateSampler(device_data, pCreateInfo, pAllocator, pSampler);
 
     if (pCreateInfo != nullptr) {
-
         if ((device_data->physical_device_features.samplerAnisotropy == false) && (pCreateInfo->maxAnisotropy != 1.0)) {
             skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
                             DEVICE_FEATURE, LayerName,
-                            "vkCreateSampler(): The samplerAnisotropy feature is not enabled, so the maxAnisotropy member of the "
-                            "VkSamplerCreateInfo structure must be 1.0 but is %f.",
+                            "vkCreateSampler(): The samplerAnisotropy feature was not enabled at device-creation time, so the "
+                            "maxAnisotropy member of the VkSamplerCreateInfo structure must be 1.0 but is %f.",
                             pCreateInfo->maxAnisotropy);
         }
 
