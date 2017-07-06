@@ -186,7 +186,7 @@ endif()
 add_dependencies(VkLayer_utils generate_helper_files)
 
 add_vk_layer(core_validation core_validation.cpp vk_layer_table.cpp descriptor_sets.cpp buffer_validation.cpp shader_validation.cpp)
-add_vk_layer(object_tracker object_tracker.cpp vk_layer_table.cpp)
+add_vk_layer(object_tracker object_tracker.cpp object_tracker_utils.cpp vk_layer_table.cpp)
 # generated
 add_vk_layer(threading threading.cpp thread_check.h vk_layer_table.cpp)
 add_vk_layer(unique_objects unique_objects.cpp unique_objects_wrappers.h vk_layer_table.cpp)
