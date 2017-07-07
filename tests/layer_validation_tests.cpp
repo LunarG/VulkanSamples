@@ -19571,6 +19571,53 @@ TEST_F(VkLayerTest, ExtensionNotEnabled) {
     m_errorMonitor->VerifyFound();
 }
 
+TEST_F(VkLayerTest, Maintenance1AndNegativeViewport) {
+    TEST_DESCRIPTION("Attempt to enable AMD_negative_viewport_height and Maintenance1_KHR extension simultaneously");
+
+    ASSERT_NO_FATAL_FAILURE(InitFramework(myDbgFunc, m_errorMonitor));
+    if (!((DeviceExtensionSupported(gpu(), nullptr, VK_KHR_MAINTENANCE1_EXTENSION_NAME)) &&
+        (DeviceExtensionSupported(gpu(), nullptr, VK_AMD_NEGATIVE_VIEWPORT_HEIGHT_EXTENSION_NAME)))) {
+        printf("             Maintenance1 and AMD_negative viewport height extensions not supported, skipping test\n");
+        return;
+    }
+    ASSERT_NO_FATAL_FAILURE(InitState());
+
+    const std::vector<VkQueueFamilyProperties> queue_props = m_device->queue_props;
+    std::vector<VkDeviceQueueCreateInfo> queue_info;
+    queue_info.reserve(queue_props.size());
+    std::vector<std::vector<float>> queue_priorities;
+    for (uint32_t i = 0; i < (uint32_t)queue_props.size(); i++) {
+        VkDeviceQueueCreateInfo qi = {};
+        qi.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
+        qi.pNext = NULL;
+        qi.queueFamilyIndex = i;
+        qi.queueCount = queue_props[i].queueCount;
+        queue_priorities.emplace_back(qi.queueCount, 0.0f);
+        qi.pQueuePriorities = queue_priorities[i].data();
+        queue_info.push_back(qi);
+    }
+    const char *extension_names[2] = {"VK_KHR_maintenance1", "VK_AMD_negative_viewport_height"};
+    VkDevice testDevice;
+    VkDeviceCreateInfo device_create_info = {};
+    auto features = m_device->phy().features();
+    device_create_info.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
+    device_create_info.pNext = NULL;
+    device_create_info.queueCreateInfoCount = queue_info.size();
+    device_create_info.pQueueCreateInfos = queue_info.data();
+    device_create_info.enabledLayerCount = 0;
+    device_create_info.ppEnabledLayerNames = NULL;
+    device_create_info.enabledExtensionCount = 2;
+    device_create_info.ppEnabledExtensionNames = (const char *const *)extension_names;
+    device_create_info.pEnabledFeatures = &features;
+
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_056002ec);
+    // The following unexpected error is coming from the LunarG loader. Do not make it a desired message because platforms that do
+    // not use the LunarG loader (e.g. Android) will not see the message and the test will fail.
+    m_errorMonitor->SetUnexpectedError("Failed to create device chain.");
+    vkCreateDevice(gpu(), &device_create_info, NULL, &testDevice);
+    m_errorMonitor->VerifyFound();
+}
+
 //
 // POSITIVE VALIDATION TESTS
 //

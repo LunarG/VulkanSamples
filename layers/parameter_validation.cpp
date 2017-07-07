@@ -438,11 +438,25 @@ static bool ValidateDeviceCreateInfo(instance_layer_data *instance_data, VkPhysi
         }
     }
 
+    bool maint1 = false;
+    bool negative_viewport = false;
+
     if ((pCreateInfo->enabledExtensionCount > 0) && (pCreateInfo->ppEnabledExtensionNames != NULL)) {
         for (size_t i = 0; i < pCreateInfo->enabledExtensionCount; i++) {
             skip |= validate_string(instance_data->report_data, "vkCreateDevice", "pCreateInfo->ppEnabledExtensionNames",
                                     pCreateInfo->ppEnabledExtensionNames[i]);
+            if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_KHR_MAINTENANCE1_EXTENSION_NAME) == 0) maint1 = true;
+            if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_AMD_NEGATIVE_VIEWPORT_HEIGHT_EXTENSION_NAME) == 0)
+                negative_viewport = true;
         }
+    }
+
+    if (maint1 && negative_viewport) {
+        skip |= log_msg(instance_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0,
+                        __LINE__, VALIDATION_ERROR_056002ec, LayerName,
+                        "VkDeviceCreateInfo->ppEnabledExtensionNames must not simultaneously include VK_KHR_maintenance1 and "
+                        "VK_AMD_negative_viewport_height. %s",
+                        validation_error_map[VALIDATION_ERROR_056002ec]);
     }
 
     if (pCreateInfo->pNext != NULL && pCreateInfo->pEnabledFeatures) {
