@@ -2396,6 +2396,13 @@ static void RetireWorkOnQueue(layer_data *dev_data, QUEUE_STATE *pQueue, uint64_
             }
         }
 
+        for (auto &semaphore : submission.externalSemaphores) {
+            auto pSemaphore = GetSemaphoreNode(dev_data, semaphore);
+            if (pSemaphore) {
+                pSemaphore->in_use.fetch_sub(1);
+            }
+        }
+
         for (auto cb : submission.cbs) {
             auto cb_node = GetCBNode(dev_data, cb);
             if (!cb_node) {
@@ -2653,27 +2660,41 @@ static void PostCallRecordQueueSubmit(layer_data *dev_data, VkQueue queue, uint3
         const VkSubmitInfo *submit = &pSubmits[submit_idx];
         vector<SEMAPHORE_WAIT> semaphore_waits;
         vector<VkSemaphore> semaphore_signals;
+        vector<VkSemaphore> semaphore_externals;
         for (uint32_t i = 0; i < submit->waitSemaphoreCount; ++i) {
             VkSemaphore semaphore = submit->pWaitSemaphores[i];
             auto pSemaphore = GetSemaphoreNode(dev_data, semaphore);
             if (pSemaphore) {
-                if (pSemaphore->signaler.first != VK_NULL_HANDLE) {
-                    semaphore_waits.push_back({semaphore, pSemaphore->signaler.first, pSemaphore->signaler.second});
+                if (pSemaphore->scope == kSyncScopeInternal) {
+                    if (pSemaphore->signaler.first != VK_NULL_HANDLE) {
+                        semaphore_waits.push_back({semaphore, pSemaphore->signaler.first, pSemaphore->signaler.second});
+                        pSemaphore->in_use.fetch_add(1);
+                    }
+                    pSemaphore->signaler.first = VK_NULL_HANDLE;
+                    pSemaphore->signaled = false;
+                } else {
+                    semaphore_externals.push_back(semaphore);
                     pSemaphore->in_use.fetch_add(1);
+                    if (pSemaphore->scope == kSyncScopeExternalTemporary) {
+                        pSemaphore->scope = kSyncScopeInternal;
+                    }
                 }
-                pSemaphore->signaler.first = VK_NULL_HANDLE;
-                pSemaphore->signaled = false;
             }
         }
         for (uint32_t i = 0; i < submit->signalSemaphoreCount; ++i) {
             VkSemaphore semaphore = submit->pSignalSemaphores[i];
             auto pSemaphore = GetSemaphoreNode(dev_data, semaphore);
             if (pSemaphore) {
-                pSemaphore->signaler.first = queue;
-                pSemaphore->signaler.second = pQueue->seq + pQueue->submissions.size() + 1;
-                pSemaphore->signaled = true;
-                pSemaphore->in_use.fetch_add(1);
-                semaphore_signals.push_back(semaphore);
+                if (pSemaphore->scope == kSyncScopeInternal) {
+                    pSemaphore->signaler.first = queue;
+                    pSemaphore->signaler.second = pQueue->seq + pQueue->submissions.size() + 1;
+                    pSemaphore->signaled = true;
+                    pSemaphore->in_use.fetch_add(1);
+                    semaphore_signals.push_back(semaphore);
+                } else {
+                    semaphore_externals.push_back(semaphore);
+                    pSemaphore->in_use.fetch_add(1);
+                }
             }
         }
         for (uint32_t i = 0; i < submit->commandBufferCount; i++) {
@@ -2690,7 +2711,7 @@ static void PostCallRecordQueueSubmit(layer_data *dev_data, VkQueue queue, uint3
                 }
             }
         }
-        pQueue->submissions.emplace_back(cbs, semaphore_waits, semaphore_signals,
+        pQueue->submissions.emplace_back(cbs, semaphore_waits, semaphore_signals, semaphore_externals,
                                          submit_idx == submitCount - 1 ? fence : VK_NULL_HANDLE);
     }
 
@@ -2699,7 +2720,7 @@ static void PostCallRecordQueueSubmit(layer_data *dev_data, VkQueue queue, uint3
         // record an empty submission with just the fence, so we can determine
         // its completion.
         pQueue->submissions.emplace_back(std::vector<VkCommandBuffer>(), std::vector<SEMAPHORE_WAIT>(), std::vector<VkSemaphore>(),
-                                         fence);
+                                         std::vector<VkSemaphore>(), fence);
     }
 }
 
@@ -2713,6 +2734,7 @@ static bool PreCallValidateQueueSubmit(layer_data *dev_data, VkQueue queue, uint
 
     unordered_set<VkSemaphore> signaled_semaphores;
     unordered_set<VkSemaphore> unsignaled_semaphores;
+    unordered_set<VkSemaphore> internal_semaphores;
     vector<VkCommandBuffer> current_cmds;
     unordered_map<ImageSubresourcePair, IMAGE_LAYOUT_NODE> localImageLayoutMap;
     // Now verify each individual submit
@@ -2723,7 +2745,7 @@ static bool PreCallValidateQueueSubmit(layer_data *dev_data, VkQueue queue, uint
                                                  VALIDATION_ERROR_13c00098, VALIDATION_ERROR_13c0009a);
             VkSemaphore semaphore = submit->pWaitSemaphores[i];
             auto pSemaphore = GetSemaphoreNode(dev_data, semaphore);
-            if (pSemaphore) {
+            if (pSemaphore && (pSemaphore->scope == kSyncScopeInternal || internal_semaphores.count(semaphore))) {
                 if (unsignaled_semaphores.count(semaphore) ||
                     (!(signaled_semaphores.count(semaphore)) && !(pSemaphore->signaled))) {
                     skip |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_SEMAPHORE_EXT,
@@ -2735,11 +2757,14 @@ static bool PreCallValidateQueueSubmit(layer_data *dev_data, VkQueue queue, uint
                     unsignaled_semaphores.insert(semaphore);
                 }
             }
+            if (pSemaphore && pSemaphore->scope == kSyncScopeExternalTemporary) {
+                internal_semaphores.insert(semaphore);
+            }
         }
         for (uint32_t i = 0; i < submit->signalSemaphoreCount; ++i) {
             VkSemaphore semaphore = submit->pSignalSemaphores[i];
             auto pSemaphore = GetSemaphoreNode(dev_data, semaphore);
-            if (pSemaphore) {
+            if (pSemaphore && (pSemaphore->scope == kSyncScopeInternal || internal_semaphores.count(semaphore))) {
                 if (signaled_semaphores.count(semaphore) || (!(unsignaled_semaphores.count(semaphore)) && pSemaphore->signaled)) {
                     skip |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_SEMAPHORE_EXT,
                                     HandleToUint64(semaphore), __LINE__, DRAWSTATE_QUEUE_FORWARD_PROGRESS, "DS",
@@ -8750,6 +8775,7 @@ static bool PreCallValidateQueueBindSparse(layer_data *dev_data, VkQueue queue, 
 
     unordered_set<VkSemaphore> signaled_semaphores;
     unordered_set<VkSemaphore> unsignaled_semaphores;
+    unordered_set<VkSemaphore> internal_semaphores;
     for (uint32_t bindIdx = 0; bindIdx < bindInfoCount; ++bindIdx) {
         const VkBindSparseInfo &bindInfo = pBindInfo[bindIdx];
 
@@ -8758,7 +8784,7 @@ static bool PreCallValidateQueueBindSparse(layer_data *dev_data, VkQueue queue, 
         for (uint32_t i = 0; i < bindInfo.waitSemaphoreCount; ++i) {
             VkSemaphore semaphore = bindInfo.pWaitSemaphores[i];
             auto pSemaphore = GetSemaphoreNode(dev_data, semaphore);
-            if (pSemaphore) {
+            if (pSemaphore && (pSemaphore->scope == kSyncScopeInternal || internal_semaphores.count(semaphore))) {
                 if (unsignaled_semaphores.count(semaphore) ||
                     (!(signaled_semaphores.count(semaphore)) && !(pSemaphore->signaled))) {
                     skip |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_SEMAPHORE_EXT,
@@ -8770,11 +8796,14 @@ static bool PreCallValidateQueueBindSparse(layer_data *dev_data, VkQueue queue, 
                     unsignaled_semaphores.insert(semaphore);
                 }
             }
+            if (pSemaphore && pSemaphore->scope == kSyncScopeExternalTemporary) {
+                internal_semaphores.insert(semaphore);
+            }
         }
         for (uint32_t i = 0; i < bindInfo.signalSemaphoreCount; ++i) {
             VkSemaphore semaphore = bindInfo.pSignalSemaphores[i];
             auto pSemaphore = GetSemaphoreNode(dev_data, semaphore);
-            if (pSemaphore) {
+            if (pSemaphore && pSemaphore->scope == kSyncScopeInternal) {
                 if (signaled_semaphores.count(semaphore) || (!(unsignaled_semaphores.count(semaphore)) && pSemaphore->signaled)) {
                     skip |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_SEMAPHORE_EXT,
                                     HandleToUint64(semaphore), __LINE__, DRAWSTATE_QUEUE_FORWARD_PROGRESS, "DS",
@@ -8829,38 +8858,52 @@ static void PostCallRecordQueueBindSparse(layer_data *dev_data, VkQueue queue, u
 
         std::vector<SEMAPHORE_WAIT> semaphore_waits;
         std::vector<VkSemaphore> semaphore_signals;
+        std::vector<VkSemaphore> semaphore_externals;
         for (uint32_t i = 0; i < bindInfo.waitSemaphoreCount; ++i) {
             VkSemaphore semaphore = bindInfo.pWaitSemaphores[i];
             auto pSemaphore = GetSemaphoreNode(dev_data, semaphore);
             if (pSemaphore) {
-                if (pSemaphore->signaler.first != VK_NULL_HANDLE) {
-                    semaphore_waits.push_back({semaphore, pSemaphore->signaler.first, pSemaphore->signaler.second});
+                if (pSemaphore->scope == kSyncScopeInternal) {
+                    if (pSemaphore->signaler.first != VK_NULL_HANDLE) {
+                        semaphore_waits.push_back({semaphore, pSemaphore->signaler.first, pSemaphore->signaler.second});
+                        pSemaphore->in_use.fetch_add(1);
+                    }
+                    pSemaphore->signaler.first = VK_NULL_HANDLE;
+                    pSemaphore->signaled = false;
+                } else {
+                    semaphore_externals.push_back(semaphore);
                     pSemaphore->in_use.fetch_add(1);
+                    if (pSemaphore->scope == kSyncScopeExternalTemporary) {
+                        pSemaphore->scope = kSyncScopeInternal;
+                    }
                 }
-                pSemaphore->signaler.first = VK_NULL_HANDLE;
-                pSemaphore->signaled = false;
             }
         }
         for (uint32_t i = 0; i < bindInfo.signalSemaphoreCount; ++i) {
             VkSemaphore semaphore = bindInfo.pSignalSemaphores[i];
             auto pSemaphore = GetSemaphoreNode(dev_data, semaphore);
             if (pSemaphore) {
-                pSemaphore->signaler.first = queue;
-                pSemaphore->signaler.second = pQueue->seq + pQueue->submissions.size() + 1;
-                pSemaphore->signaled = true;
-                pSemaphore->in_use.fetch_add(1);
-                semaphore_signals.push_back(semaphore);
+                if (pSemaphore->scope == kSyncScopeInternal) {
+                    pSemaphore->signaler.first = queue;
+                    pSemaphore->signaler.second = pQueue->seq + pQueue->submissions.size() + 1;
+                    pSemaphore->signaled = true;
+                    pSemaphore->in_use.fetch_add(1);
+                    semaphore_signals.push_back(semaphore);
+                } else {
+                    semaphore_externals.push_back(semaphore);
+                    pSemaphore->in_use.fetch_add(1);
+                }
             }
         }
 
-        pQueue->submissions.emplace_back(std::vector<VkCommandBuffer>(), semaphore_waits, semaphore_signals,
+        pQueue->submissions.emplace_back(std::vector<VkCommandBuffer>(), semaphore_waits, semaphore_signals, semaphore_externals,
                                          bindIdx == bindInfoCount - 1 ? fence : VK_NULL_HANDLE);
     }
 
     if (pFence && !bindInfoCount) {
         // No work to do, just dropping a fence in the queue by itself.
         pQueue->submissions.emplace_back(std::vector<VkCommandBuffer>(), std::vector<SEMAPHORE_WAIT>(), std::vector<VkSemaphore>(),
-                                         fence);
+                                         std::vector<VkSemaphore>(), fence);
     }
 }
 
@@ -8891,9 +8934,76 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateSemaphore(VkDevice device, const VkSemaphor
         sNode->signaler.first = VK_NULL_HANDLE;
         sNode->signaler.second = 0;
         sNode->signaled = false;
+        sNode->scope = kSyncScopeInternal;
     }
     return result;
 }
+
+static bool PreCallValidateImportSemaphore(layer_data *dev_data, VkSemaphore semaphore, const char *caller_name) {
+    SEMAPHORE_NODE *sema_node = GetSemaphoreNode(dev_data, semaphore);
+    VK_OBJECT obj_struct = {HandleToUint64(semaphore), kVulkanObjectTypeSemaphore};
+    bool skip = false;
+    if (sema_node) {
+        skip |= ValidateObjectNotInUse(dev_data, sema_node, obj_struct, caller_name, VALIDATION_ERROR_UNDEFINED);
+    }
+    return skip;
+}
+
+static void PostCallRecordImportSemaphore(layer_data *dev_data, VkSemaphore semaphore,
+                                          VkExternalSemaphoreHandleTypeFlagBitsKHR handle_type, VkSemaphoreImportFlagsKHR flags) {
+    SEMAPHORE_NODE *sema_node = GetSemaphoreNode(dev_data, semaphore);
+    if (sema_node && sema_node->scope != kSyncScopeExternalPermanent) {
+        if ((handle_type == VK_EXTERNAL_SEMAPHORE_HANDLE_TYPE_SYNC_FD_BIT_KHR || flags & VK_SEMAPHORE_IMPORT_TEMPORARY_BIT_KHR) &&
+            sema_node->scope == kSyncScopeInternal) {
+            sema_node->scope = kSyncScopeExternalTemporary;
+        } else {
+            sema_node->scope = kSyncScopeExternalPermanent;
+        }
+    }
+}
+
+#ifdef VK_USE_PLATFORM_WIN32_KHR
+VKAPI_ATTR VkResult VKAPI_CALL
+ImportSemaphoreWin32HandleKHR(VkDevice device, const VkImportSemaphoreWin32HandleInfoKHR *pImportSemaphoreWin32HandleInfo) {
+    VkResult result = VK_ERROR_VALIDATION_FAILED_EXT;
+    layer_data *dev_data = GetLayerDataPtr(get_dispatch_key(device), layer_data_map);
+    bool skip =
+        PreCallValidateImportSemaphore(dev_data, pImportSemaphoreWin32HandleInfo->semaphore, "vkImportSemaphoreWin32HandleKHR");
+
+    if (!skip) {
+        result = dev_data->dispatch_table.ImportSemaphoreWin32HandleKHR(device, pImportSemaphoreWin32HandleInfo);
+    }
+
+    if (result == VK_SUCCESS) {
+        PostCallRecordImportSemaphore(dev_data, pImportSemaphoreWin32HandleInfo->semaphore,
+                                      pImportSemaphoreWin32HandleInfo->handleType, pImportSemaphoreWin32HandleInfo->flags);
+    }
+    return result;
+}
+#endif
+
+static void PostCallRecordGetSemaphore(layer_data *dev_data, VkSemaphore semaphore,
+                                       VkExternalSemaphoreHandleTypeFlagBitsKHR handle_type) {
+    SEMAPHORE_NODE *sema_node = GetSemaphoreNode(dev_data, semaphore);
+    if (sema_node && handle_type != VK_EXTERNAL_SEMAPHORE_HANDLE_TYPE_SYNC_FD_BIT_KHR) {
+        // Cannot track semaphore state once it is exported, except for Sync FD handle types which have copy transference
+        sema_node->scope = kSyncScopeExternalPermanent;
+    }
+}
+
+#ifdef VK_USE_PLATFORM_WIN32_KHR
+VKAPI_ATTR VkResult VKAPI_CALL GetSemaphoreWin32HandleKHR(VkDevice device,
+                                                          const VkSemaphoreGetWin32HandleInfoKHR *pGetWin32HandleInfo,
+                                                          HANDLE *pHandle) {
+    layer_data *dev_data = GetLayerDataPtr(get_dispatch_key(device), layer_data_map);
+    VkResult result = dev_data->dispatch_table.GetSemaphoreWin32HandleKHR(device, pGetWin32HandleInfo, pHandle);
+
+    if (result == VK_SUCCESS) {
+        PostCallRecordGetSemaphore(dev_data, pGetWin32HandleInfo->semaphore, pGetWin32HandleInfo->handleType);
+    }
+    return result;
+}
+#endif
 
 VKAPI_ATTR VkResult VKAPI_CALL CreateEvent(VkDevice device, const VkEventCreateInfo *pCreateInfo,
                                            const VkAllocationCallbacks *pAllocator, VkEvent *pEvent) {
@@ -9592,7 +9702,7 @@ static bool PreCallValidateAcquireNextImageKHR(layer_data *dev_data, VkDevice de
     }
 
     auto pSemaphore = GetSemaphoreNode(dev_data, semaphore);
-    if (pSemaphore && pSemaphore->signaled) {
+    if (pSemaphore && pSemaphore->scope == kSyncScopeInternal && pSemaphore->signaled) {
         skip |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_SEMAPHORE_EXT,
                         HandleToUint64(semaphore), __LINE__, VALIDATION_ERROR_16400a0c, "DS",
                         "vkAcquireNextImageKHR: Semaphore must not be currently signaled or in a wait state. %s",
@@ -9642,11 +9752,18 @@ static void PostCallRecordAcquireNextImageKHR(layer_data *dev_data, VkDevice dev
         pFence->signaler.first = VK_NULL_HANDLE;  // ANI isn't on a queue, so this can't participate in a completion proof.
     }
 
-    // A successful call to AcquireNextImageKHR counts as a signal operation on semaphore
     auto pSemaphore = GetSemaphoreNode(dev_data, semaphore);
     if (pSemaphore) {
-        pSemaphore->signaled = true;
-        pSemaphore->signaler.first = VK_NULL_HANDLE;
+        if (GetDeviceExtensions(dev_data)->vk_khr_external_semaphore) {
+            // A successful call with external semaphores enabled acts as a temporary import
+            if (pSemaphore->scope == kSyncScopeInternal) {
+                pSemaphore->scope = kSyncScopeExternalTemporary;
+            }
+        } else {
+            // A successful call without external semaphores acts as a signal operation
+            pSemaphore->signaled = true;
+            pSemaphore->signaler.first = VK_NULL_HANDLE;
+        }
     }
 
     // Mark the image as acquired.
@@ -10778,6 +10895,8 @@ static const std::unordered_map<std::string, void*> name_to_funcptr_map = {
 #ifdef VK_USE_PLATFORM_WIN32_KHR
     {"vkCreateWin32SurfaceKHR", (void*)CreateWin32SurfaceKHR},
     {"vkGetPhysicalDeviceWin32PresentationSupportKHR", (void*)GetPhysicalDeviceWin32PresentationSupportKHR},
+    {"vkImportSemaphoreWin32HandleKHR", (void*)ImportSemaphoreWin32HandleKHR},
+    {"vkGetSemaphoreWin32HandleKHR", (void*)GetSemaphoreWin32HandleKHR},
 #endif
 #ifdef VK_USE_PLATFORM_XCB_KHR
     {"vkCreateXcbSurfaceKHR", (void*)CreateXcbSurfaceKHR},

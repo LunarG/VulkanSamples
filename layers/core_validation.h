@@ -111,10 +111,17 @@ class FENCE_NODE {
     FENCE_NODE() : state(FENCE_UNSIGNALED) {}
 };
 
+enum SyncScope {
+    kSyncScopeInternal,
+    kSyncScopeExternalTemporary,
+    kSyncScopeExternalPermanent,
+};
+
 class SEMAPHORE_NODE : public BASE_NODE {
    public:
     std::pair<VkQueue, uint64_t> signaler;
     bool signaled;
+    SyncScope scope;
 };
 
 class EVENT_STATE : public BASE_NODE {

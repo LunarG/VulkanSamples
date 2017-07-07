@@ -708,12 +708,18 @@ struct SEMAPHORE_WAIT {
 
 struct CB_SUBMISSION {
     CB_SUBMISSION(std::vector<VkCommandBuffer> const &cbs, std::vector<SEMAPHORE_WAIT> const &waitSemaphores,
-                  std::vector<VkSemaphore> const &signalSemaphores, VkFence fence)
-        : cbs(cbs), waitSemaphores(waitSemaphores), signalSemaphores(signalSemaphores), fence(fence) {}
+                  std::vector<VkSemaphore> const &signalSemaphores, std::vector<VkSemaphore> const &externalSemaphores,
+                  VkFence fence)
+        : cbs(cbs),
+          waitSemaphores(waitSemaphores),
+          signalSemaphores(signalSemaphores),
+          externalSemaphores(externalSemaphores),
+          fence(fence) {}
 
     std::vector<VkCommandBuffer> cbs;
     std::vector<SEMAPHORE_WAIT> waitSemaphores;
     std::vector<VkSemaphore> signalSemaphores;
+    std::vector<VkSemaphore> externalSemaphores;
     VkFence fence;
 };
 
