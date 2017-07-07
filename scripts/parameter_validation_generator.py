@@ -20,10 +20,12 @@
 # Author: Dustin Graves <dustin@lunarg.com>
 # Author: Mark Lobodzinski <mark@lunarg.com>
 
-import os,re,sys
+import os,re,sys,string
 import xml.etree.ElementTree as etree
 from generator import *
 from collections import namedtuple
+from vuid_mapping import *
+
 
 
 # ParamCheckerGeneratorOptions - subclass of GeneratorOptions.
@@ -159,7 +161,7 @@ class ParamCheckerOutputGenerator(OutputGenerator):
         self.required_extensions = []                     # List of required extensions for the current extension
         self.extension_type = ''                          # Type of active feature (extension), device or instance
         self.extension_names = dict()                     # Dictionary of extension names to extension name defines
-
+        self.valid_vuids = set()                          # Set of all valid VUIDs
         # Named tuples to store struct and command data
         self.StructType = namedtuple('StructType', ['name', 'value'])
         self.CommandParam = namedtuple('CommandParam', ['type', 'name', 'ispointer', 'isstaticarray', 'isbool', 'israngedenum',
@@ -167,6 +169,22 @@ class ParamCheckerOutputGenerator(OutputGenerator):
                                                         'condition', 'cdecl'])
         self.CommandData = namedtuple('CommandData', ['name', 'params', 'cdecl', 'extension_type'])
         self.StructMemberData = namedtuple('StructMemberData', ['name', 'members'])
+
+        self.vuid_file = None
+        # Cover cases where file is built from scripts directory, Lin/Win, or Android build structure
+        vuid_filename_locations = [
+            './vk_validation_error_messages.h',
+            '../layers/vk_validation_error_messages.h',
+            '../../layers/vk_validation_error_messages.h',
+            '../../../layers/vk_validation_error_messages.h',
+            ]
+        for vuid_filename in vuid_filename_locations:
+            if os.path.isfile(vuid_filename):
+                self.vuid_file = open(vuid_filename, "r")
+                break
+        if self.vuid_file == None:
+            print("Error: Could not find vk_validation_error_messages.h")
+            quit()
     #
     def incIndent(self, indent):
         inc = ' ' * self.INDENT_SPACES
@@ -178,10 +196,28 @@ class ParamCheckerOutputGenerator(OutputGenerator):
         if indent and (len(indent) > self.INDENT_SPACES):
             return indent[:-self.INDENT_SPACES]
         return ''
+    # Convert decimal number to 8 digit hexadecimal lower-case representation
+    def IdToHex(self, dec_num):
+        if dec_num > 4294967295:
+            print ("ERROR: Decimal # %d can't be represented in 8 hex digits" % (dec_num))
+            sys.exit()
+        hex_num = hex(dec_num)
+        return hex_num[2:].zfill(8)
     #
     def beginFile(self, genOpts):
         OutputGenerator.beginFile(self, genOpts)
         # C-specific
+        #
+        # Open vk_validation_error_messages.h file to verify computed VUIDs
+        for line in self.vuid_file:
+            # Grab hex number from enum definition
+            vuid_list = line.split('0x')
+            # If this is a valid enumeration line, remove trailing comma and CR
+            if len(vuid_list) == 2:
+                vuid_num = vuid_list[1][:-2]
+                # Make sure this is a good hex number before adding to set
+                if len(vuid_num) == 8 and all(c in string.hexdigits for c in vuid_num):
+                    self.valid_vuids.add(vuid_num)
         #
         # User-supplied prefix text, if any (list of strings)
         if (genOpts.prefixText):
@@ -687,24 +723,38 @@ class ParamCheckerOutputGenerator(OutputGenerator):
         checkedExpr.append(localIndent + '}\n')
         return [checkedExpr]
     #
+    # Get VUID identifier from implicit VUID tag
+    def GetVuid(self, vuid_string):
+        if '->' in vuid_string:
+           return "VALIDATION_ERROR_UNDEFINED"
+        vuid_num = self.IdToHex(convertVUID(vuid_string))
+        if vuid_num in self.valid_vuids:
+            vuid = "VALIDATION_ERROR_%s" % vuid_num
+        else:
+            vuid = "VALIDATION_ERROR_UNDEFINED"
+        return vuid
+    #
     # Generate the sType check string
-    def makeStructTypeCheck(self, prefix, value, lenValue, valueRequired, lenValueRequired, lenPtrRequired, funcPrintName, lenPrintName, valuePrintName, postProcSpec):
+    def makeStructTypeCheck(self, prefix, value, lenValue, valueRequired, lenValueRequired, lenPtrRequired, funcPrintName, lenPrintName, valuePrintName, postProcSpec, struct_type_name):
         checkExpr = []
         stype = self.structTypes[value.type]
         if lenValue:
+            vuid_name = struct_type_name if struct_type_name is not None else funcPrintName
+            vuid = self.GetVuid("VUID-%s-%s-parameter" % (vuid_name, value.name))
             # This is an array with a pointer to a count value
             if lenValue.ispointer:
                 # When the length parameter is a pointer, there is an extra Boolean parameter in the function call to indicate if it is required
-                checkExpr.append('skipCall |= validate_struct_type_array(layer_data->report_data, "{}", {ppp}"{ldn}"{pps}, {ppp}"{dn}"{pps}, "{sv}", {pf}{ln}, {pf}{vn}, {sv}, {}, {}, {});\n'.format(
-                    funcPrintName, lenPtrRequired, lenValueRequired, valueRequired, ln=lenValue.name, ldn=lenPrintName, dn=valuePrintName, vn=value.name, sv=stype.value, pf=prefix, **postProcSpec))
+                checkExpr.append('skipCall |= validate_struct_type_array(layer_data->report_data, "{}", {ppp}"{ldn}"{pps}, {ppp}"{dn}"{pps}, "{sv}", {pf}{ln}, {pf}{vn}, {sv}, {}, {}, {}, {});\n'.format(
+                    funcPrintName, lenPtrRequired, lenValueRequired, valueRequired, vuid, ln=lenValue.name, ldn=lenPrintName, dn=valuePrintName, vn=value.name, sv=stype.value, pf=prefix, **postProcSpec))
             # This is an array with an integer count value
             else:
-                checkExpr.append('skipCall |= validate_struct_type_array(layer_data->report_data, "{}", {ppp}"{ldn}"{pps}, {ppp}"{dn}"{pps}, "{sv}", {pf}{ln}, {pf}{vn}, {sv}, {}, {});\n'.format(
-                    funcPrintName, lenValueRequired, valueRequired, ln=lenValue.name, ldn=lenPrintName, dn=valuePrintName, vn=value.name, sv=stype.value, pf=prefix, **postProcSpec))
+                checkExpr.append('skipCall |= validate_struct_type_array(layer_data->report_data, "{}", {ppp}"{ldn}"{pps}, {ppp}"{dn}"{pps}, "{sv}", {pf}{ln}, {pf}{vn}, {sv}, {}, {}, {});\n'.format(
+                    funcPrintName, lenValueRequired, valueRequired, vuid, ln=lenValue.name, ldn=lenPrintName, dn=valuePrintName, vn=value.name, sv=stype.value, pf=prefix, **postProcSpec))
         # This is an individual struct
         else:
-            checkExpr.append('skipCall |= validate_struct_type(layer_data->report_data, "{}", {ppp}"{}"{pps}, "{sv}", {}{vn}, {sv}, {});\n'.format(
-                funcPrintName, valuePrintName, prefix, valueRequired, vn=value.name, sv=stype.value, **postProcSpec))
+            vuid = self.GetVuid("VUID-%s-sType-sType" % value.type)
+            checkExpr.append('skipCall |= validate_struct_type(layer_data->report_data, "{}", {ppp}"{}"{pps}, "{sv}", {}{vn}, {sv}, {}, {});\n'.format(
+                funcPrintName, valuePrintName, prefix, valueRequired, vuid, vn=value.name, sv=stype.value, vt=value.type, **postProcSpec))
         return checkExpr
     #
     # Generate the handle check string
@@ -735,41 +785,48 @@ class ParamCheckerOutputGenerator(OutputGenerator):
         return checkExpr
     #
     # Generate pNext check string
-    def makeStructNextCheck(self, prefix, value, funcPrintName, valuePrintName, postProcSpec):
+    def makeStructNextCheck(self, prefix, value, funcPrintName, valuePrintName, postProcSpec, struct_type_name):
         checkExpr = []
         # Generate an array of acceptable VkStructureType values for pNext
         extStructCount = 0
         extStructVar = 'NULL'
         extStructNames = 'NULL'
+        vuid = self.GetVuid("VUID-%s-pNext-pNext" % struct_type_name)
         if value.extstructs:
             structs = value.extstructs.split(',')
             checkExpr.append('const VkStructureType allowedStructs[] = {' + ', '.join([self.getStructType(s) for s in structs]) + '};\n')
             extStructCount = 'ARRAY_SIZE(allowedStructs)'
             extStructVar = 'allowedStructs'
             extStructNames = '"' + ', '.join(structs) + '"'
-        checkExpr.append('skipCall |= validate_struct_pnext(layer_data->report_data, "{}", {ppp}"{}"{pps}, {}, {}{}, {}, {}, GeneratedHeaderVersion);\n'.format(
-            funcPrintName, valuePrintName, extStructNames, prefix, value.name, extStructCount, extStructVar, **postProcSpec))
+        checkExpr.append('skipCall |= validate_struct_pnext(layer_data->report_data, "{}", {ppp}"{}"{pps}, {}, {}{}, {}, {}, GeneratedHeaderVersion, {});\n'.format(
+            funcPrintName, valuePrintName, extStructNames, prefix, value.name, extStructCount, extStructVar, vuid, **postProcSpec))
         return checkExpr
     #
     # Generate the pointer check string
-    def makePointerCheck(self, prefix, value, lenValue, valueRequired, lenValueRequired, lenPtrRequired, funcPrintName, lenPrintName, valuePrintName, postProcSpec):
+    def makePointerCheck(self, prefix, value, lenValue, valueRequired, lenValueRequired, lenPtrRequired, funcPrintName, lenPrintName, valuePrintName, postProcSpec, struct_type_name):
         checkExpr = []
+        vuid_tag_name = struct_type_name if struct_type_name is not None else funcPrintName
         if lenValue:
+            count_required_vuid = self.GetVuid("VUID-%s-%s-arraylength" % (vuid_tag_name, lenValue.name))
+            array_required_vuid = self.GetVuid("VUID-%s-%s-parameter" % (vuid_tag_name, value.name))
             # This is an array with a pointer to a count value
             if lenValue.ispointer:
                 # If count and array parameters are optional, there will be no validation
                 if valueRequired == 'true' or lenPtrRequired == 'true' or lenValueRequired == 'true':
                     # When the length parameter is a pointer, there is an extra Boolean parameter in the function call to indicate if it is required
-                    checkExpr.append('skipCall |= validate_array(layer_data->report_data, "{}", {ppp}"{ldn}"{pps}, {ppp}"{dn}"{pps}, {pf}{ln}, {pf}{vn}, {}, {}, {});\n'.format(
-                        funcPrintName, lenPtrRequired, lenValueRequired, valueRequired, ln=lenValue.name, ldn=lenPrintName, dn=valuePrintName, vn=value.name, pf=prefix, **postProcSpec))
+                    checkExpr.append('skipCall |= validate_array(layer_data->report_data, "{}", {ppp}"{ldn}"{pps}, {ppp}"{dn}"{pps}, {pf}{ln}, {pf}{vn}, {}, {}, {}, {}, {});\n'.format(
+                        funcPrintName, lenPtrRequired, lenValueRequired, valueRequired, count_required_vuid, array_required_vuid, ln=lenValue.name, ldn=lenPrintName, dn=valuePrintName, vn=value.name, pf=prefix, **postProcSpec))
             # This is an array with an integer count value
             else:
                 # If count and array parameters are optional, there will be no validation
                 if valueRequired == 'true' or lenValueRequired == 'true':
-                    # Arrays of strings receive special processing
-                    validationFuncName = 'validate_array' if value.type != 'char' else 'validate_string_array'
-                    checkExpr.append('skipCall |= {}(layer_data->report_data, "{}", {ppp}"{ldn}"{pps}, {ppp}"{dn}"{pps}, {pf}{ln}, {pf}{vn}, {}, {});\n'.format(
-                        validationFuncName, funcPrintName, lenValueRequired, valueRequired, ln=lenValue.name, ldn=lenPrintName, dn=valuePrintName, vn=value.name, pf=prefix, **postProcSpec))
+                    if value.type != 'char':
+                        checkExpr.append('skipCall |= validate_array(layer_data->report_data, "{}", {ppp}"{ldn}"{pps}, {ppp}"{dn}"{pps}, {pf}{ln}, {pf}{vn}, {}, {}, {}, {});\n'.format(
+                            funcPrintName, lenValueRequired, valueRequired, count_required_vuid, array_required_vuid, ln=lenValue.name, ldn=lenPrintName, dn=valuePrintName, vn=value.name, pf=prefix, **postProcSpec))
+                    else:
+                        # Arrays of strings receive special processing
+                        checkExpr.append('skipCall |= validate_string_array(layer_data->report_data, "{}", {ppp}"{ldn}"{pps}, {ppp}"{dn}"{pps}, {pf}{ln}, {pf}{vn}, {}, {}, {}, {});\n'.format(
+                            funcPrintName, lenValueRequired, valueRequired, count_required_vuid, array_required_vuid, ln=lenValue.name, ldn=lenPrintName, dn=valuePrintName, vn=value.name, pf=prefix, **postProcSpec))
             if checkExpr:
                 if lenValue and ('->' in lenValue.name):
                     # Add checks to ensure the validation call does not dereference a NULL pointer to obtain the count
@@ -777,10 +834,19 @@ class ParamCheckerOutputGenerator(OutputGenerator):
         # This is an individual struct that is not allowed to be NULL
         elif not value.isoptional:
             # Function pointers need a reinterpret_cast to void*
+            ptr_required_vuid = self.GetVuid("VUID-%s-%s-parameter" % (vuid_tag_name, value.name))
             if value.type[:4] == 'PFN_':
-                checkExpr.append('skipCall |= validate_required_pointer(layer_data->report_data, "{}", {ppp}"{}"{pps}, reinterpret_cast<const void*>({}{}));\n'.format(funcPrintName, valuePrintName, prefix, value.name, **postProcSpec))
+                allocator_dict = {'pfnAllocation': '002004f0',
+                                  'pfnReallocation': '002004f2',
+                                  'pfnFree': '002004f4',
+                                  'pfnInternalAllocation': '002004f6'
+                                 }
+                vuid = allocator_dict.get(value.name)
+                if vuid is not None:
+                    ptr_required_vuid = 'VALIDATION_ERROR_%s' % vuid
+                checkExpr.append('skipCall |= validate_required_pointer(layer_data->report_data, "{}", {ppp}"{}"{pps}, reinterpret_cast<const void*>({}{}), {});\n'.format(funcPrintName, valuePrintName, prefix, value.name, ptr_required_vuid, **postProcSpec))
             else:
-                checkExpr.append('skipCall |= validate_required_pointer(layer_data->report_data, "{}", {ppp}"{}"{pps}, {}{});\n'.format(funcPrintName, valuePrintName, prefix, value.name, **postProcSpec))
+                checkExpr.append('skipCall |= validate_required_pointer(layer_data->report_data, "{}", {ppp}"{}"{pps}, {}{}, {});\n'.format(funcPrintName, valuePrintName, prefix, value.name, ptr_required_vuid, **postProcSpec))
         return checkExpr
     #
     # Process struct member validation code, performing name suibstitution if required
@@ -932,7 +998,7 @@ class ParamCheckerOutputGenerator(OutputGenerator):
                     #
                     # If this is a pointer to a struct with an sType field, verify the type
                     if value.type in self.structTypes:
-                        usedLines += self.makeStructTypeCheck(valuePrefix, value, lenParam, req, cvReq, cpReq, funcName, lenDisplayName, valueDisplayName, postProcSpec)
+                        usedLines += self.makeStructTypeCheck(valuePrefix, value, lenParam, req, cvReq, cpReq, funcName, lenDisplayName, valueDisplayName, postProcSpec, structTypeName)
                     # If this is an input handle array that is not allowed to contain NULL handles, verify that none of the handles are VK_NULL_HANDLE
                     elif value.type in self.handleTypes and value.isconst and not self.isHandleOptional(value, lenParam):
                         usedLines += self.makeHandleCheck(valuePrefix, value, lenParam, req, cvReq, funcName, lenDisplayName, valueDisplayName, postProcSpec)
@@ -946,9 +1012,9 @@ class ParamCheckerOutputGenerator(OutputGenerator):
                     elif value.name == 'pNext':
                         # We need to ignore VkDeviceCreateInfo and VkInstanceCreateInfo, as the loader manipulates them in a way that is not documented in vk.xml
                         if not structTypeName in ['VkDeviceCreateInfo', 'VkInstanceCreateInfo']:
-                            usedLines += self.makeStructNextCheck(valuePrefix, value, funcName, valueDisplayName, postProcSpec)
+                            usedLines += self.makeStructNextCheck(valuePrefix, value, funcName, valueDisplayName, postProcSpec, structTypeName)
                     else:
-                        usedLines += self.makePointerCheck(valuePrefix, value, lenParam, req, cvReq, cpReq, funcName, lenDisplayName, valueDisplayName, postProcSpec)
+                        usedLines += self.makePointerCheck(valuePrefix, value, lenParam, req, cvReq, cpReq, funcName, lenDisplayName, valueDisplayName, postProcSpec, structTypeName)
                     #
                     # If this is a pointer to a struct (input), see if it contains members that need to be checked
                     if value.type in self.validatedStructs and value.isconst:
@@ -963,32 +1029,40 @@ class ParamCheckerOutputGenerator(OutputGenerator):
                     # Log a diagnostic message when validation cannot be automatically generated and must be implemented manually
                     self.logMsg('diag', 'ParameterValidation: No validation for {} {}'.format(structTypeName if structTypeName else funcName, value.name))
                 else:
+                    vuid_name_tag = structTypeName if structTypeName is not None else funcName
                     if value.type in self.structTypes:
                         stype = self.structTypes[value.type]
-                        usedLines.append('skipCall |= validate_struct_type(layer_data->report_data, "{}", {ppp}"{}"{pps}, "{sv}", &({}{vn}), {sv}, false);\n'.format(
-                            funcName, valueDisplayName, valuePrefix, vn=value.name, sv=stype.value, **postProcSpec))
+                        vuid = self.GetVuid("VUID-%s-sType-sType" % value.type)
+                        usedLines.append('skipCall |= validate_struct_type(layer_data->report_data, "{}", {ppp}"{}"{pps}, "{sv}", &({}{vn}), {sv}, false, {});\n'.format(
+                            funcName, valueDisplayName, valuePrefix, vuid, vn=value.name, sv=stype.value, vt=value.type, **postProcSpec))
                     elif value.type in self.handleTypes:
                         if not self.isHandleOptional(value, None):
                             usedLines.append('skipCall |= validate_required_handle(layer_data->report_data, "{}", {ppp}"{}"{pps}, {}{});\n'.format(funcName, valueDisplayName, valuePrefix, value.name, **postProcSpec))
                     elif value.type in self.flags:
                         flagBitsName = value.type.replace('Flags', 'FlagBits')
                         if not flagBitsName in self.flagBits:
-                            usedLines.append('skipCall |= validate_reserved_flags(layer_data->report_data, "{}", {ppp}"{}"{pps}, {pf}{});\n'.format(funcName, valueDisplayName, value.name, pf=valuePrefix, **postProcSpec))
+                            vuid = self.GetVuid("VUID-%s-%s-zerobitmask" % (vuid_name_tag, value.name))
+                            usedLines.append('skipCall |= validate_reserved_flags(layer_data->report_data, "{}", {ppp}"{}"{pps}, {pf}{}, {});\n'.format(funcName, valueDisplayName, value.name, vuid, pf=valuePrefix, **postProcSpec))
                         else:
-                            flagsRequired = 'false' if value.isoptional else 'true'
+                            if value.isoptional:
+                                flagsRequired = 'false'
+                                vuid = self.GetVuid("VUID-%s-%s-parameter" % (vuid_name_tag, value.name))
+                            else:
+                                flagsRequired = 'true'
+                                vuid = self.GetVuid("VUID-%s-%s-requiredbitmask" % (vuid_name_tag, value.name))
                             allFlagsName = 'All' + flagBitsName
-                            usedLines.append('skipCall |= validate_flags(layer_data->report_data, "{}", {ppp}"{}"{pps}, "{}", {}, {pf}{}, {}, false);\n'.format(funcName, valueDisplayName, flagBitsName, allFlagsName, value.name, flagsRequired, pf=valuePrefix, **postProcSpec))
+                            usedLines.append('skipCall |= validate_flags(layer_data->report_data, "{}", {ppp}"{}"{pps}, "{}", {}, {pf}{}, {}, false, {});\n'.format(funcName, valueDisplayName, flagBitsName, allFlagsName, value.name, flagsRequired, vuid, pf=valuePrefix, **postProcSpec))
                     elif value.type in self.flagBits:
                         flagsRequired = 'false' if value.isoptional else 'true'
                         allFlagsName = 'All' + value.type
-                        usedLines.append('skipCall |= validate_flags(layer_data->report_data, "{}", {ppp}"{}"{pps}, "{}", {}, {pf}{}, {}, true);\n'.format(funcName, valueDisplayName, value.type, allFlagsName, value.name, flagsRequired, pf=valuePrefix, **postProcSpec))
+                        vuid = self.GetVuid("VUID-%s-%s-parameter" % (vuid_name_tag, value.name))
+                        usedLines.append('skipCall |= validate_flags(layer_data->report_data, "{}", {ppp}"{}"{pps}, "{}", {}, {pf}{}, {}, true, {});\n'.format(funcName, valueDisplayName, value.type, allFlagsName, value.name, flagsRequired, vuid, pf=valuePrefix, **postProcSpec))
                     elif value.isbool:
                         usedLines.append('skipCall |= validate_bool32(layer_data->report_data, "{}", {ppp}"{}"{pps}, {}{});\n'.format(funcName, valueDisplayName, valuePrefix, value.name, **postProcSpec))
                     elif value.israngedenum:
                         enumRange = self.enumRanges[value.type]
-                        if value.type == "VkObjectEntryTypeNVX":
-                            garbage = 2
-                        usedLines.append('skipCall |= validate_ranged_enum(layer_data->report_data, "{}", {ppp}"{}"{pps}, "{}", {}, {}, {}{});\n'.format(funcName, valueDisplayName, value.type, enumRange[0], enumRange[1], valuePrefix, value.name, **postProcSpec))
+                        vuid = self.GetVuid("VUID-%s-%s-parameter" % (vuid_name_tag, value.name))
+                        usedLines.append('skipCall |= validate_ranged_enum(layer_data->report_data, "{}", {ppp}"{}"{pps}, "{}", {}, {}, {}{}, {});\n'.format(funcName, valueDisplayName, value.type, enumRange[0], enumRange[1], valuePrefix, value.name, vuid, **postProcSpec))
                     #
                     # If this is a struct, see if it contains members that need to be checked
                     if value.type in self.validatedStructs:

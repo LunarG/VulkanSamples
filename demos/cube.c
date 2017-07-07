@@ -957,8 +957,7 @@ static void demo_draw(struct demo *demo) {
     vkWaitForFences(demo->device, 1, &demo->fences[demo->frame_index], VK_TRUE, UINT64_MAX);
     vkResetFences(demo->device, 1, &demo->fences[demo->frame_index]);
 
-    err = !(VK_SUCCESS);
-    while (err != VK_SUCCESS) {
+    do {
         // Get the index of the next available swapchain image:
         err = demo->fpAcquireNextImageKHR(demo->device, demo->swapchain, UINT64_MAX,
                                           demo->image_acquired_semaphores[demo->frame_index],
@@ -975,7 +974,7 @@ static void demo_draw(struct demo *demo) {
         } else {
             assert(!err);
         }
-    }
+    } while (err != VK_SUCCESS);
 
     demo_update_data_buffer(demo);
 

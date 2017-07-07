@@ -716,8 +716,8 @@ static VkResult loader_add_instance_extensions(const struct loader_instance *ins
 
         bool ext_unsupported = wsi_unsupported_instance_extension(&ext_props[i]);
         if (!ext_unsupported) {
-            (void)snprintf(spec_version, sizeof(spec_version), "%d.%d.%d", VK_MAJOR(ext_props[i].specVersion),
-                           VK_MINOR(ext_props[i].specVersion), VK_PATCH(ext_props[i].specVersion));
+            (void)snprintf(spec_version, sizeof(spec_version), "%d.%d.%d", VK_VERSION_MAJOR(ext_props[i].specVersion),
+                           VK_VERSION_MINOR(ext_props[i].specVersion), VK_VERSION_PATCH(ext_props[i].specVersion));
             loader_log(inst, VK_DEBUG_REPORT_DEBUG_BIT_EXT, 0, "Instance Extension: %s (%s) version %s", ext_props[i].extensionName,
                        lib_name, spec_version);
 
@@ -751,9 +751,8 @@ static VkResult loader_init_device_extensions(const struct loader_instance *inst
 
     for (i = 0; i < count; i++) {
         char spec_version[64];
-
-        (void)snprintf(spec_version, sizeof(spec_version), "%d.%d.%d", VK_MAJOR(ext_props[i].specVersion),
-                       VK_MINOR(ext_props[i].specVersion), VK_PATCH(ext_props[i].specVersion));
+        (void)snprintf(spec_version, sizeof(spec_version), "%d.%d.%d", VK_VERSION_MAJOR(ext_props[i].specVersion),
+                       VK_VERSION_MINOR(ext_props[i].specVersion), VK_VERSION_PATCH(ext_props[i].specVersion));
         loader_log(inst, VK_DEBUG_REPORT_DEBUG_BIT_EXT, 0, "Device Extension: %s (%s) version %s", ext_props[i].extensionName,
                    phys_dev_term->this_icd_term->scanned_icd->lib_name, spec_version);
         res = loader_add_to_ext_list(inst, ext_list, 1, &ext_props[i]);
@@ -786,9 +785,8 @@ VkResult loader_add_device_extensions(const struct loader_instance *inst,
         }
         for (i = 0; i < count; i++) {
             char spec_version[64];
-
-            (void)snprintf(spec_version, sizeof(spec_version), "%d.%d.%d", VK_MAJOR(ext_props[i].specVersion),
-                           VK_MINOR(ext_props[i].specVersion), VK_PATCH(ext_props[i].specVersion));
+            (void)snprintf(spec_version, sizeof(spec_version), "%d.%d.%d", VK_VERSION_MAJOR(ext_props[i].specVersion),
+                           VK_VERSION_MINOR(ext_props[i].specVersion), VK_VERSION_PATCH(ext_props[i].specVersion));
             loader_log(inst, VK_DEBUG_REPORT_DEBUG_BIT_EXT, 0, "Device Extension: %s (%s) version %s", ext_props[i].extensionName,
                        lib_name, spec_version);
             res = loader_add_to_ext_list(inst, ext_list, 1, &ext_props[i]);
@@ -912,33 +910,37 @@ VkResult loader_add_to_dev_ext_list(const struct loader_instance *inst, struct l
 
     memcpy(&ext_list->list[idx].props, props, sizeof(*props));
     ext_list->list[idx].entrypoint_count = entry_count;
-    ext_list->list[idx].entrypoints =
-        loader_instance_heap_alloc(inst, sizeof(char *) * entry_count, VK_SYSTEM_ALLOCATION_SCOPE_INSTANCE);
-    if (ext_list->list[idx].entrypoints == NULL) {
-        loader_log(inst, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
-                   "loader_add_to_dev_ext_list: Failed to allocate space "
-                   "for device extension entrypoint list in list %d",
-                   idx);
-        ext_list->list[idx].entrypoint_count = 0;
-        return VK_ERROR_OUT_OF_HOST_MEMORY;
-    }
-    for (uint32_t i = 0; i < entry_count; i++) {
-        ext_list->list[idx].entrypoints[i] =
-            loader_instance_heap_alloc(inst, strlen(entrys[i]) + 1, VK_SYSTEM_ALLOCATION_SCOPE_INSTANCE);
-        if (ext_list->list[idx].entrypoints[i] == NULL) {
-            for (uint32_t j = 0; j < i; j++) {
-                loader_instance_heap_free(inst, ext_list->list[idx].entrypoints[j]);
-            }
-            loader_instance_heap_free(inst, ext_list->list[idx].entrypoints);
-            ext_list->list[idx].entrypoint_count = 0;
-            ext_list->list[idx].entrypoints = NULL;
+    if (entry_count == 0) {
+        ext_list->list[idx].entrypoints = NULL;
+    } else {
+        ext_list->list[idx].entrypoints =
+            loader_instance_heap_alloc(inst, sizeof(char *) * entry_count, VK_SYSTEM_ALLOCATION_SCOPE_INSTANCE);
+        if (ext_list->list[idx].entrypoints == NULL) {
             loader_log(inst, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
                        "loader_add_to_dev_ext_list: Failed to allocate space "
-                       "for device extension entrypoint %d name",
-                       i);
+                       "for device extension entrypoint list in list %d",
+                       idx);
+            ext_list->list[idx].entrypoint_count = 0;
             return VK_ERROR_OUT_OF_HOST_MEMORY;
         }
-        strcpy(ext_list->list[idx].entrypoints[i], entrys[i]);
+        for (uint32_t i = 0; i < entry_count; i++) {
+            ext_list->list[idx].entrypoints[i] =
+                loader_instance_heap_alloc(inst, strlen(entrys[i]) + 1, VK_SYSTEM_ALLOCATION_SCOPE_INSTANCE);
+            if (ext_list->list[idx].entrypoints[i] == NULL) {
+                for (uint32_t j = 0; j < i; j++) {
+                    loader_instance_heap_free(inst, ext_list->list[idx].entrypoints[j]);
+                }
+                loader_instance_heap_free(inst, ext_list->list[idx].entrypoints);
+                ext_list->list[idx].entrypoint_count = 0;
+                ext_list->list[idx].entrypoints = NULL;
+                loader_log(inst, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
+                           "loader_add_to_dev_ext_list: Failed to allocate space "
+                           "for device extension entrypoint %d name",
+                           i);
+                return VK_ERROR_OUT_OF_HOST_MEMORY;
+            }
+            strcpy(ext_list->list[idx].entrypoints[i], entrys[i]);
+        }
     }
     ext_list->count++;
 

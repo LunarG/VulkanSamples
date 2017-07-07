@@ -1,23 +1,16 @@
 // Copyright (c) 2015-2017 The Khronos Group Inc.
 // 
-// Permission is hereby granted, free of charge, to any person obtaining a
-// copy of this software and/or associated documentation files (the
-// "Materials"), to deal in the Materials without restriction, including
-// without limitation the rights to use, copy, modify, merge, publish,
-// distribute, sublicense, and/or sell copies of the Materials, and to
-// permit persons to whom the Materials are furnished to do so, subject to
-// the following conditions:
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
 // 
-// The above copyright notice and this permission notice shall be included
-// in all copies or substantial portions of the Materials.
+//     http://www.apache.org/licenses/LICENSE-2.0
 // 
-// THE MATERIALS ARE PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
-// EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
-// MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
-// IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
-// CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
-// TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
-// MATERIALS OR THE USE OR OTHER DEALINGS IN THE MATERIALS.
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
 // This header is generated from the Khronos Vulkan XML API Registry.
 
@@ -40,7 +33,7 @@
 # include <memory>
 # include <vector>
 #endif /*VULKAN_HPP_DISABLE_ENHANCED_MODE*/
-static_assert( VK_HEADER_VERSION ==  51 , "Wrong VK_HEADER_VERSION!" );
+static_assert( VK_HEADER_VERSION ==  53 , "Wrong VK_HEADER_VERSION!" );
 
 // 32-bit vulkan is not typesafe for handles, so don't allow copy constructors on this platform by default.
 // To enable this feature on 32-bit platforms please define VULKAN_HPP_TYPESAFE_CONVERSION
@@ -1156,6 +1149,18 @@ namespace vk
   };
 
   using PipelineDiscardRectangleStateCreateFlagsEXT = Flags<PipelineDiscardRectangleStateCreateFlagBitsEXT, VkPipelineDiscardRectangleStateCreateFlagsEXT>;
+
+  enum class PipelineCoverageToColorStateCreateFlagBitsNV
+  {
+  };
+
+  using PipelineCoverageToColorStateCreateFlagsNV = Flags<PipelineCoverageToColorStateCreateFlagBitsNV, VkPipelineCoverageToColorStateCreateFlagsNV>;
+
+  enum class PipelineCoverageModulationStateCreateFlagBitsNV
+  {
+  };
+
+  using PipelineCoverageModulationStateCreateFlagsNV = Flags<PipelineCoverageModulationStateCreateFlagBitsNV, VkPipelineCoverageModulationStateCreateFlagsNV>;
 
   class DeviceMemory
   {
@@ -5767,7 +5772,8 @@ namespace vk
   {
     eFill = VK_POLYGON_MODE_FILL,
     eLine = VK_POLYGON_MODE_LINE,
-    ePoint = VK_POLYGON_MODE_POINT
+    ePoint = VK_POLYGON_MODE_POINT,
+    eFillRectangleNV = VK_POLYGON_MODE_FILL_RECTANGLE_NV
   };
 
   enum class CullModeFlagBits
@@ -5833,7 +5839,53 @@ namespace vk
     eSubtract = VK_BLEND_OP_SUBTRACT,
     eReverseSubtract = VK_BLEND_OP_REVERSE_SUBTRACT,
     eMin = VK_BLEND_OP_MIN,
-    eMax = VK_BLEND_OP_MAX
+    eMax = VK_BLEND_OP_MAX,
+    eZeroEXT = VK_BLEND_OP_ZERO_EXT,
+    eSrcEXT = VK_BLEND_OP_SRC_EXT,
+    eDstEXT = VK_BLEND_OP_DST_EXT,
+    eSrcOverEXT = VK_BLEND_OP_SRC_OVER_EXT,
+    eDstOverEXT = VK_BLEND_OP_DST_OVER_EXT,
+    eSrcInEXT = VK_BLEND_OP_SRC_IN_EXT,
+    eDstInEXT = VK_BLEND_OP_DST_IN_EXT,
+    eSrcOutEXT = VK_BLEND_OP_SRC_OUT_EXT,
+    eDstOutEXT = VK_BLEND_OP_DST_OUT_EXT,
+    eSrcAtopEXT = VK_BLEND_OP_SRC_ATOP_EXT,
+    eDstAtopEXT = VK_BLEND_OP_DST_ATOP_EXT,
+    eXorEXT = VK_BLEND_OP_XOR_EXT,
+    eMultiplyEXT = VK_BLEND_OP_MULTIPLY_EXT,
+    eScreenEXT = VK_BLEND_OP_SCREEN_EXT,
+    eOverlayEXT = VK_BLEND_OP_OVERLAY_EXT,
+    eDarkenEXT = VK_BLEND_OP_DARKEN_EXT,
+    eLightenEXT = VK_BLEND_OP_LIGHTEN_EXT,
+    eColordodgeEXT = VK_BLEND_OP_COLORDODGE_EXT,
+    eColorburnEXT = VK_BLEND_OP_COLORBURN_EXT,
+    eHardlightEXT = VK_BLEND_OP_HARDLIGHT_EXT,
+    eSoftlightEXT = VK_BLEND_OP_SOFTLIGHT_EXT,
+    eDifferenceEXT = VK_BLEND_OP_DIFFERENCE_EXT,
+    eExclusionEXT = VK_BLEND_OP_EXCLUSION_EXT,
+    eInvertEXT = VK_BLEND_OP_INVERT_EXT,
+    eInvertRgbEXT = VK_BLEND_OP_INVERT_RGB_EXT,
+    eLineardodgeEXT = VK_BLEND_OP_LINEARDODGE_EXT,
+    eLinearburnEXT = VK_BLEND_OP_LINEARBURN_EXT,
+    eVividlightEXT = VK_BLEND_OP_VIVIDLIGHT_EXT,
+    eLinearlightEXT = VK_BLEND_OP_LINEARLIGHT_EXT,
+    ePinlightEXT = VK_BLEND_OP_PINLIGHT_EXT,
+    eHardmixEXT = VK_BLEND_OP_HARDMIX_EXT,
+    eHslHueEXT = VK_BLEND_OP_HSL_HUE_EXT,
+    eHslSaturationEXT = VK_BLEND_OP_HSL_SATURATION_EXT,
+    eHslColorEXT = VK_BLEND_OP_HSL_COLOR_EXT,
+    eHslLuminosityEXT = VK_BLEND_OP_HSL_LUMINOSITY_EXT,
+    ePlusEXT = VK_BLEND_OP_PLUS_EXT,
+    ePlusClampedEXT = VK_BLEND_OP_PLUS_CLAMPED_EXT,
+    ePlusClampedAlphaEXT = VK_BLEND_OP_PLUS_CLAMPED_ALPHA_EXT,
+    ePlusDarkerEXT = VK_BLEND_OP_PLUS_DARKER_EXT,
+    eMinusEXT = VK_BLEND_OP_MINUS_EXT,
+    eMinusClampedEXT = VK_BLEND_OP_MINUS_CLAMPED_EXT,
+    eContrastEXT = VK_BLEND_OP_CONTRAST_EXT,
+    eInvertOvgEXT = VK_BLEND_OP_INVERT_OVG_EXT,
+    eRedEXT = VK_BLEND_OP_RED_EXT,
+    eGreenEXT = VK_BLEND_OP_GREEN_EXT,
+    eBlueEXT = VK_BLEND_OP_BLUE_EXT
   };
 
   enum class StencilOp
@@ -6471,7 +6523,14 @@ namespace vk
     eSurfaceCapabilities2KHR = VK_STRUCTURE_TYPE_SURFACE_CAPABILITIES_2_KHR,
     eSurfaceFormat2KHR = VK_STRUCTURE_TYPE_SURFACE_FORMAT_2_KHR,
     eIosSurfaceCreateInfoMVK = VK_STRUCTURE_TYPE_IOS_SURFACE_CREATE_INFO_MVK,
-    eMacosSurfaceCreateInfoMVK = VK_STRUCTURE_TYPE_MACOS_SURFACE_CREATE_INFO_MVK
+    eMacosSurfaceCreateInfoMVK = VK_STRUCTURE_TYPE_MACOS_SURFACE_CREATE_INFO_MVK,
+    ePhysicalDeviceSamplerFilterMinmaxPropertiesEXT = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SAMPLER_FILTER_MINMAX_PROPERTIES_EXT,
+    eSamplerReductionModeCreateInfoEXT = VK_STRUCTURE_TYPE_SAMPLER_REDUCTION_MODE_CREATE_INFO_EXT,
+    ePhysicalDeviceBlendOperationAdvancedFeaturesEXT = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_BLEND_OPERATION_ADVANCED_FEATURES_EXT,
+    ePhysicalDeviceBlendOperationAdvancedPropertiesEXT = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_BLEND_OPERATION_ADVANCED_PROPERTIES_EXT,
+    ePipelineColorBlendAdvancedStateCreateInfoEXT = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_ADVANCED_STATE_CREATE_INFO_EXT,
+    ePipelineCoverageToColorStateCreateInfoNV = VK_STRUCTURE_TYPE_PIPELINE_COVERAGE_TO_COLOR_STATE_CREATE_INFO_NV,
+    ePipelineCoverageModulationStateCreateInfoNV = VK_STRUCTURE_TYPE_PIPELINE_COVERAGE_MODULATION_STATE_CREATE_INFO_NV
   };
 
   struct ApplicationInfo
@@ -12193,6 +12252,206 @@ namespace vk
   };
   static_assert( sizeof( TextureLODGatherFormatPropertiesAMD ) == sizeof( VkTextureLODGatherFormatPropertiesAMD ), "struct and wrapper have different size!" );
 
+  struct PipelineCoverageToColorStateCreateInfoNV
+  {
+    PipelineCoverageToColorStateCreateInfoNV( PipelineCoverageToColorStateCreateFlagsNV flags_ = PipelineCoverageToColorStateCreateFlagsNV(), Bool32 coverageToColorEnable_ = 0, uint32_t coverageToColorLocation_ = 0 )
+      : sType( StructureType::ePipelineCoverageToColorStateCreateInfoNV )
+      , pNext( nullptr )
+      , flags( flags_ )
+      , coverageToColorEnable( coverageToColorEnable_ )
+      , coverageToColorLocation( coverageToColorLocation_ )
+    {
+    }
+
+    PipelineCoverageToColorStateCreateInfoNV( VkPipelineCoverageToColorStateCreateInfoNV const & rhs )
+    {
+      memcpy( this, &rhs, sizeof( PipelineCoverageToColorStateCreateInfoNV ) );
+    }
+
+    PipelineCoverageToColorStateCreateInfoNV& operator=( VkPipelineCoverageToColorStateCreateInfoNV const & rhs )
+    {
+      memcpy( this, &rhs, sizeof( PipelineCoverageToColorStateCreateInfoNV ) );
+      return *this;
+    }
+    PipelineCoverageToColorStateCreateInfoNV& setPNext( const void* pNext_ )
+    {
+      pNext = pNext_;
+      return *this;
+    }
+
+    PipelineCoverageToColorStateCreateInfoNV& setFlags( PipelineCoverageToColorStateCreateFlagsNV flags_ )
+    {
+      flags = flags_;
+      return *this;
+    }
+
+    PipelineCoverageToColorStateCreateInfoNV& setCoverageToColorEnable( Bool32 coverageToColorEnable_ )
+    {
+      coverageToColorEnable = coverageToColorEnable_;
+      return *this;
+    }
+
+    PipelineCoverageToColorStateCreateInfoNV& setCoverageToColorLocation( uint32_t coverageToColorLocation_ )
+    {
+      coverageToColorLocation = coverageToColorLocation_;
+      return *this;
+    }
+
+    operator const VkPipelineCoverageToColorStateCreateInfoNV&() const
+    {
+      return *reinterpret_cast<const VkPipelineCoverageToColorStateCreateInfoNV*>(this);
+    }
+
+    bool operator==( PipelineCoverageToColorStateCreateInfoNV const& rhs ) const
+    {
+      return ( sType == rhs.sType )
+          && ( pNext == rhs.pNext )
+          && ( flags == rhs.flags )
+          && ( coverageToColorEnable == rhs.coverageToColorEnable )
+          && ( coverageToColorLocation == rhs.coverageToColorLocation );
+    }
+
+    bool operator!=( PipelineCoverageToColorStateCreateInfoNV const& rhs ) const
+    {
+      return !operator==( rhs );
+    }
+
+  private:
+    StructureType sType;
+
+  public:
+    const void* pNext;
+    PipelineCoverageToColorStateCreateFlagsNV flags;
+    Bool32 coverageToColorEnable;
+    uint32_t coverageToColorLocation;
+  };
+  static_assert( sizeof( PipelineCoverageToColorStateCreateInfoNV ) == sizeof( VkPipelineCoverageToColorStateCreateInfoNV ), "struct and wrapper have different size!" );
+
+  struct PhysicalDeviceSamplerFilterMinmaxPropertiesEXT
+  {
+    operator const VkPhysicalDeviceSamplerFilterMinmaxPropertiesEXT&() const
+    {
+      return *reinterpret_cast<const VkPhysicalDeviceSamplerFilterMinmaxPropertiesEXT*>(this);
+    }
+
+    bool operator==( PhysicalDeviceSamplerFilterMinmaxPropertiesEXT const& rhs ) const
+    {
+      return ( sType == rhs.sType )
+          && ( pNext == rhs.pNext )
+          && ( filterMinmaxSingleComponentFormats == rhs.filterMinmaxSingleComponentFormats )
+          && ( filterMinmaxImageComponentMapping == rhs.filterMinmaxImageComponentMapping );
+    }
+
+    bool operator!=( PhysicalDeviceSamplerFilterMinmaxPropertiesEXT const& rhs ) const
+    {
+      return !operator==( rhs );
+    }
+
+  private:
+    StructureType sType;
+
+  public:
+    void* pNext;
+    Bool32 filterMinmaxSingleComponentFormats;
+    Bool32 filterMinmaxImageComponentMapping;
+  };
+  static_assert( sizeof( PhysicalDeviceSamplerFilterMinmaxPropertiesEXT ) == sizeof( VkPhysicalDeviceSamplerFilterMinmaxPropertiesEXT ), "struct and wrapper have different size!" );
+
+  struct PhysicalDeviceBlendOperationAdvancedFeaturesEXT
+  {
+    PhysicalDeviceBlendOperationAdvancedFeaturesEXT( Bool32 advancedBlendCoherentOperations_ = 0 )
+      : sType( StructureType::ePhysicalDeviceBlendOperationAdvancedFeaturesEXT )
+      , pNext( nullptr )
+      , advancedBlendCoherentOperations( advancedBlendCoherentOperations_ )
+    {
+    }
+
+    PhysicalDeviceBlendOperationAdvancedFeaturesEXT( VkPhysicalDeviceBlendOperationAdvancedFeaturesEXT const & rhs )
+    {
+      memcpy( this, &rhs, sizeof( PhysicalDeviceBlendOperationAdvancedFeaturesEXT ) );
+    }
+
+    PhysicalDeviceBlendOperationAdvancedFeaturesEXT& operator=( VkPhysicalDeviceBlendOperationAdvancedFeaturesEXT const & rhs )
+    {
+      memcpy( this, &rhs, sizeof( PhysicalDeviceBlendOperationAdvancedFeaturesEXT ) );
+      return *this;
+    }
+    PhysicalDeviceBlendOperationAdvancedFeaturesEXT& setPNext( void* pNext_ )
+    {
+      pNext = pNext_;
+      return *this;
+    }
+
+    PhysicalDeviceBlendOperationAdvancedFeaturesEXT& setAdvancedBlendCoherentOperations( Bool32 advancedBlendCoherentOperations_ )
+    {
+      advancedBlendCoherentOperations = advancedBlendCoherentOperations_;
+      return *this;
+    }
+
+    operator const VkPhysicalDeviceBlendOperationAdvancedFeaturesEXT&() const
+    {
+      return *reinterpret_cast<const VkPhysicalDeviceBlendOperationAdvancedFeaturesEXT*>(this);
+    }
+
+    bool operator==( PhysicalDeviceBlendOperationAdvancedFeaturesEXT const& rhs ) const
+    {
+      return ( sType == rhs.sType )
+          && ( pNext == rhs.pNext )
+          && ( advancedBlendCoherentOperations == rhs.advancedBlendCoherentOperations );
+    }
+
+    bool operator!=( PhysicalDeviceBlendOperationAdvancedFeaturesEXT const& rhs ) const
+    {
+      return !operator==( rhs );
+    }
+
+  private:
+    StructureType sType;
+
+  public:
+    void* pNext;
+    Bool32 advancedBlendCoherentOperations;
+  };
+  static_assert( sizeof( PhysicalDeviceBlendOperationAdvancedFeaturesEXT ) == sizeof( VkPhysicalDeviceBlendOperationAdvancedFeaturesEXT ), "struct and wrapper have different size!" );
+
+  struct PhysicalDeviceBlendOperationAdvancedPropertiesEXT
+  {
+    operator const VkPhysicalDeviceBlendOperationAdvancedPropertiesEXT&() const
+    {
+      return *reinterpret_cast<const VkPhysicalDeviceBlendOperationAdvancedPropertiesEXT*>(this);
+    }
+
+    bool operator==( PhysicalDeviceBlendOperationAdvancedPropertiesEXT const& rhs ) const
+    {
+      return ( sType == rhs.sType )
+          && ( pNext == rhs.pNext )
+          && ( advancedBlendMaxColorAttachments == rhs.advancedBlendMaxColorAttachments )
+          && ( advancedBlendIndependentBlend == rhs.advancedBlendIndependentBlend )
+          && ( advancedBlendNonPremultipliedSrcColor == rhs.advancedBlendNonPremultipliedSrcColor )
+          && ( advancedBlendNonPremultipliedDstColor == rhs.advancedBlendNonPremultipliedDstColor )
+          && ( advancedBlendCorrelatedOverlap == rhs.advancedBlendCorrelatedOverlap )
+          && ( advancedBlendAllOperations == rhs.advancedBlendAllOperations );
+    }
+
+    bool operator!=( PhysicalDeviceBlendOperationAdvancedPropertiesEXT const& rhs ) const
+    {
+      return !operator==( rhs );
+    }
+
+  private:
+    StructureType sType;
+
+  public:
+    void* pNext;
+    uint32_t advancedBlendMaxColorAttachments;
+    Bool32 advancedBlendIndependentBlend;
+    Bool32 advancedBlendNonPremultipliedSrcColor;
+    Bool32 advancedBlendNonPremultipliedDstColor;
+    Bool32 advancedBlendCorrelatedOverlap;
+    Bool32 advancedBlendAllOperations;
+  };
+  static_assert( sizeof( PhysicalDeviceBlendOperationAdvancedPropertiesEXT ) == sizeof( VkPhysicalDeviceBlendOperationAdvancedPropertiesEXT ), "struct and wrapper have different size!" );
+
   enum class SubpassContents
   {
     eInline = VK_SUBPASS_CONTENTS_INLINE,
@@ -12814,7 +13073,8 @@ namespace vk
     eMemoryRead = VK_ACCESS_MEMORY_READ_BIT,
     eMemoryWrite = VK_ACCESS_MEMORY_WRITE_BIT,
     eCommandProcessReadNVX = VK_ACCESS_COMMAND_PROCESS_READ_BIT_NVX,
-    eCommandProcessWriteNVX = VK_ACCESS_COMMAND_PROCESS_WRITE_BIT_NVX
+    eCommandProcessWriteNVX = VK_ACCESS_COMMAND_PROCESS_WRITE_BIT_NVX,
+    eColorAttachmentReadNoncoherentEXT = VK_ACCESS_COLOR_ATTACHMENT_READ_NONCOHERENT_BIT_EXT
   };
 
   using AccessFlags = Flags<AccessFlagBits, VkAccessFlags>;
@@ -12833,7 +13093,7 @@ namespace vk
   {
     enum
     {
-      allFlags = VkFlags(AccessFlagBits::eIndirectCommandRead) | VkFlags(AccessFlagBits::eIndexRead) | VkFlags(AccessFlagBits::eVertexAttributeRead) | VkFlags(AccessFlagBits::eUniformRead) | VkFlags(AccessFlagBits::eInputAttachmentRead) | VkFlags(AccessFlagBits::eShaderRead) | VkFlags(AccessFlagBits::eShaderWrite) | VkFlags(AccessFlagBits::eColorAttachmentRead) | VkFlags(AccessFlagBits::eColorAttachmentWrite) | VkFlags(AccessFlagBits::eDepthStencilAttachmentRead) | VkFlags(AccessFlagBits::eDepthStencilAttachmentWrite) | VkFlags(AccessFlagBits::eTransferRead) | VkFlags(AccessFlagBits::eTransferWrite) | VkFlags(AccessFlagBits::eHostRead) | VkFlags(AccessFlagBits::eHostWrite) | VkFlags(AccessFlagBits::eMemoryRead) | VkFlags(AccessFlagBits::eMemoryWrite) | VkFlags(AccessFlagBits::eCommandProcessReadNVX) | VkFlags(AccessFlagBits::eCommandProcessWriteNVX)
+      allFlags = VkFlags(AccessFlagBits::eIndirectCommandRead) | VkFlags(AccessFlagBits::eIndexRead) | VkFlags(AccessFlagBits::eVertexAttributeRead) | VkFlags(AccessFlagBits::eUniformRead) | VkFlags(AccessFlagBits::eInputAttachmentRead) | VkFlags(AccessFlagBits::eShaderRead) | VkFlags(AccessFlagBits::eShaderWrite) | VkFlags(AccessFlagBits::eColorAttachmentRead) | VkFlags(AccessFlagBits::eColorAttachmentWrite) | VkFlags(AccessFlagBits::eDepthStencilAttachmentRead) | VkFlags(AccessFlagBits::eDepthStencilAttachmentWrite) | VkFlags(AccessFlagBits::eTransferRead) | VkFlags(AccessFlagBits::eTransferWrite) | VkFlags(AccessFlagBits::eHostRead) | VkFlags(AccessFlagBits::eHostWrite) | VkFlags(AccessFlagBits::eMemoryRead) | VkFlags(AccessFlagBits::eMemoryWrite) | VkFlags(AccessFlagBits::eCommandProcessReadNVX) | VkFlags(AccessFlagBits::eCommandProcessWriteNVX) | VkFlags(AccessFlagBits::eColorAttachmentReadNoncoherentEXT)
     };
   };
 
@@ -14172,7 +14432,8 @@ namespace vk
     eSampledImageFilterLinear = VK_FORMAT_FEATURE_SAMPLED_IMAGE_FILTER_LINEAR_BIT,
     eSampledImageFilterCubicIMG = VK_FORMAT_FEATURE_SAMPLED_IMAGE_FILTER_CUBIC_BIT_IMG,
     eTransferSrcKHR = VK_FORMAT_FEATURE_TRANSFER_SRC_BIT_KHR,
-    eTransferDstKHR = VK_FORMAT_FEATURE_TRANSFER_DST_BIT_KHR
+    eTransferDstKHR = VK_FORMAT_FEATURE_TRANSFER_DST_BIT_KHR,
+    eSampledImageFilterMinmaxEXT = VK_FORMAT_FEATURE_SAMPLED_IMAGE_FILTER_MINMAX_BIT_EXT
   };
 
   using FormatFeatureFlags = Flags<FormatFeatureFlagBits, VkFormatFeatureFlags>;
@@ -14191,7 +14452,7 @@ namespace vk
   {
     enum
     {
-      allFlags = VkFlags(FormatFeatureFlagBits::eSampledImage) | VkFlags(FormatFeatureFlagBits::eStorageImage) | VkFlags(FormatFeatureFlagBits::eStorageImageAtomic) | VkFlags(FormatFeatureFlagBits::eUniformTexelBuffer) | VkFlags(FormatFeatureFlagBits::eStorageTexelBuffer) | VkFlags(FormatFeatureFlagBits::eStorageTexelBufferAtomic) | VkFlags(FormatFeatureFlagBits::eVertexBuffer) | VkFlags(FormatFeatureFlagBits::eColorAttachment) | VkFlags(FormatFeatureFlagBits::eColorAttachmentBlend) | VkFlags(FormatFeatureFlagBits::eDepthStencilAttachment) | VkFlags(FormatFeatureFlagBits::eBlitSrc) | VkFlags(FormatFeatureFlagBits::eBlitDst) | VkFlags(FormatFeatureFlagBits::eSampledImageFilterLinear) | VkFlags(FormatFeatureFlagBits::eSampledImageFilterCubicIMG) | VkFlags(FormatFeatureFlagBits::eTransferSrcKHR) | VkFlags(FormatFeatureFlagBits::eTransferDstKHR)
+      allFlags = VkFlags(FormatFeatureFlagBits::eSampledImage) | VkFlags(FormatFeatureFlagBits::eStorageImage) | VkFlags(FormatFeatureFlagBits::eStorageImageAtomic) | VkFlags(FormatFeatureFlagBits::eUniformTexelBuffer) | VkFlags(FormatFeatureFlagBits::eStorageTexelBuffer) | VkFlags(FormatFeatureFlagBits::eStorageTexelBufferAtomic) | VkFlags(FormatFeatureFlagBits::eVertexBuffer) | VkFlags(FormatFeatureFlagBits::eColorAttachment) | VkFlags(FormatFeatureFlagBits::eColorAttachmentBlend) | VkFlags(FormatFeatureFlagBits::eDepthStencilAttachment) | VkFlags(FormatFeatureFlagBits::eBlitSrc) | VkFlags(FormatFeatureFlagBits::eBlitDst) | VkFlags(FormatFeatureFlagBits::eSampledImageFilterLinear) | VkFlags(FormatFeatureFlagBits::eSampledImageFilterCubicIMG) | VkFlags(FormatFeatureFlagBits::eTransferSrcKHR) | VkFlags(FormatFeatureFlagBits::eTransferDstKHR) | VkFlags(FormatFeatureFlagBits::eSampledImageFilterMinmaxEXT)
     };
   };
 
@@ -21893,6 +22154,253 @@ namespace vk
   };
   static_assert( sizeof( RenderPassCreateInfo ) == sizeof( VkRenderPassCreateInfo ), "struct and wrapper have different size!" );
 
+  enum class SamplerReductionModeEXT
+  {
+    eWeightedAverage = VK_SAMPLER_REDUCTION_MODE_WEIGHTED_AVERAGE_EXT,
+    eMin = VK_SAMPLER_REDUCTION_MODE_MIN_EXT,
+    eMax = VK_SAMPLER_REDUCTION_MODE_MAX_EXT
+  };
+
+  struct SamplerReductionModeCreateInfoEXT
+  {
+    SamplerReductionModeCreateInfoEXT( SamplerReductionModeEXT reductionMode_ = SamplerReductionModeEXT::eWeightedAverage )
+      : sType( StructureType::eSamplerReductionModeCreateInfoEXT )
+      , pNext( nullptr )
+      , reductionMode( reductionMode_ )
+    {
+    }
+
+    SamplerReductionModeCreateInfoEXT( VkSamplerReductionModeCreateInfoEXT const & rhs )
+    {
+      memcpy( this, &rhs, sizeof( SamplerReductionModeCreateInfoEXT ) );
+    }
+
+    SamplerReductionModeCreateInfoEXT& operator=( VkSamplerReductionModeCreateInfoEXT const & rhs )
+    {
+      memcpy( this, &rhs, sizeof( SamplerReductionModeCreateInfoEXT ) );
+      return *this;
+    }
+    SamplerReductionModeCreateInfoEXT& setPNext( const void* pNext_ )
+    {
+      pNext = pNext_;
+      return *this;
+    }
+
+    SamplerReductionModeCreateInfoEXT& setReductionMode( SamplerReductionModeEXT reductionMode_ )
+    {
+      reductionMode = reductionMode_;
+      return *this;
+    }
+
+    operator const VkSamplerReductionModeCreateInfoEXT&() const
+    {
+      return *reinterpret_cast<const VkSamplerReductionModeCreateInfoEXT*>(this);
+    }
+
+    bool operator==( SamplerReductionModeCreateInfoEXT const& rhs ) const
+    {
+      return ( sType == rhs.sType )
+          && ( pNext == rhs.pNext )
+          && ( reductionMode == rhs.reductionMode );
+    }
+
+    bool operator!=( SamplerReductionModeCreateInfoEXT const& rhs ) const
+    {
+      return !operator==( rhs );
+    }
+
+  private:
+    StructureType sType;
+
+  public:
+    const void* pNext;
+    SamplerReductionModeEXT reductionMode;
+  };
+  static_assert( sizeof( SamplerReductionModeCreateInfoEXT ) == sizeof( VkSamplerReductionModeCreateInfoEXT ), "struct and wrapper have different size!" );
+
+  enum class BlendOverlapEXT
+  {
+    eUncorrelated = VK_BLEND_OVERLAP_UNCORRELATED_EXT,
+    eDisjoint = VK_BLEND_OVERLAP_DISJOINT_EXT,
+    eConjoint = VK_BLEND_OVERLAP_CONJOINT_EXT
+  };
+
+  struct PipelineColorBlendAdvancedStateCreateInfoEXT
+  {
+    PipelineColorBlendAdvancedStateCreateInfoEXT( Bool32 srcPremultiplied_ = 0, Bool32 dstPremultiplied_ = 0, BlendOverlapEXT blendOverlap_ = BlendOverlapEXT::eUncorrelated )
+      : sType( StructureType::ePipelineColorBlendAdvancedStateCreateInfoEXT )
+      , pNext( nullptr )
+      , srcPremultiplied( srcPremultiplied_ )
+      , dstPremultiplied( dstPremultiplied_ )
+      , blendOverlap( blendOverlap_ )
+    {
+    }
+
+    PipelineColorBlendAdvancedStateCreateInfoEXT( VkPipelineColorBlendAdvancedStateCreateInfoEXT const & rhs )
+    {
+      memcpy( this, &rhs, sizeof( PipelineColorBlendAdvancedStateCreateInfoEXT ) );
+    }
+
+    PipelineColorBlendAdvancedStateCreateInfoEXT& operator=( VkPipelineColorBlendAdvancedStateCreateInfoEXT const & rhs )
+    {
+      memcpy( this, &rhs, sizeof( PipelineColorBlendAdvancedStateCreateInfoEXT ) );
+      return *this;
+    }
+    PipelineColorBlendAdvancedStateCreateInfoEXT& setPNext( const void* pNext_ )
+    {
+      pNext = pNext_;
+      return *this;
+    }
+
+    PipelineColorBlendAdvancedStateCreateInfoEXT& setSrcPremultiplied( Bool32 srcPremultiplied_ )
+    {
+      srcPremultiplied = srcPremultiplied_;
+      return *this;
+    }
+
+    PipelineColorBlendAdvancedStateCreateInfoEXT& setDstPremultiplied( Bool32 dstPremultiplied_ )
+    {
+      dstPremultiplied = dstPremultiplied_;
+      return *this;
+    }
+
+    PipelineColorBlendAdvancedStateCreateInfoEXT& setBlendOverlap( BlendOverlapEXT blendOverlap_ )
+    {
+      blendOverlap = blendOverlap_;
+      return *this;
+    }
+
+    operator const VkPipelineColorBlendAdvancedStateCreateInfoEXT&() const
+    {
+      return *reinterpret_cast<const VkPipelineColorBlendAdvancedStateCreateInfoEXT*>(this);
+    }
+
+    bool operator==( PipelineColorBlendAdvancedStateCreateInfoEXT const& rhs ) const
+    {
+      return ( sType == rhs.sType )
+          && ( pNext == rhs.pNext )
+          && ( srcPremultiplied == rhs.srcPremultiplied )
+          && ( dstPremultiplied == rhs.dstPremultiplied )
+          && ( blendOverlap == rhs.blendOverlap );
+    }
+
+    bool operator!=( PipelineColorBlendAdvancedStateCreateInfoEXT const& rhs ) const
+    {
+      return !operator==( rhs );
+    }
+
+  private:
+    StructureType sType;
+
+  public:
+    const void* pNext;
+    Bool32 srcPremultiplied;
+    Bool32 dstPremultiplied;
+    BlendOverlapEXT blendOverlap;
+  };
+  static_assert( sizeof( PipelineColorBlendAdvancedStateCreateInfoEXT ) == sizeof( VkPipelineColorBlendAdvancedStateCreateInfoEXT ), "struct and wrapper have different size!" );
+
+  enum class CoverageModulationModeNV
+  {
+    eNone = VK_COVERAGE_MODULATION_MODE_NONE_NV,
+    eRgb = VK_COVERAGE_MODULATION_MODE_RGB_NV,
+    eAlpha = VK_COVERAGE_MODULATION_MODE_ALPHA_NV,
+    eRgba = VK_COVERAGE_MODULATION_MODE_RGBA_NV
+  };
+
+  struct PipelineCoverageModulationStateCreateInfoNV
+  {
+    PipelineCoverageModulationStateCreateInfoNV( PipelineCoverageModulationStateCreateFlagsNV flags_ = PipelineCoverageModulationStateCreateFlagsNV(), CoverageModulationModeNV coverageModulationMode_ = CoverageModulationModeNV::eNone, Bool32 coverageModulationTableEnable_ = 0, uint32_t coverageModulationTableCount_ = 0, const float* pCoverageModulationTable_ = nullptr )
+      : sType( StructureType::ePipelineCoverageModulationStateCreateInfoNV )
+      , pNext( nullptr )
+      , flags( flags_ )
+      , coverageModulationMode( coverageModulationMode_ )
+      , coverageModulationTableEnable( coverageModulationTableEnable_ )
+      , coverageModulationTableCount( coverageModulationTableCount_ )
+      , pCoverageModulationTable( pCoverageModulationTable_ )
+    {
+    }
+
+    PipelineCoverageModulationStateCreateInfoNV( VkPipelineCoverageModulationStateCreateInfoNV const & rhs )
+    {
+      memcpy( this, &rhs, sizeof( PipelineCoverageModulationStateCreateInfoNV ) );
+    }
+
+    PipelineCoverageModulationStateCreateInfoNV& operator=( VkPipelineCoverageModulationStateCreateInfoNV const & rhs )
+    {
+      memcpy( this, &rhs, sizeof( PipelineCoverageModulationStateCreateInfoNV ) );
+      return *this;
+    }
+    PipelineCoverageModulationStateCreateInfoNV& setPNext( const void* pNext_ )
+    {
+      pNext = pNext_;
+      return *this;
+    }
+
+    PipelineCoverageModulationStateCreateInfoNV& setFlags( PipelineCoverageModulationStateCreateFlagsNV flags_ )
+    {
+      flags = flags_;
+      return *this;
+    }
+
+    PipelineCoverageModulationStateCreateInfoNV& setCoverageModulationMode( CoverageModulationModeNV coverageModulationMode_ )
+    {
+      coverageModulationMode = coverageModulationMode_;
+      return *this;
+    }
+
+    PipelineCoverageModulationStateCreateInfoNV& setCoverageModulationTableEnable( Bool32 coverageModulationTableEnable_ )
+    {
+      coverageModulationTableEnable = coverageModulationTableEnable_;
+      return *this;
+    }
+
+    PipelineCoverageModulationStateCreateInfoNV& setCoverageModulationTableCount( uint32_t coverageModulationTableCount_ )
+    {
+      coverageModulationTableCount = coverageModulationTableCount_;
+      return *this;
+    }
+
+    PipelineCoverageModulationStateCreateInfoNV& setPCoverageModulationTable( const float* pCoverageModulationTable_ )
+    {
+      pCoverageModulationTable = pCoverageModulationTable_;
+      return *this;
+    }
+
+    operator const VkPipelineCoverageModulationStateCreateInfoNV&() const
+    {
+      return *reinterpret_cast<const VkPipelineCoverageModulationStateCreateInfoNV*>(this);
+    }
+
+    bool operator==( PipelineCoverageModulationStateCreateInfoNV const& rhs ) const
+    {
+      return ( sType == rhs.sType )
+          && ( pNext == rhs.pNext )
+          && ( flags == rhs.flags )
+          && ( coverageModulationMode == rhs.coverageModulationMode )
+          && ( coverageModulationTableEnable == rhs.coverageModulationTableEnable )
+          && ( coverageModulationTableCount == rhs.coverageModulationTableCount )
+          && ( pCoverageModulationTable == rhs.pCoverageModulationTable );
+    }
+
+    bool operator!=( PipelineCoverageModulationStateCreateInfoNV const& rhs ) const
+    {
+      return !operator==( rhs );
+    }
+
+  private:
+    StructureType sType;
+
+  public:
+    const void* pNext;
+    PipelineCoverageModulationStateCreateFlagsNV flags;
+    CoverageModulationModeNV coverageModulationMode;
+    Bool32 coverageModulationTableEnable;
+    uint32_t coverageModulationTableCount;
+    const float* pCoverageModulationTable;
+  };
+  static_assert( sizeof( PipelineCoverageModulationStateCreateInfoNV ) == sizeof( VkPipelineCoverageModulationStateCreateInfoNV ), "struct and wrapper have different size!" );
+
   Result enumerateInstanceLayerProperties( uint32_t* pPropertyCount, LayerProperties* pProperties );
 #ifndef VULKAN_HPP_DISABLE_ENHANCED_MODE
   template <typename Allocator = std::allocator<LayerProperties>> 
@@ -28287,6 +28795,26 @@ namespace vk
     return "{}";
   }
 
+  VULKAN_HPP_INLINE std::string to_string(PipelineCoverageToColorStateCreateFlagBitsNV)
+  {
+    return "(void)";
+  }
+
+  VULKAN_HPP_INLINE std::string to_string(PipelineCoverageToColorStateCreateFlagsNV)
+  {
+    return "{}";
+  }
+
+  VULKAN_HPP_INLINE std::string to_string(PipelineCoverageModulationStateCreateFlagBitsNV)
+  {
+    return "(void)";
+  }
+
+  VULKAN_HPP_INLINE std::string to_string(PipelineCoverageModulationStateCreateFlagsNV)
+  {
+    return "{}";
+  }
+
   VULKAN_HPP_INLINE std::string to_string(ImageLayout value)
   {
     switch (value)
@@ -28547,6 +29075,7 @@ namespace vk
     case PolygonMode::eFill: return "Fill";
     case PolygonMode::eLine: return "Line";
     case PolygonMode::ePoint: return "Point";
+    case PolygonMode::eFillRectangleNV: return "FillRectangleNV";
     default: return "invalid";
     }
   }
@@ -28620,6 +29149,52 @@ namespace vk
     case BlendOp::eReverseSubtract: return "ReverseSubtract";
     case BlendOp::eMin: return "Min";
     case BlendOp::eMax: return "Max";
+    case BlendOp::eZeroEXT: return "ZeroEXT";
+    case BlendOp::eSrcEXT: return "SrcEXT";
+    case BlendOp::eDstEXT: return "DstEXT";
+    case BlendOp::eSrcOverEXT: return "SrcOverEXT";
+    case BlendOp::eDstOverEXT: return "DstOverEXT";
+    case BlendOp::eSrcInEXT: return "SrcInEXT";
+    case BlendOp::eDstInEXT: return "DstInEXT";
+    case BlendOp::eSrcOutEXT: return "SrcOutEXT";
+    case BlendOp::eDstOutEXT: return "DstOutEXT";
+    case BlendOp::eSrcAtopEXT: return "SrcAtopEXT";
+    case BlendOp::eDstAtopEXT: return "DstAtopEXT";
+    case BlendOp::eXorEXT: return "XorEXT";
+    case BlendOp::eMultiplyEXT: return "MultiplyEXT";
+    case BlendOp::eScreenEXT: return "ScreenEXT";
+    case BlendOp::eOverlayEXT: return "OverlayEXT";
+    case BlendOp::eDarkenEXT: return "DarkenEXT";
+    case BlendOp::eLightenEXT: return "LightenEXT";
+    case BlendOp::eColordodgeEXT: return "ColordodgeEXT";
+    case BlendOp::eColorburnEXT: return "ColorburnEXT";
+    case BlendOp::eHardlightEXT: return "HardlightEXT";
+    case BlendOp::eSoftlightEXT: return "SoftlightEXT";
+    case BlendOp::eDifferenceEXT: return "DifferenceEXT";
+    case BlendOp::eExclusionEXT: return "ExclusionEXT";
+    case BlendOp::eInvertEXT: return "InvertEXT";
+    case BlendOp::eInvertRgbEXT: return "InvertRgbEXT";
+    case BlendOp::eLineardodgeEXT: return "LineardodgeEXT";
+    case BlendOp::eLinearburnEXT: return "LinearburnEXT";
+    case BlendOp::eVividlightEXT: return "VividlightEXT";
+    case BlendOp::eLinearlightEXT: return "LinearlightEXT";
+    case BlendOp::ePinlightEXT: return "PinlightEXT";
+    case BlendOp::eHardmixEXT: return "HardmixEXT";
+    case BlendOp::eHslHueEXT: return "HslHueEXT";
+    case BlendOp::eHslSaturationEXT: return "HslSaturationEXT";
+    case BlendOp::eHslColorEXT: return "HslColorEXT";
+    case BlendOp::eHslLuminosityEXT: return "HslLuminosityEXT";
+    case BlendOp::ePlusEXT: return "PlusEXT";
+    case BlendOp::ePlusClampedEXT: return "PlusClampedEXT";
+    case BlendOp::ePlusClampedAlphaEXT: return "PlusClampedAlphaEXT";
+    case BlendOp::ePlusDarkerEXT: return "PlusDarkerEXT";
+    case BlendOp::eMinusEXT: return "MinusEXT";
+    case BlendOp::eMinusClampedEXT: return "MinusClampedEXT";
+    case BlendOp::eContrastEXT: return "ContrastEXT";
+    case BlendOp::eInvertOvgEXT: return "InvertOvgEXT";
+    case BlendOp::eRedEXT: return "RedEXT";
+    case BlendOp::eGreenEXT: return "GreenEXT";
+    case BlendOp::eBlueEXT: return "BlueEXT";
     default: return "invalid";
     }
   }
@@ -29065,6 +29640,13 @@ namespace vk
     case StructureType::eSurfaceFormat2KHR: return "SurfaceFormat2KHR";
     case StructureType::eIosSurfaceCreateInfoMVK: return "IosSurfaceCreateInfoMVK";
     case StructureType::eMacosSurfaceCreateInfoMVK: return "MacosSurfaceCreateInfoMVK";
+    case StructureType::ePhysicalDeviceSamplerFilterMinmaxPropertiesEXT: return "PhysicalDeviceSamplerFilterMinmaxPropertiesEXT";
+    case StructureType::eSamplerReductionModeCreateInfoEXT: return "SamplerReductionModeCreateInfoEXT";
+    case StructureType::ePhysicalDeviceBlendOperationAdvancedFeaturesEXT: return "PhysicalDeviceBlendOperationAdvancedFeaturesEXT";
+    case StructureType::ePhysicalDeviceBlendOperationAdvancedPropertiesEXT: return "PhysicalDeviceBlendOperationAdvancedPropertiesEXT";
+    case StructureType::ePipelineColorBlendAdvancedStateCreateInfoEXT: return "PipelineColorBlendAdvancedStateCreateInfoEXT";
+    case StructureType::ePipelineCoverageToColorStateCreateInfoNV: return "PipelineCoverageToColorStateCreateInfoNV";
+    case StructureType::ePipelineCoverageModulationStateCreateInfoNV: return "PipelineCoverageModulationStateCreateInfoNV";
     default: return "invalid";
     }
   }
@@ -29240,6 +29822,7 @@ namespace vk
     case AccessFlagBits::eMemoryWrite: return "MemoryWrite";
     case AccessFlagBits::eCommandProcessReadNVX: return "CommandProcessReadNVX";
     case AccessFlagBits::eCommandProcessWriteNVX: return "CommandProcessWriteNVX";
+    case AccessFlagBits::eColorAttachmentReadNoncoherentEXT: return "ColorAttachmentReadNoncoherentEXT";
     default: return "invalid";
     }
   }
@@ -29267,6 +29850,7 @@ namespace vk
     if (value & AccessFlagBits::eMemoryWrite) result += "MemoryWrite | ";
     if (value & AccessFlagBits::eCommandProcessReadNVX) result += "CommandProcessReadNVX | ";
     if (value & AccessFlagBits::eCommandProcessWriteNVX) result += "CommandProcessWriteNVX | ";
+    if (value & AccessFlagBits::eColorAttachmentReadNoncoherentEXT) result += "ColorAttachmentReadNoncoherentEXT | ";
     return "{" + result.substr(0, result.size() - 3) + "}";
   }
 
@@ -29500,6 +30084,7 @@ namespace vk
     case FormatFeatureFlagBits::eSampledImageFilterCubicIMG: return "SampledImageFilterCubicIMG";
     case FormatFeatureFlagBits::eTransferSrcKHR: return "TransferSrcKHR";
     case FormatFeatureFlagBits::eTransferDstKHR: return "TransferDstKHR";
+    case FormatFeatureFlagBits::eSampledImageFilterMinmaxEXT: return "SampledImageFilterMinmaxEXT";
     default: return "invalid";
     }
   }
@@ -29524,6 +30109,7 @@ namespace vk
     if (value & FormatFeatureFlagBits::eSampledImageFilterCubicIMG) result += "SampledImageFilterCubicIMG | ";
     if (value & FormatFeatureFlagBits::eTransferSrcKHR) result += "TransferSrcKHR | ";
     if (value & FormatFeatureFlagBits::eTransferDstKHR) result += "TransferDstKHR | ";
+    if (value & FormatFeatureFlagBits::eSampledImageFilterMinmaxEXT) result += "SampledImageFilterMinmaxEXT | ";
     return "{" + result.substr(0, result.size() - 3) + "}";
   }
 
@@ -30492,6 +31078,40 @@ namespace vk
     if (value & SubpassDescriptionFlagBits::ePerViewAttributesNVX) result += "PerViewAttributesNVX | ";
     if (value & SubpassDescriptionFlagBits::ePerViewPositionXOnlyNVX) result += "PerViewPositionXOnlyNVX | ";
     return "{" + result.substr(0, result.size() - 3) + "}";
+  }
+
+  VULKAN_HPP_INLINE std::string to_string(SamplerReductionModeEXT value)
+  {
+    switch (value)
+    {
+    case SamplerReductionModeEXT::eWeightedAverage: return "WeightedAverage";
+    case SamplerReductionModeEXT::eMin: return "Min";
+    case SamplerReductionModeEXT::eMax: return "Max";
+    default: return "invalid";
+    }
+  }
+
+  VULKAN_HPP_INLINE std::string to_string(BlendOverlapEXT value)
+  {
+    switch (value)
+    {
+    case BlendOverlapEXT::eUncorrelated: return "Uncorrelated";
+    case BlendOverlapEXT::eDisjoint: return "Disjoint";
+    case BlendOverlapEXT::eConjoint: return "Conjoint";
+    default: return "invalid";
+    }
+  }
+
+  VULKAN_HPP_INLINE std::string to_string(CoverageModulationModeNV value)
+  {
+    switch (value)
+    {
+    case CoverageModulationModeNV::eNone: return "None";
+    case CoverageModulationModeNV::eRgb: return "Rgb";
+    case CoverageModulationModeNV::eAlpha: return "Alpha";
+    case CoverageModulationModeNV::eRgba: return "Rgba";
+    default: return "invalid";
+    }
   }
 
 } // namespace vk

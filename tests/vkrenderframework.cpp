@@ -109,19 +109,19 @@ bool VkRenderFramework::InstanceExtensionSupported(const char *ext_name, uint32_
 };
 
 // Return true if extension name is found and spec value is >= requested spec value
-bool VkRenderFramework::DeviceExtensionSupported(VkPhysicalDevice dev, const char *ext_name, uint32_t spec) {
+bool VkRenderFramework::DeviceExtensionSupported(VkPhysicalDevice dev, const char *layer, const char *ext_name, uint32_t spec) {
     if (!inst) {
         EXPECT_NE((VkInstance)0, inst);  // Complain, not cool without an instance
         return false;
     }
     uint32_t ext_count = 0;
     std::vector<VkExtensionProperties> ext_props;
-    VkResult res = vkEnumerateDeviceExtensionProperties(dev, nullptr, &ext_count, nullptr);
+    VkResult res = vkEnumerateDeviceExtensionProperties(dev, layer, &ext_count, nullptr);
     if (VK_SUCCESS != res) return false;
     if (0 == ext_count) return false;
 
     ext_props.resize(ext_count);
-    res = vkEnumerateDeviceExtensionProperties(dev, nullptr, &ext_count, ext_props.data());
+    res = vkEnumerateDeviceExtensionProperties(dev, layer, &ext_count, ext_props.data());
     if (VK_SUCCESS != res) return false;
 
     for (auto &it : ext_props) {
@@ -244,9 +244,20 @@ void VkRenderFramework::GetPhysicalDeviceFeatures(VkPhysicalDeviceFeatures *feat
 void VkRenderFramework::InitState(VkPhysicalDeviceFeatures *features, const VkCommandPoolCreateFlags flags) {
     // Remove any unsupported device extension names from list
     for (auto ext = m_device_extension_names.begin(); ext != m_device_extension_names.end();) {
-        if (!DeviceExtensionSupported(objs[0], *ext)) {
-            ADD_FAILURE() << "InitState(): The requested device extension " << *ext << " was not found. Disabled.";
-            ext = m_device_extension_names.erase(ext);
+        if (!DeviceExtensionSupported(objs[0], nullptr, *ext)) {
+            bool found = false;
+            for (auto layer = m_instance_layer_names.begin(); layer != m_instance_layer_names.end();) {
+                if (!DeviceExtensionSupported(objs[0], *layer, *ext)) {
+                    found = true;
+                    break;
+                }
+            }
+            if (!found) {
+                ADD_FAILURE() << "InitState(): The requested device extension " << *ext << " was not found. Disabled.";
+                ext = m_device_extension_names.erase(ext);
+            } else {
+                ++ext;
+            }
         } else {
             ++ext;
         }

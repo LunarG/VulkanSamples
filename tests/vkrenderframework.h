@@ -83,7 +83,7 @@ class VkRenderFramework : public VkTestFramework {
 
     bool InstanceLayerSupported(const char *name, uint32_t specVersion = 0, uint32_t implementationVersion = 0);
     bool InstanceExtensionSupported(const char *name, uint32_t specVersion = 0);
-    bool DeviceExtensionSupported(VkPhysicalDevice dev, const char *name, uint32_t specVersion = 0);
+    bool DeviceExtensionSupported(VkPhysicalDevice dev, const char *layer, const char *name, uint32_t specVersion = 0);
 
    protected:
     VkApplicationInfo app_info;

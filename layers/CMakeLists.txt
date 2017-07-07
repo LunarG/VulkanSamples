@@ -60,6 +60,13 @@ if (WIN32)
                     )
             endforeach(config_file)
         endif()
+        # Copy vk_validation_error_messages.h from source to build dir for scripts to pick up
+        FILE(TO_NATIVE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/vk_validation_error_messages.h src_val_msgs)
+        FILE(TO_NATIVE_PATH ${CMAKE_CURRENT_BINARY_DIR}/vk_validation_error_messages.h dst_val_msgs)
+        add_custom_target(vk_validation_error_messages ALL
+            COMMAND copy ${src_val_msgs} ${dst_val_msgs}
+            VERBATIM
+            )
     endif()
 else()
     # extra setup for out-of-tree builds
@@ -70,6 +77,11 @@ else()
                 VERBATIM
                 )
         endforeach(config_file)
+        # Add link to vk_validation_error_messages.h in build dir for scripts to pick up
+        add_custom_target(vk_validation_error_messages ALL
+            COMMAND ln -sf ${CMAKE_CURRENT_SOURCE_DIR}/vk_validation_error_messages.h
+            VERBATIM
+            )
     endif()
 endif()
 # If a layer has a direcgt dependency on a project with the same name, use it.
@@ -178,7 +190,7 @@ add_vk_layer(object_tracker object_tracker.cpp vk_layer_table.cpp)
 # generated
 add_vk_layer(threading threading.cpp thread_check.h vk_layer_table.cpp)
 add_vk_layer(unique_objects unique_objects.cpp unique_objects_wrappers.h vk_layer_table.cpp)
-add_vk_layer(parameter_validation parameter_validation.cpp parameter_validation.h vk_layer_table.cpp)
+add_vk_layer(parameter_validation parameter_validation.cpp parameter_validation.h vk_layer_table.cpp vk_validation_error_messages.h)
 
 # Core validation has additional dependencies
 target_include_directories(VkLayer_core_validation PRIVATE ${GLSLANG_SPIRV_INCLUDE_DIR})

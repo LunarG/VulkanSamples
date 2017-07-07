@@ -20,7 +20,18 @@ index 32d3d33..d2c4d25 100644
  	defenv.Append(CPPDEFINES = ['_CRT_SECURE_NO_WARNINGS', '_CRT_NONSTDC_NO_WARNINGS', '_CRT_SECURE_NO_DEPRECATE', '_CRT_NON_CONFORMING_SWPRINTFS'])
  	defenv['MSVCRT_FLAG'] = '/MT' # Avoid msvcr?0.dll dependency
  else:
-@@ -143,9 +143,9 @@ stub_env.Append(CCFLAGS = ['/Fa${TARGET}.lst'])    # listing file name
+@@ -43,6 +43,10 @@ if msvs_version >= 11.0:
+ 	defenv['SUBSYS_CON'] = '/subsystem:console,5.01' # support windows xp
+ 	defenv['SUBSYS_WIN'] = '/subsystem:windows,5.01' # support windows xp
+ 
++if msvs_version >= 14.0:
++	defenv.Append(CCFLAGS = ['/guard:cf'])
++	defenv.Append(LINKFLAGS = ['/guard:cf'])
++
+ ### defines
+ 
+ defenv.Append(CPPDEFINES = [('NSISCALL', '$STDCALL')])
+@@ -143,9 +147,9 @@ stub_env.Append(CCFLAGS = ['/Fa${TARGET}.lst'])    # listing file name
  stub_env.Append(LINKFLAGS = ['$NODEFLIBS_FLAG'])   # no default libraries
  stub_env.Append(LINKFLAGS = ['$MAP_FLAG'])         # generate map file
  
