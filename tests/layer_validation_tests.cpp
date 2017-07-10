@@ -13816,6 +13816,219 @@ TEST_F(VkLayerTest, PipelineInUseDestroyedSignaled) {
     vkDestroyPipelineLayout(m_device->handle(), pipeline_layout, nullptr);
 }
 
+TEST_F(VkLayerTest, CreateImageViewBreaksParameterCompatibilityRequirements) {
+    TEST_DESCRIPTION(
+        "Attempts to create an Image View with a view type that does not match the image type it is being created from.");
+
+    ASSERT_NO_FATAL_FAILURE(InitFramework(myDbgFunc, m_errorMonitor));
+    if (DeviceExtensionSupported(gpu(), nullptr, VK_KHR_MAINTENANCE1_EXTENSION_NAME)) {
+        m_device_extension_names.push_back(VK_KHR_MAINTENANCE1_EXTENSION_NAME);
+    }
+    ASSERT_NO_FATAL_FAILURE(InitState());
+
+    VkPhysicalDeviceMemoryProperties memProps;
+    vkGetPhysicalDeviceMemoryProperties(m_device->phy().handle(), &memProps);
+
+    // Test mismatch detection for image of type VK_IMAGE_TYPE_1D
+    VkImageCreateInfo imgInfo = {VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
+                                 nullptr,
+                                 VK_IMAGE_CREATE_MUTABLE_FORMAT_BIT,
+                                 VK_IMAGE_TYPE_1D,
+                                 VK_FORMAT_R8G8B8A8_UNORM,
+                                 {1, 1, 1},
+                                 1,
+                                 1,
+                                 VK_SAMPLE_COUNT_1_BIT,
+                                 VK_IMAGE_TILING_OPTIMAL,
+                                 VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
+                                 VK_SHARING_MODE_EXCLUSIVE,
+                                 0,
+                                 nullptr,
+                                 VK_IMAGE_LAYOUT_UNDEFINED};
+    VkImageObj image1D(m_device);
+    image1D.init(&imgInfo);
+    ASSERT_TRUE(image1D.initialized());
+
+    // Initialize VkImageViewCreateInfo with mismatched viewType
+    VkImageView imageView;
+    VkImageViewCreateInfo ivci = {};
+    ivci.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+    ivci.image = image1D.handle();
+    ivci.viewType = VK_IMAGE_VIEW_TYPE_2D;
+    ivci.format = VK_FORMAT_R8G8B8A8_UNORM;
+    ivci.subresourceRange.layerCount = 1;
+    ivci.subresourceRange.baseMipLevel = 0;
+    ivci.subresourceRange.levelCount = 1;
+    ivci.subresourceRange.baseArrayLayer = 0;
+    ivci.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+
+    // Test for error message
+    m_errorMonitor->SetDesiredFailureMsg(
+        VK_DEBUG_REPORT_ERROR_BIT_EXT,
+        "vkCreateImageView(): pCreateInfo->viewType VK_IMAGE_VIEW_TYPE_2D is not compatible with image");
+    vkCreateImageView(m_device->device(), &ivci, NULL, &imageView);
+    m_errorMonitor->VerifyFound();
+
+    // Test mismatch detection for image of type VK_IMAGE_TYPE_2D
+    imgInfo = {VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
+               nullptr,
+               VK_IMAGE_CREATE_MUTABLE_FORMAT_BIT,
+               VK_IMAGE_TYPE_2D,
+               VK_FORMAT_R8G8B8A8_UNORM,
+               {1, 1, 1},
+               1,
+               6,
+               VK_SAMPLE_COUNT_1_BIT,
+               VK_IMAGE_TILING_OPTIMAL,
+               VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
+               VK_SHARING_MODE_EXCLUSIVE,
+               0,
+               nullptr,
+               VK_IMAGE_LAYOUT_UNDEFINED};
+    VkImageObj image2D(m_device);
+    image2D.init(&imgInfo);
+    ASSERT_TRUE(image2D.initialized());
+
+    // Initialize VkImageViewCreateInfo with mismatched viewType
+    ivci = {};
+    ivci.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+    ivci.image = image2D.handle();
+    ivci.viewType = VK_IMAGE_VIEW_TYPE_3D;
+    ivci.format = VK_FORMAT_R8G8B8A8_UNORM;
+    ivci.subresourceRange.layerCount = 1;
+    ivci.subresourceRange.baseMipLevel = 0;
+    ivci.subresourceRange.levelCount = 1;
+    ivci.subresourceRange.baseArrayLayer = 0;
+    ivci.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+
+    // Test for error message
+    m_errorMonitor->SetDesiredFailureMsg(
+        VK_DEBUG_REPORT_ERROR_BIT_EXT,
+        "vkCreateImageView(): pCreateInfo->viewType VK_IMAGE_VIEW_TYPE_3D is not compatible with image");
+    vkCreateImageView(m_device->device(), &ivci, NULL, &imageView);
+    m_errorMonitor->VerifyFound();
+
+    // Change VkImageViewCreateInfo to different mismatched viewType
+    ivci.viewType = VK_IMAGE_VIEW_TYPE_CUBE;
+    ivci.subresourceRange.layerCount = 6;
+
+    // Test for error message
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_0ac007d6);
+    vkCreateImageView(m_device->device(), &ivci, NULL, &imageView);
+    m_errorMonitor->VerifyFound();
+
+    // Test mismatch detection for image of type VK_IMAGE_TYPE_3D
+    imgInfo = {VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
+               nullptr,
+               VK_IMAGE_CREATE_MUTABLE_FORMAT_BIT,
+               VK_IMAGE_TYPE_3D,
+               VK_FORMAT_R8G8B8A8_UNORM,
+               {1, 1, 1},
+               1,
+               1,
+               VK_SAMPLE_COUNT_1_BIT,
+               VK_IMAGE_TILING_OPTIMAL,
+               VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
+               VK_SHARING_MODE_EXCLUSIVE,
+               0,
+               nullptr,
+               VK_IMAGE_LAYOUT_UNDEFINED};
+    VkImageObj image3D(m_device);
+    image3D.init(&imgInfo);
+    ASSERT_TRUE(image3D.initialized());
+
+    // Initialize VkImageViewCreateInfo with mismatched viewType
+    ivci = {};
+    ivci.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+    ivci.image = image3D.handle();
+    ivci.viewType = VK_IMAGE_VIEW_TYPE_1D;
+    ivci.format = VK_FORMAT_R8G8B8A8_UNORM;
+    ivci.subresourceRange.layerCount = 1;
+    ivci.subresourceRange.baseMipLevel = 0;
+    ivci.subresourceRange.levelCount = 1;
+    ivci.subresourceRange.baseArrayLayer = 0;
+    ivci.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+
+    // Test for error message
+    m_errorMonitor->SetDesiredFailureMsg(
+        VK_DEBUG_REPORT_ERROR_BIT_EXT,
+        "vkCreateImageView(): pCreateInfo->viewType VK_IMAGE_VIEW_TYPE_1D is not compatible with image");
+    vkCreateImageView(m_device->device(), &ivci, NULL, &imageView);
+    m_errorMonitor->VerifyFound();
+
+    // Change VkImageViewCreateInfo to different mismatched viewType
+    ivci.viewType = VK_IMAGE_VIEW_TYPE_2D;
+
+    // Test for error message
+    if (DeviceExtensionSupported(gpu(), nullptr, VK_KHR_MAINTENANCE1_EXTENSION_NAME)) {
+        m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_0ac007da);
+    } else {
+        m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_0ac007fa);
+    }
+
+    vkCreateImageView(m_device->device(), &ivci, NULL, &imageView);
+    m_errorMonitor->VerifyFound();
+
+    // Check if the device can make the image required for this test case.
+    VkImageFormatProperties formProps = {{0, 0, 0}, 0, 0, 0, 0};
+    VkResult res = vkGetPhysicalDeviceImageFormatProperties(
+        m_device->phy().handle(), VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_TYPE_3D, VK_IMAGE_TILING_OPTIMAL,
+        VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
+        VK_IMAGE_CREATE_MUTABLE_FORMAT_BIT | VK_IMAGE_CREATE_2D_ARRAY_COMPATIBLE_BIT_KHR | VK_IMAGE_CREATE_SPARSE_BINDING_BIT,
+        &formProps);
+
+    // If not, skip this part of the test.
+    if (res) {
+        return;
+    }
+
+    // Initialize VkImageCreateInfo with VK_IMAGE_CREATE_2D_ARRAY_COMPATIBLE_BIT_KHR and VK_IMAGE_CREATE_SPARSE_BINDING_BIT which
+    // are incompatible create flags.
+    imgInfo = {
+        VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
+        nullptr,
+        VK_IMAGE_CREATE_MUTABLE_FORMAT_BIT | VK_IMAGE_CREATE_2D_ARRAY_COMPATIBLE_BIT_KHR | VK_IMAGE_CREATE_SPARSE_BINDING_BIT,
+        VK_IMAGE_TYPE_3D,
+        VK_FORMAT_R8G8B8A8_UNORM,
+        {1, 1, 1},
+        1,
+        1,
+        VK_SAMPLE_COUNT_1_BIT,
+        VK_IMAGE_TILING_OPTIMAL,
+        VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
+        VK_SHARING_MODE_EXCLUSIVE,
+        0,
+        nullptr,
+        VK_IMAGE_LAYOUT_UNDEFINED};
+    VkImage imageSparse;
+
+    // Creating a sparse image means we should not bind memory to it.
+    res = vkCreateImage(m_device->device(), &imgInfo, NULL, &imageSparse);
+    ASSERT_FALSE(res);
+
+    // Initialize VkImageViewCreateInfo to create a view that will attempt to utilize VK_IMAGE_CREATE_2D_ARRAY_COMPATIBLE_BIT_KHR.
+    ivci = {};
+    ivci.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+    ivci.image = imageSparse;
+    ivci.viewType = VK_IMAGE_VIEW_TYPE_2D;
+    ivci.format = VK_FORMAT_R8G8B8A8_UNORM;
+    ivci.subresourceRange.layerCount = 1;
+    ivci.subresourceRange.baseMipLevel = 0;
+    ivci.subresourceRange.levelCount = 1;
+    ivci.subresourceRange.baseArrayLayer = 0;
+    ivci.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+
+    // Test for error message
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
+                                         " when the VK_IMAGE_CREATE_SPARSE_BINDING_BIT, VK_IMAGE_CREATE_SPARSE_RESIDENCY_BIT, or "
+                                         "VK_IMAGE_CREATE_SPARSE_ALIASED_BIT flags are enabled.");
+    vkCreateImageView(m_device->device(), &ivci, NULL, &imageView);
+    m_errorMonitor->VerifyFound();
+
+    // Clean up
+    vkDestroyImage(m_device->device(), imageSparse, nullptr);
+}
+
 TEST_F(VkLayerTest, ImageViewInUseDestroyedSignaled) {
     TEST_DESCRIPTION("Delete in-use imageView.");
 
@@ -21372,6 +21585,48 @@ TEST_F(VkPositiveLayerTest, FenceCreateSignaledWaitHandling) {
     vkDestroyFence(m_device->device(), f2, nullptr);
 
     m_errorMonitor->VerifyNotFound();
+}
+
+TEST_F(VkPositiveLayerTest, CreateImageViewFollowsParameterCompatibilityRequirements) {
+    TEST_DESCRIPTION("Verify that creating an ImageView with valid usage does not generate validation errors.");
+
+    ASSERT_NO_FATAL_FAILURE(Init());
+
+    m_errorMonitor->ExpectSuccess();
+    
+    VkImageCreateInfo imgInfo = {VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
+                                 nullptr,
+                                 VK_IMAGE_CREATE_MUTABLE_FORMAT_BIT,
+                                 VK_IMAGE_TYPE_2D,
+                                 VK_FORMAT_R8G8B8A8_UNORM,
+                                 {128, 128, 1},
+                                 1,
+                                 1,
+                                 VK_SAMPLE_COUNT_1_BIT,
+                                 VK_IMAGE_TILING_OPTIMAL,
+                                 VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
+                                 VK_SHARING_MODE_EXCLUSIVE,
+                                 0,
+                                 nullptr,
+                                 VK_IMAGE_LAYOUT_UNDEFINED};
+    VkImageObj image(m_device);
+    image.init(&imgInfo);
+    ASSERT_TRUE(image.initialized());
+    VkImageView imageView;
+    VkImageViewCreateInfo ivci = {};
+    ivci.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+    ivci.image = image.handle();
+    ivci.viewType = VK_IMAGE_VIEW_TYPE_2D;
+    ivci.format = VK_FORMAT_R8G8B8A8_UNORM;
+    ivci.subresourceRange.layerCount = 1;
+    ivci.subresourceRange.baseMipLevel = 0;
+    ivci.subresourceRange.levelCount = 1;
+    ivci.subresourceRange.baseArrayLayer = 0;
+    ivci.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+
+    vkCreateImageView(m_device->device(), &ivci, NULL, &imageView);
+    m_errorMonitor->VerifyNotFound();
+    vkDestroyImageView(m_device->device(), imageView, NULL);
 }
 
 TEST_F(VkPositiveLayerTest, ValidUsage) {

@@ -3202,19 +3202,21 @@ bool PreCallValidateCreateImageView(layer_data *device_data, const VkImageViewCr
         skip |= ValidateImageUsageFlags(
             device_data, image_state,
             VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT |
-                VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
+            VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
             false, -1, "vkCreateImageView()",
             "VK_IMAGE_USAGE_[SAMPLED|STORAGE|COLOR_ATTACHMENT|DEPTH_STENCIL_ATTACHMENT|INPUT_ATTACHMENT]_BIT");
         // If this isn't a sparse image, it needs to have memory backing it at CreateImageView time
         skip |= ValidateMemoryIsBoundToImage(device_data, image_state, "vkCreateImageView()", VALIDATION_ERROR_0ac007f8);
         // Checks imported from image layer
         skip |= ValidateImageSubresourceRange(device_data, image_state, create_info->viewType == VK_IMAGE_VIEW_TYPE_2D_ARRAY,
-                                              create_info->subresourceRange, "vkCreateImageView", "pCreateInfo->subresourceRange");
+            create_info->subresourceRange, "vkCreateImageView", "pCreateInfo->subresourceRange");
 
         VkImageCreateFlags image_flags = image_state->createInfo.flags;
         VkFormat image_format = image_state->createInfo.format;
         VkFormat view_format = create_info->format;
         VkImageAspectFlags aspect_mask = create_info->subresourceRange.aspectMask;
+        VkImageType image_type = image_state->createInfo.imageType;
+        VkImageViewType view_type = create_info->viewType;
 
         // Validate VK_IMAGE_CREATE_MUTABLE_FORMAT_BIT state
         if (image_flags & VK_IMAGE_CREATE_MUTABLE_FORMAT_BIT) {
@@ -3245,6 +3247,79 @@ bool PreCallValidateCreateImageView(layer_data *device_data, const VkImageViewCr
 
         // Validate correct image aspect bits for desired formats and format consistency
         skip |= ValidateImageAspectMask(device_data, image_state->image, image_format, aspect_mask, "vkCreateImageView()");
+
+        switch (image_type) {
+            case VK_IMAGE_TYPE_1D:
+                if (view_type != VK_IMAGE_VIEW_TYPE_1D && view_type != VK_IMAGE_VIEW_TYPE_1D_ARRAY) {
+                    skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0,
+                                    __LINE__, VALIDATION_ERROR_0ac007fa, "IMAGE",
+                                    "vkCreateImageView(): pCreateInfo->viewType %s is not compatible with image type %s. %s",
+                                    string_VkImageViewType(view_type), string_VkImageType(image_type),
+                                    validation_error_map[VALIDATION_ERROR_0ac007fa]);
+                }
+                break;
+            case VK_IMAGE_TYPE_2D:
+                if (view_type != VK_IMAGE_VIEW_TYPE_2D && view_type != VK_IMAGE_VIEW_TYPE_2D_ARRAY) {
+                    if ((view_type == VK_IMAGE_VIEW_TYPE_CUBE || view_type == VK_IMAGE_VIEW_TYPE_CUBE_ARRAY) &&
+                        !(image_flags & VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT)) {
+                        skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0,
+                                        __LINE__, VALIDATION_ERROR_0ac007d6, "IMAGE",
+                                        "vkCreateImageView(): pCreateInfo->viewType %s is not compatible with image type %s. %s",
+                                        string_VkImageViewType(view_type), string_VkImageType(image_type),
+                                        validation_error_map[VALIDATION_ERROR_0ac007d6]);
+                    } else if (view_type != VK_IMAGE_VIEW_TYPE_CUBE && view_type != VK_IMAGE_VIEW_TYPE_CUBE_ARRAY) {
+                        skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0,
+                                        __LINE__, VALIDATION_ERROR_0ac007fa, "IMAGE",
+                                        "vkCreateImageView(): pCreateInfo->viewType %s is not compatible with image type %s. %s",
+                                        string_VkImageViewType(view_type), string_VkImageType(image_type),
+                                        validation_error_map[VALIDATION_ERROR_0ac007fa]);
+                    }
+                }
+                break;
+            case VK_IMAGE_TYPE_3D:
+                if (GetDeviceExtensions(device_data)->vk_khr_maintenance1) {
+                    if (view_type != VK_IMAGE_VIEW_TYPE_3D) {
+                        if ((view_type == VK_IMAGE_VIEW_TYPE_2D || view_type == VK_IMAGE_VIEW_TYPE_2D_ARRAY)) {
+                            if (!(image_flags & VK_IMAGE_CREATE_2D_ARRAY_COMPATIBLE_BIT_KHR)) {
+                                skip |= log_msg(
+                                    report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0,
+                                    __LINE__, VALIDATION_ERROR_0ac007da, "IMAGE",
+                                    "vkCreateImageView(): pCreateInfo->viewType %s is not compatible with image type %s. %s",
+                                    string_VkImageViewType(view_type), string_VkImageType(image_type),
+                                    validation_error_map[VALIDATION_ERROR_0ac007da]);
+                            } else if ((image_flags & (VK_IMAGE_CREATE_SPARSE_BINDING_BIT | VK_IMAGE_CREATE_SPARSE_RESIDENCY_BIT |
+                                                       VK_IMAGE_CREATE_SPARSE_ALIASED_BIT))) {
+                                skip |= log_msg(
+                                    report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0,
+                                    __LINE__, VALIDATION_ERROR_0ac007fa, "IMAGE",
+                                    "vkCreateImageView(): pCreateInfo->viewType %s is not compatible with image type %s when the "
+                                    "VK_IMAGE_CREATE_SPARSE_BINDING_BIT, VK_IMAGE_CREATE_SPARSE_RESIDENCY_BIT, or "
+                                    "VK_IMAGE_CREATE_SPARSE_ALIASED_BIT flags are enabled. %s",
+                                    string_VkImageViewType(view_type), string_VkImageType(image_type),
+                                    validation_error_map[VALIDATION_ERROR_0ac007fa]);
+                            }
+                        } else {
+                            skip |=
+                                log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0,
+                                        __LINE__, VALIDATION_ERROR_0ac007fa, "IMAGE",
+                                        "vkCreateImageView(): pCreateInfo->viewType %s is not compatible with image type %s. %s",
+                                        string_VkImageViewType(view_type), string_VkImageType(image_type),
+                                        validation_error_map[VALIDATION_ERROR_0ac007fa]);
+                        }
+                    }
+                } else {
+                    if (view_type != VK_IMAGE_VIEW_TYPE_3D) {
+                        skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0,
+                                        __LINE__, VALIDATION_ERROR_0ac007fa, "IMAGE",
+                                        "vkCreateImageView(): pCreateInfo->viewType %s is not compatible with image type %s. %s",
+                                        string_VkImageViewType(view_type), string_VkImageType(image_type),
+                                        validation_error_map[VALIDATION_ERROR_0ac007fa]);
+                    }
+                }
+                break;
+            default:
+                break;
+        }
     }
     return skip;
 }
