@@ -793,11 +793,11 @@ class ParamCheckerOutputGenerator(OutputGenerator):
         extStructNames = 'NULL'
         vuid = self.GetVuid("VUID-%s-pNext-pNext" % struct_type_name)
         if value.extstructs:
+            extStructVar = 'allowed_structs_{}'.format(struct_type_name)
+            extStructCount = 'ARRAY_SIZE({})'.format(extStructVar)
             structs = value.extstructs.split(',')
-            checkExpr.append('const VkStructureType allowedStructs[] = {' + ', '.join([self.getStructType(s) for s in structs]) + '};\n')
-            extStructCount = 'ARRAY_SIZE(allowedStructs)'
-            extStructVar = 'allowedStructs'
             extStructNames = '"' + ', '.join(structs) + '"'
+            checkExpr.append('const VkStructureType {}[] = {{ {} }};\n'.format(extStructVar, ', '.join([self.getStructType(s) for s in structs])))
         checkExpr.append('skipCall |= validate_struct_pnext(layer_data->report_data, "{}", {ppp}"{}"{pps}, {}, {}{}, {}, {}, GeneratedHeaderVersion, {});\n'.format(
             funcPrintName, valuePrintName, extStructNames, prefix, value.name, extStructCount, extStructVar, vuid, **postProcSpec))
         return checkExpr
