@@ -6143,21 +6143,48 @@ VKAPI_ATTR void VKAPI_CALL CmdResetEvent(VkCommandBuffer commandBuffer, VkEvent 
     if (!skip) dev_data->dispatch_table.CmdResetEvent(commandBuffer, event, stageMask);
 }
 
-static bool ValidateBarriers(const char *funcName, VkCommandBuffer cmdBuffer, uint32_t memBarrierCount,
-                             const VkMemoryBarrier *pMemBarriers, uint32_t bufferBarrierCount,
-                             const VkBufferMemoryBarrier *pBufferMemBarriers, uint32_t imageMemBarrierCount,
-                             const VkImageMemoryBarrier *pImageMemBarriers) {
+static bool ValidateBarriers(const char *funcName, VkCommandBuffer cmdBuffer, VkPipelineStageFlags src_stage_mask,
+                             VkPipelineStageFlags dst_stage_mask, uint32_t memBarrierCount, const VkMemoryBarrier *pMemBarriers,
+                             uint32_t bufferBarrierCount, const VkBufferMemoryBarrier *pBufferMemBarriers,
+                             uint32_t imageMemBarrierCount, const VkImageMemoryBarrier *pImageMemBarriers) {
     bool skip = false;
     layer_data *dev_data = GetLayerDataPtr(get_dispatch_key(cmdBuffer), layer_data_map);
     GLOBAL_CB_NODE *pCB = GetCBNode(dev_data, cmdBuffer);
-    if (pCB->activeRenderPass) {
-        if (!pCB->activeRenderPass->hasSelfDependency[pCB->activeSubpass]) {
-            auto rp_handle = HandleToUint64(pCB->activeRenderPass->renderPass);
-            skip |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
-                            rp_handle, __LINE__, VALIDATION_ERROR_1b800928, "CORE",
-                            "%s: Barriers cannot be set during subpass %d of renderPass 0x%" PRIx64
-                            "with no self-dependency specified. %s",
-                            funcName, pCB->activeSubpass, rp_handle, validation_error_map[VALIDATION_ERROR_1b800928]);
+    // TODO: Split this series of checks off into a special CmdPipelineBarrier-only function
+    if (0 == strcmp(funcName, "vkCmdPipelineBarrier()")) {
+        if (pCB->activeRenderPass) {
+            auto rp_state = pCB->activeRenderPass;
+            auto rp_handle = HandleToUint64(rp_state->renderPass);
+            if (!rp_state->hasSelfDependency[pCB->activeSubpass]) {
+                skip |= log_msg(
+                    dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, rp_handle,
+                    __LINE__, VALIDATION_ERROR_1b800928, "CORE",
+                    "%s: Barriers cannot be set during subpass %d of renderPass 0x%" PRIx64 "with no self-dependency specified. %s",
+                    funcName, pCB->activeSubpass, rp_handle, validation_error_map[VALIDATION_ERROR_1b800928]);
+            } else {
+                assert(rp_state->subpass_to_dependency_index[pCB->activeSubpass] != -1);
+                const auto &sub_dep = rp_state->createInfo.pDependencies[rp_state->subpass_to_dependency_index[pCB->activeSubpass]];
+                const auto &sub_src_mask = sub_dep.srcStageMask;
+                const auto &sub_dst_mask = sub_dep.dstStageMask;
+                if (src_stage_mask != (sub_src_mask & src_stage_mask)) {
+                    skip |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT,
+                                    VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, rp_handle, __LINE__, VALIDATION_ERROR_1b80092a,
+                                    "CORE",
+                                    "%s: Barrier srcStageMask(0x%X) is not a subset of VkSubpassDependency srcStageMask(0x%X) of "
+                                    "subpass %d of renderPass 0x%" PRIx64 ". %s",
+                                    funcName, src_stage_mask, sub_src_mask, pCB->activeSubpass, rp_handle,
+                                    validation_error_map[VALIDATION_ERROR_1b80092a]);
+                }
+                if (dst_stage_mask != (sub_dst_mask & dst_stage_mask)) {
+                    skip |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT,
+                                    VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, rp_handle, __LINE__, VALIDATION_ERROR_1b80092c,
+                                    "CORE",
+                                    "%s: Barrier dstStageMask(0x%X) is not a subset of VkSubpassDependency dstStageMask(0x%X) of "
+                                    "subpass %d of renderPass 0x%" PRIx64 ". %s",
+                                    funcName, src_stage_mask, sub_src_mask, pCB->activeSubpass, rp_handle,
+                                    validation_error_map[VALIDATION_ERROR_1b80092c]);
+                }
+            }
         }
     }
     for (uint32_t i = 0; i < imageMemBarrierCount; ++i) {
@@ -6443,8 +6470,9 @@ VKAPI_ATTR void VKAPI_CALL CmdWaitEvents(VkCommandBuffer commandBuffer, uint32_t
             TransitionImageLayouts(dev_data, commandBuffer, imageMemoryBarrierCount, pImageMemoryBarriers);
         }
 
-        skip |= ValidateBarriers("vkCmdWaitEvents()", commandBuffer, memoryBarrierCount, pMemoryBarriers, bufferMemoryBarrierCount,
-                                 pBufferMemoryBarriers, imageMemoryBarrierCount, pImageMemoryBarriers);
+        skip |=
+            ValidateBarriers("vkCmdWaitEvents()", commandBuffer, sourceStageMask, dstStageMask, memoryBarrierCount, pMemoryBarriers,
+                             bufferMemoryBarrierCount, pBufferMemoryBarriers, imageMemoryBarrierCount, pImageMemoryBarriers);
     }
     lock.unlock();
     if (!skip)
@@ -6470,8 +6498,9 @@ static bool PreCallValidateCmdPipelineBarrier(layer_data *device_data, GLOBAL_CB
                                          VALIDATION_ERROR_1b800926);
     skip |= ValidateBarriersToImages(device_data, commandBuffer, imageMemoryBarrierCount, pImageMemoryBarriers,
                                      "vkCmdPipelineBarrier()");
-    skip |= ValidateBarriers("vkCmdPipelineBarrier()", commandBuffer, memoryBarrierCount, pMemoryBarriers, bufferMemoryBarrierCount,
-                             pBufferMemoryBarriers, imageMemoryBarrierCount, pImageMemoryBarriers);
+    skip |=
+        ValidateBarriers("vkCmdPipelineBarrier()", commandBuffer, srcStageMask, dstStageMask, memoryBarrierCount, pMemoryBarriers,
+                         bufferMemoryBarrierCount, pBufferMemoryBarriers, imageMemoryBarrierCount, pImageMemoryBarriers);
     return skip;
 }
 
@@ -7211,11 +7240,13 @@ static bool ValidateDependencies(const layer_data *dev_data, FRAMEBUFFER_STATE c
 }
 
 static bool CreatePassDAG(const layer_data *dev_data, const VkRenderPassCreateInfo *pCreateInfo,
-                          std::vector<DAGNode> &subpass_to_node, std::vector<bool> &has_self_dependency) {
+                          std::vector<DAGNode> &subpass_to_node, std::vector<bool> &has_self_dependency,
+                          std::vector<int32_t> &subpass_to_dep_index) {
     bool skip = false;
     for (uint32_t i = 0; i < pCreateInfo->subpassCount; ++i) {
         DAGNode &subpass_node = subpass_to_node[i];
         subpass_node.pass = i;
+        subpass_to_dep_index[i] = -1;  // Default to no dependency and overwrite below as needed
     }
     for (uint32_t i = 0; i < pCreateInfo->dependencyCount; ++i) {
         const VkSubpassDependency &dependency = pCreateInfo->pDependencies[i];
@@ -7228,12 +7259,15 @@ static bool CreatePassDAG(const layer_data *dev_data, const VkRenderPassCreateIn
         } else if (dependency.srcSubpass > dependency.dstSubpass) {
             skip |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0,
                             __LINE__, DRAWSTATE_INVALID_RENDERPASS, "DS",
-                            "Depedency graph must be specified such that an earlier pass cannot depend on a later pass.");
+                            "Dependency graph must be specified such that an earlier pass cannot depend on a later pass.");
         } else if (dependency.srcSubpass == dependency.dstSubpass) {
             has_self_dependency[dependency.srcSubpass] = true;
         } else {
             subpass_to_node[dependency.dstSubpass].prev.push_back(dependency.srcSubpass);
             subpass_to_node[dependency.srcSubpass].next.push_back(dependency.dstSubpass);
+        }
+        if (dependency.srcSubpass != VK_SUBPASS_EXTERNAL) {
+            subpass_to_dep_index[dependency.srcSubpass] = i;
         }
     }
     return skip;
@@ -7437,12 +7471,14 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateRenderPass(VkDevice device, const VkRenderP
 
         std::vector<bool> has_self_dependency(pCreateInfo->subpassCount);
         std::vector<DAGNode> subpass_to_node(pCreateInfo->subpassCount);
-        skip |= CreatePassDAG(dev_data, pCreateInfo, subpass_to_node, has_self_dependency);
+        std::vector<int32_t> subpass_to_dep_index(pCreateInfo->subpassCount);
+        skip |= CreatePassDAG(dev_data, pCreateInfo, subpass_to_node, has_self_dependency, subpass_to_dep_index);
 
         auto render_pass = unique_ptr<RENDER_PASS_STATE>(new RENDER_PASS_STATE(pCreateInfo));
         render_pass->renderPass = *pRenderPass;
         render_pass->hasSelfDependency = has_self_dependency;
         render_pass->subpassToNode = subpass_to_node;
+        render_pass->subpass_to_dependency_index = subpass_to_dep_index;
 
         for (uint32_t i = 0; i < pCreateInfo->subpassCount; ++i) {
             const VkSubpassDescription &subpass = pCreateInfo->pSubpasses[i];

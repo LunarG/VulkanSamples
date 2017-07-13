@@ -379,6 +379,7 @@ struct RENDER_PASS_STATE : public BASE_NODE {
     safe_VkRenderPassCreateInfo createInfo;
     std::vector<bool> hasSelfDependency;
     std::vector<DAGNode> subpassToNode;
+    std::vector<int32_t> subpass_to_dependency_index;  // Map srcSubpass to its pDependency index (or -1 if none)
     std::unordered_map<uint32_t, bool> attachment_first_read;
 
     RENDER_PASS_STATE(VkRenderPassCreateInfo const *pCreateInfo) : createInfo(pCreateInfo) {}
