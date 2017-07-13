@@ -4,7 +4,7 @@
         "name": "VK_LAYER_LUNARG_core_validation",
         "type": "GLOBAL",
         "library_path": "./libVkLayer_core_validation.so",
-        "api_version": "1.0.51",
+        "api_version": "1.0.54",
         "implementation_version": "1",
         "description": "LunarG Validation Layer",
         "instance_extensions": [
@@ -27,8 +27,3 @@
          ]
     }
 }
-
-
-
-
-

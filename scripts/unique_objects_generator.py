@@ -147,6 +147,9 @@ class UniqueObjectsOutputGenerator(OutputGenerator):
             'vkCmdPushDescriptorSetWithTemplateKHR',
             'vkDebugMarkerSetObjectTagEXT',
             'vkDebugMarkerSetObjectNameEXT',
+            'vkGetPhysicalDeviceDisplayProperties2KHR',
+            'vkGetPhysicalDeviceDisplayPlaneProperties2KHR',
+            'vkGetDisplayModeProperties2KHR',
             ]
         # Commands shadowed by interface functions and are not implemented
         self.interface_functions = [

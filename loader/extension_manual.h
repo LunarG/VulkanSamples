@@ -134,3 +134,27 @@ VKAPI_ATTR VkResult VKAPI_CALL GetRandROutputDisplayEXT(VkPhysicalDevice physica
 VKAPI_ATTR VkResult VKAPI_CALL terminator_GetRandROutputDisplayEXT(VkPhysicalDevice physicalDevice, Display* dpy, RROutput rrOutput,
                                                                    VkDisplayKHR* pDisplay);
 #endif  // VK_USE_PLATFORM_XLIB_XRANDR_EXT
+
+VKAPI_ATTR void VKAPI_CALL GetPhysicalDeviceExternalBufferPropertiesKHR(
+    VkPhysicalDevice physicalDevice, const VkPhysicalDeviceExternalBufferInfoKHR* pExternalBufferInfo,
+    VkExternalBufferPropertiesKHR* pExternalBufferProperties);
+
+VKAPI_ATTR void VKAPI_CALL terminator_GetPhysicalDeviceExternalBufferPropertiesKHR(
+    VkPhysicalDevice physicalDevice, const VkPhysicalDeviceExternalBufferInfoKHR* pExternalBufferInfo,
+    VkExternalBufferPropertiesKHR* pExternalBufferProperties);
+
+VKAPI_ATTR void VKAPI_CALL GetPhysicalDeviceExternalSemaphorePropertiesKHR(
+    VkPhysicalDevice physicalDevice, const VkPhysicalDeviceExternalSemaphoreInfoKHR* pExternalSemaphoreInfo,
+    VkExternalSemaphorePropertiesKHR* pExternalSemaphoreProperties);
+
+VKAPI_ATTR void VKAPI_CALL terminator_GetPhysicalDeviceExternalSemaphorePropertiesKHR(
+    VkPhysicalDevice physicalDevice, const VkPhysicalDeviceExternalSemaphoreInfoKHR* pExternalSemaphoreInfo,
+    VkExternalSemaphorePropertiesKHR* pExternalSemaphoreProperties);
+
+VKAPI_ATTR void VKAPI_CALL GetPhysicalDeviceExternalFencePropertiesKHR(
+    VkPhysicalDevice physicalDevice, const VkPhysicalDeviceExternalFenceInfoKHR* pExternalFenceInfo,
+    VkExternalFencePropertiesKHR* pExternalFenceProperties);
+
+VKAPI_ATTR void VKAPI_CALL terminator_GetPhysicalDeviceExternalFencePropertiesKHR(
+    VkPhysicalDevice physicalDevice, const VkPhysicalDeviceExternalFenceInfoKHR* pExternalFenceInfo,
+    VkExternalFencePropertiesKHR* pExternalFenceProperties);

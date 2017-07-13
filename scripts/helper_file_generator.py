@@ -667,10 +667,7 @@ class HelperFileOutputGenerator(OutputGenerator):
                     done = True
                     break
             if done == False:
-                if object_type == 'kVulkanObjectTypeDebugReportCallbackEXT':
-                    object_types_header += '    VK_DEBUG_REPORT_OBJECT_TYPE_DEBUG_REPORT_EXT, // kVulkanObjectTypeDebugReportCallbackEXT\n'
-                else:
-                    object_types_header += '    VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT; // No Match\n'
+                object_types_header += '    VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, // No Match\n'
         object_types_header += '};\n'
 
         # Output a conversion routine from the layer object definitions to the core object type definitions
@@ -688,7 +685,7 @@ class HelperFileOutputGenerator(OutputGenerator):
                     done = True
                     break
             if done == False:
-                object_types_header += '    VK_OBJECT_TYPE_UNKNOWN; // No Match\n'
+                object_types_header += '    VK_OBJECT_TYPE_UNKNOWN, // No Match\n'
         object_types_header += '};\n'
 
         return object_types_header
