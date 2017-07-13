@@ -6150,13 +6150,14 @@ static bool ValidateBarriers(const char *funcName, VkCommandBuffer cmdBuffer, ui
     bool skip = false;
     layer_data *dev_data = GetLayerDataPtr(get_dispatch_key(cmdBuffer), layer_data_map);
     GLOBAL_CB_NODE *pCB = GetCBNode(dev_data, cmdBuffer);
-    if (pCB->activeRenderPass && memBarrierCount) {
+    if (pCB->activeRenderPass) {
         if (!pCB->activeRenderPass->hasSelfDependency[pCB->activeSubpass]) {
+            auto rp_handle = HandleToUint64(pCB->activeRenderPass->renderPass);
             skip |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
-                            HandleToUint64(cmdBuffer), __LINE__, DRAWSTATE_INVALID_BARRIER, "DS",
-                            "%s: Barriers cannot be set during subpass %d "
-                            "with no self dependency specified.",
-                            funcName, pCB->activeSubpass);
+                            rp_handle, __LINE__, VALIDATION_ERROR_1b800928, "CORE",
+                            "%s: Barriers cannot be set during subpass %d of renderPass 0x%" PRIx64
+                            "with no self-dependency specified. %s",
+                            funcName, pCB->activeSubpass, rp_handle, validation_error_map[VALIDATION_ERROR_1b800928]);
         }
     }
     for (uint32_t i = 0; i < imageMemBarrierCount; ++i) {
