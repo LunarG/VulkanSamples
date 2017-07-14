@@ -30,7 +30,7 @@
 #define __STDC_FORMAT_MACROS
 #include <inttypes.h>
 
-#include <stdint.h> // For UINT32_MAX
+#include <stdint.h>  // For UINT32_MAX
 
 #include <algorithm>
 #include <iostream>
@@ -448,13 +448,18 @@ TEST(CreateInstance, LayerNotPresent) {
 
 // Used by run_loader_tests.sh to test for layer insertion.
 TEST(CreateInstance, LayerPresent) {
-    char const *const names[] = {"VK_LAYER_LUNARG_parameter_validation"};  // Temporary required due to MSVC bug.
-    auto const info = VK::InstanceCreateInfo().enabledLayerCount(1).ppEnabledLayerNames(names);
-
+    char const *const names1[] = {"VK_LAYER_LUNARG_parameter_validation"};  // Temporary required due to MSVC bug.
+    char const *const names2[] = {"VK_LAYER_LUNARG_standard_validation"};   // Temporary required due to MSVC bug.
+    auto const info1 = VK::InstanceCreateInfo().enabledLayerCount(1).ppEnabledLayerNames(names1);
     VkInstance instance = VK_NULL_HANDLE;
-    VkResult result = vkCreateInstance(info, VK_NULL_HANDLE, &instance);
+    VkResult result = vkCreateInstance(info1, VK_NULL_HANDLE, &instance);
     ASSERT_EQ(result, VK_SUCCESS);
+    vkDestroyInstance(instance, nullptr);
 
+    auto const info2 = VK::InstanceCreateInfo().enabledLayerCount(1).ppEnabledLayerNames(names2);
+    instance = VK_NULL_HANDLE;
+    result = vkCreateInstance(info2, VK_NULL_HANDLE, &instance);
+    ASSERT_EQ(result, VK_SUCCESS);
     vkDestroyInstance(instance, nullptr);
 }
 
@@ -545,6 +550,76 @@ TEST(EnumeratePhysicalDevices, TwoCallIncomplete) {
 
     result = vkEnumeratePhysicalDevices(instance, &physicalCount, physical.get());
     ASSERT_EQ(result, VK_INCOMPLETE);
+
+    vkDestroyInstance(instance, nullptr);
+}
+
+// Test to make sure that layers enabled in the instance show up in the list of device layers.
+TEST(EnumerateDeviceLayers, LayersMatch) {
+    char const *const names1[] = {"VK_LAYER_LUNARG_standard_validation"};
+    char const *const names2[3] = {"VK_LAYER_LUNARG_parameter_validation", "VK_LAYER_LUNARG_core_validation",
+                                   "VK_LAYER_LUNARG_object_tracker"};
+    auto const info1 = VK::InstanceCreateInfo().enabledLayerCount(1).ppEnabledLayerNames(names1);
+    VkInstance instance = VK_NULL_HANDLE;
+    VkResult result = vkCreateInstance(info1, VK_NULL_HANDLE, &instance);
+    ASSERT_EQ(result, VK_SUCCESS);
+
+    uint32_t physicalCount = 0;
+    result = vkEnumeratePhysicalDevices(instance, &physicalCount, nullptr);
+    ASSERT_EQ(result, VK_SUCCESS);
+    ASSERT_GT(physicalCount, 0u);
+
+    std::unique_ptr<VkPhysicalDevice[]> physical(new VkPhysicalDevice[physicalCount]);
+    result = vkEnumeratePhysicalDevices(instance, &physicalCount, physical.get());
+    ASSERT_EQ(result, VK_SUCCESS);
+    ASSERT_GT(physicalCount, 0u);
+    uint32_t count = 24;
+    VkLayerProperties layer_props[24];
+    vkEnumerateDeviceLayerProperties(physical[0], &count, layer_props);
+    ASSERT_GE(count, 1u);
+    bool found = false;
+    for (uint32_t iii = 0; iii < count; iii++) {
+        if (!strcmp(layer_props[iii].layerName, names1[0])) {
+            found = true;
+            break;
+        }
+    }
+    if (!found) {
+        ASSERT_EQ(count, 0);
+    }
+
+    vkDestroyInstance(instance, nullptr);
+
+    auto const info2 = VK::InstanceCreateInfo().enabledLayerCount(3).ppEnabledLayerNames(names2);
+    instance = VK_NULL_HANDLE;
+    result = vkCreateInstance(info2, VK_NULL_HANDLE, &instance);
+    ASSERT_EQ(result, VK_SUCCESS);
+
+    physicalCount = 0;
+    result = vkEnumeratePhysicalDevices(instance, &physicalCount, nullptr);
+    ASSERT_EQ(result, VK_SUCCESS);
+    ASSERT_GT(physicalCount, 0u);
+
+    std::unique_ptr<VkPhysicalDevice[]> physical2(new VkPhysicalDevice[physicalCount]);
+    result = vkEnumeratePhysicalDevices(instance, &physicalCount, physical2.get());
+    ASSERT_EQ(result, VK_SUCCESS);
+    ASSERT_GT(physicalCount, 0u);
+
+    count = 24;
+    vkEnumerateDeviceLayerProperties(physical2[0], &count, layer_props);
+    ASSERT_GE(count, 3u);
+    for (uint32_t jjj = 0; jjj < 3; jjj++) {
+        found = false;
+        for (uint32_t iii = 0; iii < count; iii++) {
+            if (!strcmp(layer_props[iii].layerName, names2[jjj])) {
+                found = true;
+                break;
+            }
+        }
+        if (!found) {
+            ASSERT_EQ(count, 0);
+        }
+    }
 
     vkDestroyInstance(instance, nullptr);
 }
