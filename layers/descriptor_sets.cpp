@@ -486,7 +486,15 @@ bool cvdescriptorset::DescriptorSet::ValidateDrawState(const std::map<uint32_t, 
                     auto reqs = binding_pair.second;
 
                     auto image_view_state = GetImageViewState(device_data_, image_view);
-                    assert(image_view_state);
+                    if (nullptr == image_view_state) {
+                        // Image view must have been destroyed since initial update. Could potentially flag the descriptor
+                        //  as "invalid" (updated = false) at DestroyImageView() time and detect this error at bind time
+                        std::stringstream error_str;
+                        error_str << "Descriptor in binding #" << binding << " at global descriptor index " << i
+                                  << " is using imageView " << image_view << " that has been destroyed.";
+                        *error = error_str.str();
+                        return false;
+                    }
                     auto image_view_ci = image_view_state->create_info;
 
                     if ((reqs & DESCRIPTOR_REQ_ALL_VIEW_TYPE_BITS) && (~reqs & (1 << image_view_ci.viewType))) {
