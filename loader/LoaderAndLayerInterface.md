@@ -398,6 +398,7 @@ extension or core device entry-points.
 
 
 ##### ABI Versioning
+
 The Vulkan loader library will be distributed in various ways including Vulkan
 SDKs, OS package distributions and Independent Hardware Vendor (IHV) driver
 packages. These details are beyond the scope of this document. However, the name
@@ -1821,6 +1822,7 @@ ICD to properly hand-shake.
     * [Windows and Linux ICD Negotiation](#windows-and-linux-icd-negotiation)
       * [Version Negotiation Between Loader and ICDs](#version-negotiation-between-loader-and-icds)
         * [Interfacing With Legacy ICDs or Loader](#interfacing-with-legacy-icds-or-loader)
+      * [Loader Version 5 Interface Requirements](#loader-version-5-interface-requirements)
       * [Loader Version 4 Interface Requirements](#loader-version-4-interface-requirements)
       * [Loader Version 3 Interface Requirements](#loader-version-3-interface-requirements)
       * [Loader Version 2 Interface Requirements](#loader-version-2-interface-requirements)
@@ -2333,6 +2335,31 @@ is a legacy loader supporting version 0 or 1.  If the loader calls
 the loader only supports version 0.
 
 
+##### Loader Version 5 Interface Requirements
+
+Version 5 of the loader/ICD interface has no changes to the actual interface.
+If the loader requests interface version 5 or greater, it is simply
+an indication to ICDs that the loader is now evaluating if the API Version info
+passed into vkCreateInstance is a valid version for the loader.  If it is not,
+the loader will catch this during vkCreateInstance and fail with a
+VK_ERROR_INCOMPATIBLE_DRIVER error.
+
+On the other hand, if version 5 or newer is not requested by the loader, then it
+indicates to the ICD that the loader is ignorant of the API version being
+requested.  Because of this, it falls on the ICD to validate that the API
+Version is not greater than major = 1 and minor = 0.  If it is, then the ICD
+should automatically fail with a VK_ERROR_INCOMPATIBLE_DRIVER error since the
+loader is a 1.0 loader, and is unaware of the version.
+
+Here is a table of the expected behaviors:
+
+| Loader Supports I/f Version  |  ICD Supports I/f Version  |    Result        |
+| :---: |:---:|------------------------|
+|           <= 4               |           <= 4             | ICD must fail with `VK_ERROR_INCOMPATIBLE_DRIVER` for all vkCreateInstance calls with apiVersion set to > Vulkan 1.0 because both the loader and ICD support interface version <= 4. Otherwise, the ICD should behave as normal. |
+|           <= 4               |           >= 5             | ICD must fail with `VK_ERROR_INCOMPATIBLE_DRIVER` for all vkCreateInstance calls with apiVersion set to > Vulkan 1.0 because the loader is still at interface version <= 4. Otherwise, the ICD should behave as normal.  |
+|           >= 5               |           <= 4             | Loader will fail with `VK_ERROR_INCOMPATIBLE_DRIVER` if it can't handle the apiVersion.  ICD may pass for all apiVersions, but since it's interface is <= 4, it is best if it assumes it needs to do the work of rejecting anything > Vulkan 1.0 and fail with `VK_ERROR_INCOMPATIBLE_DRIVER`. Otherwise, the ICD should behave as normal.  |
+|           >= 5               |           >= 5             | Loader will fail with `VK_ERROR_INCOMPATIBLE_DRIVER` if it can't handle the apiVersion, and ICDs should fail with `VK_ERROR_INCOMPATIBLE_DRIVER` **only if** they can not support the specified apiVersion. Otherwise, the ICD should behave as normal.  |
+
 ##### Loader Version 4 Interface Requirements
 
 The major change to version 4 of the loader/ICD interface is the support of
@@ -2425,7 +2452,7 @@ Loader.  These are referenced throughout the text, but collected here for ease
 of discovery.
 
 | Environment Variable              | Behavior |  Example Format  |
-|----------------|---------------------|----------------------|
+|:---:|---------------------|----------------------|
 | VK_ICD_FILENAMES                  | Force the loader to use the specific ICD JSON files.  The value should contain a list of delimited full path listings to ICD JSON Manifest files.  **NOTE:** If you fail to use the global path to a JSON file, you may encounter issues.  |  `export VK_ICD_FILENAMES=<folder_a>\intel.json:<folder_b>\amd.json`<br/><br/>`set VK_ICD_FILENAMES=<folder_a>\nvidia.json;<folder_b>\mesa.json` |
 | VK_INSTANCE_LAYERS                | Force the loader to add the given layers to the list of Enabled layers normally passed into `vkCreateInstance`.  These layers are added first, and the loader will remove any duplicate layers that appear in both this list as well as that passed into `ppEnabledLayerNames`. | `export VK_INSTANCE_LAYERS=<layer_a>:<layer_b>`<br/><br/>`set VK_INSTANCE_LAYERS=<layer_a>;<layer_b>` |
 | VK_LAYER_PATH                     | Override the loader's standard Layer library search folders and use the provided delimited folders to search for layer Manifest files. | `export VK_LAYER_PATH=<path_a>:<path_b>`<br/><br/>`set VK_LAYER_PATH=<path_a>;<pathb>` |
@@ -2435,7 +2462,7 @@ of discovery.
 ## Glossary of Terms
 
 | Field Name | Field Value |
-|----------------|--------------------|
+|:---:|--------------------|
 | Android Loader | The loader designed to work primarily for the Android OS.  This is generated from a different code-base than the desktop loader.  But, in all important aspects, should be functionally equivalent. |
 | Desktop Loader | The loader designed to work on both Windows and Linux.  This is generated from a different [code-base](#https://github.com/KhronosGroup/Vulkan-LoaderAndValidationLayers) than the Android loader.  But in all important aspects, should be functionally equivalent. |
 | Core Function | A function that is already part of the Vulkan core specification and not an extension.  For example, vkCreateDevice(). |

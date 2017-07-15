@@ -40,6 +40,7 @@ typedef struct _debug_report_data {
     VkLayerDbgFunctionNode *default_debug_callback_list;
     VkFlags active_flags;
     bool g_DEBUG_REPORT;
+    std::unordered_map<uint64_t, std::string> *debugObjectNameMap;
 } debug_report_data;
 
 template debug_report_data *GetLayerDataPtr<debug_report_data>(void *data_key,
@@ -119,8 +120,21 @@ static inline bool debug_report_log_msg(const debug_report_data *debug_data, VkF
 
     while (pTrav) {
         if (pTrav->msgFlags & msgFlags) {
-            if (pTrav->pfnMsgCallback(msgFlags, objectType, srcObject, location, msgCode, pLayerPrefix, pMsg, pTrav->pUserData)) {
-                bail = true;
+            auto it = debug_data->debugObjectNameMap->find(srcObject);
+            if (it == debug_data->debugObjectNameMap->end()) {
+                if (pTrav->pfnMsgCallback(msgFlags, objectType, srcObject, location, msgCode, pLayerPrefix, pMsg,
+                                          pTrav->pUserData)) {
+                    bail = true;
+                }
+            } else {
+                std::string newMsg = "SrcObject name = ";
+                newMsg.append(it->second.c_str());
+                newMsg.append(" ");
+                newMsg.append(pMsg);
+                if (pTrav->pfnMsgCallback(msgFlags, objectType, srcObject, location, msgCode, pLayerPrefix, newMsg.c_str(),
+                                          pTrav->pUserData)) {
+                    bail = true;
+                }
             }
         }
         pTrav = pTrav->pNext;
@@ -143,6 +157,7 @@ static inline debug_report_data *debug_report_create_instance(
             debug_data->g_DEBUG_REPORT = true;
         }
     }
+    debug_data->debugObjectNameMap = new std::unordered_map<uint64_t, std::string>;
     return debug_data;
 }
 
@@ -150,6 +165,7 @@ static inline void layer_debug_report_destroy_instance(debug_report_data *debug_
     if (debug_data) {
         RemoveAllMessageCallbacks(debug_data, &debug_data->default_debug_callback_list);
         RemoveAllMessageCallbacks(debug_data, &debug_data->debug_callback_list);
+        delete debug_data->debugObjectNameMap;
         free(debug_data);
     }
 }

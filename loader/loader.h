@@ -48,9 +48,6 @@
 #define DEBUG_DISABLE_APP_ALLOCATORS 0
 
 #define MAX_STRING_SIZE 1024
-#define VK_MAJOR(version) (version >> 22)
-#define VK_MINOR(version) ((version >> 12) & 0x3ff)
-#define VK_PATCH(version) (version & 0xfff)
 
 // This is defined in vk_layer.h, but if there's problems we need to create the define
 // here.

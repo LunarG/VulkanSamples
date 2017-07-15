@@ -25,8 +25,8 @@ import vuid_mapping
 #############################
 
 
-out_filename = "vk_validation_error_messages.h" # can override w/ '-out <filename>' option
-db_filename = "vk_validation_error_database.txt" # can override w/ '-gendb <filename>' option
+out_filename = "../layers/vk_validation_error_messages.h" # can override w/ '-out <filename>' option
+db_filename = "../layers/vk_validation_error_database.txt" # can override w/ '-gendb <filename>' option
 json_filename = None # con pass in w/ '-json <filename> option
 gen_db = False # set to True when '-gendb <filename>' option provided
 json_compare = False # compare existing DB to json file input

@@ -43,16 +43,24 @@ import platform
 #  2. Could use notes to store custom fields (like TODO) and print those out here
 #  3. Update test code to check if tests use new, unique enums to check for errors instead of strings
 
-db_file = 'vk_validation_error_database.txt'
-layer_source_files = [
-'core_validation.cpp',
-'descriptor_sets.cpp',
-'parameter_validation.cpp',
-'object_tracker.cpp',
-'shader_validation.cpp',
-'buffer_validation.cpp',
+db_file = '../layers/vk_validation_error_database.txt'
+generated_layer_source_directories = [
+'build',
+'dbuild',
+'release',
 ]
-header_file = 'vk_validation_error_messages.h'
+generated_layer_source_files = [
+'parameter_validation.h',
+]
+layer_source_files = [
+'../layers/core_validation.cpp',
+'../layers/descriptor_sets.cpp',
+'../layers/parameter_validation.cpp',
+'../layers/object_tracker.cpp',
+'../layers/shader_validation.cpp',
+'../layers/buffer_validation.cpp',
+]
+header_file = '../layers/vk_validation_error_messages.h'
 # TODO : Don't hardcode linux path format if we want this to run on windows
 test_file = '../tests/layer_validation_tests.cpp'
 # List of enums that are allowed to be used more than once so don't warn on their duplicates
@@ -164,8 +172,27 @@ class ValidationHeader:
         #print "Found %d error enums. First is %s and last is %s." % (len(self.enums), self.enums[0], self.enums[-1])
 
 class ValidationSource:
-    def __init__(self, source_file_list):
+    def __init__(self, source_file_list, generated_source_file_list, generated_source_directories):
         self.source_files = source_file_list
+        self.generated_source_files = generated_source_file_list
+        self.generated_source_dirs = generated_source_directories
+
+        if len(self.generated_source_files) > 0:
+            qualified_paths = []
+            for source in self.generated_source_files:
+                for build_dir in self.generated_source_dirs:
+                    filepath = '../%s/layers/%s' % (build_dir, source)
+                    if os.path.isfile(filepath):
+                        qualified_paths.append(filepath)
+                        continue
+            if len(self.generated_source_files) != len(qualified_paths):
+                print("Error: Unable to locate one or more of the following source files in the %s directories" % (", ".join(generated_source_directories)))
+                print(self.generated_source_files)
+                print("Skipping documentation validation test")
+                quit()
+            else:
+                self.source_files.extend(qualified_paths)
+
         self.enum_count_dict = {} # dict of enum values to the count of how much they're used, and location of where they're used
         # 1500099c is a special case that provides an exception when an extension is enabled. No specific error is flagged, but the exception is handled so add it here
         self.enum_count_dict['VALIDATION_ERROR_1500099c'] = {}
@@ -287,7 +314,7 @@ def main(argv):
     val_header = ValidationHeader()
     val_header.read()
     # Create parser for layer files
-    val_source = ValidationSource(layer_source_files)
+    val_source = ValidationSource(layer_source_files, generated_layer_source_files, generated_layer_source_directories)
     val_source.parse()
     # Parse test files
     test_parser = TestParser([test_file, ])
