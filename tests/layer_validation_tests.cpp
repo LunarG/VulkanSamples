@@ -10091,6 +10091,12 @@ TEST_F(VkLayerTest, InvalidBarriers) {
     m_errorMonitor->VerifyFound();
     vkCmdEndRenderPass(m_commandBuffer->handle());
 
+    // Add a token self-dependency for this test to avoid unexpected errors
+    //  Since we re-init RenderTarget w/ self-dep, save initial default RP & FB for explicit clean-up
+    auto save_fb = m_framebuffer;
+    auto save_rp = m_renderPass;
+    m_addRenderPassSelfDependency = true;
+    ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, "Image Layout cannot be transitioned to UNDEFINED");
     VkImageObj image(m_device);
     image.Init(128, 128, 1, VK_FORMAT_B8G8R8A8_UNORM, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT, VK_IMAGE_TILING_OPTIMAL, 0);
@@ -10123,14 +10129,12 @@ TEST_F(VkLayerTest, InvalidBarriers) {
 
     // Try to change layout in a renderpass
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_1b80093a);
-    m_errorMonitor->SetUnexpectedError(" Barriers cannot be set during subpass 0 of renderPass ");
     vkCmdPipelineBarrier(m_commandBuffer->handle(), VK_PIPELINE_STAGE_HOST_BIT, VK_PIPELINE_STAGE_VERTEX_SHADER_BIT, 0, 0, nullptr,
                          0, nullptr, 1, &img_barrier);
     m_errorMonitor->VerifyFound();
 
     img_barrier.oldLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_0a8007fe);
-    m_errorMonitor->SetUnexpectedError(" Barriers cannot be set during subpass 0 of renderPass ");
     // baseArrayLayer + layerCount must be <= image's arrayLayers
     img_barrier.subresourceRange.baseArrayLayer = 1;
     vkCmdPipelineBarrier(m_commandBuffer->handle(), VK_PIPELINE_STAGE_HOST_BIT, VK_PIPELINE_STAGE_VERTEX_SHADER_BIT, 0, 0, nullptr,
@@ -10139,7 +10143,6 @@ TEST_F(VkLayerTest, InvalidBarriers) {
     img_barrier.subresourceRange.baseArrayLayer = 0;
 
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_0a8007fc);
-    m_errorMonitor->SetUnexpectedError(" Barriers cannot be set during subpass 0 of renderPass ");
     // baseMipLevel + levelCount must be <= image's mipLevels
     img_barrier.subresourceRange.baseMipLevel = 1;
     vkCmdPipelineBarrier(m_commandBuffer->handle(), VK_PIPELINE_STAGE_HOST_BIT, VK_PIPELINE_STAGE_VERTEX_SHADER_BIT, 0, 0, nullptr,
@@ -10149,7 +10152,6 @@ TEST_F(VkLayerTest, InvalidBarriers) {
 
     // levelCount must be non-zero.
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_0a8007fc);
-    m_errorMonitor->SetUnexpectedError(" Barriers cannot be set during subpass 0 of renderPass ");
     img_barrier.subresourceRange.levelCount = 0;
     vkCmdPipelineBarrier(m_commandBuffer->handle(), VK_PIPELINE_STAGE_HOST_BIT, VK_PIPELINE_STAGE_VERTEX_SHADER_BIT, 0, 0, nullptr,
                          0, nullptr, 1, &img_barrier);
@@ -10158,7 +10160,6 @@ TEST_F(VkLayerTest, InvalidBarriers) {
 
     // layerCount must be non-zero.
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_0a8007fe);
-    m_errorMonitor->SetUnexpectedError(" Barriers cannot be set during subpass 0 of renderPass ");
     img_barrier.subresourceRange.layerCount = 0;
     vkCmdPipelineBarrier(m_commandBuffer->handle(), VK_PIPELINE_STAGE_HOST_BIT, VK_PIPELINE_STAGE_VERTEX_SHADER_BIT, 0, 0, nullptr,
                          0, nullptr, 1, &img_barrier);
@@ -10166,7 +10167,6 @@ TEST_F(VkLayerTest, InvalidBarriers) {
     img_barrier.subresourceRange.layerCount = 1;
 
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, "Buffer Barriers cannot be used during a render pass");
-    m_errorMonitor->SetUnexpectedError(" Barriers cannot be set during subpass 0 of renderPass ");
     vk_testing::Buffer buffer;
     VkMemoryPropertyFlags mem_reqs = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
     buffer.init_as_src_and_dst(*m_device, 256, mem_reqs);
@@ -10404,6 +10404,8 @@ TEST_F(VkLayerTest, InvalidBarriers) {
     uint32_t queue_family_index = m_device->QueueFamilyWithoutCapabilities(VK_QUEUE_COMPUTE_BIT);
     if (queue_family_index == UINT32_MAX) {
         printf("             No non-compute queue found; skipped.\n");
+        vkDestroyFramebuffer(m_device->device(), save_fb, nullptr);
+        vkDestroyRenderPass(m_device->device(), save_rp, nullptr);
         return;  // NOTE: this exits the test function!
     }
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_1b80093e);
@@ -10420,6 +10422,8 @@ TEST_F(VkLayerTest, InvalidBarriers) {
 
     if ((queue_props[queue_family_index].queueFlags & VK_QUEUE_GRAPHICS_BIT) == 0) {
         printf("             The non-compute queue does not support graphics; skipped.\n");
+        vkDestroyFramebuffer(m_device->device(), save_fb, nullptr);
+        vkDestroyRenderPass(m_device->device(), save_rp, nullptr);
         return;  // NOTE: this exits the test function!
     }
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_1e600918);
@@ -10431,6 +10435,8 @@ TEST_F(VkLayerTest, InvalidBarriers) {
                     nullptr, 0, nullptr, 0, nullptr);
     m_errorMonitor->VerifyFound();
     bad_command_buffer.end();
+    vkDestroyFramebuffer(m_device->device(), save_fb, nullptr);
+    vkDestroyRenderPass(m_device->device(), save_rp, nullptr);
 }
 
 TEST_F(VkPositiveLayerTest, LayoutFromPresentWithoutAccessMemoryRead) {

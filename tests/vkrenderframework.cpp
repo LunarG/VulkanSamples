@@ -38,6 +38,7 @@ VkRenderFramework::VkRenderFramework()
       m_commandBuffer(NULL),
       m_renderPass(VK_NULL_HANDLE),
       m_framebuffer(VK_NULL_HANDLE),
+      m_addRenderPassSelfDependency(false),
       m_width(256.0),   // default window width
       m_height(256.0),  // default window height
       m_render_target_fmt(VK_FORMAT_R8G8B8A8_UNORM),
@@ -417,6 +418,18 @@ void VkRenderFramework::InitRenderTarget(uint32_t targets, VkImageView *dsBindin
     rp_info.pAttachments = attachments.data();
     rp_info.subpassCount = 1;
     rp_info.pSubpasses = &subpass;
+    VkSubpassDependency subpass_dep = {};
+    if (m_addRenderPassSelfDependency) {
+        // Add a subpass self-dependency to subpass 0 of default renderPass
+        subpass_dep.srcSubpass = 0;
+        subpass_dep.dstSubpass = 0;
+        subpass_dep.srcStageMask = (VK_PIPELINE_STAGE_ALL_COMMANDS_BIT << 1) - 1;
+        subpass_dep.dstStageMask = (VK_PIPELINE_STAGE_ALL_COMMANDS_BIT << 1) - 1;
+        subpass_dep.srcAccessMask = (VK_ACCESS_MEMORY_WRITE_BIT << 1) - 1;
+        subpass_dep.dstAccessMask = (VK_ACCESS_MEMORY_WRITE_BIT << 1) - 1;
+        rp_info.dependencyCount = 1;
+        rp_info.pDependencies = &subpass_dep;
+    }
 
     vkCreateRenderPass(device(), &rp_info, NULL, &m_renderPass);
 
