@@ -702,7 +702,7 @@ VKAPI_ATTR VkResult VKAPI_CALL GetDisplayPlaneCapabilitiesKHR(VkPhysicalDevice p
 }
 #endif
 
-VKAPI_ATTR VkResult VKAPI_CALL DebugMarkerSetObjectTagEXT(VkDevice device, VkDebugMarkerObjectTagInfoEXT *pTagInfo) {
+VKAPI_ATTR VkResult VKAPI_CALL DebugMarkerSetObjectTagEXT(VkDevice device, const VkDebugMarkerObjectTagInfoEXT *pTagInfo) {
     layer_data *device_data = GetLayerDataPtr(get_dispatch_key(device), layer_data_map);
     auto local_tag_info = new safe_VkDebugMarkerObjectTagInfoEXT(pTagInfo);
     {
@@ -717,7 +717,7 @@ VKAPI_ATTR VkResult VKAPI_CALL DebugMarkerSetObjectTagEXT(VkDevice device, VkDeb
     return result;
 }
 
-VKAPI_ATTR VkResult VKAPI_CALL DebugMarkerSetObjectNameEXT(VkDevice device, VkDebugMarkerObjectNameInfoEXT *pNameInfo) {
+VKAPI_ATTR VkResult VKAPI_CALL DebugMarkerSetObjectNameEXT(VkDevice device, const VkDebugMarkerObjectNameInfoEXT *pNameInfo) {
     layer_data *device_data = GetLayerDataPtr(get_dispatch_key(device), layer_data_map);
     auto local_name_info = new safe_VkDebugMarkerObjectNameInfoEXT(pNameInfo);
     {

@@ -5456,7 +5456,7 @@ VKAPI_ATTR VkResult VKAPI_CALL GetRandROutputDisplayEXT(VkPhysicalDevice physica
 
 // Definitions for the VK_EXT_debug_marker Extension
 
-VKAPI_ATTR VkResult VKAPI_CALL DebugMarkerSetObjectTagEXT(VkDevice device, VkDebugMarkerObjectTagInfoEXT *pTagInfo) {
+VKAPI_ATTR VkResult VKAPI_CALL DebugMarkerSetObjectTagEXT(VkDevice device, const VkDebugMarkerObjectTagInfoEXT *pTagInfo) {
     VkResult result = VK_ERROR_VALIDATION_FAILED_EXT;
     bool skip = false;
     auto my_data = GetLayerDataPtr(get_dispatch_key(device), layer_data_map);
@@ -5476,7 +5476,7 @@ VKAPI_ATTR VkResult VKAPI_CALL DebugMarkerSetObjectTagEXT(VkDevice device, VkDeb
     return result;
 }
 
-VKAPI_ATTR VkResult VKAPI_CALL DebugMarkerSetObjectNameEXT(VkDevice device, VkDebugMarkerObjectNameInfoEXT *pNameInfo) {
+VKAPI_ATTR VkResult VKAPI_CALL DebugMarkerSetObjectNameEXT(VkDevice device, const VkDebugMarkerObjectNameInfoEXT *pNameInfo) {
     VkResult result = VK_ERROR_VALIDATION_FAILED_EXT;
     bool skip = false;
     auto my_data = GetLayerDataPtr(get_dispatch_key(device), layer_data_map);
@@ -5501,7 +5501,7 @@ VKAPI_ATTR VkResult VKAPI_CALL DebugMarkerSetObjectNameEXT(VkDevice device, VkDe
     return result;
 }
 
-VKAPI_ATTR void VKAPI_CALL CmdDebugMarkerBeginEXT(VkCommandBuffer commandBuffer, VkDebugMarkerMarkerInfoEXT *pMarkerInfo) {
+VKAPI_ATTR void VKAPI_CALL CmdDebugMarkerBeginEXT(VkCommandBuffer commandBuffer, const VkDebugMarkerMarkerInfoEXT *pMarkerInfo) {
     bool skip = false;
     auto my_data = GetLayerDataPtr(get_dispatch_key(commandBuffer), layer_data_map);
     assert(my_data != NULL);
@@ -5513,7 +5513,7 @@ VKAPI_ATTR void VKAPI_CALL CmdDebugMarkerBeginEXT(VkCommandBuffer commandBuffer,
     }
 }
 
-VKAPI_ATTR void VKAPI_CALL CmdDebugMarkerInsertEXT(VkCommandBuffer commandBuffer, VkDebugMarkerMarkerInfoEXT *pMarkerInfo) {
+VKAPI_ATTR void VKAPI_CALL CmdDebugMarkerInsertEXT(VkCommandBuffer commandBuffer, const VkDebugMarkerMarkerInfoEXT *pMarkerInfo) {
     bool skip = false;
     auto my_data = GetLayerDataPtr(get_dispatch_key(commandBuffer), layer_data_map);
     assert(my_data != NULL);
