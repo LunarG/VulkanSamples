@@ -6147,7 +6147,7 @@ VKAPI_ATTR void VKAPI_CALL CmdResetEvent(VkCommandBuffer commandBuffer, VkEvent 
 // Pre: cb_state->activeRenderPass must be a pointer to valid renderPass state
 static bool ValidateRenderPassPipelineBarriers(layer_data *device_data, const char *funcName, GLOBAL_CB_NODE const *cb_state,
                                                VkPipelineStageFlags src_stage_mask, VkPipelineStageFlags dst_stage_mask,
-                                               uint32_t memBarrierCount, const VkMemoryBarrier *pMemBarriers,
+                                               uint32_t mem_barrier_count, const VkMemoryBarrier *mem_barriers,
                                                uint32_t bufferBarrierCount, const VkBufferMemoryBarrier *pBufferMemBarriers,
                                                uint32_t imageMemBarrierCount, const VkImageMemoryBarrier *pImageMemBarriers) {
     bool skip = false;
@@ -6162,23 +6162,49 @@ static bool ValidateRenderPassPipelineBarriers(layer_data *device_data, const ch
     } else {
         assert(rp_state->subpass_to_dependency_index[cb_state->activeSubpass] != -1);
         const auto &sub_dep = rp_state->createInfo.pDependencies[rp_state->subpass_to_dependency_index[cb_state->activeSubpass]];
-        const auto &sub_src_mask = sub_dep.srcStageMask;
-        const auto &sub_dst_mask = sub_dep.dstStageMask;
-        if (src_stage_mask != (sub_src_mask & src_stage_mask)) {
+        const auto &sub_src_stage_mask = sub_dep.srcStageMask;
+        const auto &sub_dst_stage_mask = sub_dep.dstStageMask;
+        if (src_stage_mask != (sub_src_stage_mask & src_stage_mask)) {
             skip |= log_msg(device_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
                             rp_handle, __LINE__, VALIDATION_ERROR_1b80092a, "CORE",
                             "%s: Barrier srcStageMask(0x%X) is not a subset of VkSubpassDependency srcStageMask(0x%X) of "
                             "subpass %d of renderPass 0x%" PRIx64 ". %s",
-                            funcName, src_stage_mask, sub_src_mask, cb_state->activeSubpass, rp_handle,
+                            funcName, src_stage_mask, sub_src_stage_mask, cb_state->activeSubpass, rp_handle,
                             validation_error_map[VALIDATION_ERROR_1b80092a]);
         }
-        if (dst_stage_mask != (sub_dst_mask & dst_stage_mask)) {
+        if (dst_stage_mask != (sub_dst_stage_mask & dst_stage_mask)) {
             skip |= log_msg(device_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
                             rp_handle, __LINE__, VALIDATION_ERROR_1b80092c, "CORE",
                             "%s: Barrier dstStageMask(0x%X) is not a subset of VkSubpassDependency dstStageMask(0x%X) of "
                             "subpass %d of renderPass 0x%" PRIx64 ". %s",
-                            funcName, dst_stage_mask, sub_dst_mask, cb_state->activeSubpass, rp_handle,
+                            funcName, dst_stage_mask, sub_dst_stage_mask, cb_state->activeSubpass, rp_handle,
                             validation_error_map[VALIDATION_ERROR_1b80092c]);
+        }
+        const auto &sub_src_access_mask = sub_dep.srcAccessMask;
+        const auto &sub_dst_access_mask = sub_dep.dstAccessMask;
+        for (uint32_t i = 0; i < mem_barrier_count; ++i) {
+            const auto &mb_src_access_mask = mem_barriers[i].srcAccessMask;
+            if (mb_src_access_mask != (sub_src_access_mask & mb_src_access_mask)) {
+                skip |=
+                    log_msg(device_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
+                            rp_handle, __LINE__, VALIDATION_ERROR_1b80092e, "CORE",
+                            "%s: Barrier pMemoryBarriers[%d].srcAccessMask(0x%X) is not a subset of VkSubpassDependency "
+                            "srcAccessMask(0x%X) of "
+                            "subpass %d of renderPass 0x%" PRIx64 ". %s",
+                            funcName, i, mb_src_access_mask, sub_src_access_mask, cb_state->activeSubpass, rp_handle,
+                            validation_error_map[VALIDATION_ERROR_1b80092e]);
+            }
+            const auto &mb_dst_access_mask = mem_barriers[i].dstAccessMask;
+            if (mb_dst_access_mask != (sub_dst_access_mask & mb_dst_access_mask)) {
+                skip |=
+                    log_msg(device_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
+                            rp_handle, __LINE__, VALIDATION_ERROR_1b800930, "CORE",
+                            "%s: Barrier pMemoryBarriers[%d].dstAccessMask(0x%X) is not a subset of VkSubpassDependency "
+                            "dstAccessMask(0x%X) of "
+                            "subpass %d of renderPass 0x%" PRIx64 ". %s",
+                            funcName, i, mb_src_access_mask, sub_src_access_mask, cb_state->activeSubpass, rp_handle,
+                            validation_error_map[VALIDATION_ERROR_1b800930]);
+            }
         }
     }
     return skip;
