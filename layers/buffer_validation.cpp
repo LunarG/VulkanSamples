@@ -351,7 +351,7 @@ void TransitionSubpassLayouts(layer_data *device_data, GLOBAL_CB_NODE *pCB, cons
     }
 }
 
-bool ValidateImageAspectLayout(layer_data *device_data, GLOBAL_CB_NODE *pCB, const VkImageMemoryBarrier *mem_barrier,
+bool ValidateImageAspectLayout(layer_data *device_data, GLOBAL_CB_NODE const *pCB, const VkImageMemoryBarrier *mem_barrier,
                                uint32_t level, uint32_t layer, VkImageAspectFlags aspect) {
     if (!(mem_barrier->subresourceRange.aspectMask & aspect)) {
         return false;
@@ -478,9 +478,8 @@ bool ValidateBarrierLayoutToImageUsage(layer_data *device_data, const VkImageMem
 }
 
 // Verify image barriers are compatible with the images they reference.
-bool ValidateBarriersToImages(layer_data *device_data, VkCommandBuffer cmdBuffer, uint32_t imageMemoryBarrierCount,
+bool ValidateBarriersToImages(layer_data *device_data, GLOBAL_CB_NODE const *cb_state, uint32_t imageMemoryBarrierCount,
                               const VkImageMemoryBarrier *pImageMemoryBarriers, const char *func_name) {
-    GLOBAL_CB_NODE *pCB = GetCBNode(device_data, cmdBuffer);
     bool skip = false;
 
     for (uint32_t i = 0; i < imageMemoryBarrierCount; ++i) {
@@ -530,10 +529,10 @@ bool ValidateBarriersToImages(layer_data *device_data, VkCommandBuffer cmdBuffer
             uint32_t level = img_barrier->subresourceRange.baseMipLevel + j;
             for (uint32_t k = 0; k < layer_count; k++) {
                 uint32_t layer = img_barrier->subresourceRange.baseArrayLayer + k;
-                skip |= ValidateImageAspectLayout(device_data, pCB, img_barrier, level, layer, VK_IMAGE_ASPECT_COLOR_BIT);
-                skip |= ValidateImageAspectLayout(device_data, pCB, img_barrier, level, layer, VK_IMAGE_ASPECT_DEPTH_BIT);
-                skip |= ValidateImageAspectLayout(device_data, pCB, img_barrier, level, layer, VK_IMAGE_ASPECT_STENCIL_BIT);
-                skip |= ValidateImageAspectLayout(device_data, pCB, img_barrier, level, layer, VK_IMAGE_ASPECT_METADATA_BIT);
+                skip |= ValidateImageAspectLayout(device_data, cb_state, img_barrier, level, layer, VK_IMAGE_ASPECT_COLOR_BIT);
+                skip |= ValidateImageAspectLayout(device_data, cb_state, img_barrier, level, layer, VK_IMAGE_ASPECT_DEPTH_BIT);
+                skip |= ValidateImageAspectLayout(device_data, cb_state, img_barrier, level, layer, VK_IMAGE_ASPECT_STENCIL_BIT);
+                skip |= ValidateImageAspectLayout(device_data, cb_state, img_barrier, level, layer, VK_IMAGE_ASPECT_METADATA_BIT);
             }
         }
     }
