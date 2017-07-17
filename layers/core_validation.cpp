@@ -6177,7 +6177,7 @@ static bool ValidateRenderPassPipelineBarriers(layer_data *device_data, const ch
                             rp_handle, __LINE__, VALIDATION_ERROR_1b80092c, "CORE",
                             "%s: Barrier dstStageMask(0x%X) is not a subset of VkSubpassDependency dstStageMask(0x%X) of "
                             "subpass %d of renderPass 0x%" PRIx64 ". %s",
-                            funcName, src_stage_mask, sub_src_mask, cb_state->activeSubpass, rp_handle,
+                            funcName, dst_stage_mask, sub_dst_mask, cb_state->activeSubpass, rp_handle,
                             validation_error_map[VALIDATION_ERROR_1b80092c]);
         }
     }
