@@ -423,16 +423,10 @@ void VkRenderFramework::InitRenderTarget(uint32_t targets, VkImageView *dsBindin
         // Add a subpass self-dependency to subpass 0 of default renderPass
         subpass_dep.srcSubpass = 0;
         subpass_dep.dstSubpass = 0;
-        // Just putting a bunch of Gfx-related stages in here by default but skipping GS/Tess
-        subpass_dep.srcStageMask = VK_PIPELINE_STAGE_DRAW_INDIRECT_BIT | VK_PIPELINE_STAGE_VERTEX_INPUT_BIT |
-                                   VK_PIPELINE_STAGE_VERTEX_SHADER_BIT | VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT |
-                                   VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT |
-                                   VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
-        subpass_dep.dstStageMask = VK_PIPELINE_STAGE_DRAW_INDIRECT_BIT | VK_PIPELINE_STAGE_VERTEX_INPUT_BIT |
-                                   VK_PIPELINE_STAGE_VERTEX_SHADER_BIT | VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT |
-                                   VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT |
-                                   VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
-        // Add all of the gfx mem access bit supported by above pipeline stages
+        // Just using all commands to max supported bits by queue are enumerated
+        subpass_dep.srcStageMask = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
+        subpass_dep.dstStageMask = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
+        // Add all of the gfx mem access bits
         subpass_dep.srcAccessMask = VK_ACCESS_INDIRECT_COMMAND_READ_BIT | VK_ACCESS_INDEX_READ_BIT |
                                     VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT | VK_ACCESS_UNIFORM_READ_BIT |
                                     VK_ACCESS_INPUT_ATTACHMENT_READ_BIT | VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT |
