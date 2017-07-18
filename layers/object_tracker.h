@@ -47,7 +47,7 @@
 namespace object_tracker {
 
 // Object Tracker ERROR codes
-enum OBJECT_TRACK_ERROR {
+enum ObjectTrackerError {
     OBJTRACK_NONE,            // Used for INFO & other non-error messages
     OBJTRACK_UNKNOWN_OBJECT,  // Updating uses of object that's not in global object list
     OBJTRACK_INTERNAL_ERROR,  // Bug with data tracking within the layer
@@ -69,7 +69,7 @@ enum ObjectStatusFlagBits {
 };
 
 // Object and state information structure
-struct OBJTRACK_NODE {
+struct ObjTrackState {
     uint64_t handle;               // Object handle (new)
     VulkanObjectType object_type;  // Object type identifier
     ObjectStatusFlags status;      // Object state
@@ -77,7 +77,7 @@ struct OBJTRACK_NODE {
 };
 
 // Track Queue information
-struct OT_QUEUE_INFO {
+struct ObjTrackQueueInfo {
     uint32_t queue_node_index;
     VkQueue queue;
 };
@@ -85,7 +85,7 @@ struct OT_QUEUE_INFO {
 // Layer name string to be logged with validation messages.
 const char LayerName[] = "ObjectTracker";
 
-typedef std::unordered_map<uint64_t, OBJTRACK_NODE *> object_map_type;
+typedef std::unordered_map<uint64_t, ObjTrackState *> object_map_type;
 
 struct layer_data {
     VkInstance instance;
@@ -104,12 +104,12 @@ struct layer_data {
 
     std::vector<VkQueueFamilyProperties> queue_family_properties;
 
-    // Vector of unordered_maps per object type to hold OBJTRACK_NODE info
+    // Vector of unordered_maps per object type to hold ObjTrackState info
     std::vector<object_map_type> object_map;
     // Special-case map for swapchain images
-    std::unordered_map<uint64_t, OBJTRACK_NODE *> swapchainImageMap;
+    std::unordered_map<uint64_t, ObjTrackState *> swapchainImageMap;
     // Map of queue information structures, one per queue
-    std::unordered_map<VkQueue, OT_QUEUE_INFO *> queue_info_map;
+    std::unordered_map<VkQueue, ObjTrackQueueInfo *> queue_info_map;
 
     VkLayerDispatchTable dispatch_table;
     // Default constructor
@@ -144,7 +144,7 @@ void AllocateCommandBuffer(VkDevice device, const VkCommandPool command_pool, co
                            VkCommandBufferLevel level);
 void AllocateDescriptorSet(VkDevice device, VkDescriptorPool descriptor_pool, VkDescriptorSet descriptor_set);
 void CreateSwapchainImageObject(VkDevice dispatchable_object, VkImage swapchain_image, VkSwapchainKHR swapchain);
-void object_tracker_report_undestroyed_objects(VkDevice device, UNIQUE_VALIDATION_ERROR_CODE error_code);
+void ReportUndestroyedObjects(VkDevice device, UNIQUE_VALIDATION_ERROR_CODE error_code);
 VKAPI_ATTR void VKAPI_CALL DestroyInstance(VkInstance instance, const VkAllocationCallbacks *pAllocator);
 VKAPI_ATTR void VKAPI_CALL DestroyDevice(VkDevice device, const VkAllocationCallbacks *pAllocator);
 VKAPI_ATTR void VKAPI_CALL UpdateDescriptorSets(VkDevice device, uint32_t descriptorWriteCount,
@@ -265,7 +265,7 @@ void CreateObject(T1 dispatchable_object, T2 object, VulkanObjectType object_typ
                 OBJTRACK_NONE, LayerName, "OBJ[0x%" PRIxLEAST64 "] : CREATE %s object 0x%" PRIxLEAST64, object_track_index++,
                 object_string[object_type], object_handle);
 
-        OBJTRACK_NODE *pNewObjNode = new OBJTRACK_NODE;
+        ObjTrackState *pNewObjNode = new ObjTrackState;
         pNewObjNode->object_type = object_type;
         pNewObjNode->status = custom_allocator ? OBJSTATUS_CUSTOM_ALLOCATOR : OBJSTATUS_NONE;
         pNewObjNode->handle = object_handle;
@@ -289,7 +289,7 @@ void DestroyObject(T1 dispatchable_object, T2 object, VulkanObjectType object_ty
     if (object_handle != VK_NULL_HANDLE) {
         auto item = device_data->object_map[object_type].find(object_handle);
         if (item != device_data->object_map[object_type].end()) {
-            OBJTRACK_NODE *pNode = item->second;
+            ObjTrackState *pNode = item->second;
             assert(device_data->num_total_objects > 0);
             device_data->num_total_objects--;
             assert(device_data->num_objects[pNode->object_type] > 0);

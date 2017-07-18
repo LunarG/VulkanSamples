@@ -24,11 +24,12 @@
  * Author: Tony Barbour <tony@LunarG.com>
  */
 
+
 #include "object_tracker.h"
 
 namespace object_tracker {
 
-void object_tracker_report_undestroyed_objects(VkDevice device, UNIQUE_VALIDATION_ERROR_CODE error_code) {
+void ReportUndestroyedObjects(VkDevice device, UNIQUE_VALIDATION_ERROR_CODE error_code) {
     DeviceReportUndestroyedObjects(device, kVulkanObjectTypeCommandBuffer, error_code);
     DeviceReportUndestroyedObjects(device, kVulkanObjectTypeSemaphore, error_code);
     DeviceReportUndestroyedObjects(device, kVulkanObjectTypeFence, error_code);
