@@ -127,7 +127,7 @@ then
    exit 1
 fi
 
-filter=-VkLayerTest.ExceedMemoryAllocationCount
+filter=-VkLayerTest.ExceedMemoryAllocationCount:VkLayerTest.CreateImageViewFormatFeatureMismatch
 # Run the layer validation tests with and without the wrap-objects layer. Diff the results.
 # Filter out the "Unexpected:" lines because they contain varying object handles.
 GTEST_PRINT_TIME=0 \

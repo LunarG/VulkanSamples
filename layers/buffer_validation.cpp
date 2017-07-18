@@ -3273,6 +3273,8 @@ bool PreCallValidateCreateImageView(layer_data *device_data, const VkImageViewCr
 
         VkImageCreateFlags image_flags = image_state->createInfo.flags;
         VkFormat image_format = image_state->createInfo.format;
+        VkImageUsageFlags image_usage = image_state->createInfo.usage;
+        VkImageTiling image_tiling = image_state->createInfo.tiling;
         VkFormat view_format = create_info->format;
         VkImageAspectFlags aspect_mask = create_info->subresourceRange.aspectMask;
         VkImageType image_type = image_state->createInfo.imageType;
@@ -3379,6 +3381,69 @@ bool PreCallValidateCreateImageView(layer_data *device_data, const VkImageViewCr
                 break;
             default:
                 break;
+        }
+
+        const VkFormatProperties *format_properties = GetFormatProperties(device_data, view_format);
+        bool check_tiling_features = false;
+        VkFormatFeatureFlags tiling_features = 0;
+        UNIQUE_VALIDATION_ERROR_CODE linear_error_codes[] = {
+            VALIDATION_ERROR_0ac007dc, VALIDATION_ERROR_0ac007e0, VALIDATION_ERROR_0ac007e2,
+            VALIDATION_ERROR_0ac007e4, VALIDATION_ERROR_0ac007e6,
+        };
+        UNIQUE_VALIDATION_ERROR_CODE optimal_error_codes[] = {
+            VALIDATION_ERROR_0ac007e8, VALIDATION_ERROR_0ac007ea, VALIDATION_ERROR_0ac007ec,
+            VALIDATION_ERROR_0ac007ee, VALIDATION_ERROR_0ac007f0,
+        };
+        UNIQUE_VALIDATION_ERROR_CODE *error_codes = nullptr;
+        if (image_tiling == VK_IMAGE_TILING_LINEAR) {
+            tiling_features = format_properties->linearTilingFeatures;
+            error_codes = linear_error_codes;
+            check_tiling_features = true;
+        } else if (image_tiling == VK_IMAGE_TILING_OPTIMAL) {
+            tiling_features = format_properties->optimalTilingFeatures;
+            error_codes = optimal_error_codes;
+            check_tiling_features = true;
+        }
+
+        if (check_tiling_features) {
+            if (tiling_features == 0) {
+                skip |=
+                    log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
+                            error_codes[0], "IMAGE",
+                            "vkCreateImageView() pCreateInfo->format %s cannot be used with an image having the "
+                            "%s flag set. %s",
+                            string_VkFormat(view_format), string_VkImageTiling(image_tiling), validation_error_map[error_codes[0]]);
+            } else if ((image_usage & VK_IMAGE_USAGE_SAMPLED_BIT) && !(tiling_features & VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT)) {
+                skip |=
+                    log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
+                            error_codes[1], "IMAGE",
+                            "vkCreateImageView() pCreateInfo->format %s cannot be used with an image having the "
+                            "%s and VK_IMAGE_USAGE_SAMPLED_BIT flags set. %s",
+                            string_VkFormat(view_format), string_VkImageTiling(image_tiling), validation_error_map[error_codes[1]]);
+            } else if ((image_usage & VK_IMAGE_USAGE_STORAGE_BIT) && !(tiling_features & VK_FORMAT_FEATURE_STORAGE_IMAGE_BIT)) {
+                skip |=
+                    log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
+                            error_codes[2], "IMAGE",
+                            "vkCreateImageView() pCreateInfo->format %s cannot be used with an image having the "
+                            "%s and VK_IMAGE_USAGE_STORAGE_BIT flags set. %s",
+                            string_VkFormat(view_format), string_VkImageTiling(image_tiling), validation_error_map[error_codes[2]]);
+            } else if ((image_usage & VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT) &&
+                       !(tiling_features & VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT)) {
+                skip |=
+                    log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
+                            error_codes[3], "IMAGE",
+                            "vkCreateImageView() pCreateInfo->format %s cannot be used with an image having the "
+                            "%s and VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT flags set. %s",
+                            string_VkFormat(view_format), string_VkImageTiling(image_tiling), validation_error_map[error_codes[3]]);
+            } else if ((image_usage & VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT) &&
+                       !(tiling_features & VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT)) {
+                skip |=
+                    log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
+                            error_codes[4], "IMAGE",
+                            "vkCreateImageView() pCreateInfo->format %s cannot be used with an image having the "
+                            "%s and VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT flags set. %s",
+                            string_VkFormat(view_format), string_VkImageTiling(image_tiling), validation_error_map[error_codes[4]]);
+            }
         }
     }
     return skip;

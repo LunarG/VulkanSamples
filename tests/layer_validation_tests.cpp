@@ -19,6 +19,7 @@
  * Author: Tony Barbour <tony@LunarG.com>
  * Author: Cody Northrop <cnorthrop@google.com>
  * Author: Dave Houlton <daveh@lunarg.com>
+ * Author: Jeremy Kniager <jeremyk@lunarg.com>
  */
 
 #ifdef ANDROID
@@ -14013,6 +14014,166 @@ TEST_F(VkLayerTest, CreateImageViewBreaksParameterCompatibilityRequirements) {
 
     // Clean up
     vkDestroyImage(m_device->device(), imageSparse, nullptr);
+}
+
+TEST_F(VkLayerTest, CreateImageViewFormatFeatureMismatch) {
+    TEST_DESCRIPTION("TO BE WRITTEN");
+
+    // Check for and load required layer
+    if (InstanceLayerSupported("VK_LAYER_LUNARG_device_profile_api")) {
+        m_instance_layer_names.push_back("VK_LAYER_LUNARG_device_profile_api");
+    } else {
+        printf("             Did not find VK_LAYER_LUNARG_device_profile_api layer; skipped.\n");
+        return;
+    }
+    ASSERT_NO_FATAL_FAILURE(InitFramework(myDbgFunc, m_errorMonitor));
+    ASSERT_NO_FATAL_FAILURE(InitState());
+
+    // Load required functions
+    PFN_vkSetPhysicalDeviceFormatPropertiesEXT fpvkSetPhyiscalDeviceFormatPropertiesEXT =
+        (PFN_vkSetPhysicalDeviceFormatPropertiesEXT)vkGetInstanceProcAddr(instance(), "vkSetPhysicalDeviceFormatPropertiesEXT");
+    PFN_vkGetOriginalPhysicalDeviceFormatPropertiesEXT fpvkGetOriginalPhysicalDeviceFormatPropertiesEXT =
+        (PFN_vkGetOriginalPhysicalDeviceFormatPropertiesEXT)vkGetInstanceProcAddr(instance(),
+                                                                                  "vkGetOriginalPhysicalDeviceFormatPropertiesEXT");
+
+    if (!(fpvkSetPhyiscalDeviceFormatPropertiesEXT) || !(fpvkGetOriginalPhysicalDeviceFormatPropertiesEXT)) {
+        printf("             Can't find device_profile_api functions; skipped.\n");
+        return;
+    }
+
+    // List of features to be tested
+    VkFormatFeatureFlagBits features[] = {VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT, VK_FORMAT_FEATURE_STORAGE_IMAGE_BIT,
+                                          VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT, VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT};
+    uint32_t feature_count = 4;
+    // List of usage cases for each feature test
+    VkImageUsageFlags usages[] = {VK_IMAGE_USAGE_SAMPLED_BIT, VK_IMAGE_USAGE_STORAGE_BIT, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
+                                  VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT};
+    // List of errors that will be thrown in order of tests run
+    UNIQUE_VALIDATION_ERROR_CODE optimal_error_codes[] = {
+        VALIDATION_ERROR_0ac007ea, VALIDATION_ERROR_0ac007ec, VALIDATION_ERROR_0ac007ee, VALIDATION_ERROR_0ac007f0,
+    };
+
+    VkFormatProperties formatProps;
+
+    // First three tests
+    uint32_t i = 0;
+    for (i = 0; i < (feature_count - 1); i++) {
+        // Modify formats to have mismatched features
+
+        // Format for image
+        fpvkGetOriginalPhysicalDeviceFormatPropertiesEXT(gpu(), VK_FORMAT_R32G32B32A32_UINT, &formatProps);
+        formatProps.optimalTilingFeatures |= features[i];
+        fpvkSetPhyiscalDeviceFormatPropertiesEXT(gpu(), VK_FORMAT_R32G32B32A32_UINT, formatProps);
+
+        memset(&formatProps, 0, sizeof(formatProps));
+
+        // Format for view
+        fpvkGetOriginalPhysicalDeviceFormatPropertiesEXT(gpu(), VK_FORMAT_R32G32B32A32_SINT, &formatProps);
+        formatProps.optimalTilingFeatures = features[(i + 1) % feature_count];
+        fpvkSetPhyiscalDeviceFormatPropertiesEXT(gpu(), VK_FORMAT_R32G32B32A32_SINT, formatProps);
+
+        // Create image with modified format
+        VkImageCreateInfo imgInfo = {VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
+                                     nullptr,
+                                     VK_IMAGE_CREATE_MUTABLE_FORMAT_BIT,
+                                     VK_IMAGE_TYPE_2D,
+                                     VK_FORMAT_R32G32B32A32_UINT,
+                                     {1, 1, 1},
+                                     1,
+                                     1,
+                                     VK_SAMPLE_COUNT_1_BIT,
+                                     VK_IMAGE_TILING_OPTIMAL,
+                                     usages[i],
+                                     VK_SHARING_MODE_EXCLUSIVE,
+                                     0,
+                                     nullptr,
+                                     VK_IMAGE_LAYOUT_UNDEFINED};
+        VkImageObj image(m_device);
+        image.init(&imgInfo);
+        ASSERT_TRUE(image.initialized());
+
+        VkImageView imageView;
+
+        // Initialize VkImageViewCreateInfo with modified format
+        VkImageViewCreateInfo ivci = {};
+        ivci.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+        ivci.image = image.handle();
+        ivci.viewType = VK_IMAGE_VIEW_TYPE_2D;
+        ivci.format = VK_FORMAT_R32G32B32A32_SINT;
+        ivci.subresourceRange.layerCount = 1;
+        ivci.subresourceRange.baseMipLevel = 0;
+        ivci.subresourceRange.levelCount = 1;
+        ivci.subresourceRange.baseArrayLayer = 0;
+        ivci.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+
+        // Test for error message
+        m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, optimal_error_codes[i]);
+        VkResult res = vkCreateImageView(m_device->device(), &ivci, NULL, &imageView);
+        m_errorMonitor->VerifyFound();
+
+        if (!res) {
+            vkDestroyImageView(m_device->device(), imageView, nullptr);
+        }
+    }
+
+    // Test for VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT.  Needs special formats
+
+    // Modify formats to have mismatched features
+
+    // Format for image
+    fpvkGetOriginalPhysicalDeviceFormatPropertiesEXT(gpu(), VK_FORMAT_D24_UNORM_S8_UINT, &formatProps);
+    formatProps.optimalTilingFeatures |= features[i];
+    fpvkSetPhyiscalDeviceFormatPropertiesEXT(gpu(), VK_FORMAT_D24_UNORM_S8_UINT, formatProps);
+
+    memset(&formatProps, 0, sizeof(formatProps));
+
+    // Format for view
+    fpvkGetOriginalPhysicalDeviceFormatPropertiesEXT(gpu(), VK_FORMAT_D32_SFLOAT_S8_UINT, &formatProps);
+    formatProps.optimalTilingFeatures = features[(i + 1) % feature_count];
+    fpvkSetPhyiscalDeviceFormatPropertiesEXT(gpu(), VK_FORMAT_D32_SFLOAT_S8_UINT, formatProps);
+
+    // Create image with modified format
+    VkImageCreateInfo imgInfo = {VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
+                                 nullptr,
+                                 VK_IMAGE_CREATE_MUTABLE_FORMAT_BIT,
+                                 VK_IMAGE_TYPE_2D,
+                                 VK_FORMAT_D24_UNORM_S8_UINT,
+                                 {1, 1, 1},
+                                 1,
+                                 1,
+                                 VK_SAMPLE_COUNT_1_BIT,
+                                 VK_IMAGE_TILING_OPTIMAL,
+                                 usages[i],
+                                 VK_SHARING_MODE_EXCLUSIVE,
+                                 0,
+                                 nullptr,
+                                 VK_IMAGE_LAYOUT_UNDEFINED};
+    VkImageObj image(m_device);
+    image.init(&imgInfo);
+    ASSERT_TRUE(image.initialized());
+
+    VkImageView imageView;
+
+    // Initialize VkImageViewCreateInfo with modified format
+    VkImageViewCreateInfo ivci = {};
+    ivci.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+    ivci.image = image.handle();
+    ivci.viewType = VK_IMAGE_VIEW_TYPE_2D;
+    ivci.format = VK_FORMAT_D32_SFLOAT_S8_UINT;
+    ivci.subresourceRange.layerCount = 1;
+    ivci.subresourceRange.baseMipLevel = 0;
+    ivci.subresourceRange.levelCount = 1;
+    ivci.subresourceRange.baseArrayLayer = 0;
+    ivci.subresourceRange.aspectMask = VK_IMAGE_ASPECT_STENCIL_BIT;
+
+    // Test for error message
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, optimal_error_codes[i]);
+    VkResult res = vkCreateImageView(m_device->device(), &ivci, NULL, &imageView);
+    m_errorMonitor->VerifyFound();
+
+    if (!res) {
+        vkDestroyImageView(m_device->device(), imageView, nullptr);
+    }
 }
 
 TEST_F(VkLayerTest, ImageViewInUseDestroyedSignaled) {
