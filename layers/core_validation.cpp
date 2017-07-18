@@ -6143,6 +6143,18 @@ VKAPI_ATTR void VKAPI_CALL CmdResetEvent(VkCommandBuffer commandBuffer, VkEvent 
     if (!skip) dev_data->dispatch_table.CmdResetEvent(commandBuffer, event, stageMask);
 }
 
+// Return input pipeline stage flags, expanded for individual bits if VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT
+static VkPipelineStageFlags ExpandPipelineStageFlags(VkPipelineStageFlags inflags) {
+    return (inflags != VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT)
+               ? inflags
+               : (VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT | VK_PIPELINE_STAGE_DRAW_INDIRECT_BIT | VK_PIPELINE_STAGE_VERTEX_INPUT_BIT |
+                  VK_PIPELINE_STAGE_VERTEX_SHADER_BIT | VK_PIPELINE_STAGE_TESSELLATION_CONTROL_SHADER_BIT |
+                  VK_PIPELINE_STAGE_TESSELLATION_EVALUATION_SHADER_BIT | VK_PIPELINE_STAGE_GEOMETRY_SHADER_BIT |
+                  VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT |
+                  VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT |
+                  VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT);
+}
+
 // Validate VUs for Pipeline Barriers that are within a renderPass
 // Pre: cb_state->activeRenderPass must be a pointer to valid renderPass state
 static bool ValidateRenderPassPipelineBarriers(layer_data *device_data, const char *funcName, GLOBAL_CB_NODE const *cb_state,
@@ -6162,9 +6174,10 @@ static bool ValidateRenderPassPipelineBarriers(layer_data *device_data, const ch
     } else {
         assert(rp_state->subpass_to_dependency_index[cb_state->activeSubpass] != -1);
         const auto &sub_dep = rp_state->createInfo.pDependencies[rp_state->subpass_to_dependency_index[cb_state->activeSubpass]];
-        const auto &sub_src_stage_mask = sub_dep.srcStageMask;
-        const auto &sub_dst_stage_mask = sub_dep.dstStageMask;
-        if (src_stage_mask != (sub_src_stage_mask & src_stage_mask)) {
+        const auto &sub_src_stage_mask = ExpandPipelineStageFlags(sub_dep.srcStageMask);
+        const auto &sub_dst_stage_mask = ExpandPipelineStageFlags(sub_dep.dstStageMask);
+        if ((sub_src_stage_mask != VK_PIPELINE_STAGE_ALL_COMMANDS_BIT) &&
+            (src_stage_mask != (sub_src_stage_mask & src_stage_mask))) {
             skip |= log_msg(device_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
                             rp_handle, __LINE__, VALIDATION_ERROR_1b80092a, "CORE",
                             "%s: Barrier srcStageMask(0x%X) is not a subset of VkSubpassDependency srcStageMask(0x%X) of "
@@ -6172,7 +6185,8 @@ static bool ValidateRenderPassPipelineBarriers(layer_data *device_data, const ch
                             funcName, src_stage_mask, sub_src_stage_mask, cb_state->activeSubpass, rp_handle,
                             validation_error_map[VALIDATION_ERROR_1b80092a]);
         }
-        if (dst_stage_mask != (sub_dst_stage_mask & dst_stage_mask)) {
+        if ((sub_dst_stage_mask != VK_PIPELINE_STAGE_ALL_COMMANDS_BIT) &&
+            (dst_stage_mask != (sub_dst_stage_mask & dst_stage_mask))) {
             skip |= log_msg(device_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
                             rp_handle, __LINE__, VALIDATION_ERROR_1b80092c, "CORE",
                             "%s: Barrier dstStageMask(0x%X) is not a subset of VkSubpassDependency dstStageMask(0x%X) of "
