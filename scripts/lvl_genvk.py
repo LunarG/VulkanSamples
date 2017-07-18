@@ -22,6 +22,7 @@ from cgenerator import CGeneratorOptions, COutputGenerator
 from threading_generator import  ThreadGeneratorOptions, ThreadOutputGenerator
 from parameter_validation_generator import ParamCheckerGeneratorOptions, ParamCheckerOutputGenerator
 from unique_objects_generator import UniqueObjectsGeneratorOptions, UniqueObjectsOutputGenerator
+from object_tracker_generator import ObjectTrackerGeneratorOptions, ObjectTrackerOutputGenerator
 from dispatch_table_helper_generator import DispatchTableHelperOutputGenerator, DispatchTableHelperOutputGeneratorOptions
 from helper_file_generator import HelperFileOutputGenerator, HelperFileOutputGeneratorOptions
 from loader_extension_generator import LoaderExtensionOutputGenerator, LoaderExtensionGeneratorOptions
@@ -147,6 +148,27 @@ def makeGenOpts(extensions = [], removeExtensions = [], protect = True, director
           UniqueObjectsOutputGenerator,
           UniqueObjectsGeneratorOptions(
             filename          = 'unique_objects_wrappers.h',
+            directory         = directory,
+            apiname           = 'vulkan',
+            profile           = None,
+            versions          = allVersions,
+            emitversions      = allVersions,
+            defaultExtensions = 'vulkan',
+            addExtensions     = addExtensions,
+            removeExtensions  = removeExtensions,
+            prefixText        = prefixStrings + vkPrefixStrings,
+            protectFeature    = False,
+            apicall           = 'VKAPI_ATTR ',
+            apientry          = 'VKAPI_CALL ',
+            apientryp         = 'VKAPI_PTR *',
+            alignFuncParam    = 48)
+        ]
+
+    # Options for object_tracker layer
+    genOpts['object_tracker.cpp'] = [
+          ObjectTrackerOutputGenerator,
+          ObjectTrackerGeneratorOptions(
+            filename          = 'object_tracker.cpp',
             directory         = directory,
             apiname           = 'vulkan',
             profile           = None,
