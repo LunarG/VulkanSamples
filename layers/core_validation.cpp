@@ -10262,7 +10262,7 @@ VKAPI_ATTR VkResult VKAPI_CALL GetDisplayPlaneCapabilitiesKHR(VkPhysicalDevice p
     return result;
 }
 
-VKAPI_ATTR VkResult VKAPI_CALL DebugMarkerSetObjectNameEXT(VkDevice device, VkDebugMarkerObjectNameInfoEXT *pNameInfo) {
+VKAPI_ATTR VkResult VKAPI_CALL DebugMarkerSetObjectNameEXT(VkDevice device, const VkDebugMarkerObjectNameInfoEXT *pNameInfo) {
     std::unique_lock<std::mutex> lock(global_lock);
     layer_data *device_data = GetLayerDataPtr(get_dispatch_key(device), layer_data_map);
     if (pNameInfo->pObjectName) {

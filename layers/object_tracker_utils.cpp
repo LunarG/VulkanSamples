@@ -940,7 +940,7 @@ VKAPI_ATTR void VKAPI_CALL GetPhysicalDeviceQueueFamilyProperties2KHR(VkPhysical
     }
 }
 
-VKAPI_ATTR VkResult VKAPI_CALL DebugMarkerSetObjectNameEXT(VkDevice device, VkDebugMarkerObjectNameInfoEXT *pNameInfo) {
+VKAPI_ATTR VkResult VKAPI_CALL DebugMarkerSetObjectNameEXT(VkDevice device, const VkDebugMarkerObjectNameInfoEXT *pNameInfo) {
     bool skip = VK_FALSE;
     std::unique_lock<std::mutex> lock(global_lock);
     layer_data *dev_data = GetLayerDataPtr(get_dispatch_key(device), layer_data_map);
