@@ -2615,19 +2615,6 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateSharedSwapchainsKHR(VkDevice device, uint32
 VKAPI_ATTR VkResult VKAPI_CALL CreateDisplayPlaneSurfaceKHR(VkInstance instance, const VkDisplaySurfaceCreateInfoKHR *pCreateInfo,
                                                             const VkAllocationCallbacks *pAllocator, VkSurfaceKHR *pSurface);
 
-VKAPI_ATTR void VKAPI_CALL GetDeviceQueue(VkDevice device, uint32_t queueFamilyIndex, uint32_t queueIndex, VkQueue *pQueue) {
-    std::unique_lock<std::mutex> lock(global_lock);
-    ValidateObject(device, device, kVulkanObjectTypeDevice, false, VALIDATION_ERROR_29605601, VALIDATION_ERROR_UNDEFINED);
-    lock.unlock();
-
-    get_dispatch_table(ot_device_table_map, device)->GetDeviceQueue(device, queueFamilyIndex, queueIndex, pQueue);
-
-    lock.lock();
-
-    CreateQueue(device, *pQueue);
-    AddQueueInfo(device, queueFamilyIndex, *pQueue);
-}
-
 VKAPI_ATTR void VKAPI_CALL FreeMemory(VkDevice device, VkDeviceMemory memory, const VkAllocationCallbacks *pAllocator) {
     bool skip = false;
     std::unique_lock<std::mutex> lock(global_lock);
