@@ -400,6 +400,51 @@ VKAPI_ATTR void VKAPI_CALL UpdateDescriptorSets(VkDevice device, uint32_t descri
         ->UpdateDescriptorSets(device, descriptorWriteCount, pDescriptorWrites, descriptorCopyCount, pDescriptorCopies);
 }
 
+VKAPI_ATTR VkResult VKAPI_CALL CreateComputePipelines(VkDevice device, VkPipelineCache pipelineCache, uint32_t createInfoCount,
+                                                      const VkComputePipelineCreateInfo *pCreateInfos,
+                                                      const VkAllocationCallbacks *pAllocator, VkPipeline *pPipelines) {
+    bool skip = VK_FALSE;
+    std::unique_lock<std::mutex> lock(global_lock);
+    skip |= ValidateObject(device, device, kVulkanObjectTypeDevice, false, VALIDATION_ERROR_1f205601, VALIDATION_ERROR_UNDEFINED);
+    if (pCreateInfos) {
+        for (uint32_t idx0 = 0; idx0 < createInfoCount; ++idx0) {
+            if (pCreateInfos[idx0].basePipelineHandle) {
+                skip |= ValidateObject(device, pCreateInfos[idx0].basePipelineHandle, kVulkanObjectTypePipeline, true,
+                                       VALIDATION_ERROR_03000572, VALIDATION_ERROR_03000009);
+            }
+            if (pCreateInfos[idx0].layout) {
+                skip |= ValidateObject(device, pCreateInfos[idx0].layout, kVulkanObjectTypePipelineLayout, false,
+                                       VALIDATION_ERROR_0300be01, VALIDATION_ERROR_03000009);
+            }
+            if (pCreateInfos[idx0].stage.module) {
+                skip |= ValidateObject(device, pCreateInfos[idx0].stage.module, kVulkanObjectTypeShaderModule, false,
+                                       VALIDATION_ERROR_1060d201, VALIDATION_ERROR_UNDEFINED);
+            }
+        }
+    }
+    if (pipelineCache) {
+        skip |= ValidateObject(device, pipelineCache, kVulkanObjectTypePipelineCache, true, VALIDATION_ERROR_1f228001,
+                               VALIDATION_ERROR_1f228007);
+    }
+    lock.unlock();
+    if (skip) {
+        for (uint32_t i = 0; i < createInfoCount; i++) {
+            pPipelines[i] = VK_NULL_HANDLE;
+        }
+        return VK_ERROR_VALIDATION_FAILED_EXT;
+    }
+    VkResult result = get_dispatch_table(ot_device_table_map, device)
+                          ->CreateComputePipelines(device, pipelineCache, createInfoCount, pCreateInfos, pAllocator, pPipelines);
+    lock.lock();
+    for (uint32_t idx1 = 0; idx1 < createInfoCount; ++idx1) {
+        if (pPipelines[idx1] != VK_NULL_HANDLE) {
+            CreateObject(device, pPipelines[idx1], kVulkanObjectTypePipeline, pAllocator);
+        }
+    }
+    lock.unlock();
+    return result;
+}
+
 VKAPI_ATTR VkResult VKAPI_CALL ResetDescriptorPool(VkDevice device, VkDescriptorPool descriptorPool,
                                                    VkDescriptorPoolResetFlags flags) {
     bool skip = false;
