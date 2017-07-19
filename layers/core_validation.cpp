@@ -6354,11 +6354,6 @@ static bool ValidateBarriers(layer_data *device_data, const char *funcName, GLOB
 
     for (uint32_t i = 0; i < bufferBarrierCount; ++i) {
         auto mem_barrier = &pBufferMemBarriers[i];
-        if (cb_state->activeRenderPass) {
-            skip |= log_msg(device_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
-                            HandleToUint64(cb_state->commandBuffer), __LINE__, DRAWSTATE_INVALID_BARRIER, "DS",
-                            "%s: Buffer Barriers cannot be used during a render pass.", funcName);
-        }
         if (!mem_barrier) continue;
 
         // Validate buffer barrier queue family indices
