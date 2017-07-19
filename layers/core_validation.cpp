@@ -6160,8 +6160,8 @@ static VkPipelineStageFlags ExpandPipelineStageFlags(VkPipelineStageFlags inflag
 static bool ValidateRenderPassPipelineBarriers(layer_data *device_data, const char *funcName, GLOBAL_CB_NODE const *cb_state,
                                                VkPipelineStageFlags src_stage_mask, VkPipelineStageFlags dst_stage_mask,
                                                VkDependencyFlags dependency_flags, uint32_t mem_barrier_count,
-                                               const VkMemoryBarrier *mem_barriers, uint32_t bufferBarrierCount,
-                                               const VkBufferMemoryBarrier *pBufferMemBarriers, uint32_t imageMemBarrierCount,
+                                               const VkMemoryBarrier *mem_barriers, uint32_t buffer_mem_barrier_count,
+                                               const VkBufferMemoryBarrier *pBufferMemBarriers, uint32_t image_mem_barrier_count,
                                                const VkImageMemoryBarrier *pImageMemBarriers) {
     bool skip = false;
     auto rp_state = cb_state->activeRenderPass;
@@ -6197,6 +6197,14 @@ static bool ValidateRenderPassPipelineBarriers(layer_data *device_data, const ch
         }
         const auto &sub_src_access_mask = sub_dep.srcAccessMask;
         const auto &sub_dst_access_mask = sub_dep.dstAccessMask;
+        if (0 != buffer_mem_barrier_count) {
+            skip |= log_msg(device_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_RENDER_PASS_EXT,
+                            rp_handle, __LINE__, VALIDATION_ERROR_1b800934, "CORE",
+                            "%s: bufferMemoryBarrierCount is non-zero (%d) for "
+                            "subpass %d of renderPass 0x%" PRIx64 ". %s",
+                            funcName, buffer_mem_barrier_count, cb_state->activeSubpass, rp_handle,
+                            validation_error_map[VALIDATION_ERROR_1b800934]);
+        }
         for (uint32_t i = 0; i < mem_barrier_count; ++i) {
             const auto &mb_src_access_mask = mem_barriers[i].srcAccessMask;
             if (mb_src_access_mask != (sub_src_access_mask & mb_src_access_mask)) {
