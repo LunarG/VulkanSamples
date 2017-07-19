@@ -3880,6 +3880,12 @@ TEST_F(VkLayerTest, RenderPassBarrierConflicts) {
                          VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_DEPENDENCY_BY_REGION_BIT, 0, nullptr, 0, nullptr, 1,
                          &img_barrier);
     m_errorMonitor->VerifyFound();
+    // Mis-match dependencyFlags
+    img_barrier.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_1b800932);
+    vkCmdPipelineBarrier(m_commandBuffer->handle(), VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+                         VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, 0 /* wrong */, 0, nullptr, 0, nullptr, 1, &img_barrier);
+    m_errorMonitor->VerifyFound();
     vkDestroyFramebuffer(m_device->device(), fb, nullptr);
     vkDestroyRenderPass(m_device->device(), rp, nullptr);
     vkDestroyRenderPass(m_device->device(), rp_noselfdep, nullptr);
