@@ -6159,16 +6159,17 @@ static VkPipelineStageFlags ExpandPipelineStageFlags(VkPipelineStageFlags inflag
 // Pre: cb_state->activeRenderPass must be a pointer to valid renderPass state
 static bool ValidateRenderPassPipelineBarriers(layer_data *device_data, const char *funcName, GLOBAL_CB_NODE const *cb_state,
                                                VkPipelineStageFlags src_stage_mask, VkPipelineStageFlags dst_stage_mask,
-                                               uint32_t mem_barrier_count, const VkMemoryBarrier *mem_barriers,
-                                               uint32_t bufferBarrierCount, const VkBufferMemoryBarrier *pBufferMemBarriers,
-                                               uint32_t imageMemBarrierCount, const VkImageMemoryBarrier *pImageMemBarriers) {
+                                               VkDependencyFlags dependency_flags, uint32_t mem_barrier_count,
+                                               const VkMemoryBarrier *mem_barriers, uint32_t bufferBarrierCount,
+                                               const VkBufferMemoryBarrier *pBufferMemBarriers, uint32_t imageMemBarrierCount,
+                                               const VkImageMemoryBarrier *pImageMemBarriers) {
     bool skip = false;
     auto rp_state = cb_state->activeRenderPass;
     auto rp_handle = HandleToUint64(rp_state->renderPass);
     if (!rp_state->hasSelfDependency[cb_state->activeSubpass]) {
         skip |=
-            log_msg(device_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
-                    rp_handle, __LINE__, VALIDATION_ERROR_1b800928, "CORE",
+            log_msg(device_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_RENDER_PASS_EXT, rp_handle,
+                    __LINE__, VALIDATION_ERROR_1b800928, "CORE",
                     "%s: Barriers cannot be set during subpass %d of renderPass 0x%" PRIx64 "with no self-dependency specified. %s",
                     funcName, cb_state->activeSubpass, rp_handle, validation_error_map[VALIDATION_ERROR_1b800928]);
     } else {
@@ -6178,7 +6179,7 @@ static bool ValidateRenderPassPipelineBarriers(layer_data *device_data, const ch
         const auto &sub_dst_stage_mask = ExpandPipelineStageFlags(sub_dep.dstStageMask);
         if ((sub_src_stage_mask != VK_PIPELINE_STAGE_ALL_COMMANDS_BIT) &&
             (src_stage_mask != (sub_src_stage_mask & src_stage_mask))) {
-            skip |= log_msg(device_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
+            skip |= log_msg(device_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_RENDER_PASS_EXT,
                             rp_handle, __LINE__, VALIDATION_ERROR_1b80092a, "CORE",
                             "%s: Barrier srcStageMask(0x%X) is not a subset of VkSubpassDependency srcStageMask(0x%X) of "
                             "subpass %d of renderPass 0x%" PRIx64 ". %s",
@@ -6187,7 +6188,7 @@ static bool ValidateRenderPassPipelineBarriers(layer_data *device_data, const ch
         }
         if ((sub_dst_stage_mask != VK_PIPELINE_STAGE_ALL_COMMANDS_BIT) &&
             (dst_stage_mask != (sub_dst_stage_mask & dst_stage_mask))) {
-            skip |= log_msg(device_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
+            skip |= log_msg(device_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_RENDER_PASS_EXT,
                             rp_handle, __LINE__, VALIDATION_ERROR_1b80092c, "CORE",
                             "%s: Barrier dstStageMask(0x%X) is not a subset of VkSubpassDependency dstStageMask(0x%X) of "
                             "subpass %d of renderPass 0x%" PRIx64 ". %s",
@@ -6199,26 +6200,33 @@ static bool ValidateRenderPassPipelineBarriers(layer_data *device_data, const ch
         for (uint32_t i = 0; i < mem_barrier_count; ++i) {
             const auto &mb_src_access_mask = mem_barriers[i].srcAccessMask;
             if (mb_src_access_mask != (sub_src_access_mask & mb_src_access_mask)) {
-                skip |=
-                    log_msg(device_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
-                            rp_handle, __LINE__, VALIDATION_ERROR_1b80092e, "CORE",
-                            "%s: Barrier pMemoryBarriers[%d].srcAccessMask(0x%X) is not a subset of VkSubpassDependency "
-                            "srcAccessMask(0x%X) of "
-                            "subpass %d of renderPass 0x%" PRIx64 ". %s",
-                            funcName, i, mb_src_access_mask, sub_src_access_mask, cb_state->activeSubpass, rp_handle,
-                            validation_error_map[VALIDATION_ERROR_1b80092e]);
+                skip |= log_msg(device_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT,
+                                VK_DEBUG_REPORT_OBJECT_TYPE_RENDER_PASS_EXT, rp_handle, __LINE__, VALIDATION_ERROR_1b80092e, "CORE",
+                                "%s: Barrier pMemoryBarriers[%d].srcAccessMask(0x%X) is not a subset of VkSubpassDependency "
+                                "srcAccessMask(0x%X) of "
+                                "subpass %d of renderPass 0x%" PRIx64 ". %s",
+                                funcName, i, mb_src_access_mask, sub_src_access_mask, cb_state->activeSubpass, rp_handle,
+                                validation_error_map[VALIDATION_ERROR_1b80092e]);
             }
             const auto &mb_dst_access_mask = mem_barriers[i].dstAccessMask;
             if (mb_dst_access_mask != (sub_dst_access_mask & mb_dst_access_mask)) {
-                skip |=
-                    log_msg(device_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
-                            rp_handle, __LINE__, VALIDATION_ERROR_1b800930, "CORE",
-                            "%s: Barrier pMemoryBarriers[%d].dstAccessMask(0x%X) is not a subset of VkSubpassDependency "
-                            "dstAccessMask(0x%X) of "
-                            "subpass %d of renderPass 0x%" PRIx64 ". %s",
-                            funcName, i, mb_src_access_mask, sub_src_access_mask, cb_state->activeSubpass, rp_handle,
-                            validation_error_map[VALIDATION_ERROR_1b800930]);
+                skip |= log_msg(device_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT,
+                                VK_DEBUG_REPORT_OBJECT_TYPE_RENDER_PASS_EXT, rp_handle, __LINE__, VALIDATION_ERROR_1b800930, "CORE",
+                                "%s: Barrier pMemoryBarriers[%d].dstAccessMask(0x%X) is not a subset of VkSubpassDependency "
+                                "dstAccessMask(0x%X) of "
+                                "subpass %d of renderPass 0x%" PRIx64 ". %s",
+                                funcName, i, mb_src_access_mask, sub_src_access_mask, cb_state->activeSubpass, rp_handle,
+                                validation_error_map[VALIDATION_ERROR_1b800930]);
             }
+        }
+        if (sub_dep.dependencyFlags != dependency_flags) {
+            skip |= log_msg(device_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_RENDER_PASS_EXT,
+                            rp_handle, __LINE__, VALIDATION_ERROR_1b800932, "CORE",
+                            "%s: dependencyFlags param (0x%X) does not equal VkSubpassDependency "
+                            "dependencyFlags value (0x%X) for "
+                            "subpass %d of renderPass 0x%" PRIx64 ". %s",
+                            funcName, dependency_flags, sub_dep.dependencyFlags, cb_state->activeSubpass, rp_handle,
+                            validation_error_map[VALIDATION_ERROR_1b800932]);
         }
     }
     return skip;
@@ -6528,9 +6536,10 @@ VKAPI_ATTR void VKAPI_CALL CmdWaitEvents(VkCommandBuffer commandBuffer, uint32_t
 
 static bool PreCallValidateCmdPipelineBarrier(layer_data *device_data, GLOBAL_CB_NODE const *cb_state,
                                               VkPipelineStageFlags srcStageMask, VkPipelineStageFlags dstStageMask,
-                                              uint32_t memoryBarrierCount, const VkMemoryBarrier *pMemoryBarriers,
-                                              uint32_t bufferMemoryBarrierCount, const VkBufferMemoryBarrier *pBufferMemoryBarriers,
-                                              uint32_t imageMemoryBarrierCount, const VkImageMemoryBarrier *pImageMemoryBarriers) {
+                                              VkDependencyFlags dependencyFlags, uint32_t memoryBarrierCount,
+                                              const VkMemoryBarrier *pMemoryBarriers, uint32_t bufferMemoryBarrierCount,
+                                              const VkBufferMemoryBarrier *pBufferMemoryBarriers, uint32_t imageMemoryBarrierCount,
+                                              const VkImageMemoryBarrier *pImageMemoryBarriers) {
     bool skip = false;
     skip |= ValidateStageMasksAgainstQueueCapabilities(device_data, cb_state, srcStageMask, dstStageMask, "vkCmdPipelineBarrier",
                                                        VALIDATION_ERROR_1b80093e);
@@ -6545,7 +6554,7 @@ static bool PreCallValidateCmdPipelineBarrier(layer_data *device_data, GLOBAL_CB
         ValidateBarriersToImages(device_data, cb_state, imageMemoryBarrierCount, pImageMemoryBarriers, "vkCmdPipelineBarrier()");
     if (cb_state->activeRenderPass) {
         skip |= ValidateRenderPassPipelineBarriers(device_data, "vkCmdPipelineBarrier()", cb_state, srcStageMask, dstStageMask,
-                                                   memoryBarrierCount, pMemoryBarriers, bufferMemoryBarrierCount,
+                                                   dependencyFlags, memoryBarrierCount, pMemoryBarriers, bufferMemoryBarrierCount,
                                                    pBufferMemoryBarriers, imageMemoryBarrierCount, pImageMemoryBarriers);
     }
     skip |= ValidateBarriers(device_data, "vkCmdPipelineBarrier()", cb_state, srcStageMask, dstStageMask, memoryBarrierCount,
@@ -6569,9 +6578,9 @@ VKAPI_ATTR void VKAPI_CALL CmdPipelineBarrier(VkCommandBuffer commandBuffer, VkP
     unique_lock_t lock(global_lock);
     GLOBAL_CB_NODE *cb_state = GetCBNode(device_data, commandBuffer);
     if (cb_state) {
-        skip |= PreCallValidateCmdPipelineBarrier(device_data, cb_state, srcStageMask, dstStageMask, memoryBarrierCount,
-                                                  pMemoryBarriers, bufferMemoryBarrierCount, pBufferMemoryBarriers,
-                                                  imageMemoryBarrierCount, pImageMemoryBarriers);
+        skip |= PreCallValidateCmdPipelineBarrier(device_data, cb_state, srcStageMask, dstStageMask, dependencyFlags,
+                                                  memoryBarrierCount, pMemoryBarriers, bufferMemoryBarrierCount,
+                                                  pBufferMemoryBarriers, imageMemoryBarrierCount, pImageMemoryBarriers);
         if (!skip) {
             PreCallRecordCmdPipelineBarrier(device_data, cb_state, commandBuffer, imageMemoryBarrierCount, pImageMemoryBarriers);
         }
