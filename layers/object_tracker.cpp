@@ -1104,7 +1104,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateDescriptorSetLayout(VkDevice device, const 
                         if (pCreateInfo->pBindings[idx0].pImmutableSamplers) {
                             for (uint32_t idx1 = 0; idx1 < pCreateInfo->pBindings[idx0].descriptorCount; ++idx1) {
                                 skip |= ValidateObject(device, pCreateInfo->pBindings[idx0].pImmutableSamplers[idx1],
-                                                       kVulkanObjectTypeSampler, false, VALIDATION_ERROR_04e00234,
+                                                       kVulkanObjectTypeSampler, false, VALIDATION_ERROR_UNDEFINED,
                                                        VALIDATION_ERROR_UNDEFINED);
                             }
                         }
@@ -2705,7 +2705,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateGraphicsPipelines(VkDevice device, VkPipeli
         for (uint32_t idx0 = 0; idx0 < createInfoCount; ++idx0) {
             if (pCreateInfos[idx0].basePipelineHandle) {
                 skip |= ValidateObject(device, pCreateInfos[idx0].basePipelineHandle, kVulkanObjectTypePipeline, true,
-                                       VALIDATION_ERROR_096005a4, VALIDATION_ERROR_09600009);
+                                       VALIDATION_ERROR_UNDEFINED, VALIDATION_ERROR_09600009);
             }
             if (pCreateInfos[idx0].layout) {
                 skip |= ValidateObject(device, pCreateInfos[idx0].layout, kVulkanObjectTypePipelineLayout, false,
