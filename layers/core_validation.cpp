@@ -6247,19 +6247,53 @@ static bool ValidateRenderPassPipelineBarriers(layer_data *device_data, const ch
                                 "%s: Barrier pImageMemoryBarriers[%d].dstAccessMask(0x%X) is not a subset of VkSubpassDependency "
                                 "dstAccessMask(0x%X) of "
                                 "subpass %d of renderPass 0x%" PRIx64 ". %s",
-                                funcName, i, img_dst_access_mask, sub_dst_access_mask, cb_state->activeSubpass, rp_handle,
+                                funcName, i, img_dst_access_mask, sub_dst_access_mask, active_subpass, rp_handle,
                                 validation_error_map[VALIDATION_ERROR_1b800930]);
             }
             // Verify that a framebuffer image matches barrier image
             const auto &fb_state = GetFramebufferState(device_data, cb_state->activeFramebuffer);
             const auto img_bar_image = img_barrier.image;
             bool image_match = false;
+            bool sub_image_found = false;  // Do we find a corresponding subpass description
+            VkImageLayout sub_image_layout = VK_IMAGE_LAYOUT_UNDEFINED;
+            uint32_t attach_index = 0;
+            uint32_t index_count = 0;
             for (const auto &fb_attach : fb_state->attachments) {
                 if (img_bar_image == fb_attach.image) {
                     image_match = true;
+                    attach_index = index_count;
+                    break;
                 }
+                index_count++;
             }
-            if (!image_match) {
+            if (image_match) {  // Make sure subpass is referring to matching attachment
+                if (sub_desc.pDepthStencilAttachment && sub_desc.pDepthStencilAttachment->attachment == attach_index) {
+                    sub_image_layout = sub_desc.pDepthStencilAttachment->layout;
+                    sub_image_found = true;
+                } else {
+                    for (uint32_t j = 0; j < sub_desc.colorAttachmentCount; ++j) {
+                        if (sub_desc.pColorAttachments && sub_desc.pColorAttachments[j].attachment == attach_index) {
+                            sub_image_layout = sub_desc.pColorAttachments[j].layout;
+                            sub_image_found = true;
+                            break;
+                        } else if (sub_desc.pResolveAttachments && sub_desc.pResolveAttachments[j].attachment == attach_index) {
+                            sub_image_layout = sub_desc.pResolveAttachments[j].layout;
+                            sub_image_found = true;
+                            break;
+                        }
+                    }
+                }
+                if (!sub_image_found) {
+                    skip |= log_msg(
+                        device_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_RENDER_PASS_EXT,
+                        rp_handle, __LINE__, VALIDATION_ERROR_1b800936, "CORE",
+                        "%s: Barrier pImageMemoryBarriers[%d].image (0x%" PRIx64
+                        ") is not referenced by the VkSubpassDescription for active subpass (%d) of current renderPass (0x%" PRIx64
+                        "). %s",
+                        funcName, i, HandleToUint64(img_bar_image), active_subpass, rp_handle,
+                        validation_error_map[VALIDATION_ERROR_1b800936]);
+                }
+            } else {  // !image_match
                 auto const fb_handle = HandleToUint64(fb_state->framebuffer);
                 skip |=
                     log_msg(device_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_FRAMEBUFFER_EXT,
