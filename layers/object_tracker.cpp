@@ -3750,8 +3750,6 @@ VKAPI_ATTR void VKAPI_CALL CmdDrawIndirectCountAMD(VkCommandBuffer commandBuffer
         ValidateObject(commandBuffer, buffer, kVulkanObjectTypeBuffer, false, VALIDATION_ERROR_1ac01a01, VALIDATION_ERROR_1ac00009);
     skip |= ValidateObject(commandBuffer, countBuffer, kVulkanObjectTypeBuffer, false, VALIDATION_ERROR_1ac03401,
                            VALIDATION_ERROR_1ac00009);
-    skip |= ValidateObject(commandBuffer, commandBuffer, kVulkanObjectTypeBuffer, false, VALIDATION_ERROR_1ac02413,
-                           VALIDATION_ERROR_1ac00009);
     lock.unlock();
     if (!skip) {
         get_dispatch_table(ot_device_table_map, commandBuffer)
@@ -3769,8 +3767,6 @@ VKAPI_ATTR void VKAPI_CALL CmdDrawIndexedIndirectCountAMD(VkCommandBuffer comman
     skip |=
         ValidateObject(commandBuffer, buffer, kVulkanObjectTypeBuffer, false, VALIDATION_ERROR_1a801a01, VALIDATION_ERROR_1a800009);
     skip |= ValidateObject(commandBuffer, countBuffer, kVulkanObjectTypeBuffer, false, VALIDATION_ERROR_1a803401,
-                           VALIDATION_ERROR_1a800009);
-    skip |= ValidateObject(commandBuffer, commandBuffer, kVulkanObjectTypeBuffer, false, VALIDATION_ERROR_1a802413,
                            VALIDATION_ERROR_1a800009);
     lock.unlock();
     if (!skip) {
