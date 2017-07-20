@@ -6164,16 +6164,18 @@ static bool ValidateRenderPassPipelineBarriers(layer_data *device_data, const ch
                                                const VkImageMemoryBarrier *image_barriers) {
     bool skip = false;
     auto rp_state = cb_state->activeRenderPass;
+    const auto active_subpass = cb_state->activeSubpass;
     auto rp_handle = HandleToUint64(rp_state->renderPass);
-    if (!rp_state->hasSelfDependency[cb_state->activeSubpass]) {
-        skip |=
-            log_msg(device_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_RENDER_PASS_EXT, rp_handle,
-                    __LINE__, VALIDATION_ERROR_1b800928, "CORE",
-                    "%s: Barriers cannot be set during subpass %d of renderPass 0x%" PRIx64 "with no self-dependency specified. %s",
-                    funcName, cb_state->activeSubpass, rp_handle, validation_error_map[VALIDATION_ERROR_1b800928]);
+    if (!rp_state->hasSelfDependency[active_subpass]) {
+        skip |= log_msg(device_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_RENDER_PASS_EXT,
+                        rp_handle, __LINE__, VALIDATION_ERROR_1b800928, "CORE",
+                        "%s: Barriers cannot be set during subpass %d of renderPass 0x%" PRIx64
+                        " with no self-dependency specified. %s",
+                        funcName, active_subpass, rp_handle, validation_error_map[VALIDATION_ERROR_1b800928]);
     } else {
         assert(rp_state->subpass_to_dependency_index[cb_state->activeSubpass] != -1);
-        const auto &sub_dep = rp_state->createInfo.pDependencies[rp_state->subpass_to_dependency_index[cb_state->activeSubpass]];
+        const auto &sub_dep = rp_state->createInfo.pDependencies[rp_state->subpass_to_dependency_index[active_subpass]];
+        const auto &sub_desc = rp_state->createInfo.pSubpasses[active_subpass];
         const auto &sub_src_stage_mask = ExpandPipelineStageFlags(sub_dep.srcStageMask);
         const auto &sub_dst_stage_mask = ExpandPipelineStageFlags(sub_dep.dstStageMask);
         if ((sub_src_stage_mask != VK_PIPELINE_STAGE_ALL_COMMANDS_BIT) &&
@@ -6182,7 +6184,7 @@ static bool ValidateRenderPassPipelineBarriers(layer_data *device_data, const ch
                             rp_handle, __LINE__, VALIDATION_ERROR_1b80092a, "CORE",
                             "%s: Barrier srcStageMask(0x%X) is not a subset of VkSubpassDependency srcStageMask(0x%X) of "
                             "subpass %d of renderPass 0x%" PRIx64 ". %s",
-                            funcName, src_stage_mask, sub_src_stage_mask, cb_state->activeSubpass, rp_handle,
+                            funcName, src_stage_mask, sub_src_stage_mask, active_subpass, rp_handle,
                             validation_error_map[VALIDATION_ERROR_1b80092a]);
         }
         if ((sub_dst_stage_mask != VK_PIPELINE_STAGE_ALL_COMMANDS_BIT) &&
@@ -6191,7 +6193,7 @@ static bool ValidateRenderPassPipelineBarriers(layer_data *device_data, const ch
                             rp_handle, __LINE__, VALIDATION_ERROR_1b80092c, "CORE",
                             "%s: Barrier dstStageMask(0x%X) is not a subset of VkSubpassDependency dstStageMask(0x%X) of "
                             "subpass %d of renderPass 0x%" PRIx64 ". %s",
-                            funcName, dst_stage_mask, sub_dst_stage_mask, cb_state->activeSubpass, rp_handle,
+                            funcName, dst_stage_mask, sub_dst_stage_mask, active_subpass, rp_handle,
                             validation_error_map[VALIDATION_ERROR_1b80092c]);
         }
         if (0 != buffer_mem_barrier_count) {
@@ -6199,7 +6201,7 @@ static bool ValidateRenderPassPipelineBarriers(layer_data *device_data, const ch
                             rp_handle, __LINE__, VALIDATION_ERROR_1b800934, "CORE",
                             "%s: bufferMemoryBarrierCount is non-zero (%d) for "
                             "subpass %d of renderPass 0x%" PRIx64 ". %s",
-                            funcName, buffer_mem_barrier_count, cb_state->activeSubpass, rp_handle,
+                            funcName, buffer_mem_barrier_count, active_subpass, rp_handle,
                             validation_error_map[VALIDATION_ERROR_1b800934]);
         }
         const auto &sub_src_access_mask = sub_dep.srcAccessMask;
@@ -6212,7 +6214,7 @@ static bool ValidateRenderPassPipelineBarriers(layer_data *device_data, const ch
                                 "%s: Barrier pMemoryBarriers[%d].srcAccessMask(0x%X) is not a subset of VkSubpassDependency "
                                 "srcAccessMask(0x%X) of "
                                 "subpass %d of renderPass 0x%" PRIx64 ". %s",
-                                funcName, i, mb_src_access_mask, sub_src_access_mask, cb_state->activeSubpass, rp_handle,
+                                funcName, i, mb_src_access_mask, sub_src_access_mask, active_subpass, rp_handle,
                                 validation_error_map[VALIDATION_ERROR_1b80092e]);
             }
             const auto &mb_dst_access_mask = mem_barriers[i].dstAccessMask;
@@ -6222,7 +6224,7 @@ static bool ValidateRenderPassPipelineBarriers(layer_data *device_data, const ch
                                 "%s: Barrier pMemoryBarriers[%d].dstAccessMask(0x%X) is not a subset of VkSubpassDependency "
                                 "dstAccessMask(0x%X) of "
                                 "subpass %d of renderPass 0x%" PRIx64 ". %s",
-                                funcName, i, mb_dst_access_mask, sub_dst_access_mask, cb_state->activeSubpass, rp_handle,
+                                funcName, i, mb_dst_access_mask, sub_dst_access_mask, active_subpass, rp_handle,
                                 validation_error_map[VALIDATION_ERROR_1b800930]);
             }
         }
@@ -6235,7 +6237,7 @@ static bool ValidateRenderPassPipelineBarriers(layer_data *device_data, const ch
                                 "%s: Barrier pImageMemoryBarriers[%d].srcAccessMask(0x%X) is not a subset of VkSubpassDependency "
                                 "srcAccessMask(0x%X) of "
                                 "subpass %d of renderPass 0x%" PRIx64 ". %s",
-                                funcName, i, img_src_access_mask, sub_src_access_mask, cb_state->activeSubpass, rp_handle,
+                                funcName, i, img_src_access_mask, sub_src_access_mask, active_subpass, rp_handle,
                                 validation_error_map[VALIDATION_ERROR_1b80092e]);
             }
             const auto &img_dst_access_mask = img_barrier.dstAccessMask;
