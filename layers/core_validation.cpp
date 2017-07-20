@@ -6311,6 +6311,18 @@ static bool ValidateRenderPassPipelineBarriers(layer_data *device_data, const ch
                             "%s and %s. %s",
                             funcName, HandleToUint64(img_barrier.image), string_VkImageLayout(img_barrier.oldLayout),
                             string_VkImageLayout(img_barrier.newLayout), validation_error_map[VALIDATION_ERROR_1b80093a]);
+            } else {
+                if (sub_image_found && sub_image_layout != img_barrier.oldLayout) {
+                    skip |= log_msg(
+                        device_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_RENDER_PASS_EXT,
+                        rp_handle, __LINE__, VALIDATION_ERROR_1b800938, "CORE",
+                        "%s: Barrier pImageMemoryBarriers[%d].image (0x%" PRIx64
+                        ") is referenced by the VkSubpassDescription for active subpass (%d) of current renderPass (0x%" PRIx64
+                        ") as having layout %s, but image barrier has layout %s. %s",
+                        funcName, i, HandleToUint64(img_bar_image), active_subpass, rp_handle,
+                        string_VkImageLayout(img_barrier.oldLayout), string_VkImageLayout(sub_image_layout),
+                        validation_error_map[VALIDATION_ERROR_1b800938]);
+                }
             }
         }
         if (sub_dep.dependencyFlags != dependency_flags) {
