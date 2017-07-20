@@ -6247,6 +6247,24 @@ static bool ValidateRenderPassPipelineBarriers(layer_data *device_data, const ch
                                 funcName, i, img_dst_access_mask, sub_dst_access_mask, cb_state->activeSubpass, rp_handle,
                                 validation_error_map[VALIDATION_ERROR_1b800930]);
             }
+            // Verify that a framebuffer image matches barrier image
+            const auto &fb_state = GetFramebufferState(device_data, cb_state->activeFramebuffer);
+            const auto img_bar_image = image_barriers[i].image;
+            bool image_match = false;
+            for (const auto &fb_attach : fb_state->attachments) {
+                if (img_bar_image == fb_attach.image) {
+                    image_match = true;
+                }
+            }
+            if (!image_match) {
+                auto const fb_handle = HandleToUint64(fb_state->framebuffer);
+                skip |=
+                    log_msg(device_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_FRAMEBUFFER_EXT,
+                            fb_handle, __LINE__, VALIDATION_ERROR_1b800936, "CORE",
+                            "%s: Barrier pImageMemoryBarriers[%d].image (0x%" PRIx64
+                            ") does not match an image from the current framebuffer (0x%" PRIx64 "). %s",
+                            funcName, i, HandleToUint64(img_bar_image), fb_handle, validation_error_map[VALIDATION_ERROR_1b800936]);
+            }
         }
         if (sub_dep.dependencyFlags != dependency_flags) {
             skip |= log_msg(device_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_RENDER_PASS_EXT,
