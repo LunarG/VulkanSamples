@@ -926,7 +926,7 @@ static void AppDestroyInstance(struct AppInstance *inst) {
         free(inst->global_layers[i].extension_properties);
     }
     free(inst->global_layers);
-    free(inst->inst_extensions);
+    free((char**)inst->inst_extensions);
     vkDestroyInstance(inst->instance, NULL);
 }
 
