@@ -6227,7 +6227,8 @@ static bool ValidateRenderPassPipelineBarriers(layer_data *device_data, const ch
             }
         }
         for (uint32_t i = 0; i < image_mem_barrier_count; ++i) {
-            const auto &img_src_access_mask = image_barriers[i].srcAccessMask;
+            const auto &img_barrier = image_barriers[i];
+            const auto &img_src_access_mask = img_barrier.srcAccessMask;
             if (img_src_access_mask != (sub_src_access_mask & img_src_access_mask)) {
                 skip |= log_msg(device_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT,
                                 VK_DEBUG_REPORT_OBJECT_TYPE_RENDER_PASS_EXT, rp_handle, __LINE__, VALIDATION_ERROR_1b80092e, "CORE",
@@ -6237,7 +6238,7 @@ static bool ValidateRenderPassPipelineBarriers(layer_data *device_data, const ch
                                 funcName, i, img_src_access_mask, sub_src_access_mask, cb_state->activeSubpass, rp_handle,
                                 validation_error_map[VALIDATION_ERROR_1b80092e]);
             }
-            const auto &img_dst_access_mask = image_barriers[i].dstAccessMask;
+            const auto &img_dst_access_mask = img_barrier.dstAccessMask;
             if (img_dst_access_mask != (sub_dst_access_mask & img_dst_access_mask)) {
                 skip |= log_msg(device_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT,
                                 VK_DEBUG_REPORT_OBJECT_TYPE_RENDER_PASS_EXT, rp_handle, __LINE__, VALIDATION_ERROR_1b800930, "CORE",
@@ -6249,7 +6250,7 @@ static bool ValidateRenderPassPipelineBarriers(layer_data *device_data, const ch
             }
             // Verify that a framebuffer image matches barrier image
             const auto &fb_state = GetFramebufferState(device_data, cb_state->activeFramebuffer);
-            const auto img_bar_image = image_barriers[i].image;
+            const auto img_bar_image = img_barrier.image;
             bool image_match = false;
             for (const auto &fb_attach : fb_state->attachments) {
                 if (img_bar_image == fb_attach.image) {
@@ -6264,6 +6265,16 @@ static bool ValidateRenderPassPipelineBarriers(layer_data *device_data, const ch
                             "%s: Barrier pImageMemoryBarriers[%d].image (0x%" PRIx64
                             ") does not match an image from the current framebuffer (0x%" PRIx64 "). %s",
                             funcName, i, HandleToUint64(img_bar_image), fb_handle, validation_error_map[VALIDATION_ERROR_1b800936]);
+            }
+            if (img_barrier.oldLayout != img_barrier.newLayout) {
+                skip |=
+                    log_msg(device_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
+                            HandleToUint64(cb_state->commandBuffer), __LINE__, VALIDATION_ERROR_1b80093a, "CORE",
+                            "%s: As the Image Barrier for image 0x%" PRIx64
+                            " is being executed within a render pass instance, oldLayout must equal newLayout yet they are "
+                            "%s and %s. %s",
+                            funcName, HandleToUint64(img_barrier.image), string_VkImageLayout(img_barrier.oldLayout),
+                            string_VkImageLayout(img_barrier.newLayout), validation_error_map[VALIDATION_ERROR_1b80093a]);
             }
         }
         if (sub_dep.dependencyFlags != dependency_flags) {
@@ -6337,16 +6348,6 @@ static bool ValidateBarriers(layer_data *device_data, const char *funcName, GLOB
         }
 
         if (mem_barrier->oldLayout != mem_barrier->newLayout) {
-            if (cb_state->activeRenderPass) {
-                skip |=
-                    log_msg(device_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
-                            HandleToUint64(cb_state->commandBuffer), __LINE__, VALIDATION_ERROR_1b80093a, "DS",
-                            "%s: As the Image Barrier for image 0x%" PRIx64
-                            " is being executed within a render pass instance, oldLayout must equal newLayout yet they are "
-                            "%s and %s. %s",
-                            funcName, HandleToUint64(mem_barrier->image), string_VkImageLayout(mem_barrier->oldLayout),
-                            string_VkImageLayout(mem_barrier->newLayout), validation_error_map[VALIDATION_ERROR_1b80093a]);
-            }
             skip |= ValidateMaskBitsFromLayouts(device_data, cb_state->commandBuffer, mem_barrier->srcAccessMask,
                                                 mem_barrier->oldLayout, "Source");
             skip |= ValidateMaskBitsFromLayouts(device_data, cb_state->commandBuffer, mem_barrier->dstAccessMask,
