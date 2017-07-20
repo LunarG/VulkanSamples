@@ -803,8 +803,13 @@ static bool validate_fs_outputs_against_render_pass(debug_report_data const *rep
                             "fragment shader writes to output location %d with no matching attachment", it_a->first.first);
             it_a++;
         } else if (!b_at_end && (a_at_end || it_a->first.first > it_b->first)) {
-            skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
+            // Only complain if there are unmasked channels for this attachment. If the writemask is 0, it's acceptable for the
+            // shader to not produce a matching output.
+            if (pPipeline->attachments[it_b->first].colorWriteMask != 0) {
+                skip |=
+                    log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
                             SHADER_CHECKER_INPUT_NOT_PRODUCED, "SC", "Attachment %d not written by fragment shader", it_b->first);
+            }
             it_b++;
         } else {
             unsigned output_type = get_fundamental_type(fs, it_a->second.type_id);
