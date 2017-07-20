@@ -1014,6 +1014,9 @@ implicit_param_map = {
 'pImportFenceProperties' : 467,
 'pImportFenceFdInfo' : 468,
 'pImportFenceWin32HandleInfo' : 469,
+'basePipelineHandle' : 470,
+'pImmutableSamplers' : 471,
+'pTexelBufferView' : 472,
 ### ADD New implicit param mappings above this line
 }
 
