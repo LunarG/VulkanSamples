@@ -10125,7 +10125,7 @@ TEST_F(VkLayerTest, InvalidBarriers) {
     img_barrier.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
     // New layout can't be UNDEFINED
     img_barrier.newLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-    img_barrier.image = image.handle();
+    img_barrier.image = m_renderTargets[0]->handle();
     img_barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
     img_barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
     img_barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
