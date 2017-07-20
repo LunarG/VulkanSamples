@@ -16496,6 +16496,46 @@ TEST_F(VkLayerTest, CreatePipelineFragmentOutputNotWritten) {
     m_errorMonitor->VerifyFound();
 }
 
+TEST_F(VkPositiveLayerTest, CreatePipelineFragmentOutputNotWrittenButMasked) {
+    TEST_DESCRIPTION(
+        "Test that no error is produced when the fragment shader fails to declare an output,"
+        " but the corresponding attachment's write mask is 0.");
+    m_errorMonitor->ExpectSuccess();
+
+    ASSERT_NO_FATAL_FAILURE(Init());
+
+    char const *vsSource =
+        "#version 450\n"
+            "\n"
+            "void main(){\n"
+            "   gl_Position = vec4(1);\n"
+            "}\n";
+    char const *fsSource =
+        "#version 450\n"
+            "\n"
+            "void main(){\n"
+            "}\n";
+
+    VkShaderObj vs(m_device, vsSource, VK_SHADER_STAGE_VERTEX_BIT, this);
+    VkShaderObj fs(m_device, fsSource, VK_SHADER_STAGE_FRAGMENT_BIT, this);
+
+    VkPipelineObj pipe(m_device);
+    pipe.AddShader(&vs);
+    pipe.AddShader(&fs);
+
+    /* set up CB 0, not written, but also masked */
+    pipe.AddColorAttachment(0);
+    ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
+
+    VkDescriptorSetObj descriptorSet(m_device);
+    descriptorSet.AppendDummy();
+    descriptorSet.CreateVKDescriptorSet(m_commandBuffer);
+
+    pipe.CreateVKPipeline(descriptorSet.GetPipelineLayout(), renderPass());
+
+    m_errorMonitor->VerifyNotFound();
+}
+
 TEST_F(VkLayerTest, CreatePipelineFragmentOutputNotConsumed) {
     TEST_DESCRIPTION(
         "Test that a warning is produced for a fragment shader which provides a spurious "
