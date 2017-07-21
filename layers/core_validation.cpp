@@ -6174,8 +6174,9 @@ static bool ValidateRenderPassPipelineBarriers(layer_data *device_data, const ch
                         funcName, active_subpass, rp_handle, validation_error_map[VALIDATION_ERROR_1b800928]);
     } else {
         assert(rp_state->subpass_to_dependency_index[cb_state->activeSubpass] != -1);
-        const auto &sub_dep = rp_state->createInfo.pDependencies[rp_state->subpass_to_dependency_index[active_subpass]];
+        // Grab ref to current subpassDescription up-front for use below
         const auto &sub_desc = rp_state->createInfo.pSubpasses[active_subpass];
+        const auto &sub_dep = rp_state->createInfo.pDependencies[rp_state->subpass_to_dependency_index[active_subpass]];
         const auto &sub_src_stage_mask = ExpandPipelineStageFlags(sub_dep.srcStageMask);
         const auto &sub_dst_stage_mask = ExpandPipelineStageFlags(sub_dep.dstStageMask);
         if ((sub_src_stage_mask != VK_PIPELINE_STAGE_ALL_COMMANDS_BIT) &&
