@@ -233,7 +233,7 @@ class BUFFER_STATE : public BINDABLE {
 
     ~BUFFER_STATE() {
         if ((createInfo.sharingMode == VK_SHARING_MODE_CONCURRENT) && (createInfo.queueFamilyIndexCount > 0)) {
-            delete createInfo.pQueueFamilyIndices;
+            delete [] createInfo.pQueueFamilyIndices;
             createInfo.pQueueFamilyIndices = nullptr;
         }
     };
@@ -281,7 +281,7 @@ class IMAGE_STATE : public BINDABLE {
 
     ~IMAGE_STATE() {
         if ((createInfo.sharingMode == VK_SHARING_MODE_CONCURRENT) && (createInfo.queueFamilyIndexCount > 0)) {
-            delete createInfo.pQueueFamilyIndices;
+            delete [] createInfo.pQueueFamilyIndices;
             createInfo.pQueueFamilyIndices = nullptr;
         }
     };
