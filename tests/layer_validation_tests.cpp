@@ -3898,8 +3898,49 @@ TEST_F(VkLayerTest, RenderPassBarrierConflicts) {
                          VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_DEPENDENCY_BY_REGION_BIT, 0, nullptr, 0, nullptr, 1,
                          &img_barrier);
     m_errorMonitor->VerifyFound();
+    vkCmdEndRenderPass(m_commandBuffer->handle());
+    // Create new RP/FB combo where subpass has incorrect index attachment, this is 2nd half of VALIDATION_ERROR_1b800936
+    VkAttachmentDescription attach2[] = {
+        {0, VK_FORMAT_R8G8B8A8_UNORM, VK_SAMPLE_COUNT_1_BIT, VK_ATTACHMENT_LOAD_OP_DONT_CARE, VK_ATTACHMENT_STORE_OP_DONT_CARE,
+         VK_ATTACHMENT_LOAD_OP_DONT_CARE, VK_ATTACHMENT_STORE_OP_DONT_CARE, VK_IMAGE_LAYOUT_UNDEFINED,
+         VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL},
+        {0, VK_FORMAT_R8G8B8A8_UNORM, VK_SAMPLE_COUNT_1_BIT, VK_ATTACHMENT_LOAD_OP_DONT_CARE, VK_ATTACHMENT_STORE_OP_DONT_CARE,
+         VK_ATTACHMENT_LOAD_OP_DONT_CARE, VK_ATTACHMENT_STORE_OP_DONT_CARE, VK_IMAGE_LAYOUT_UNDEFINED,
+         VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL},
+    };
+    // ref attachment points to wrong attachment
+    ref.attachment = 1;
+    ref.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+    // Reusing subpasses & dep from above
+    VkRenderPassCreateInfo rpci2 = {VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO, nullptr, 0, 2, attach2, 1, subpasses, 1, &dep};
+    VkRenderPass rp_badsubindex;
 
+    err = vkCreateRenderPass(m_device->device(), &rpci2, nullptr, &rp_badsubindex);
+    ASSERT_VK_SUCCESS(err);
+
+    VkImageObj image2(m_device);
+    image2.InitNoLayout(32, 32, 1, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT, VK_IMAGE_TILING_OPTIMAL, 0);
+    VkImageView imageView2 = image2.targetView(VK_FORMAT_R8G8B8A8_UNORM);
+    // re-use imageView from start of test
+    VkImageView iv_array[2] = {imageView, imageView2};
+
+    VkFramebufferCreateInfo fbci2 = {VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO, nullptr, 0, rp_badsubindex, 2, iv_array, 32, 32, 1};
+    VkFramebuffer fb2;
+    err = vkCreateFramebuffer(m_device->device(), &fbci2, nullptr, &fb2);
+    ASSERT_VK_SUCCESS(err);
+
+    rpbi.renderPass = rp_badsubindex;
+    rpbi.framebuffer = fb2;
+    vkCmdBeginRenderPass(m_commandBuffer->handle(), &rpbi, VK_SUBPASS_CONTENTS_INLINE);
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_1b800936);
+    vkCmdPipelineBarrier(m_commandBuffer->handle(), VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+                         VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_DEPENDENCY_BY_REGION_BIT, 0, nullptr, 0, nullptr, 1,
+                         &img_barrier);
+    m_errorMonitor->VerifyFound();
+
+    vkDestroyFramebuffer(m_device->device(), fb2, nullptr);
     vkDestroyFramebuffer(m_device->device(), fb, nullptr);
+    vkDestroyRenderPass(m_device->device(), rp_badsubindex, nullptr);
     vkDestroyRenderPass(m_device->device(), rp_badlayout, nullptr);
     vkDestroyRenderPass(m_device->device(), rp, nullptr);
     vkDestroyRenderPass(m_device->device(), rp_noselfdep, nullptr);
