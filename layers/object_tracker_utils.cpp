@@ -616,13 +616,14 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateDevice(VkPhysicalDevice physicalDevice, con
 
 VKAPI_ATTR VkResult VKAPI_CALL GetSwapchainImagesKHR(VkDevice device, VkSwapchainKHR swapchain, uint32_t *pSwapchainImageCount,
                                                      VkImage *pSwapchainImages) {
-    bool skip = VK_FALSE;
+    bool skip = false;
     std::unique_lock<std::mutex> lock(global_lock);
     skip |= ValidateObject(device, device, kVulkanObjectTypeDevice, false, VALIDATION_ERROR_30805601, VALIDATION_ERROR_UNDEFINED);
+    skip |= ValidateObject(device, swapchain, kVulkanObjectTypeSwapchainKHR, false, VALIDATION_ERROR_3082f001,
+                           VALIDATION_ERROR_UNDEFINED);
     lock.unlock();
-    if (skip) {
-        return VK_ERROR_VALIDATION_FAILED_EXT;
-    }
+    if (skip) return VK_ERROR_VALIDATION_FAILED_EXT;
+
     VkResult result = get_dispatch_table(ot_device_table_map, device)
                           ->GetSwapchainImagesKHR(device, swapchain, pSwapchainImageCount, pSwapchainImages);
     if (pSwapchainImages != NULL) {

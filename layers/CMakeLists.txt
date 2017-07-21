@@ -171,6 +171,7 @@ run_vk_xml_generate(threading_generator.py thread_check.h)
 run_vk_xml_generate(parameter_validation_generator.py parameter_validation.h)
 run_vk_xml_generate(unique_objects_generator.py unique_objects_wrappers.h)
 run_vk_xml_generate(dispatch_table_helper_generator.py vk_dispatch_table_helper.h)
+run_vk_xml_generate(object_tracker_generator.py object_tracker.cpp)
 
 # Layer Utils Library
 # For Windows, we use a static lib because the Windows loader has a fairly restrictive loader search
