@@ -796,6 +796,16 @@ bool cvdescriptorset::ValidateImageUpdate(VkImageView image_view, VkImageLayout 
             *error_msg = "No memory bound to image.";
             return false;
         }
+
+        // KHR_maintenance1 allows rendering into 2D or 2DArray views which slice a 3D image,
+        // but not binding them to descriptor sets.
+        if (image_node->createInfo.imageType == VK_IMAGE_TYPE_3D &&
+            (iv_state->create_info.viewType == VK_IMAGE_VIEW_TYPE_2D ||
+             iv_state->create_info.viewType == VK_IMAGE_VIEW_TYPE_2D_ARRAY)) {
+            *error_code = VALIDATION_ERROR_046002ae;
+            *error_msg = "ImageView must not be a 2D or 2DArray view of a 3D image";
+            return false;
+        }
     }
     // First validate that format and layout are compatible
     if (format == VK_FORMAT_MAX_ENUM) {
