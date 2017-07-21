@@ -3881,8 +3881,26 @@ TEST_F(VkLayerTest, RenderPassBarrierConflicts) {
                          VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_DEPENDENCY_BY_REGION_BIT, 0, nullptr, 0, nullptr, 1,
                          &img_barrier);
     m_errorMonitor->VerifyFound();
+    vkCmdEndRenderPass(m_commandBuffer->handle());
+    // Have image barrier layouts mis-match subpass attachment layout
+    // Create RP where subpass has wrong image layout
+    ref.layout = VK_IMAGE_LAYOUT_GENERAL;
+    VkRenderPass rp_badlayout;
+    rpci.dependencyCount = 1;
+    rpci.pDependencies = &dep;
+    err = vkCreateRenderPass(m_device->device(), &rpci, nullptr, &rp_badlayout);
+    ASSERT_VK_SUCCESS(err);
+    rpbi.renderPass = rp_badlayout;
+    vkCmdBeginRenderPass(m_commandBuffer->handle(), &rpbi, VK_SUBPASS_CONTENTS_INLINE);
+    img_barrier.oldLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_1b800938);
+    vkCmdPipelineBarrier(m_commandBuffer->handle(), VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+                         VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_DEPENDENCY_BY_REGION_BIT, 0, nullptr, 0, nullptr, 1,
+                         &img_barrier);
+    m_errorMonitor->VerifyFound();
 
     vkDestroyFramebuffer(m_device->device(), fb, nullptr);
+    vkDestroyRenderPass(m_device->device(), rp_badlayout, nullptr);
     vkDestroyRenderPass(m_device->device(), rp, nullptr);
     vkDestroyRenderPass(m_device->device(), rp_noselfdep, nullptr);
 }
