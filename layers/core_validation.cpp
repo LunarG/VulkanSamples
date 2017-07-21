@@ -6641,13 +6641,14 @@ static bool PreCallValidateCmdPipelineBarrier(layer_data *device_data, GLOBAL_CB
                                          VALIDATION_ERROR_1b800924);
     skip |= ValidateStageMaskGsTsEnables(device_data, dstStageMask, "vkCmdPipelineBarrier()", VALIDATION_ERROR_1b800922,
                                          VALIDATION_ERROR_1b800926);
-    skip |=
-        ValidateBarriersToImages(device_data, cb_state, imageMemoryBarrierCount, pImageMemoryBarriers, "vkCmdPipelineBarrier()");
     if (cb_state->activeRenderPass) {
         skip |= ValidateRenderPassPipelineBarriers(device_data, "vkCmdPipelineBarrier()", cb_state, srcStageMask, dstStageMask,
                                                    dependencyFlags, memoryBarrierCount, pMemoryBarriers, bufferMemoryBarrierCount,
                                                    pBufferMemoryBarriers, imageMemoryBarrierCount, pImageMemoryBarriers);
+        if (skip) return true;  // Early return to avoid redundant errors from below calls
     }
+    skip |=
+        ValidateBarriersToImages(device_data, cb_state, imageMemoryBarrierCount, pImageMemoryBarriers, "vkCmdPipelineBarrier()");
     skip |= ValidateBarriers(device_data, "vkCmdPipelineBarrier()", cb_state, srcStageMask, dstStageMask, memoryBarrierCount,
                              pMemoryBarriers, bufferMemoryBarrierCount, pBufferMemoryBarriers, imageMemoryBarrierCount,
                              pImageMemoryBarriers);
