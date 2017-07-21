@@ -3890,8 +3890,18 @@ TEST_F(VkLayerTest, RenderPassBarrierConflicts) {
                          &img_barrier);
     m_errorMonitor->VerifyFound();
     vkCmdEndRenderPass(m_commandBuffer->handle());
-    // Create new RP/FB combo where subpass has incorrect index attachment, this is 2nd half of VALIDATION_ERROR_1b800936
-    VkAttachmentDescription attach2[] = {
+
+    vkDestroyFramebuffer(m_device->device(), fb, nullptr);
+    vkDestroyRenderPass(m_device->device(), rp, nullptr);
+    vkDestroyRenderPass(m_device->device(), rp_noselfdep, nullptr);
+}
+
+TEST_F(VkLayerTest, ImageBarrierSubpassConflict) {
+    TEST_DESCRIPTION("Check case where subpass index references different image from image barrier");
+    ASSERT_NO_FATAL_FAILURE(Init());
+
+    // Create RP/FB combo where subpass has incorrect index attachment, this is 2nd half of VALIDATION_ERROR_1b800936
+    VkAttachmentDescription attach[] = {
         {0, VK_FORMAT_R8G8B8A8_UNORM, VK_SAMPLE_COUNT_1_BIT, VK_ATTACHMENT_LOAD_OP_DONT_CARE, VK_ATTACHMENT_STORE_OP_DONT_CARE,
          VK_ATTACHMENT_LOAD_OP_DONT_CARE, VK_ATTACHMENT_STORE_OP_DONT_CARE, VK_IMAGE_LAYOUT_UNDEFINED,
          VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL},
@@ -3899,29 +3909,66 @@ TEST_F(VkLayerTest, RenderPassBarrierConflicts) {
          VK_ATTACHMENT_LOAD_OP_DONT_CARE, VK_ATTACHMENT_STORE_OP_DONT_CARE, VK_IMAGE_LAYOUT_UNDEFINED,
          VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL},
     };
-    // ref attachment points to wrong attachment
-    ref.attachment = 1;
-    ref.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-    // Reusing subpasses & dep from above
-    VkRenderPassCreateInfo rpci2 = {VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO, nullptr, 0, 2, attach2, 1, subpasses, 1, &dep};
-    VkRenderPass rp_badsubindex;
+    // ref attachment points to wrong attachment index compared to img_barrier below
+    VkAttachmentReference ref = {1, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL};
+    VkSubpassDescription subpasses[] = {
+        {0, VK_PIPELINE_BIND_POINT_GRAPHICS, 0, nullptr, 1, &ref, nullptr, nullptr, 0, nullptr},
+    };
+    VkSubpassDependency dep = {0,
+                               0,
+                               VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+                               VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+                               VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
+                               VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
+                               VK_DEPENDENCY_BY_REGION_BIT};
 
-    err = vkCreateRenderPass(m_device->device(), &rpci2, nullptr, &rp_badsubindex);
+    VkRenderPassCreateInfo rpci = {VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO, nullptr, 0, 2, attach, 1, subpasses, 1, &dep};
+    VkRenderPass rp;
+
+    VkResult err = vkCreateRenderPass(m_device->device(), &rpci, nullptr, &rp);
     ASSERT_VK_SUCCESS(err);
 
+    VkImageObj image(m_device);
+    image.InitNoLayout(32, 32, 1, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT, VK_IMAGE_TILING_OPTIMAL, 0);
+    VkImageView imageView = image.targetView(VK_FORMAT_R8G8B8A8_UNORM);
     VkImageObj image2(m_device);
     image2.InitNoLayout(32, 32, 1, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT, VK_IMAGE_TILING_OPTIMAL, 0);
     VkImageView imageView2 = image2.targetView(VK_FORMAT_R8G8B8A8_UNORM);
     // re-use imageView from start of test
     VkImageView iv_array[2] = {imageView, imageView2};
 
-    VkFramebufferCreateInfo fbci2 = {VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO, nullptr, 0, rp_badsubindex, 2, iv_array, 32, 32, 1};
-    VkFramebuffer fb2;
-    err = vkCreateFramebuffer(m_device->device(), &fbci2, nullptr, &fb2);
+    VkFramebufferCreateInfo fbci = {VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO, nullptr, 0, rp, 2, iv_array, 32, 32, 1};
+    VkFramebuffer fb;
+    err = vkCreateFramebuffer(m_device->device(), &fbci, nullptr, &fb);
     ASSERT_VK_SUCCESS(err);
 
-    rpbi.renderPass = rp_badsubindex;
-    rpbi.framebuffer = fb2;
+    VkRenderPassBeginInfo rpbi = {VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
+                                  nullptr,
+                                  rp,
+                                  fb,
+                                  {{
+                                       0,
+                                       0,
+                                   },
+                                   {32, 32}},
+                                  0,
+                                  nullptr};
+
+    VkImageMemoryBarrier img_barrier = {};
+    img_barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+    img_barrier.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+    img_barrier.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+    img_barrier.oldLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+    img_barrier.newLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+    img_barrier.image = image.handle(); /* barrier references image from attachment index 0 */
+    img_barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+    img_barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+    img_barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    img_barrier.subresourceRange.baseArrayLayer = 0;
+    img_barrier.subresourceRange.baseMipLevel = 0;
+    img_barrier.subresourceRange.layerCount = 1;
+    img_barrier.subresourceRange.levelCount = 1;
+    m_commandBuffer->begin();
     vkCmdBeginRenderPass(m_commandBuffer->handle(), &rpbi, VK_SUBPASS_CONTENTS_INLINE);
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_1b800936);
     vkCmdPipelineBarrier(m_commandBuffer->handle(), VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
@@ -3929,11 +3976,8 @@ TEST_F(VkLayerTest, RenderPassBarrierConflicts) {
                          &img_barrier);
     m_errorMonitor->VerifyFound();
 
-    vkDestroyFramebuffer(m_device->device(), fb2, nullptr);
     vkDestroyFramebuffer(m_device->device(), fb, nullptr);
-    vkDestroyRenderPass(m_device->device(), rp_badsubindex, nullptr);
     vkDestroyRenderPass(m_device->device(), rp, nullptr);
-    vkDestroyRenderPass(m_device->device(), rp_noselfdep, nullptr);
 }
 
 TEST_F(VkLayerTest, RenderPassInvalidRenderArea) {
