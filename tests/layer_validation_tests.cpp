@@ -12390,6 +12390,87 @@ TEST_F(VkLayerTest, NumBlendAttachMismatch) {
     vkDestroyDescriptorPool(m_device->device(), ds_pool, NULL);
 }
 
+TEST_F(VkLayerTest, Maint1BindingSliceOf3DImage) {
+    TEST_DESCRIPTION(
+        "Attempt to bind a slice of a 3D texture in a descriptor set. "
+        "This is explicitly disallowed by KHR_maintenance1 to keep "
+        "things simple for drivers.");
+    ASSERT_NO_FATAL_FAILURE(InitFramework(myDbgFunc, m_errorMonitor));
+    if (DeviceExtensionSupported(gpu(), nullptr, VK_KHR_MAINTENANCE1_EXTENSION_NAME)) {
+        m_device_extension_names.push_back(VK_KHR_MAINTENANCE1_EXTENSION_NAME);
+    } else {
+        printf(VK_KHR_MAINTENANCE1_EXTENSION_NAME " is not supported; skipping\n");
+        return;
+    }
+    ASSERT_NO_FATAL_FAILURE(InitState());
+
+    VkResult err;
+
+    VkDescriptorPoolSize dps = { VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 1 };
+    VkDescriptorPoolCreateInfo dspci = {
+        VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO, nullptr,
+        0, 1, 1, &dps };
+    VkDescriptorPool pool;
+    err = vkCreateDescriptorPool(m_device->device(), &dspci, nullptr, &pool);
+    ASSERT_VK_SUCCESS(err);
+
+    VkDescriptorSetLayoutBinding dsl_binding = { 0, VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
+        1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr };
+
+    VkDescriptorSetLayoutCreateInfo ds_layout_ci = {
+        VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO, nullptr,
+        0, 1, &dsl_binding };
+    VkDescriptorSetLayout dsl;
+    err = vkCreateDescriptorSetLayout(m_device->device(), &ds_layout_ci, nullptr, &dsl);
+    ASSERT_VK_SUCCESS(err);
+
+    VkDescriptorSetAllocateInfo alloc_info = {
+        VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO, nullptr,
+        pool, 1, &dsl};
+    VkDescriptorSet ds;
+    err = vkAllocateDescriptorSets(m_device->device(), &alloc_info, &ds);
+
+    VkImageCreateInfo ici = { VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO, nullptr,
+        VK_IMAGE_CREATE_2D_ARRAY_COMPATIBLE_BIT_KHR,
+        VK_IMAGE_TYPE_3D, VK_FORMAT_R8G8B8A8_UNORM,
+        { 32, 32, 32 }, 1, 1,
+        VK_SAMPLE_COUNT_1_BIT,
+        VK_IMAGE_TILING_OPTIMAL,
+        VK_IMAGE_USAGE_SAMPLED_BIT,
+        VK_SHARING_MODE_EXCLUSIVE, 0, nullptr, VK_IMAGE_LAYOUT_UNDEFINED };
+    VkImageObj image(m_device);
+    image.init(&ici);
+    ASSERT_TRUE(image.initialized());
+
+    VkImageViewCreateInfo ivci = { VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO, nullptr,
+        0, image.handle(), VK_IMAGE_VIEW_TYPE_2D,
+        VK_FORMAT_R8G8B8A8_UNORM,
+        { VK_COMPONENT_SWIZZLE_IDENTITY,
+          VK_COMPONENT_SWIZZLE_IDENTITY,
+          VK_COMPONENT_SWIZZLE_IDENTITY,
+          VK_COMPONENT_SWIZZLE_IDENTITY
+        },
+        { VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 },
+    };
+    VkImageView view;
+    err = vkCreateImageView(m_device->device(), &ivci, nullptr, &view);
+    ASSERT_VK_SUCCESS(err);
+
+    // Meat of the test.
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_046002ae);
+
+    VkDescriptorImageInfo dii = { VK_NULL_HANDLE, view, VK_IMAGE_LAYOUT_GENERAL };
+    VkWriteDescriptorSet write = { VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET, nullptr,
+        ds, 0, 0, 1, VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, &dii, nullptr, nullptr };
+    vkUpdateDescriptorSets(m_device->device(), 1, &write, 0, nullptr);
+
+    m_errorMonitor->VerifyFound();
+
+    vkDestroyImageView(m_device->device(), view, nullptr);
+    vkDestroyDescriptorSetLayout(m_device->device(), dsl, nullptr);
+    vkDestroyDescriptorPool(m_device->device(), pool, nullptr);
+}
+
 TEST_F(VkLayerTest, MissingClearAttachment) {
     TEST_DESCRIPTION(
         "Points to a wrong colorAttachment index in a VkClearAttachment "
