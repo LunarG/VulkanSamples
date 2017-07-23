@@ -172,7 +172,7 @@ class UniqueObjectsOutputGenerator(OutputGenerator):
         self.cmd_info_data = []        # Save the cmdinfo data for wrapping the handles when processing is complete
         self.structMembers = []        # List of StructMemberData records for all Vulkan structs
         self.extension_structs = []    # List of all structs or sister-structs containing handles
-                                       # A sister-struct may contain no handles but shares <validextensionstructs> with one that does
+                                       # A sister-struct may contain no handles but shares a structextends attribute with one that does
         self.structTypes = dict()      # Map of Vulkan struct typename to required VkStructureType
         self.struct_member_dict = dict()
         # Named tuples to store struct and command data
@@ -400,7 +400,7 @@ class UniqueObjectsOutputGenerator(OutputGenerator):
                 # Store the required type value
                 self.structTypes[typeName] = self.StructType(name=name, value=value)
             # Store pointer/array/string info
-            extstructs = member.attrib.get('validextensionstructs') if name == 'pNext' else None
+            extstructs = self.registry.validextensionstructs[typeName] if name == 'pNext' else None
             membersInfo.append(self.CommandParam(type=type,
                                                  name=name,
                                                  ispointer=self.paramIsPointer(member),
@@ -457,18 +457,18 @@ class UniqueObjectsOutputGenerator(OutputGenerator):
                 ndo_list.add(item)
         return ndo_list
     #
-    # Construct list of extension structs containing handles, or extension structs that share a <validextensionstructs>
-    # tag WITH an extension struct containing handles. All extension structs in any pNext chain will have to be copied.
+    # Construct list of extension structs containing handles, or extension structs that share a structextends attribute
+    # WITH an extension struct containing handles. All extension structs in any pNext chain will have to be copied.
     # TODO: make this recursive -- structs buried three or more levels deep are not searched for extensions
     def GenerateCommandWrapExtensionList(self):
         for struct in self.structMembers:
             if (len(struct.members) > 1) and struct.members[1].extstructs is not None:
                 found = False;
-                for item in struct.members[1].extstructs.split(','):
+                for item in struct.members[1].extstructs:
                     if item != '' and self.struct_contains_ndo(item) == True:
                         found = True
                 if found == True:
-                    for item in struct.members[1].extstructs.split(','):
+                    for item in struct.members[1].extstructs:
                         if item != '' and item not in self.extension_structs:
                             self.extension_structs.append(item)
     #
@@ -477,7 +477,7 @@ class UniqueObjectsOutputGenerator(OutputGenerator):
         if struct_type in self.struct_member_dict:
             param_info = self.struct_member_dict[struct_type]
             if (len(param_info) > 1) and param_info[1].extstructs is not None:
-                for item in param_info[1].extstructs.split(','):
+                for item in param_info[1].extstructs:
                     if item in self.extension_structs:
                         return True
         return False
@@ -820,7 +820,7 @@ class UniqueObjectsOutputGenerator(OutputGenerator):
                     islocal = True
             isdestroy = True if True in [destroy_txt in cmdname for destroy_txt in ['Destroy', 'Free']] else False
             iscreate = True if True in [create_txt in cmdname for create_txt in ['Create', 'Allocate', 'GetRandROutputDisplayEXT', 'RegisterDeviceEvent', 'RegisterDisplayEvent']] else False
-            extstructs = member.attrib.get('validextensionstructs') if name == 'pNext' else None
+            extstructs = self.registry.validextensionstructs[type] if name == 'pNext' else None
             membersInfo.append(self.CommandParam(type=type,
                                                  name=name,
                                                  ispointer=ispointer,

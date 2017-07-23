@@ -422,7 +422,7 @@ class ParamCheckerOutputGenerator(OutputGenerator):
                                                 iscount=iscount,
                                                 noautovalidity=noautovalidity,
                                                 len=self.getLen(member),
-                                                extstructs=member.attrib.get('validextensionstructs') if name == 'pNext' else None,
+                                                extstructs=self.registry.validextensionstructs[typeName] if name == 'pNext' else None,
                                                 condition=conditions[name] if conditions and name in conditions else None,
                                                 cdecl=cdecl))
         self.structMembers.append(self.StructMemberData(name=typeName, members=membersInfo))
@@ -795,9 +795,8 @@ class ParamCheckerOutputGenerator(OutputGenerator):
         if value.extstructs:
             extStructVar = 'allowed_structs_{}'.format(struct_type_name)
             extStructCount = 'ARRAY_SIZE({})'.format(extStructVar)
-            structs = value.extstructs.split(',')
-            extStructNames = '"' + ', '.join(structs) + '"'
-            checkExpr.append('const VkStructureType {}[] = {{ {} }};\n'.format(extStructVar, ', '.join([self.getStructType(s) for s in structs])))
+            extStructNames = '"' + ', '.join(value.extstructs) + '"'
+            checkExpr.append('const VkStructureType {}[] = {{ {} }};\n'.format(extStructVar, ', '.join([self.getStructType(s) for s in value.extstructs])))
         checkExpr.append('skipCall |= validate_struct_pnext(layer_data->report_data, "{}", {ppp}"{}"{pps}, {}, {}{}, {}, {}, GeneratedHeaderVersion, {});\n'.format(
             funcPrintName, valuePrintName, extStructNames, prefix, value.name, extStructCount, extStructVar, vuid, **postProcSpec))
         return checkExpr

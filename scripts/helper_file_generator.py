@@ -344,7 +344,7 @@ class HelperFileOutputGenerator(OutputGenerator):
                                                  isconst=True if 'const' in cdecl else False,
                                                  iscount=True if name in lens else False,
                                                  len=self.getLen(member),
-                                                 extstructs=member.attrib.get('validextensionstructs') if name == 'pNext' else None,
+                                                 extstructs=self.registry.validextensionstructs[typeName] if name == 'pNext' else None,
                                                  cdecl=cdecl))
         self.structMembers.append(self.StructMemberData(name=typeName, members=membersInfo, ifdef_protect=self.featureExtraProtect))
     #
