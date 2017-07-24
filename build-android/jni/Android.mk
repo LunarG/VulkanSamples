@@ -38,6 +38,7 @@ LOCAL_SRC_FILES += $(SRC_DIR)/layers/descriptor_sets.cpp
 LOCAL_SRC_FILES += $(SRC_DIR)/layers/buffer_validation.cpp
 LOCAL_SRC_FILES += $(SRC_DIR)/layers/shader_validation.cpp
 LOCAL_SRC_FILES += $(SRC_DIR)/layers/vk_layer_table.cpp
+LOCAL_SRC_FILES += $(SRC_DIR)/layers/xxhash.c
 LOCAL_C_INCLUDES += $(LOCAL_PATH)/$(SRC_DIR)/include \
                     $(LOCAL_PATH)/$(SRC_DIR)/layers \
                     $(LOCAL_PATH)/$(LAYER_DIR)/include \
