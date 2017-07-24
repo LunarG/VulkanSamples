@@ -100,6 +100,93 @@ struct shader_module {
     void build_def_index();
 };
 
+// TODO: Wire this up to SPIRV-Tools commit hash
+#define VALIDATION_CACHE_VERSION  1
+
+class ValidationCache {
+    // hashes of shaders that have passed validation before, and can be skipped.
+    // we don't store negative results, as we would have to also store what was
+    // wrong with them; also, we expect they will get fixed, so we're less
+    // likely to see them again.
+    std::unordered_set<uint32_t> good_shader_hashes;
+    ValidationCache() {}
+
+public:
+    static VkValidationCacheEXT Create(VkValidationCacheCreateInfoEXT const *pCreateInfo) {
+        auto cache = new ValidationCache();
+        cache->Load(pCreateInfo);
+        return VkValidationCacheEXT(cache);
+    }
+
+    void Load(VkValidationCacheCreateInfoEXT const *pCreateInfo) {
+        auto size = 8u + VK_UUID_SIZE;
+        if (!pCreateInfo->pInitialData || pCreateInfo->initialDataSize < size)
+            return;
+
+        uint32_t const *data = (uint32_t const *)pCreateInfo->pInitialData;
+        if (data[0] != size)
+            return;
+        if (data[1] != VK_VALIDATION_CACHE_HEADER_VERSION_ONE_EXT)
+            return;
+        if (data[2] != VALIDATION_CACHE_VERSION || data[3] || data[4] || data[5])
+            return;   // different version
+
+        data += 6;
+
+        for (;size < pCreateInfo->initialDataSize;
+             data++, size += sizeof(uint32_t)) {
+            good_shader_hashes.insert(*data);
+        }
+    }
+
+    void Write(size_t *pDataSize, void *pData) {
+        auto headerSize = 8u + VK_UUID_SIZE;
+        if (!pData) {
+            *pDataSize = headerSize + good_shader_hashes.size() * sizeof(uint32_t);
+            return;
+        }
+
+        if (*pDataSize < headerSize) {
+            *pDataSize = 0;
+            return;   // Too small for even the header!
+        }
+
+        uint32_t *out = (uint32_t *)pData;
+        size_t actualSize = headerSize;
+
+        // Write the header
+        *out++ = headerSize;
+        *out++ = VK_VALIDATION_CACHE_HEADER_VERSION_ONE_EXT;
+        *out++ = VALIDATION_CACHE_VERSION;
+        *out++ = 0;
+        *out++ = 0;
+        *out++ = 0;
+
+        for (auto it = good_shader_hashes.begin();
+             it != good_shader_hashes.end() && actualSize < *pDataSize;
+             it++, out++, actualSize += sizeof(uint32_t)) {
+            *out = *it;
+        }
+
+        *pDataSize = actualSize;
+    }
+
+    void Merge(ValidationCache const *other) {
+        for (auto h : other->good_shader_hashes)
+            good_shader_hashes.insert(h);
+    }
+
+    static uint32_t MakeShaderHash(VkShaderModuleCreateInfo const *smci);
+
+    bool Contains(uint32_t hash) {
+        return good_shader_hashes.count(hash) != 0;
+    }
+
+    void Insert(uint32_t hash) {
+        good_shader_hashes.insert(hash);
+    }
+};
+
 bool validate_and_capture_pipeline_shader_state(layer_data *dev_data, PIPELINE_STATE *pPipeline);
 bool validate_compute_pipeline(layer_data *dev_data, PIPELINE_STATE *pPipeline);
 typedef std::pair<unsigned, unsigned> descriptor_slot_t;
