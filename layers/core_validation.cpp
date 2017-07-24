@@ -6362,14 +6362,96 @@ static bool ValidateRenderPassPipelineBarriers(layer_data *device_data, const ch
     return skip;
 }
 
+// Array to mask individual accessMask to corresponding stageMask
+//  accessMask active bit position (0-31) maps to index
+const static VkPipelineStageFlags AccessMaskToPipeStage[20] = {
+    // VK_ACCESS_INDIRECT_COMMAND_READ_BIT = 0
+    VK_PIPELINE_STAGE_DRAW_INDIRECT_BIT,
+    // VK_ACCESS_INDEX_READ_BIT = 1
+    VK_PIPELINE_STAGE_VERTEX_INPUT_BIT,
+    // VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT = 2
+    VK_PIPELINE_STAGE_VERTEX_INPUT_BIT,
+    // VK_ACCESS_UNIFORM_READ_BIT = 3
+    VK_PIPELINE_STAGE_VERTEX_SHADER_BIT | VK_PIPELINE_STAGE_TESSELLATION_CONTROL_SHADER_BIT |
+        VK_PIPELINE_STAGE_TESSELLATION_EVALUATION_SHADER_BIT | VK_PIPELINE_STAGE_GEOMETRY_SHADER_BIT |
+        VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT | VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+    // VK_ACCESS_INPUT_ATTACHMENT_READ_BIT = 4
+    VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
+    // VK_ACCESS_SHADER_READ_BIT = 5
+    VK_PIPELINE_STAGE_VERTEX_SHADER_BIT | VK_PIPELINE_STAGE_TESSELLATION_CONTROL_SHADER_BIT |
+        VK_PIPELINE_STAGE_TESSELLATION_EVALUATION_SHADER_BIT | VK_PIPELINE_STAGE_GEOMETRY_SHADER_BIT |
+        VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT | VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+    // VK_ACCESS_SHADER_WRITE_BIT = 6
+    VK_PIPELINE_STAGE_VERTEX_SHADER_BIT | VK_PIPELINE_STAGE_TESSELLATION_CONTROL_SHADER_BIT |
+        VK_PIPELINE_STAGE_TESSELLATION_EVALUATION_SHADER_BIT | VK_PIPELINE_STAGE_GEOMETRY_SHADER_BIT |
+        VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT | VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+    // VK_ACCESS_COLOR_ATTACHMENT_READ_BIT = 7
+    VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+    // VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT = 8
+    VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+    // VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT = 9
+    VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT,
+    // VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT = 10
+    VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT,
+    // VK_ACCESS_TRANSFER_READ_BIT = 11
+    VK_PIPELINE_STAGE_TRANSFER_BIT,
+    // VK_ACCESS_TRANSFER_WRITE_BIT = 12
+    VK_PIPELINE_STAGE_TRANSFER_BIT,
+    // VK_ACCESS_HOST_READ_BIT = 13
+    VK_PIPELINE_STAGE_HOST_BIT,
+    // VK_ACCESS_HOST_WRITE_BIT = 14
+    VK_PIPELINE_STAGE_HOST_BIT,
+    // VK_ACCESS_MEMORY_READ_BIT = 15
+    VK_ACCESS_FLAG_BITS_MAX_ENUM,  // Always match
+    // VK_ACCESS_MEMORY_WRITE_BIT = 16
+    VK_ACCESS_FLAG_BITS_MAX_ENUM,  // Always match
+    // VK_ACCESS_COMMAND_PROCESS_READ_BIT_NVX = 17
+    VK_PIPELINE_STAGE_COMMAND_PROCESS_BIT_NVX,
+    // VK_ACCESS_COMMAND_PROCESS_WRITE_BIT_NVX = 18
+    VK_PIPELINE_STAGE_COMMAND_PROCESS_BIT_NVX,
+};
+
+// Verify that all bits of access_mask are supported by the src_stage_mask
+static bool ValidateAccessMaskPipelineStage(VkAccessFlags access_mask, VkPipelineStageFlags stage_mask) {
+    // Early out if all commands set, or access_mask NULL
+    if ((stage_mask & VK_PIPELINE_STAGE_ALL_COMMANDS_BIT) || (0 == access_mask)) return true;
+
+    stage_mask = ExpandPipelineStageFlags(stage_mask);
+    int index = 0;
+    // for each of the set bits in access_mask, make sure that supporting stage mask bit(s) are set
+    while (access_mask) {
+        index = (u_ffs(access_mask) - 1);
+        assert(index >= 0);
+        // Must have "!= 0" compare to prevent warning from MSVC
+        if ((AccessMaskToPipeStage[index] & stage_mask) == 0) return false;  // early out
+        access_mask &= ~(1 << index);                                        // Mask off bit that's been checked
+    }
+    return true;
+}
+
 static bool ValidateBarriers(layer_data *device_data, const char *funcName, GLOBAL_CB_NODE const *cb_state,
                              VkPipelineStageFlags src_stage_mask, VkPipelineStageFlags dst_stage_mask, uint32_t memBarrierCount,
                              const VkMemoryBarrier *pMemBarriers, uint32_t bufferBarrierCount,
                              const VkBufferMemoryBarrier *pBufferMemBarriers, uint32_t imageMemBarrierCount,
                              const VkImageMemoryBarrier *pImageMemBarriers) {
     bool skip = false;
+    for (uint32_t i = 0; i < memBarrierCount; ++i) {
+        const auto &mem_barrier = pMemBarriers[i];
+        if (!ValidateAccessMaskPipelineStage(mem_barrier.srcAccessMask, src_stage_mask)) {
+            skip |= log_msg(device_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
+                            HandleToUint64(cb_state->commandBuffer), __LINE__, VALIDATION_ERROR_1b800940, "DS",
+                            "%s: pMemBarriers[%d].srcAccessMask (0x%X) is not supported by srcStageMask (0x%X). %s", funcName, i,
+                            mem_barrier.srcAccessMask, src_stage_mask, validation_error_map[VALIDATION_ERROR_1b800940]);
+        }
+    }
     for (uint32_t i = 0; i < imageMemBarrierCount; ++i) {
         auto mem_barrier = &pImageMemBarriers[i];
+        if (!ValidateAccessMaskPipelineStage(mem_barrier->srcAccessMask, src_stage_mask)) {
+            skip |= log_msg(device_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
+                            HandleToUint64(cb_state->commandBuffer), __LINE__, VALIDATION_ERROR_1b800940, "DS",
+                            "%s: pImageMemBarriers[%d].srcAccessMask (0x%X) is not supported by srcStageMask (0x%X). %s", funcName,
+                            i, mem_barrier->srcAccessMask, src_stage_mask, validation_error_map[VALIDATION_ERROR_1b800940]);
+        }
         auto image_data = GetImageState(device_data, mem_barrier->image);
         if (image_data) {
             uint32_t src_q_f_index = mem_barrier->srcQueueFamilyIndex;
@@ -6446,6 +6528,12 @@ static bool ValidateBarriers(layer_data *device_data, const char *funcName, GLOB
         auto mem_barrier = &pBufferMemBarriers[i];
         if (!mem_barrier) continue;
 
+        if (!ValidateAccessMaskPipelineStage(mem_barrier->srcAccessMask, src_stage_mask)) {
+            skip |= log_msg(device_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
+                            HandleToUint64(cb_state->commandBuffer), __LINE__, VALIDATION_ERROR_1b800940, "DS",
+                            "%s: pBufferMemBarriers[%d].srcAccessMask (0x%X) is not supported by srcStageMask (0x%X). %s", funcName,
+                            i, mem_barrier->srcAccessMask, src_stage_mask, validation_error_map[VALIDATION_ERROR_1b800940]);
+        }
         // Validate buffer barrier queue family indices
         if ((mem_barrier->srcQueueFamilyIndex != VK_QUEUE_FAMILY_IGNORED &&
              mem_barrier->srcQueueFamilyIndex >= device_data->phys_dev_properties.queue_family_properties.size()) ||
