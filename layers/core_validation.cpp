@@ -2009,12 +2009,11 @@ static bool ValidateRequestedFeatures(instance_layer_data *instance_data, const 
     uint32_t total_bools = sizeof(VkPhysicalDeviceFeatures) / sizeof(VkBool32);
     for (uint32_t i = 0; i < total_bools; i++) {
         if (requested[i] > actual[i]) {
-            // TODO: Add index to struct member name helper to be able to include a feature name
             skip |= log_msg(instance_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT,
                             VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT, 0, __LINE__, DEVLIMITS_INVALID_FEATURE_REQUESTED, "DL",
-                            "While calling vkCreateDevice(), requesting feature #%u in VkPhysicalDeviceFeatures struct, "
+                            "While calling vkCreateDevice(), requesting feature '%s' in VkPhysicalDeviceFeatures struct, "
                             "which is not available on this device.",
-                            i);
+                            GetPhysDevFeatureString(i));
             errors++;
         }
     }
