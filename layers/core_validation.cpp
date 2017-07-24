@@ -6181,6 +6181,15 @@ static bool ValidateRenderPassImageBarriers(layer_data *device_data, const char 
                             funcName, i, img_dst_access_mask, sub_dst_access_mask, active_subpass, rp_handle,
                             validation_error_map[VALIDATION_ERROR_1b800930]);
         }
+        if (VK_QUEUE_FAMILY_IGNORED != img_barrier.srcQueueFamilyIndex ||
+            VK_QUEUE_FAMILY_IGNORED != img_barrier.dstQueueFamilyIndex) {
+            skip |= log_msg(device_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_RENDER_PASS_EXT,
+                            rp_handle, __LINE__, VALIDATION_ERROR_1b80093c, "CORE",
+                            "%s: Barrier pImageMemoryBarriers[%d].srcQueueFamilyIndex is %d and "
+                            "pImageMemoryBarriers[%d].dstQueueFamilyIndex is %d but both must be VK_QUEUE_FAMILY_IGNORED. %s",
+                            funcName, i, img_barrier.srcQueueFamilyIndex, i, img_barrier.dstQueueFamilyIndex,
+                            validation_error_map[VALIDATION_ERROR_1b80093c]);
+        }
         // TODO : Secondary CBs could have null framebuffer so just skipping that case for now. Need to correctly
         //  handle that case at ExecuteCBs time
         const auto &fb_state = GetFramebufferState(device_data, cb_state->activeFramebuffer);
