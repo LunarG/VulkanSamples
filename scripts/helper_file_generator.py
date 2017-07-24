@@ -364,6 +364,23 @@ class HelperFileOutputGenerator(OutputGenerator):
         outstring += '}\n'
         return outstring
     #
+    # Tack on a helper which, given an index into a VkPhysicalDeviceFeatures structure, will print the corresponding feature name
+    def DeIndexPhysDevFeatures(self):
+        pdev_members = None
+        for name, members, ifdef in self.structMembers:
+            if name == 'VkPhysicalDeviceFeatures':
+                pdev_members = members
+                break
+        deindex = '\n'
+        deindex += 'static const char * GetPhysDevFeatureString(uint32_t index) {\n'
+        deindex += '    const char * IndexToPhysDevFeatureString[] = {\n'
+        for feature in pdev_members:
+            deindex += '        "%s",\n' % feature.name
+        deindex += '    };\n\n'
+        deindex += '    return IndexToPhysDevFeatureString[index];\n'
+        deindex += '}\n'
+        return deindex
+    #
     # Combine enum string helper header file preamble with body text and return
     def GenerateEnumStringHelperHeader(self):
             enum_string_helper_header = '\n'
@@ -375,6 +392,7 @@ class HelperFileOutputGenerator(OutputGenerator):
             enum_string_helper_header += '#include <vulkan/vulkan.h>\n'
             enum_string_helper_header += '\n'
             enum_string_helper_header += self.enum_output
+            enum_string_helper_header += self.DeIndexPhysDevFeatures()
             return enum_string_helper_header
     #
     # struct_size_header: build function prototypes for header file
