@@ -155,6 +155,7 @@ class ParamCheckerOutputGenerator(OutputGenerator):
         self.structMembers = []                           # List of StructMemberData records for all Vulkan structs
         self.validatedStructs = dict()                    # Map of structs type names to generated validation code for that struct type
         self.enumRanges = dict()                          # Map of enum name to BEGIN/END range values
+        self.enumValueLists = ''                          # String containing enumerated type map definitions
         self.flags = set()                                # Map of flags typenames
         self.flagBits = dict()                            # Map of flag bits typename to list of values
         self.newFlags = set()                             # Map of flags typenames /defined in the current feature/
@@ -249,6 +250,8 @@ class ParamCheckerOutputGenerator(OutputGenerator):
         write('namespace parameter_validation {', file = self.outFile)
     def endFile(self):
         # C-specific
+        self.newline()
+        write(self.enumValueLists, file=self.outFile)
         self.newline()
         commands_text = '\n'.join(self.validation)
         write(commands_text, file=self.outFile)
@@ -427,8 +430,7 @@ class ParamCheckerOutputGenerator(OutputGenerator):
                                                 cdecl=cdecl))
         self.structMembers.append(self.StructMemberData(name=typeName, members=membersInfo))
     #
-    # Capture group (e.g. C "enum" type) info to be used for
-    # param check code generation.
+    # Capture group (e.g. C "enum" type) info to be used for param check code generation.
     # These are concatenated together with other types.
     def genGroup(self, groupinfo, groupName):
         OutputGenerator.genGroup(self, groupinfo, groupName)
@@ -457,9 +459,16 @@ class ParamCheckerOutputGenerator(OutputGenerator):
             isEnum = ('FLAG_BITS' not in expandPrefix)
             if isEnum:
                 self.enumRanges[groupName] = (expandPrefix + '_BEGIN_RANGE' + expandSuffix, expandPrefix + '_END_RANGE' + expandSuffix)
+                # Create definition for a list containing valid enum values for this enumerated type
+                enum_entry = 'const std::vector<%s> All%sEnums = {' % (groupName, groupName)
+                for enum in groupElem:
+                    name = enum.get('name')
+                    if name is not None:
+                        enum_entry += '%s, ' % enum.get('name')
+                enum_entry += '};\n'
+                self.enumValueLists += enum_entry
     #
-    # Capture command parameter info to be used for param
-    # check code generation.
+    # Capture command parameter info to be used for param check code generation.
     def genCmd(self, cmdinfo, name):
         OutputGenerator.genCmd(self, cmdinfo, name)
         interface_functions = [
