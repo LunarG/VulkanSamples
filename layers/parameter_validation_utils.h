@@ -715,6 +715,30 @@ static bool validate_ranged_enum_array(debug_report_data *report_data, const cha
     return skip_call;
 }
 
+template <typename T>
+static bool validate_ranged_enum_array(debug_report_data *report_data, const char *apiName, const ParameterName &countName,
+                                       const ParameterName &arrayName, const char *enumName, const std::vector<T> &valid_values,
+                                       uint32_t count, const T *array, bool countRequired, bool arrayRequired) {
+    bool skip_call = false;
+
+    if ((count == 0) || (array == NULL)) {
+        skip_call |= validate_array(report_data, apiName, countName, arrayName, count, array, countRequired, arrayRequired,
+                                    VALIDATION_ERROR_UNDEFINED, VALIDATION_ERROR_UNDEFINED);
+    } else {
+        for (uint32_t i = 0; i < count; ++i) {
+            if (std::find(valid_values.begin(), valid_values.end(), array[i]) == valid_values.end()) {
+                skip_call |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0,
+                                     __LINE__, UNRECOGNIZED_VALUE, LayerName,
+                                     "%s: value of %s[%d] (%d) does not fall within the begin..end range of the core %s "
+                                     "enumeration tokens and is not an extension added token",
+                                     apiName, arrayName.get_name().c_str(), i, array[i], enumName);
+            }
+        }
+    }
+
+    return skip_call;
+}
+
 /**
 * Verify that a reserved VkFlags value is zero.
 *
