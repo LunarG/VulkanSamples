@@ -652,6 +652,22 @@ bool validate_ranged_enum(debug_report_data *report_data, const char *apiName, c
     return skip_call;
 }
 
+template <typename T>
+bool validate_ranged_enum(debug_report_data *report_data, const char *apiName, const ParameterName &parameterName,
+                          const char *enumName, const std::vector<T> &valid_values, T value, UNIQUE_VALIDATION_ERROR_CODE vuid) {
+    bool skip = false;
+
+    if (std::find(valid_values.begin(), valid_values.end(), value) == valid_values.end()) {
+        skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__, vuid,
+                        LayerName,
+                        "%s: value of %s (%d) does not fall within the begin..end range of the core %s "
+                        "enumeration tokens and is not an extension added token. %s",
+                        apiName, parameterName.get_name().c_str(), value, enumName, validation_error_map[vuid]);
+    }
+
+    return skip;
+}
+
 /**
 * Validate an array of Vulkan enumeration value.
 *
