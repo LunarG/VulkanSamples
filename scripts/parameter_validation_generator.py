@@ -1015,8 +1015,8 @@ class ParamCheckerOutputGenerator(OutputGenerator):
                     elif value.isbool and value.isconst:
                         usedLines.append('skipCall |= validate_bool32_array(layer_data->report_data, "{}", {ppp}"{}"{pps}, {ppp}"{}"{pps}, {pf}{}, {pf}{}, {}, {});\n'.format(funcName, lenDisplayName, valueDisplayName, lenParam.name, value.name, cvReq, req, pf=valuePrefix, **postProcSpec))
                     elif value.israngedenum and value.isconst:
-                        enumRange = self.enumRanges[value.type]
-                        usedLines.append('skipCall |= validate_ranged_enum_array(layer_data->report_data, "{}", {ppp}"{}"{pps}, {ppp}"{}"{pps}, "{}", {}, {}, {pf}{}, {pf}{}, {}, {});\n'.format(funcName, lenDisplayName, valueDisplayName, value.type, enumRange[0], enumRange[1], lenParam.name, value.name, cvReq, req, pf=valuePrefix, **postProcSpec))
+                        enum_value_list = 'All%sEnums' % value.type
+                        usedLines.append('skipCall |= validate_ranged_enum_array(layer_data->report_data, "{}", {ppp}"{}"{pps}, {ppp}"{}"{pps}, "{}", {}, {pf}{}, {pf}{}, {}, {});\n'.format(funcName, lenDisplayName, valueDisplayName, value.type, enum_value_list, lenParam.name, value.name, cvReq, req, pf=valuePrefix, **postProcSpec))
                     elif value.name == 'pNext':
                         # We need to ignore VkDeviceCreateInfo and VkInstanceCreateInfo, as the loader manipulates them in a way that is not documented in vk.xml
                         if not structTypeName in ['VkDeviceCreateInfo', 'VkInstanceCreateInfo']:
