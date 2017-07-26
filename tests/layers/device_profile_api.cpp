@@ -35,8 +35,12 @@ static std::mutex global_lock;
 
 static uint32_t loader_layer_if_version = CURRENT_LOADER_LAYER_INTERFACE_VERSION;
 
-static std::unordered_map<VkPhysicalDevice, struct VkPhysicalDeviceProperties> device_profile_api_dev_data_map;
-static std::unordered_map<VkPhysicalDevice, struct VkPhysicalDeviceProperties> device_profile_api_dev_org_data_map;
+struct device_data {
+    VkPhysicalDeviceProperties phy_device_props;
+};
+
+static std::unordered_map<VkPhysicalDevice, struct device_data> device_profile_api_dev_data_map;
+static std::unordered_map<VkPhysicalDevice, struct device_data> device_profile_api_dev_org_data_map;
 
 // device_profile_api Layer EXT APIs
 typedef void(VKAPI_PTR *PFN_vkGetOriginalPhysicalDeviceLimitsEXT)(VkPhysicalDevice physicalDevice,
@@ -50,7 +54,7 @@ VKAPI_ATTR void VKAPI_CALL GetOriginalPhysicalDeviceLimitsEXT(VkPhysicalDevice p
     // search if we got the device limits for this device and stored in device_profile_api layer
     auto device_profile_api_data_it = device_profile_api_dev_org_data_map.find(physicalDevice);
     if (device_profile_api_data_it != device_profile_api_dev_org_data_map.end()) {
-        memcpy( orgLimits, &(device_profile_api_dev_org_data_map[physicalDevice].limits), sizeof(VkPhysicalDeviceLimits));
+        memcpy( orgLimits, &(device_profile_api_dev_org_data_map[physicalDevice].phy_device_props.limits), sizeof(VkPhysicalDeviceLimits));
     }
 }
 
@@ -61,7 +65,7 @@ VKAPI_ATTR void VKAPI_CALL SetPhysicalDeviceLimitsEXT(VkPhysicalDevice physicalD
     // search if we got the device limits for this device and stored in device_profile_api layer
     auto device_profile_api_data_it = device_profile_api_dev_data_map.find(physicalDevice);
     if (device_profile_api_data_it != device_profile_api_dev_data_map.end()) {
-        memcpy(&(device_profile_api_dev_data_map[physicalDevice].limits), newLimits, sizeof(VkPhysicalDeviceLimits));
+        memcpy(&(device_profile_api_dev_data_map[physicalDevice].phy_device_props.limits), newLimits, sizeof(VkPhysicalDeviceLimits));
     }
 }
 
@@ -102,8 +106,8 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateInstance(const VkInstanceCreateInfo *pCreat
             VkPhysicalDeviceProperties props;
             device_profile_data->instance_dispatch_table
                      ->GetPhysicalDeviceProperties(physical_devices[i], &props);
-            device_profile_api_dev_org_data_map[physical_devices[i]] = props;
-            device_profile_api_dev_data_map[physical_devices[i]] = props;
+            device_profile_api_dev_org_data_map[physical_devices[i]].phy_device_props = props;
+            device_profile_api_dev_data_map[physical_devices[i]].phy_device_props = props;
             }
     }
     return result;
