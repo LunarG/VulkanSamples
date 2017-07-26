@@ -2363,8 +2363,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateGraphicsPipelines(VkDevice device, VkPipeli
                         skip |= validate_ranged_enum(
                             report_data, "vkCreateGraphicsPipelines",
                             ParameterName("pCreateInfos[%i].pColorBlendState->logicOp", ParameterName::IndexVector{i}), "VkLogicOp",
-                            AllVkLogicOpEnums, pCreateInfos[i].pColorBlendState->logicOp,
-                            VALIDATION_ERROR_UNDEFINED);
+                            AllVkLogicOpEnums, pCreateInfos[i].pColorBlendState->logicOp, VALIDATION_ERROR_0f4004be);
                     }
                 }
             }
