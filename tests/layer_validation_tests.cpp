@@ -3823,8 +3823,8 @@ TEST_F(VkLayerTest, RenderPassBarrierConflicts) {
                          VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_DEPENDENCY_BY_REGION_BIT, 1, &mem_barrier, 0, nullptr, 0,
                          nullptr);
     m_errorMonitor->VerifyFound();
-    // Mis-match mem barrier dst access mask
-    mem_barrier.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+    // Mis-match mem barrier dst access mask. Also set srcAccessMask to 0 which should not cause an error
+    mem_barrier.srcAccessMask = 0;
     mem_barrier.dstAccessMask = VK_ACCESS_HOST_WRITE_BIT;
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_1b800930);
     vkCmdPipelineBarrier(m_commandBuffer->handle(), VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
