@@ -36,6 +36,10 @@ extern "C" {
 typedef void(VKAPI_PTR *PFN_vkSetPhysicalDeviceLimitsEXT)(VkPhysicalDevice physicalDevice, const VkPhysicalDeviceLimits *newLimits);
 typedef void(VKAPI_PTR *PFN_vkGetOriginalPhysicalDeviceLimitsEXT)(VkPhysicalDevice physicalDevice,
                                                                   const VkPhysicalDeviceLimits *orgLimits);
+typedef void(VKAPI_PTR *PFN_vkGetOriginalPhysicalDeviceFormatPropertiesEXT)(VkPhysicalDevice physicalDevice, VkFormat format,
+                                                                            const VkFormatProperties *properties);
+typedef void(VKAPI_PTR *PFN_vkSetPhysicalDeviceFormatPropertiesEXT)(VkPhysicalDevice physicalDevice, VkFormat format,
+                                                                    const VkFormatProperties newProperties);
 #ifdef __cplusplus
 }  // extern "C"
 #endif  // __cplusplus
