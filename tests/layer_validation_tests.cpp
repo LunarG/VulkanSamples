@@ -3988,6 +3988,113 @@ TEST_F(VkLayerTest, ImageBarrierSubpassConflict) {
     vkDestroyRenderPass(m_device->device(), rp, nullptr);
 }
 
+TEST_F(VkPositiveLayerTest, SecondaryCommandBufferBarrier) {
+    TEST_DESCRIPTION("Add a pipeline barrier in a secondary command buffer");
+    ASSERT_NO_FATAL_FAILURE(Init());
+
+    // A renderpass with a single subpass that declared a self-dependency
+    VkAttachmentDescription attach[] = {
+        {0, VK_FORMAT_R8G8B8A8_UNORM, VK_SAMPLE_COUNT_1_BIT, VK_ATTACHMENT_LOAD_OP_DONT_CARE, VK_ATTACHMENT_STORE_OP_DONT_CARE,
+         VK_ATTACHMENT_LOAD_OP_DONT_CARE, VK_ATTACHMENT_STORE_OP_DONT_CARE, VK_IMAGE_LAYOUT_UNDEFINED,
+         VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL},
+    };
+    VkAttachmentReference ref = {0, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL};
+    VkSubpassDescription subpasses[] = {
+        {0, VK_PIPELINE_BIND_POINT_GRAPHICS, 0, nullptr, 1, &ref, nullptr, nullptr, 0, nullptr},
+    };
+    VkSubpassDependency dep = {0,
+                               0,
+                               VK_PIPELINE_STAGE_HOST_BIT,
+                               VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
+                               VK_ACCESS_HOST_WRITE_BIT,
+                               VK_ACCESS_SHADER_WRITE_BIT,
+                               VK_DEPENDENCY_BY_REGION_BIT};
+    VkRenderPassCreateInfo rpci = {VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO, nullptr, 0, 1, attach, 1, subpasses, 1, &dep};
+    VkRenderPass rp;
+
+    VkResult err = vkCreateRenderPass(m_device->device(), &rpci, nullptr, &rp);
+    ASSERT_VK_SUCCESS(err);
+
+    VkImageObj image(m_device);
+    image.Init(32, 32, 1, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT, VK_IMAGE_TILING_OPTIMAL, 0);
+    VkImageView imageView = image.targetView(VK_FORMAT_R8G8B8A8_UNORM);
+
+    VkFramebufferCreateInfo fbci = {VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO, nullptr, 0, rp, 1, &imageView, 32, 32, 1};
+    VkFramebuffer fb;
+    err = vkCreateFramebuffer(m_device->device(), &fbci, nullptr, &fb);
+    ASSERT_VK_SUCCESS(err);
+
+    m_commandBuffer->begin();
+
+    VkRenderPassBeginInfo rpbi = {VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
+                                  nullptr,
+                                  rp,
+                                  fb,
+                                  {{
+                                       0,
+                                       0,
+                                   },
+                                   {32, 32}},
+                                  0,
+                                  nullptr};
+
+    vkCmdBeginRenderPass(m_commandBuffer->handle(), &rpbi, VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS);
+
+    VkCommandPoolObj pool(m_device, m_device->graphics_queue_node_index_, VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT);
+    VkCommandBufferObj secondary(m_device, &pool, VK_COMMAND_BUFFER_LEVEL_SECONDARY);
+
+    VkCommandBufferInheritanceInfo cbii = {VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_INFO,
+                                           nullptr,
+                                           rp,
+                                           0,
+                                           VK_NULL_HANDLE,  // Set to NULL FB handle intentionally to flesh out any errors
+                                           VK_FALSE,
+                                           0,
+                                           0};
+    VkCommandBufferBeginInfo cbbi = {VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO, nullptr,
+                                     VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT | VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT,
+                                     &cbii};
+    vkBeginCommandBuffer(secondary.handle(), &cbbi);
+    VkMemoryBarrier mem_barrier = {};
+    mem_barrier.sType = VK_STRUCTURE_TYPE_MEMORY_BARRIER;
+    mem_barrier.pNext = NULL;
+    mem_barrier.srcAccessMask = VK_ACCESS_HOST_WRITE_BIT;
+    mem_barrier.dstAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
+    vkCmdPipelineBarrier(secondary.handle(), VK_PIPELINE_STAGE_HOST_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
+                         VK_DEPENDENCY_BY_REGION_BIT, 1, &mem_barrier, 0, nullptr, 0, nullptr);
+    VkImageMemoryBarrier img_barrier = {};
+    img_barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+    img_barrier.srcAccessMask = VK_ACCESS_HOST_WRITE_BIT;
+    img_barrier.dstAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
+    img_barrier.oldLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+    img_barrier.newLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+    img_barrier.image = image.handle();
+    img_barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+    img_barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+    img_barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    img_barrier.subresourceRange.baseArrayLayer = 0;
+    img_barrier.subresourceRange.baseMipLevel = 0;
+    img_barrier.subresourceRange.layerCount = 1;
+    img_barrier.subresourceRange.levelCount = 1;
+    vkCmdPipelineBarrier(secondary.handle(), VK_PIPELINE_STAGE_HOST_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
+                         VK_DEPENDENCY_BY_REGION_BIT, 0, nullptr, 0, nullptr, 1, &img_barrier);
+    secondary.end();
+
+    vkCmdExecuteCommands(m_commandBuffer->handle(), 1, &secondary.handle());
+    vkCmdEndRenderPass(m_commandBuffer->handle());
+    m_commandBuffer->end();
+
+    VkSubmitInfo submit_info = {};
+    submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+    submit_info.commandBufferCount = 1;
+    submit_info.pCommandBuffers = &m_commandBuffer->handle();
+    vkQueueSubmit(m_device->m_queue, 1, &submit_info, VK_NULL_HANDLE);
+    vkQueueWaitIdle(m_device->m_queue);
+
+    vkDestroyFramebuffer(m_device->device(), fb, nullptr);
+    vkDestroyRenderPass(m_device->device(), rp, nullptr);
+}
+
 TEST_F(VkLayerTest, RenderPassInvalidRenderArea) {
     TEST_DESCRIPTION(
         "Generate INVALID_RENDER_AREA error by beginning renderpass"
