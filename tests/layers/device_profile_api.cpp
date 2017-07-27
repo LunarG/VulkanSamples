@@ -36,11 +36,11 @@ static std::mutex global_lock;
 static uint32_t loader_layer_if_version = CURRENT_LOADER_LAYER_INTERFACE_VERSION;
 
 struct device_data {
+    VkInstance instance;
     VkPhysicalDeviceProperties phy_device_props;
 };
 
 static std::unordered_map<VkPhysicalDevice, struct device_data> device_profile_api_dev_data_map;
-static std::unordered_map<VkPhysicalDevice, struct device_data> device_profile_api_dev_org_data_map;
 
 // device_profile_api Layer EXT APIs
 typedef void(VKAPI_PTR *PFN_vkGetOriginalPhysicalDeviceLimitsEXT)(VkPhysicalDevice physicalDevice,
@@ -50,11 +50,14 @@ typedef void(VKAPI_PTR *PFN_vkSetPhysicalDeviceLimitsEXT)(VkPhysicalDevice physi
 
 VKAPI_ATTR void VKAPI_CALL GetOriginalPhysicalDeviceLimitsEXT(VkPhysicalDevice physicalDevice, VkPhysicalDeviceLimits *orgLimits) {
     std::lock_guard<std::mutex> lock(global_lock);
+    auto device_profile_api_data_it = device_profile_api_dev_data_map.find(physicalDevice);
+    if (device_profile_api_data_it != device_profile_api_dev_data_map.end()) {
+        layer_data *device_profile_data = GetLayerDataPtr(get_dispatch_key(device_profile_api_dev_data_map[physicalDevice].instance), layer_data_map);
 
-    // search if we got the device limits for this device and stored in device_profile_api layer
-    auto device_profile_api_data_it = device_profile_api_dev_org_data_map.find(physicalDevice);
-    if (device_profile_api_data_it != device_profile_api_dev_org_data_map.end()) {
-        memcpy( orgLimits, &(device_profile_api_dev_org_data_map[physicalDevice].phy_device_props.limits), sizeof(VkPhysicalDeviceLimits));
+        VkPhysicalDeviceProperties props;
+        device_profile_data->instance_dispatch_table
+                 ->GetPhysicalDeviceProperties(physicalDevice, &props);
+        memcpy(orgLimits, &props.limits, sizeof(VkPhysicalDeviceLimits));
     }
 }
 
@@ -99,15 +102,12 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateInstance(const VkInstanceCreateInfo *pCreat
     VkPhysicalDevice *physical_devices = (VkPhysicalDevice *)malloc(sizeof(physical_devices[0]) * physical_device_count);
     result = device_profile_data->instance_dispatch_table->EnumeratePhysicalDevices(*pInstance, &physical_device_count, physical_devices);
 
-    // Get original physical device props
     for (uint8_t i = 0; i < physical_device_count; i++) {
-        auto device_profile_api_data_it = device_profile_api_dev_org_data_map.find(physical_devices[i]);
-        if (device_profile_api_data_it == device_profile_api_dev_org_data_map.end()) {
-            VkPhysicalDeviceProperties props;
+        auto device_profile_api_data_it = device_profile_api_dev_data_map.find(physical_devices[i]);
+        if (device_profile_api_data_it == device_profile_api_dev_data_map.end()) {
             device_profile_data->instance_dispatch_table
-                     ->GetPhysicalDeviceProperties(physical_devices[i], &props);
-            device_profile_api_dev_org_data_map[physical_devices[i]].phy_device_props = props;
-            device_profile_api_dev_data_map[physical_devices[i]].phy_device_props = props;
+                     ->GetPhysicalDeviceProperties(physical_devices[i], &device_profile_api_dev_data_map[physical_devices[i]].phy_device_props);
+            device_profile_api_dev_data_map[physical_devices[i]].instance = *pInstance;
             }
     }
     return result;
@@ -121,7 +121,7 @@ VKAPI_ATTR void VKAPI_CALL GetPhysicalDeviceProperties(VkPhysicalDevice physical
         // Search if we got the device limits for this device and stored in device_profile_api layer
         auto device_profile_api_data_it = device_profile_api_dev_data_map.find(physicalDevice);
         if (device_profile_api_data_it != device_profile_api_dev_data_map.end()) {
-            memcpy(pProperties, &device_profile_api_dev_data_map[physicalDevice], sizeof(VkPhysicalDeviceProperties));
+            memcpy(pProperties, &device_profile_api_dev_data_map[physicalDevice].phy_device_props, sizeof(VkPhysicalDeviceProperties));
         }
     }
 }
