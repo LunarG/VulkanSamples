@@ -463,8 +463,8 @@ class ParamCheckerOutputGenerator(OutputGenerator):
                 enum_entry = 'const std::vector<%s> All%sEnums = {' % (groupName, groupName)
                 for enum in groupElem:
                     name = enum.get('name')
-                    if name is not None:
-                        enum_entry += '%s, ' % enum.get('name')
+                    if name is not None and enum.get('supported') != 'disabled':
+                        enum_entry += '%s, ' % name
                 enum_entry += '};\n'
                 self.enumValueLists += enum_entry
     #
