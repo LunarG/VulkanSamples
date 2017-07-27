@@ -4103,6 +4103,110 @@ TEST_F(VkLayerTest, ImageBarrierSubpassConflict) {
     vkDestroyRenderPass(m_device->device(), rp, nullptr);
 }
 
+#ifdef _WIN32
+TEST_F(VkLayerTest, TemporaryExternalSemaphore) {
+    // Check for external semaphore instance extensions
+    if (InstanceExtensionSupported(VK_KHR_EXTERNAL_SEMAPHORE_CAPABILITIES_EXTENSION_NAME)) {
+        m_instance_extension_names.push_back(VK_KHR_EXTERNAL_SEMAPHORE_CAPABILITIES_EXTENSION_NAME);
+        m_instance_extension_names.push_back(VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME);
+    } else {
+        printf("             External semaphore extension not supported, skipping test\n");
+        return;
+    }
+    ASSERT_NO_FATAL_FAILURE(InitFramework(myDbgFunc, m_errorMonitor));
+
+    // Check for external semaphore device extensions
+    if (DeviceExtensionSupported(gpu(), nullptr, VK_KHR_EXTERNAL_SEMAPHORE_WIN32_EXTENSION_NAME)) {
+        m_device_extension_names.push_back(VK_KHR_EXTERNAL_SEMAPHORE_WIN32_EXTENSION_NAME);
+        m_device_extension_names.push_back(VK_KHR_EXTERNAL_SEMAPHORE_EXTENSION_NAME);
+    } else {
+        printf("             External semaphore extension not supported, skipping test\n");
+        return;
+    }
+    ASSERT_NO_FATAL_FAILURE(InitState());
+
+    // Check for external semaphore import and export capability
+    VkPhysicalDeviceExternalSemaphoreInfoKHR esi = {VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_EXTERNAL_SEMAPHORE_INFO_KHR, nullptr,
+                                                    VK_EXTERNAL_SEMAPHORE_HANDLE_TYPE_OPAQUE_WIN32_KMT_BIT_KHR};
+    VkExternalSemaphorePropertiesKHR esp = {VK_STRUCTURE_TYPE_EXTERNAL_SEMAPHORE_PROPERTIES_KHR, nullptr};
+    auto vkGetPhysicalDeviceExternalSemaphorePropertiesKHR =
+        (PFN_vkGetPhysicalDeviceExternalSemaphorePropertiesKHR)vkGetInstanceProcAddr(
+            instance(), "vkGetPhysicalDeviceExternalSemaphorePropertiesKHR");
+    vkGetPhysicalDeviceExternalSemaphorePropertiesKHR(gpu(), &esi, &esp);
+
+    if (!(esp.externalSemaphoreFeatures & VK_EXTERNAL_SEMAPHORE_FEATURE_EXPORTABLE_BIT_KHR) ||
+        !(esp.externalSemaphoreFeatures & VK_EXTERNAL_SEMAPHORE_FEATURE_IMPORTABLE_BIT_KHR)) {
+        printf("             External semaphore does not support importing and exporting, skipping test\n");
+        return;
+    }
+
+    VkResult err;
+
+    // Create a semaphore to export payload from
+    VkExportSemaphoreCreateInfoKHR esci = {VK_STRUCTURE_TYPE_EXPORT_SEMAPHORE_CREATE_INFO_KHR, nullptr,
+                                           VK_EXTERNAL_SEMAPHORE_HANDLE_TYPE_OPAQUE_WIN32_KMT_BIT_KHR};
+    VkSemaphoreCreateInfo sci = {VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO, &esci, 0};
+
+    VkSemaphore exportSemaphore;
+    err = vkCreateSemaphore(m_device->device(), &sci, nullptr, &exportSemaphore);
+    ASSERT_VK_SUCCESS(err);
+
+    // Export semaphore payload to an opaque handle
+    HANDLE handle = nullptr;
+    VkSemaphoreGetWin32HandleInfoKHR ghi = {VK_STRUCTURE_TYPE_SEMAPHORE_GET_WIN32_HANDLE_INFO_KHR, nullptr, exportSemaphore,
+                                            VK_EXTERNAL_SEMAPHORE_HANDLE_TYPE_OPAQUE_WIN32_KMT_BIT_KHR};
+    auto vkGetSemaphoreWin32HandleKHR =
+        (PFN_vkGetSemaphoreWin32HandleKHR)vkGetDeviceProcAddr(m_device->device(), "vkGetSemaphoreWin32HandleKHR");
+    err = vkGetSemaphoreWin32HandleKHR(m_device->device(), &ghi, &handle);
+    ASSERT_VK_SUCCESS(err);
+
+    // Create a semaphore to import payload into
+    sci.pNext = nullptr;
+    VkSemaphore importSemaphore;
+    err = vkCreateSemaphore(m_device->device(), &sci, nullptr, &importSemaphore);
+    ASSERT_VK_SUCCESS(err);
+
+    // Import opaque handle exported above *temporarily*
+    VkImportSemaphoreWin32HandleInfoKHR ihi = {
+        VK_STRUCTURE_TYPE_IMPORT_SEMAPHORE_WIN32_HANDLE_INFO_KHR,   nullptr, importSemaphore, VK_SEMAPHORE_IMPORT_TEMPORARY_BIT_KHR,
+        VK_EXTERNAL_SEMAPHORE_HANDLE_TYPE_OPAQUE_WIN32_KMT_BIT_KHR, handle,  nullptr};
+    auto vkImportSemaphoreWin32HandleKHR =
+        (PFN_vkImportSemaphoreWin32HandleKHR)vkGetDeviceProcAddr(m_device->device(), "vkImportSemaphoreWin32HandleKHR");
+    err = vkImportSemaphoreWin32HandleKHR(m_device->device(), &ihi);
+    ASSERT_VK_SUCCESS(err);
+
+    // Wait on the imported semaphore twice in vkQueueSubmit, the second wait should be an error
+    VkPipelineStageFlags flags = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
+    VkSubmitInfo si[] = {
+        {VK_STRUCTURE_TYPE_SUBMIT_INFO, nullptr, 0, nullptr, &flags, 0, nullptr, 1, &exportSemaphore},
+        {VK_STRUCTURE_TYPE_SUBMIT_INFO, nullptr, 1, &importSemaphore, &flags, 0, nullptr, 0, nullptr},
+        {VK_STRUCTURE_TYPE_SUBMIT_INFO, nullptr, 0, nullptr, &flags, 0, nullptr, 1, &exportSemaphore},
+        {VK_STRUCTURE_TYPE_SUBMIT_INFO, nullptr, 1, &importSemaphore, &flags, 0, nullptr, 0, nullptr},
+    };
+	m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, "has no way to be signaled");
+    vkQueueSubmit(m_device->m_queue, 4, si, VK_NULL_HANDLE);
+	m_errorMonitor->VerifyFound();
+
+    // Wait on the imported semaphore twice in vkQueueBindSparse, the second wait should be an error
+    VkBindSparseInfo bi[] = {
+        {VK_STRUCTURE_TYPE_BIND_SPARSE_INFO, nullptr, 0, nullptr, 0, nullptr, 0, nullptr, 0, nullptr, 1, &exportSemaphore},
+        {VK_STRUCTURE_TYPE_BIND_SPARSE_INFO, nullptr, 1, &importSemaphore, 0, nullptr, 0, nullptr, 0, nullptr, 0, nullptr},
+        {VK_STRUCTURE_TYPE_BIND_SPARSE_INFO, nullptr, 0, nullptr, 0, nullptr, 0, nullptr, 0, nullptr, 1, &exportSemaphore},
+        {VK_STRUCTURE_TYPE_BIND_SPARSE_INFO, nullptr, 1, &importSemaphore, 0, nullptr, 0, nullptr, 0, nullptr, 0, nullptr},
+    };
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, "has no way to be signaled");
+    vkQueueBindSparse(m_device->m_queue, 4, bi, VK_NULL_HANDLE);
+	m_errorMonitor->VerifyFound();
+
+    // Cleanup
+    err = vkQueueWaitIdle(m_device->m_queue);
+    ASSERT_VK_SUCCESS(err);
+    vkDestroySemaphore(m_device->device(), exportSemaphore, nullptr);
+    vkDestroySemaphore(m_device->device(), importSemaphore, nullptr);
+}
+#endif
+
+
 TEST_F(VkPositiveLayerTest, SecondaryCommandBufferBarrier) {
     TEST_DESCRIPTION("Add a pipeline barrier in a secondary command buffer");
     ASSERT_NO_FATAL_FAILURE(Init());
@@ -24922,6 +25026,110 @@ TEST_F(VkPositiveLayerTest, LongSemaphoreChain) {
 
     m_errorMonitor->VerifyNotFound();
 }
+
+#ifdef _WIN32
+TEST_F(VkPositiveLayerTest, ExternalSemaphore) {
+    // Check for external semaphore instance extensions
+    if (InstanceExtensionSupported(VK_KHR_EXTERNAL_SEMAPHORE_CAPABILITIES_EXTENSION_NAME)) {
+        m_instance_extension_names.push_back(VK_KHR_EXTERNAL_SEMAPHORE_CAPABILITIES_EXTENSION_NAME);
+        m_instance_extension_names.push_back(VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME);
+    } else {
+        printf("             External semaphore extension not supported, skipping test\n");
+        return;
+    }
+    ASSERT_NO_FATAL_FAILURE(InitFramework(myDbgFunc, m_errorMonitor));
+
+    // Check for external semaphore device extensions
+    if (DeviceExtensionSupported(gpu(), nullptr, VK_KHR_EXTERNAL_SEMAPHORE_WIN32_EXTENSION_NAME)) {
+        m_device_extension_names.push_back(VK_KHR_EXTERNAL_SEMAPHORE_WIN32_EXTENSION_NAME);
+        m_device_extension_names.push_back(VK_KHR_EXTERNAL_SEMAPHORE_EXTENSION_NAME);
+    } else {
+        printf("             External semaphore extension not supported, skipping test\n");
+        return;
+    }
+    ASSERT_NO_FATAL_FAILURE(InitState());
+
+    // Check for external semaphore import and export capability
+    VkPhysicalDeviceExternalSemaphoreInfoKHR esi = {VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_EXTERNAL_SEMAPHORE_INFO_KHR, nullptr,
+                                                    VK_EXTERNAL_SEMAPHORE_HANDLE_TYPE_OPAQUE_WIN32_KMT_BIT_KHR};
+    VkExternalSemaphorePropertiesKHR esp = {VK_STRUCTURE_TYPE_EXTERNAL_SEMAPHORE_PROPERTIES_KHR, nullptr};
+    auto vkGetPhysicalDeviceExternalSemaphorePropertiesKHR =
+        (PFN_vkGetPhysicalDeviceExternalSemaphorePropertiesKHR)vkGetInstanceProcAddr(
+            instance(), "vkGetPhysicalDeviceExternalSemaphorePropertiesKHR");
+    vkGetPhysicalDeviceExternalSemaphorePropertiesKHR(gpu(), &esi, &esp);
+
+    if (!(esp.externalSemaphoreFeatures & VK_EXTERNAL_SEMAPHORE_FEATURE_EXPORTABLE_BIT_KHR) ||
+        !(esp.externalSemaphoreFeatures & VK_EXTERNAL_SEMAPHORE_FEATURE_IMPORTABLE_BIT_KHR)) {
+        printf("             External semaphore does not support importing and exporting, skipping test\n");
+        return;
+    }
+
+    VkResult err;
+    m_errorMonitor->ExpectSuccess();
+
+    // Create a semaphore to export payload from
+    VkExportSemaphoreCreateInfoKHR esci = {VK_STRUCTURE_TYPE_EXPORT_SEMAPHORE_CREATE_INFO_KHR, nullptr,
+                                           VK_EXTERNAL_SEMAPHORE_HANDLE_TYPE_OPAQUE_WIN32_KMT_BIT_KHR};
+    VkSemaphoreCreateInfo sci = {VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO, &esci, 0};
+
+    VkSemaphore exportSemaphore;
+    err = vkCreateSemaphore(m_device->device(), &sci, nullptr, &exportSemaphore);
+    ASSERT_VK_SUCCESS(err);
+
+    // Export semaphore payload to an opaque handle
+    HANDLE handle = nullptr;
+    VkSemaphoreGetWin32HandleInfoKHR ghi = {VK_STRUCTURE_TYPE_SEMAPHORE_GET_WIN32_HANDLE_INFO_KHR, nullptr, exportSemaphore,
+                                            VK_EXTERNAL_SEMAPHORE_HANDLE_TYPE_OPAQUE_WIN32_KMT_BIT_KHR};
+    auto vkGetSemaphoreWin32HandleKHR =
+        (PFN_vkGetSemaphoreWin32HandleKHR)vkGetDeviceProcAddr(m_device->device(), "vkGetSemaphoreWin32HandleKHR");
+    err = vkGetSemaphoreWin32HandleKHR(m_device->device(), &ghi, &handle);
+    ASSERT_VK_SUCCESS(err);
+
+    // Create a semaphore to import payload into
+    sci.pNext = nullptr;
+    VkSemaphore importSemaphore;
+    err = vkCreateSemaphore(m_device->device(), &sci, nullptr, &importSemaphore);
+    ASSERT_VK_SUCCESS(err);
+
+    // Import opaque handle exported above
+    VkImportSemaphoreWin32HandleInfoKHR ihi = {
+        VK_STRUCTURE_TYPE_IMPORT_SEMAPHORE_WIN32_HANDLE_INFO_KHR,   nullptr, importSemaphore, 0,
+        VK_EXTERNAL_SEMAPHORE_HANDLE_TYPE_OPAQUE_WIN32_KMT_BIT_KHR, handle,  nullptr};
+    auto vkImportSemaphoreWin32HandleKHR =
+        (PFN_vkImportSemaphoreWin32HandleKHR)vkGetDeviceProcAddr(m_device->device(), "vkImportSemaphoreWin32HandleKHR");
+    err = vkImportSemaphoreWin32HandleKHR(m_device->device(), &ihi);
+    ASSERT_VK_SUCCESS(err);
+
+    // Signal the exported semaphore and wait on the imported semaphore
+    VkPipelineStageFlags flags = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
+    VkSubmitInfo si[] = {
+        {VK_STRUCTURE_TYPE_SUBMIT_INFO, nullptr, 0, nullptr, &flags, 0, nullptr, 1, &exportSemaphore},
+        {VK_STRUCTURE_TYPE_SUBMIT_INFO, nullptr, 1, &importSemaphore, &flags, 0, nullptr, 0, nullptr},
+        {VK_STRUCTURE_TYPE_SUBMIT_INFO, nullptr, 0, nullptr, &flags, 0, nullptr, 1, &exportSemaphore},
+        {VK_STRUCTURE_TYPE_SUBMIT_INFO, nullptr, 1, &importSemaphore, &flags, 0, nullptr, 0, nullptr},
+    };
+    err = vkQueueSubmit(m_device->m_queue, 4, si, VK_NULL_HANDLE);
+    ASSERT_VK_SUCCESS(err);
+
+    // Signal the imported semaphore and wait on the exported semaphore
+    VkBindSparseInfo bi[] = {
+        {VK_STRUCTURE_TYPE_BIND_SPARSE_INFO, nullptr, 0, nullptr, 0, nullptr, 0, nullptr, 0, nullptr, 1, &importSemaphore},
+        {VK_STRUCTURE_TYPE_BIND_SPARSE_INFO, nullptr, 1, &exportSemaphore, 0, nullptr, 0, nullptr, 0, nullptr, 0, nullptr},
+        {VK_STRUCTURE_TYPE_BIND_SPARSE_INFO, nullptr, 0, nullptr, 0, nullptr, 0, nullptr, 0, nullptr, 1, &importSemaphore},
+        {VK_STRUCTURE_TYPE_BIND_SPARSE_INFO, nullptr, 1, &exportSemaphore, 0, nullptr, 0, nullptr, 0, nullptr, 0, nullptr},
+    };
+    err = vkQueueBindSparse(m_device->m_queue, 4, bi, VK_NULL_HANDLE);
+    ASSERT_VK_SUCCESS(err);
+
+    // Cleanup
+    err = vkQueueWaitIdle(m_device->m_queue);
+    ASSERT_VK_SUCCESS(err);
+    vkDestroySemaphore(m_device->device(), exportSemaphore, nullptr);
+    vkDestroySemaphore(m_device->device(), importSemaphore, nullptr);
+
+    m_errorMonitor->VerifyNotFound();
+}
+#endif
 
 extern "C" void *ReleaseNullFence(void *arg) {
     struct thread_data_struct *data = (struct thread_data_struct *)arg;
