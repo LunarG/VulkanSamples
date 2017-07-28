@@ -1752,7 +1752,7 @@ static void resetCB(layer_data *dev_data, const VkCommandBuffer cb) {
         pCB->updateImages.clear();
         pCB->updateBuffers.clear();
         clear_cmd_buf_and_mem_references(dev_data, pCB);
-        pCB->validate_functions.clear();
+        pCB->queue_submit_functions.clear();
         pCB->cmd_execute_commands_functions.clear();
         pCB->eventUpdates.clear();
         pCB->queryUpdates.clear();
@@ -2687,7 +2687,7 @@ static bool PreCallValidateQueueSubmit(layer_data *dev_data, VkQueue queue, uint
                 }
 
                 // Call submit-time functions to validate/update state
-                for (auto &function : cb_node->validate_functions) {
+                for (auto &function : cb_node->queue_submit_functions) {
                     skip |= function();
                 }
                 for (auto &function : cb_node->eventUpdates) {
@@ -5498,7 +5498,7 @@ VKAPI_ATTR void VKAPI_CALL CmdBindIndexBuffer(VkCommandBuffer commandBuffer, VkB
         std::function<bool()> function = [=]() {
             return ValidateBufferMemoryIsValid(dev_data, buffer_state, "vkCmdBindIndexBuffer()");
         };
-        cb_node->validate_functions.push_back(function);
+        cb_node->queue_submit_functions.push_back(function);
         VkDeviceSize offset_align = 0;
         switch (indexType) {
             case VK_INDEX_TYPE_UINT16:
@@ -5556,7 +5556,7 @@ VKAPI_ATTR void VKAPI_CALL CmdBindVertexBuffers(VkCommandBuffer commandBuffer, u
             std::function<bool()> function = [=]() {
                 return ValidateBufferMemoryIsValid(dev_data, buffer_state, "vkCmdBindVertexBuffers()");
             };
-            cb_node->validate_functions.push_back(function);
+            cb_node->queue_submit_functions.push_back(function);
             if (pOffsets[i] >= buffer_state->createInfo.size) {
                 skip |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT,
                                 HandleToUint64(buffer_state->buffer), __LINE__, VALIDATION_ERROR_182004e4, "DS",
@@ -5584,7 +5584,7 @@ static void MarkStoreImagesAndBuffersAsWritten(layer_data *dev_data, GLOBAL_CB_N
             SetImageMemoryValid(dev_data, image_state, true);
             return false;
         };
-        pCB->validate_functions.push_back(function);
+        pCB->queue_submit_functions.push_back(function);
     }
     for (auto buffer : pCB->updateBuffers) {
         auto buffer_state = GetBufferState(dev_data, buffer);
@@ -5593,7 +5593,7 @@ static void MarkStoreImagesAndBuffersAsWritten(layer_data *dev_data, GLOBAL_CB_N
             SetBufferMemoryValid(dev_data, buffer_state, true);
             return false;
         };
-        pCB->validate_functions.push_back(function);
+        pCB->queue_submit_functions.push_back(function);
     }
 }
 
@@ -5961,7 +5961,7 @@ static void PostCallRecordCmdUpdateBuffer(layer_data *device_data, GLOBAL_CB_NOD
         SetBufferMemoryValid(device_data, dst_buffer_state, true);
         return false;
     };
-    cb_state->validate_functions.push_back(function);
+    cb_state->queue_submit_functions.push_back(function);
 }
 
 VKAPI_ATTR void VKAPI_CALL CmdUpdateBuffer(VkCommandBuffer commandBuffer, VkBuffer dstBuffer, VkDeviceSize dstOffset,
@@ -6988,7 +6988,7 @@ VKAPI_ATTR void VKAPI_CALL CmdCopyQueryPoolResults(VkCommandBuffer commandBuffer
     lock.lock();
     if (cb_node && dst_buff_state) {
         AddCommandBufferBindingBuffer(dev_data, cb_node, dst_buff_state);
-        cb_node->validate_functions.emplace_back([=]() {
+        cb_node->queue_submit_functions.emplace_back([=]() {
             SetBufferMemoryValid(dev_data, dst_buff_state, true);
             return false;
         });
@@ -7866,28 +7866,28 @@ VKAPI_ATTR void VKAPI_CALL CmdBeginRenderPass(VkCommandBuffer commandBuffer, con
                         SetImageMemoryValid(dev_data, GetImageState(dev_data, fb_info.image), true);
                         return false;
                     };
-                    cb_node->validate_functions.push_back(function);
+                    cb_node->queue_submit_functions.push_back(function);
                 } else if (FormatSpecificLoadAndStoreOpSettings(pAttachment->format, pAttachment->loadOp,
                                                                 pAttachment->stencilLoadOp, VK_ATTACHMENT_LOAD_OP_DONT_CARE)) {
                     std::function<bool()> function = [=]() {
                         SetImageMemoryValid(dev_data, GetImageState(dev_data, fb_info.image), false);
                         return false;
                     };
-                    cb_node->validate_functions.push_back(function);
+                    cb_node->queue_submit_functions.push_back(function);
                 } else if (FormatSpecificLoadAndStoreOpSettings(pAttachment->format, pAttachment->loadOp,
                                                                 pAttachment->stencilLoadOp, VK_ATTACHMENT_LOAD_OP_LOAD)) {
                     std::function<bool()> function = [=]() {
                         return ValidateImageMemoryIsValid(dev_data, GetImageState(dev_data, fb_info.image),
                                                           "vkCmdBeginRenderPass()");
                     };
-                    cb_node->validate_functions.push_back(function);
+                    cb_node->queue_submit_functions.push_back(function);
                 }
                 if (render_pass_state->attachment_first_read[i]) {
                     std::function<bool()> function = [=]() {
                         return ValidateImageMemoryIsValid(dev_data, GetImageState(dev_data, fb_info.image),
                                                           "vkCmdBeginRenderPass()");
                     };
-                    cb_node->validate_functions.push_back(function);
+                    cb_node->queue_submit_functions.push_back(function);
                 }
             }
             if (clear_op_size > pRenderPassBegin->clearValueCount) {
@@ -7990,14 +7990,14 @@ VKAPI_ATTR void VKAPI_CALL CmdEndRenderPass(VkCommandBuffer commandBuffer) {
                         SetImageMemoryValid(dev_data, GetImageState(dev_data, fb_info.image), true);
                         return false;
                     };
-                    pCB->validate_functions.push_back(function);
+                    pCB->queue_submit_functions.push_back(function);
                 } else if (FormatSpecificLoadAndStoreOpSettings(pAttachment->format, pAttachment->storeOp,
                                                                 pAttachment->stencilStoreOp, VK_ATTACHMENT_STORE_OP_DONT_CARE)) {
                     std::function<bool()> function = [=]() {
                         SetImageMemoryValid(dev_data, GetImageState(dev_data, fb_info.image), false);
                         return false;
                     };
-                    pCB->validate_functions.push_back(function);
+                    pCB->queue_submit_functions.push_back(function);
                 }
             }
         }
