@@ -1753,7 +1753,7 @@ static void resetCB(layer_data *dev_data, const VkCommandBuffer cb) {
         pCB->updateBuffers.clear();
         clear_cmd_buf_and_mem_references(dev_data, pCB);
         pCB->validate_functions.clear();
-        pCB->secondary_validate_functions.clear();
+        pCB->cmd_execute_commands_functions.clear();
         pCB->eventUpdates.clear();
         pCB->queryUpdates.clear();
 
@@ -6156,10 +6156,10 @@ static VkPipelineStageFlags ExpandPipelineStageFlags(VkPipelineStageFlags inflag
 
 // Verify image barrier image state and that the image is consistent with FB image
 static bool ValidateImageBarrierImage(layer_data *device_data, const char *funcName, GLOBAL_CB_NODE const *cb_state,
-                                      uint32_t active_subpass, const safe_VkSubpassDescription &sub_desc, uint64_t rp_handle,
-                                      uint32_t img_index, const VkImageMemoryBarrier &img_barrier) {
+                                      VkFramebuffer framebuffer, uint32_t active_subpass, const safe_VkSubpassDescription &sub_desc,
+                                      uint64_t rp_handle, uint32_t img_index, const VkImageMemoryBarrier &img_barrier) {
     bool skip = false;
-    const auto &fb_state = GetFramebufferState(device_data, cb_state->activeFramebuffer);
+    const auto &fb_state = GetFramebufferState(device_data, framebuffer);
     assert(fb_state);
     const auto img_bar_image = img_barrier.image;
     bool image_match = false;
@@ -6275,12 +6275,13 @@ static bool ValidateRenderPassImageBarriers(layer_data *device_data, const char 
         if (VK_NULL_HANDLE == cb_state->activeFramebuffer) {
             assert(VK_COMMAND_BUFFER_LEVEL_SECONDARY == cb_state->createInfo.level);
             // Secondary CB case w/o FB specified delay validation
-            cb_state->secondary_validate_functions.emplace_back([=]() {
-                return ValidateImageBarrierImage(device_data, funcName, cb_state, active_subpass, sub_desc, rp_handle, i,
+            cb_state->cmd_execute_commands_functions.emplace_back([=](VkFramebuffer fb) {
+                return ValidateImageBarrierImage(device_data, funcName, cb_state, fb, active_subpass, sub_desc, rp_handle, i,
                                                  img_barrier);
             });
         } else {
-            skip |= ValidateImageBarrierImage(device_data, funcName, cb_state, active_subpass, sub_desc, rp_handle, i, img_barrier);
+            skip |= ValidateImageBarrierImage(device_data, funcName, cb_state, cb_state->activeFramebuffer, active_subpass,
+                                              sub_desc, rp_handle, i, img_barrier);
         }
     }
     return skip;
@@ -8274,11 +8275,9 @@ VKAPI_ATTR void VKAPI_CALL CmdExecuteCommands(VkCommandBuffer commandBuffer, uin
                         //  If framebuffer for secondary CB is not NULL, then it must match active FB from primaryCB
                         skip |= validateFramebuffer(dev_data, commandBuffer, pCB, pCommandBuffers[i], pSubCB);
                         if (VK_NULL_HANDLE == pSubCB->activeFramebuffer) {
-                            // This is a state update during validation which is not ideal
-                            //  Inherit primary's activeFramebuffer and run any validate functions
-                            pSubCB->activeFramebuffer = pCB->activeFramebuffer;
-                            for (auto &function : pSubCB->secondary_validate_functions) {
-                                skip |= function();
+                            //  Inherit primary's activeFramebuffer and while running validate functions
+                            for (auto &function : pSubCB->cmd_execute_commands_functions) {
+                                skip |= function(pCB->activeFramebuffer);
                             }
                         }
                     }

@@ -681,7 +681,7 @@ struct GLOBAL_CB_NODE : public BASE_NODE {
     // Validation functions run at primary CB submit
     std::vector<std::function<bool()>> validate_functions;
     // Validation functions run when secondary CB is executed in primary
-    std::vector<std::function<bool()>> secondary_validate_functions;
+    std::vector<std::function<bool(VkFramebuffer)>> cmd_execute_commands_functions;
     std::unordered_set<VkDeviceMemory> memObjs;
     std::vector<std::function<bool(VkQueue)>> eventUpdates;
     std::vector<std::function<bool(VkQueue)>> queryUpdates;
