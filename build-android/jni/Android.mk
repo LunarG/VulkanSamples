@@ -53,7 +53,8 @@ include $(BUILD_SHARED_LIBRARY)
 
 include $(CLEAR_VARS)
 LOCAL_MODULE := VkLayer_parameter_validation
-LOCAL_SRC_FILES += $(SRC_DIR)/layers/parameter_validation.cpp
+LOCAL_SRC_FILES += $(LAYER_DIR)/include/parameter_validation.cpp
+LOCAL_SRC_FILES += $(SRC_DIR)/layers/parameter_validation_utils.cpp
 LOCAL_SRC_FILES += $(SRC_DIR)/layers/vk_layer_table.cpp
 LOCAL_C_INCLUDES += $(SRC_DIR)/include \
                     $(LAYER_DIR)/include \

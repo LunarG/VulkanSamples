@@ -20,7 +20,7 @@ from generator import write
 from cgenerator import CGeneratorOptions, COutputGenerator
 # LoaderAndValidationLayer Generator Modifications
 from threading_generator import  ThreadGeneratorOptions, ThreadOutputGenerator
-from parameter_validation_generator import ParamCheckerGeneratorOptions, ParamCheckerOutputGenerator
+from parameter_validation_generator import ParameterValidationGeneratorOptions, ParameterValidationOutputGenerator
 from unique_objects_generator import UniqueObjectsGeneratorOptions, UniqueObjectsOutputGenerator
 from object_tracker_generator import ObjectTrackerGeneratorOptions, ObjectTrackerOutputGenerator
 from dispatch_table_helper_generator import DispatchTableHelperOutputGenerator, DispatchTableHelperOutputGeneratorOptions
@@ -122,11 +122,12 @@ def makeGenOpts(extensions = [], removeExtensions = [], protect = True, director
             alignFuncParam    = 48)
         ]
 
+
     # Options for parameter validation layer
-    genOpts['parameter_validation.h'] = [
-          ParamCheckerOutputGenerator,
-          ParamCheckerGeneratorOptions(
-            filename          = 'parameter_validation.h',
+    genOpts['parameter_validation.cpp'] = [
+          ParameterValidationOutputGenerator,
+          ParameterValidationGeneratorOptions(
+            filename          = 'parameter_validation.cpp',
             directory         = directory,
             apiname           = 'vulkan',
             profile           = None,
