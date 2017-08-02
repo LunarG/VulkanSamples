@@ -3176,16 +3176,24 @@ static bool preCmdSetViewport(layer_data *my_data, uint32_t first_viewport, uint
                                 viewport.width, limits.maxViewportDimensions[0], validation_error_map[VALIDATION_ERROR_15000996]);
             }
 
-            bool invalid_height = (viewport.height <= 0 || viewport.height > limits.maxViewportDimensions[1]);
-            if ((my_data->extensions.vk_amd_negative_viewport_height || my_data->extensions.vk_khr_maintenance1) &&
-                (viewport.height < 0)) { // VALIDATION_ERROR_1500099c
-                invalid_height = false;
-            }
-            if (invalid_height) {
-                skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
-                                VALIDATION_ERROR_1500099a, LayerName,
+            if (my_data->extensions.vk_amd_negative_viewport_height || my_data->extensions.vk_khr_maintenance1) {
+                // Check lower bound against negative viewport height instead of zero
+                if (viewport.height <= -(static_cast<int32_t>(limits.maxViewportDimensions[1])) ||
+                    (viewport.height > limits.maxViewportDimensions[1])) {
+                    skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0,
+                                    __LINE__, VALIDATION_ERROR_1500099a, LayerName,
+                                    "vkCmdSetViewport %d: height (%f) exceeds permitted bounds (-%u,%u). %s", viewportIndex,
+                                    viewport.height, limits.maxViewportDimensions[1], limits.maxViewportDimensions[1],
+                                    validation_error_map[VALIDATION_ERROR_1500099a]);
+                }
+            } else {
+                if ((viewport.height <= 0) || (viewport.height > limits.maxViewportDimensions[1])) {
+                    skip |=
+                        log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
+                                VALIDATION_ERROR_15000998, LayerName,
                                 "vkCmdSetViewport %d: height (%f) exceeds permitted bounds (0,%u). %s", viewportIndex,
-                                viewport.height, limits.maxViewportDimensions[1], validation_error_map[VALIDATION_ERROR_1500099a]);
+                                viewport.height, limits.maxViewportDimensions[1], validation_error_map[VALIDATION_ERROR_15000998]);
+                }
             }
 
             if (viewport.x < limits.viewportBoundsRange[0] || viewport.x > limits.viewportBoundsRange[1]) {

@@ -20024,6 +20024,30 @@ TEST_F(VkLayerTest, DuplicateDescriptorBinding) {
     m_errorMonitor->VerifyFound();
 }
 
+TEST_F(VkLayerTest, ViewportBoundsCheckingWithNVHExtensionEnabled) {
+    TEST_DESCRIPTION("Verify errors are detected on misuse of SetViewport with a negative viewport extension enabled.");
+
+    ASSERT_NO_FATAL_FAILURE(InitFramework(myDbgFunc, m_errorMonitor));
+
+    if (DeviceExtensionSupported(gpu(), nullptr, VK_KHR_MAINTENANCE1_EXTENSION_NAME)) {
+        m_device_extension_names.push_back(VK_KHR_MAINTENANCE1_EXTENSION_NAME);
+    } else {
+        printf("             Maintenance1 Extension not supported, skipping tests\n");
+        return;
+    }
+    ASSERT_NO_FATAL_FAILURE(InitState());
+    const VkPhysicalDeviceLimits &limits = m_device->props.limits;
+
+    m_commandBuffer->begin();
+    {
+        m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_1500099a);
+        VkViewport viewport = {0, 0, 16, -(static_cast<float>(limits.maxViewportDimensions[1] + 1)), 0, 1};
+        vkCmdSetViewport(m_commandBuffer->handle(), 0, 1, &viewport);
+        m_errorMonitor->VerifyFound();
+    }
+    m_commandBuffer->end();
+}
+
 TEST_F(VkLayerTest, ViewportAndScissorBoundsChecking) {
     TEST_DESCRIPTION("Verify errors are detected on misuse of SetViewport and SetScissor.");
 
@@ -20041,7 +20065,7 @@ TEST_F(VkLayerTest, ViewportAndScissorBoundsChecking) {
     }
 
     {
-        m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_1500099a);
+        m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_15000998);
         VkViewport viewport = {0, 0, 16, static_cast<float>(limits.maxViewportDimensions[1] + 1), 0, 1};
         vkCmdSetViewport(m_commandBuffer->handle(), 0, 1, &viewport);
         m_errorMonitor->VerifyFound();
