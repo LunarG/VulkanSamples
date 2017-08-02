@@ -4117,7 +4117,7 @@ void invalidateCommandBuffers(const layer_data *dev_data, std::unordered_set<GLO
                     "Invalidating a command buffer that's currently being recorded: 0x%p.", cb_node->commandBuffer);
             cb_node->state = CB_INVALID_INCOMPLETE;
         }
-        else {
+        else if (cb_node->state == CB_RECORDED) {
             cb_node->state = CB_INVALID_COMPLETE;
         }
         cb_node->broken_bindings.push_back(obj);
