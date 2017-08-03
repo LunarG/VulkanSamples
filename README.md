@@ -33,6 +33,11 @@
       the code from previous samples to get to the point to show something new.
       The drawtexturedcube sample takes all of the drawcube code and adds texturing.
 
+## Linux Dependencies
+
+Several packages are needed to be able to build the samples under Linux.  Execute:
+```sudo apt-get install git cmake build-essential bison libx11-xcb-dev libxkbcommon-dev libmirclient-dev libwayland-dev libxrandr-dev```
+
 ## Clone the Repository
 
 The VulkanSamples repository also includes the Vulkan loader, validation layers, header files, and associated tests.
