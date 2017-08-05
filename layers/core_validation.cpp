@@ -8888,11 +8888,10 @@ static bool PreCallValidateCreateSwapchainKHR(layer_data *dev_data, const char *
         }
 
         // Validate pCreateInfo->imageExtent against VkSurfaceCapabilitiesKHR::{current|min|max}ImageExtent:
-        if ((capabilities.currentExtent.width == kSurfaceSizeFromSwapchain) &&
-            ((pCreateInfo->imageExtent.width < capabilities.minImageExtent.width) ||
-             (pCreateInfo->imageExtent.width > capabilities.maxImageExtent.width) ||
-             (pCreateInfo->imageExtent.height < capabilities.minImageExtent.height) ||
-             (pCreateInfo->imageExtent.height > capabilities.maxImageExtent.height))) {
+        if ((pCreateInfo->imageExtent.width < capabilities.minImageExtent.width) ||
+            (pCreateInfo->imageExtent.width > capabilities.maxImageExtent.width) ||
+            (pCreateInfo->imageExtent.height < capabilities.minImageExtent.height) ||
+            (pCreateInfo->imageExtent.height > capabilities.maxImageExtent.height)) {
             if (log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
                         HandleToUint64(dev_data->device), __LINE__, VALIDATION_ERROR_146009f4, "DS",
                         "%s called with imageExtent = (%d,%d), which is outside the bounds returned by "
