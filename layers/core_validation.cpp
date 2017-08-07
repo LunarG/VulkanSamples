@@ -1555,8 +1555,8 @@ bool ValidateCmdSubpassState(const layer_data *dev_data, const GLOBAL_CB_NODE *p
     return skip;
 }
 
-bool ValidateCmdQueueFlags(layer_data *dev_data, GLOBAL_CB_NODE *cb_node, const char *caller_name, VkQueueFlags required_flags,
-                           UNIQUE_VALIDATION_ERROR_CODE error_code) {
+bool ValidateCmdQueueFlags(layer_data *dev_data, const GLOBAL_CB_NODE *cb_node, const char *caller_name,
+                           VkQueueFlags required_flags, UNIQUE_VALIDATION_ERROR_CODE error_code) {
     auto pool = GetCommandPoolNode(dev_data, cb_node->createInfo.commandPool);
     if (pool) {
         VkQueueFlags queue_flags = dev_data->phys_dev_properties.queue_family_properties[pool->queueFamilyIndex].queueFlags;
@@ -1587,7 +1587,7 @@ static char const * GetCauseStr(VK_OBJECT obj) {
     return "destroyed";
 }
 
-static bool ReportInvalidCommandBuffer(layer_data *dev_data, GLOBAL_CB_NODE *cb_state, const char *call_source) {
+static bool ReportInvalidCommandBuffer(layer_data *dev_data, const GLOBAL_CB_NODE *cb_state, const char *call_source) {
     bool skip = false;
     for (auto obj : cb_state->broken_bindings) {
         const char *type_str = object_string[obj.type];
@@ -1602,7 +1602,7 @@ static bool ReportInvalidCommandBuffer(layer_data *dev_data, GLOBAL_CB_NODE *cb_
 
 // Validate the given command being added to the specified cmd buffer, flagging errors if CB is not in the recording state or if
 // there's an issue with the Cmd ordering
-bool ValidateCmd(layer_data *dev_data, GLOBAL_CB_NODE *cb_state, const CMD_TYPE cmd, const char *caller_name) {
+bool ValidateCmd(layer_data *dev_data, const GLOBAL_CB_NODE *cb_state, const CMD_TYPE cmd, const char *caller_name) {
     switch (cb_state->state) {
         case CB_RECORDING:
             return ValidateCmdSubpassState(dev_data, cb_state, cmd);
@@ -1752,7 +1752,8 @@ static void resetCB(layer_data *dev_data, const VkCommandBuffer cb) {
         pCB->updateImages.clear();
         pCB->updateBuffers.clear();
         clear_cmd_buf_and_mem_references(dev_data, pCB);
-        pCB->validate_functions.clear();
+        pCB->queue_submit_functions.clear();
+        pCB->cmd_execute_commands_functions.clear();
         pCB->eventUpdates.clear();
         pCB->queryUpdates.clear();
 
@@ -1816,7 +1817,8 @@ static void set_cb_pso_status(GLOBAL_CB_NODE *pCB, const PIPELINE_STATE *pPipe) 
 
 // Flags validation error if the associated call is made inside a render pass. The apiName routine should ONLY be called outside a
 // render pass.
-bool insideRenderPass(const layer_data *dev_data, GLOBAL_CB_NODE *pCB, const char *apiName, UNIQUE_VALIDATION_ERROR_CODE msgCode) {
+bool insideRenderPass(const layer_data *dev_data, const GLOBAL_CB_NODE *pCB, const char *apiName,
+                      UNIQUE_VALIDATION_ERROR_CODE msgCode) {
     bool inside = false;
     if (pCB->activeRenderPass) {
         inside = log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
@@ -2008,12 +2010,11 @@ static bool ValidateRequestedFeatures(instance_layer_data *instance_data, const 
     uint32_t total_bools = sizeof(VkPhysicalDeviceFeatures) / sizeof(VkBool32);
     for (uint32_t i = 0; i < total_bools; i++) {
         if (requested[i] > actual[i]) {
-            // TODO: Add index to struct member name helper to be able to include a feature name
             skip |= log_msg(instance_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT,
                             VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT, 0, __LINE__, DEVLIMITS_INVALID_FEATURE_REQUESTED, "DL",
-                            "While calling vkCreateDevice(), requesting feature #%u in VkPhysicalDeviceFeatures struct, "
+                            "While calling vkCreateDevice(), requesting feature '%s' in VkPhysicalDeviceFeatures struct, "
                             "which is not available on this device.",
-                            i);
+                            GetPhysDevFeatureString(i));
             errors++;
         }
     }
@@ -2686,7 +2687,7 @@ static bool PreCallValidateQueueSubmit(layer_data *dev_data, VkQueue queue, uint
                 }
 
                 // Call submit-time functions to validate/update state
-                for (auto &function : cb_node->validate_functions) {
+                for (auto &function : cb_node->queue_submit_functions) {
                     skip |= function();
                 }
                 for (auto &function : cb_node->eventUpdates) {
@@ -4116,7 +4117,7 @@ void invalidateCommandBuffers(const layer_data *dev_data, std::unordered_set<GLO
                     "Invalidating a command buffer that's currently being recorded: 0x%p.", cb_node->commandBuffer);
             cb_node->state = CB_INVALID_INCOMPLETE;
         }
-        else {
+        else if (cb_node->state == CB_RECORDED) {
             cb_node->state = CB_INVALID_COMPLETE;
         }
         cb_node->broken_bindings.push_back(obj);
@@ -4868,9 +4869,9 @@ static bool PreCallValidateUpdateDescriptorSets(layer_data *dev_data, uint32_t d
                                                          descriptorCopyCount, pDescriptorCopies);
 }
 // PostCallRecord* handles recording state updates following call down chain to UpdateDescriptorSets()
-static void PostCallRecordUpdateDescriptorSets(layer_data *dev_data, uint32_t descriptorWriteCount,
-                                               const VkWriteDescriptorSet *pDescriptorWrites, uint32_t descriptorCopyCount,
-                                               const VkCopyDescriptorSet *pDescriptorCopies) {
+static void PreCallRecordUpdateDescriptorSets(layer_data *dev_data, uint32_t descriptorWriteCount,
+                                              const VkWriteDescriptorSet *pDescriptorWrites, uint32_t descriptorCopyCount,
+                                              const VkCopyDescriptorSet *pDescriptorCopies) {
     cvdescriptorset::PerformUpdateDescriptorSets(dev_data, descriptorWriteCount, pDescriptorWrites, descriptorCopyCount,
                                                  pDescriptorCopies);
 }
@@ -4883,14 +4884,13 @@ VKAPI_ATTR void VKAPI_CALL UpdateDescriptorSets(VkDevice device, uint32_t descri
     unique_lock_t lock(global_lock);
     bool skip = PreCallValidateUpdateDescriptorSets(dev_data, descriptorWriteCount, pDescriptorWrites, descriptorCopyCount,
                                                     pDescriptorCopies);
-    lock.unlock();
     if (!skip) {
+        // Since UpdateDescriptorSets() is void, nothing to check prior to updating state & we can update before call down chain
+        PreCallRecordUpdateDescriptorSets(dev_data, descriptorWriteCount, pDescriptorWrites, descriptorCopyCount,
+                                          pDescriptorCopies);
+        lock.unlock();
         dev_data->dispatch_table.UpdateDescriptorSets(device, descriptorWriteCount, pDescriptorWrites, descriptorCopyCount,
                                                       pDescriptorCopies);
-        lock.lock();
-        // Since UpdateDescriptorSets() is void, nothing to check prior to updating state
-        PostCallRecordUpdateDescriptorSets(dev_data, descriptorWriteCount, pDescriptorWrites, descriptorCopyCount,
-                                           pDescriptorCopies);
     }
 }
 
@@ -5344,10 +5344,6 @@ VKAPI_ATTR void VKAPI_CALL CmdBindDescriptorSets(VkCommandBuffer commandBuffer, 
             if (descriptor_set) {
                 cb_state->lastBound[pipelineBindPoint].pipeline_layout = *pipeline_layout;
                 cb_state->lastBound[pipelineBindPoint].boundDescriptorSets[set_idx + firstSet] = descriptor_set;
-                skip |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_INFORMATION_BIT_EXT,
-                                VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT, HandleToUint64(pDescriptorSets[set_idx]), __LINE__,
-                                DRAWSTATE_NONE, "DS", "Descriptor Set 0x%" PRIxLEAST64 " bound on pipeline %s",
-                                HandleToUint64(pDescriptorSets[set_idx]), string_VkPipelineBindPoint(pipelineBindPoint));
                 if (!descriptor_set->IsUpdated() && (descriptor_set->GetTotalDescriptorCount() != 0)) {
                     skip |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_WARNING_BIT_EXT,
                                     VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT, HandleToUint64(pDescriptorSets[set_idx]),
@@ -5502,7 +5498,7 @@ VKAPI_ATTR void VKAPI_CALL CmdBindIndexBuffer(VkCommandBuffer commandBuffer, VkB
         std::function<bool()> function = [=]() {
             return ValidateBufferMemoryIsValid(dev_data, buffer_state, "vkCmdBindIndexBuffer()");
         };
-        cb_node->validate_functions.push_back(function);
+        cb_node->queue_submit_functions.push_back(function);
         VkDeviceSize offset_align = 0;
         switch (indexType) {
             case VK_INDEX_TYPE_UINT16:
@@ -5560,7 +5556,7 @@ VKAPI_ATTR void VKAPI_CALL CmdBindVertexBuffers(VkCommandBuffer commandBuffer, u
             std::function<bool()> function = [=]() {
                 return ValidateBufferMemoryIsValid(dev_data, buffer_state, "vkCmdBindVertexBuffers()");
             };
-            cb_node->validate_functions.push_back(function);
+            cb_node->queue_submit_functions.push_back(function);
             if (pOffsets[i] >= buffer_state->createInfo.size) {
                 skip |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT,
                                 HandleToUint64(buffer_state->buffer), __LINE__, VALIDATION_ERROR_182004e4, "DS",
@@ -5588,7 +5584,7 @@ static void MarkStoreImagesAndBuffersAsWritten(layer_data *dev_data, GLOBAL_CB_N
             SetImageMemoryValid(dev_data, image_state, true);
             return false;
         };
-        pCB->validate_functions.push_back(function);
+        pCB->queue_submit_functions.push_back(function);
     }
     for (auto buffer : pCB->updateBuffers) {
         auto buffer_state = GetBufferState(dev_data, buffer);
@@ -5597,7 +5593,7 @@ static void MarkStoreImagesAndBuffersAsWritten(layer_data *dev_data, GLOBAL_CB_N
             SetBufferMemoryValid(dev_data, buffer_state, true);
             return false;
         };
-        pCB->validate_functions.push_back(function);
+        pCB->queue_submit_functions.push_back(function);
     }
 }
 
@@ -5945,37 +5941,47 @@ VKAPI_ATTR void VKAPI_CALL CmdCopyImageToBuffer(VkCommandBuffer commandBuffer, V
     }
 }
 
+static bool PreCallCmdUpdateBuffer(layer_data *device_data, const GLOBAL_CB_NODE *cb_state, const BUFFER_STATE *dst_buffer_state) {
+    bool skip = false;
+    skip |= ValidateMemoryIsBoundToBuffer(device_data, dst_buffer_state, "vkCmdUpdateBuffer()", VALIDATION_ERROR_1e400046);
+    // Validate that DST buffer has correct usage flags set
+    skip |= ValidateBufferUsageFlags(device_data, dst_buffer_state, VK_BUFFER_USAGE_TRANSFER_DST_BIT, true,
+                                     VALIDATION_ERROR_1e400044, "vkCmdUpdateBuffer()", "VK_BUFFER_USAGE_TRANSFER_DST_BIT");
+    skip |= ValidateCmdQueueFlags(device_data, cb_state, "vkCmdUpdateBuffer()",
+                                  VK_QUEUE_TRANSFER_BIT | VK_QUEUE_GRAPHICS_BIT | VK_QUEUE_COMPUTE_BIT, VALIDATION_ERROR_1e402415);
+    skip |= ValidateCmd(device_data, cb_state, CMD_UPDATEBUFFER, "vkCmdUpdateBuffer()");
+    skip |= insideRenderPass(device_data, cb_state, "vkCmdUpdateBuffer()", VALIDATION_ERROR_1e400017);
+    return skip;
+}
+
+static void PostCallRecordCmdUpdateBuffer(layer_data *device_data, GLOBAL_CB_NODE *cb_state, BUFFER_STATE *dst_buffer_state) {
+    // Update bindings between buffer and cmd buffer
+    AddCommandBufferBindingBuffer(device_data, cb_state, dst_buffer_state);
+    std::function<bool()> function = [=]() {
+        SetBufferMemoryValid(device_data, dst_buffer_state, true);
+        return false;
+    };
+    cb_state->queue_submit_functions.push_back(function);
+}
+
 VKAPI_ATTR void VKAPI_CALL CmdUpdateBuffer(VkCommandBuffer commandBuffer, VkBuffer dstBuffer, VkDeviceSize dstOffset,
                                            VkDeviceSize dataSize, const uint32_t *pData) {
     bool skip = false;
     layer_data *dev_data = GetLayerDataPtr(get_dispatch_key(commandBuffer), layer_data_map);
     unique_lock_t lock(global_lock);
 
-    auto cb_node = GetCBNode(dev_data, commandBuffer);
+    auto cb_state = GetCBNode(dev_data, commandBuffer);
+    assert(cb_state);
     auto dst_buff_state = GetBufferState(dev_data, dstBuffer);
-    if (cb_node && dst_buff_state) {
-        skip |= ValidateMemoryIsBoundToBuffer(dev_data, dst_buff_state, "vkCmdUpdateBuffer()", VALIDATION_ERROR_1e400046);
-        // Update bindings between buffer and cmd buffer
-        AddCommandBufferBindingBuffer(dev_data, cb_node, dst_buff_state);
-        // Validate that DST buffer has correct usage flags set
-        skip |= ValidateBufferUsageFlags(dev_data, dst_buff_state, VK_BUFFER_USAGE_TRANSFER_DST_BIT, true,
-                                         VALIDATION_ERROR_1e400044, "vkCmdUpdateBuffer()", "VK_BUFFER_USAGE_TRANSFER_DST_BIT");
-        std::function<bool()> function = [=]() {
-            SetBufferMemoryValid(dev_data, dst_buff_state, true);
-            return false;
-        };
-        cb_node->validate_functions.push_back(function);
-
-        skip |=
-            ValidateCmdQueueFlags(dev_data, cb_node, "vkCmdUpdateBuffer()",
-                                  VK_QUEUE_TRANSFER_BIT | VK_QUEUE_GRAPHICS_BIT | VK_QUEUE_COMPUTE_BIT, VALIDATION_ERROR_1e402415);
-        skip |= ValidateCmd(dev_data, cb_node, CMD_UPDATEBUFFER, "vkCmdUpdateBuffer()");
-        skip |= insideRenderPass(dev_data, cb_node, "vkCmdUpdateBuffer()", VALIDATION_ERROR_1e400017);
-    } else {
-        assert(0);
-    }
+    assert(dst_buff_state);
+    skip |= PreCallCmdUpdateBuffer(dev_data, cb_state, dst_buff_state);
     lock.unlock();
-    if (!skip) dev_data->dispatch_table.CmdUpdateBuffer(commandBuffer, dstBuffer, dstOffset, dataSize, pData);
+    if (!skip) {
+        dev_data->dispatch_table.CmdUpdateBuffer(commandBuffer, dstBuffer, dstOffset, dataSize, pData);
+        lock.lock();
+        PostCallRecordCmdUpdateBuffer(dev_data, cb_state, dst_buff_state);
+        lock.unlock();
+    }
 }
 
 VKAPI_ATTR void VKAPI_CALL CmdFillBuffer(VkCommandBuffer commandBuffer, VkBuffer dstBuffer, VkDeviceSize dstOffset,
@@ -6136,25 +6142,344 @@ VKAPI_ATTR void VKAPI_CALL CmdResetEvent(VkCommandBuffer commandBuffer, VkEvent 
     if (!skip) dev_data->dispatch_table.CmdResetEvent(commandBuffer, event, stageMask);
 }
 
-static bool ValidateBarriers(const char *funcName, VkCommandBuffer cmdBuffer, uint32_t memBarrierCount,
+// Return input pipeline stage flags, expanded for individual bits if VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT
+static VkPipelineStageFlags ExpandPipelineStageFlags(VkPipelineStageFlags inflags) {
+    return (inflags != VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT)
+               ? inflags
+               : (VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT | VK_PIPELINE_STAGE_DRAW_INDIRECT_BIT | VK_PIPELINE_STAGE_VERTEX_INPUT_BIT |
+                  VK_PIPELINE_STAGE_VERTEX_SHADER_BIT | VK_PIPELINE_STAGE_TESSELLATION_CONTROL_SHADER_BIT |
+                  VK_PIPELINE_STAGE_TESSELLATION_EVALUATION_SHADER_BIT | VK_PIPELINE_STAGE_GEOMETRY_SHADER_BIT |
+                  VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT |
+                  VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT |
+                  VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT);
+}
+
+// Verify image barrier image state and that the image is consistent with FB image
+static bool ValidateImageBarrierImage(layer_data *device_data, const char *funcName, GLOBAL_CB_NODE const *cb_state,
+                                      VkFramebuffer framebuffer, uint32_t active_subpass, const safe_VkSubpassDescription &sub_desc,
+                                      uint64_t rp_handle, uint32_t img_index, const VkImageMemoryBarrier &img_barrier) {
+    bool skip = false;
+    const auto &fb_state = GetFramebufferState(device_data, framebuffer);
+    assert(fb_state);
+    const auto img_bar_image = img_barrier.image;
+    bool image_match = false;
+    bool sub_image_found = false;  // Do we find a corresponding subpass description
+    VkImageLayout sub_image_layout = VK_IMAGE_LAYOUT_UNDEFINED;
+    uint32_t attach_index = 0;
+    uint32_t index_count = 0;
+    // Verify that a framebuffer image matches barrier image
+    for (const auto &fb_attach : fb_state->attachments) {
+        if (img_bar_image == fb_attach.image) {
+            image_match = true;
+            attach_index = index_count;
+            break;
+        }
+        index_count++;
+    }
+    if (image_match) {  // Make sure subpass is referring to matching attachment
+        if (sub_desc.pDepthStencilAttachment && sub_desc.pDepthStencilAttachment->attachment == attach_index) {
+            sub_image_layout = sub_desc.pDepthStencilAttachment->layout;
+            sub_image_found = true;
+        } else {
+            for (uint32_t j = 0; j < sub_desc.colorAttachmentCount; ++j) {
+                if (sub_desc.pColorAttachments && sub_desc.pColorAttachments[j].attachment == attach_index) {
+                    sub_image_layout = sub_desc.pColorAttachments[j].layout;
+                    sub_image_found = true;
+                    break;
+                } else if (sub_desc.pResolveAttachments && sub_desc.pResolveAttachments[j].attachment == attach_index) {
+                    sub_image_layout = sub_desc.pResolveAttachments[j].layout;
+                    sub_image_found = true;
+                    break;
+                }
+            }
+        }
+        if (!sub_image_found) {
+            skip |= log_msg(
+                device_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_RENDER_PASS_EXT, rp_handle,
+                __LINE__, VALIDATION_ERROR_1b800936, "CORE",
+                "%s: Barrier pImageMemoryBarriers[%d].image (0x%" PRIx64
+                ") is not referenced by the VkSubpassDescription for active subpass (%d) of current renderPass (0x%" PRIx64 "). %s",
+                funcName, img_index, HandleToUint64(img_bar_image), active_subpass, rp_handle,
+                validation_error_map[VALIDATION_ERROR_1b800936]);
+        }
+    } else {  // !image_match
+        auto const fb_handle = HandleToUint64(fb_state->framebuffer);
+        skip |=
+            log_msg(device_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_FRAMEBUFFER_EXT, fb_handle,
+                    __LINE__, VALIDATION_ERROR_1b800936, "CORE",
+                    "%s: Barrier pImageMemoryBarriers[%d].image (0x%" PRIx64
+                    ") does not match an image from the current framebuffer (0x%" PRIx64 "). %s",
+                    funcName, img_index, HandleToUint64(img_bar_image), fb_handle, validation_error_map[VALIDATION_ERROR_1b800936]);
+    }
+    if (img_barrier.oldLayout != img_barrier.newLayout) {
+        skip |= log_msg(device_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
+                        HandleToUint64(cb_state->commandBuffer), __LINE__, VALIDATION_ERROR_1b80093a, "CORE",
+                        "%s: As the Image Barrier for image 0x%" PRIx64
+                        " is being executed within a render pass instance, oldLayout must equal newLayout yet they are "
+                        "%s and %s. %s",
+                        funcName, HandleToUint64(img_barrier.image), string_VkImageLayout(img_barrier.oldLayout),
+                        string_VkImageLayout(img_barrier.newLayout), validation_error_map[VALIDATION_ERROR_1b80093a]);
+    } else {
+        if (sub_image_found && sub_image_layout != img_barrier.oldLayout) {
+            skip |= log_msg(device_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_RENDER_PASS_EXT,
+                            rp_handle, __LINE__, VALIDATION_ERROR_1b800938, "CORE",
+                            "%s: Barrier pImageMemoryBarriers[%d].image (0x%" PRIx64
+                            ") is referenced by the VkSubpassDescription for active subpass (%d) of current renderPass (0x%" PRIx64
+                            ") as having layout %s, but image barrier has layout %s. %s",
+                            funcName, img_index, HandleToUint64(img_bar_image), active_subpass, rp_handle,
+                            string_VkImageLayout(img_barrier.oldLayout), string_VkImageLayout(sub_image_layout),
+                            validation_error_map[VALIDATION_ERROR_1b800938]);
+        }
+    }
+    return skip;
+}
+
+// Validate image barriers within a renderPass
+static bool ValidateRenderPassImageBarriers(layer_data *device_data, const char *funcName, GLOBAL_CB_NODE *cb_state,
+                                            uint32_t active_subpass, const safe_VkSubpassDescription &sub_desc, uint64_t rp_handle,
+                                            VkAccessFlags sub_src_access_mask, VkAccessFlags sub_dst_access_mask,
+                                            uint32_t image_mem_barrier_count, const VkImageMemoryBarrier *image_barriers) {
+    bool skip = false;
+    for (uint32_t i = 0; i < image_mem_barrier_count; ++i) {
+        const auto &img_barrier = image_barriers[i];
+        const auto &img_src_access_mask = img_barrier.srcAccessMask;
+        if (img_src_access_mask != (sub_src_access_mask & img_src_access_mask)) {
+            skip |= log_msg(device_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_RENDER_PASS_EXT,
+                            rp_handle, __LINE__, VALIDATION_ERROR_1b80092e, "CORE",
+                            "%s: Barrier pImageMemoryBarriers[%d].srcAccessMask(0x%X) is not a subset of VkSubpassDependency "
+                            "srcAccessMask(0x%X) of "
+                            "subpass %d of renderPass 0x%" PRIx64 ". %s",
+                            funcName, i, img_src_access_mask, sub_src_access_mask, active_subpass, rp_handle,
+                            validation_error_map[VALIDATION_ERROR_1b80092e]);
+        }
+        const auto &img_dst_access_mask = img_barrier.dstAccessMask;
+        if (img_dst_access_mask != (sub_dst_access_mask & img_dst_access_mask)) {
+            skip |= log_msg(device_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_RENDER_PASS_EXT,
+                            rp_handle, __LINE__, VALIDATION_ERROR_1b800930, "CORE",
+                            "%s: Barrier pImageMemoryBarriers[%d].dstAccessMask(0x%X) is not a subset of VkSubpassDependency "
+                            "dstAccessMask(0x%X) of "
+                            "subpass %d of renderPass 0x%" PRIx64 ". %s",
+                            funcName, i, img_dst_access_mask, sub_dst_access_mask, active_subpass, rp_handle,
+                            validation_error_map[VALIDATION_ERROR_1b800930]);
+        }
+        if (VK_QUEUE_FAMILY_IGNORED != img_barrier.srcQueueFamilyIndex ||
+            VK_QUEUE_FAMILY_IGNORED != img_barrier.dstQueueFamilyIndex) {
+            skip |= log_msg(device_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_RENDER_PASS_EXT,
+                            rp_handle, __LINE__, VALIDATION_ERROR_1b80093c, "CORE",
+                            "%s: Barrier pImageMemoryBarriers[%d].srcQueueFamilyIndex is %d and "
+                            "pImageMemoryBarriers[%d].dstQueueFamilyIndex is %d but both must be VK_QUEUE_FAMILY_IGNORED. %s",
+                            funcName, i, img_barrier.srcQueueFamilyIndex, i, img_barrier.dstQueueFamilyIndex,
+                            validation_error_map[VALIDATION_ERROR_1b80093c]);
+        }
+        // Secondary CBs can have null framebuffer so queue up validation in that case 'til FB is known
+        if (VK_NULL_HANDLE == cb_state->activeFramebuffer) {
+            assert(VK_COMMAND_BUFFER_LEVEL_SECONDARY == cb_state->createInfo.level);
+            // Secondary CB case w/o FB specified delay validation
+            cb_state->cmd_execute_commands_functions.emplace_back([=](VkFramebuffer fb) {
+                return ValidateImageBarrierImage(device_data, funcName, cb_state, fb, active_subpass, sub_desc, rp_handle, i,
+                                                 img_barrier);
+            });
+        } else {
+            skip |= ValidateImageBarrierImage(device_data, funcName, cb_state, cb_state->activeFramebuffer, active_subpass,
+                                              sub_desc, rp_handle, i, img_barrier);
+        }
+    }
+    return skip;
+}
+
+// Validate VUs for Pipeline Barriers that are within a renderPass
+// Pre: cb_state->activeRenderPass must be a pointer to valid renderPass state
+static bool ValidateRenderPassPipelineBarriers(layer_data *device_data, const char *funcName, GLOBAL_CB_NODE *cb_state,
+                                               VkPipelineStageFlags src_stage_mask, VkPipelineStageFlags dst_stage_mask,
+                                               VkDependencyFlags dependency_flags, uint32_t mem_barrier_count,
+                                               const VkMemoryBarrier *mem_barriers, uint32_t buffer_mem_barrier_count,
+                                               const VkBufferMemoryBarrier *buffer_mem_barriers, uint32_t image_mem_barrier_count,
+                                               const VkImageMemoryBarrier *image_barriers) {
+    bool skip = false;
+    auto rp_state = cb_state->activeRenderPass;
+    const auto active_subpass = cb_state->activeSubpass;
+    auto rp_handle = HandleToUint64(rp_state->renderPass);
+    if (!rp_state->hasSelfDependency[active_subpass]) {
+        skip |= log_msg(device_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_RENDER_PASS_EXT,
+                        rp_handle, __LINE__, VALIDATION_ERROR_1b800928, "CORE",
+                        "%s: Barriers cannot be set during subpass %d of renderPass 0x%" PRIx64
+                        " with no self-dependency specified. %s",
+                        funcName, active_subpass, rp_handle, validation_error_map[VALIDATION_ERROR_1b800928]);
+    } else {
+        assert(rp_state->subpass_to_dependency_index[cb_state->activeSubpass] != -1);
+        // Grab ref to current subpassDescription up-front for use below
+        const auto &sub_desc = rp_state->createInfo.pSubpasses[active_subpass];
+        const auto &sub_dep = rp_state->createInfo.pDependencies[rp_state->subpass_to_dependency_index[active_subpass]];
+        const auto &sub_src_stage_mask = ExpandPipelineStageFlags(sub_dep.srcStageMask);
+        const auto &sub_dst_stage_mask = ExpandPipelineStageFlags(sub_dep.dstStageMask);
+        if ((sub_src_stage_mask != VK_PIPELINE_STAGE_ALL_COMMANDS_BIT) &&
+            (src_stage_mask != (sub_src_stage_mask & src_stage_mask))) {
+            skip |= log_msg(device_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_RENDER_PASS_EXT,
+                            rp_handle, __LINE__, VALIDATION_ERROR_1b80092a, "CORE",
+                            "%s: Barrier srcStageMask(0x%X) is not a subset of VkSubpassDependency srcStageMask(0x%X) of "
+                            "subpass %d of renderPass 0x%" PRIx64 ". %s",
+                            funcName, src_stage_mask, sub_src_stage_mask, active_subpass, rp_handle,
+                            validation_error_map[VALIDATION_ERROR_1b80092a]);
+        }
+        if ((sub_dst_stage_mask != VK_PIPELINE_STAGE_ALL_COMMANDS_BIT) &&
+            (dst_stage_mask != (sub_dst_stage_mask & dst_stage_mask))) {
+            skip |= log_msg(device_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_RENDER_PASS_EXT,
+                            rp_handle, __LINE__, VALIDATION_ERROR_1b80092c, "CORE",
+                            "%s: Barrier dstStageMask(0x%X) is not a subset of VkSubpassDependency dstStageMask(0x%X) of "
+                            "subpass %d of renderPass 0x%" PRIx64 ". %s",
+                            funcName, dst_stage_mask, sub_dst_stage_mask, active_subpass, rp_handle,
+                            validation_error_map[VALIDATION_ERROR_1b80092c]);
+        }
+        if (0 != buffer_mem_barrier_count) {
+            skip |= log_msg(device_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_RENDER_PASS_EXT,
+                            rp_handle, __LINE__, VALIDATION_ERROR_1b800934, "CORE",
+                            "%s: bufferMemoryBarrierCount is non-zero (%d) for "
+                            "subpass %d of renderPass 0x%" PRIx64 ". %s",
+                            funcName, buffer_mem_barrier_count, active_subpass, rp_handle,
+                            validation_error_map[VALIDATION_ERROR_1b800934]);
+        }
+        const auto &sub_src_access_mask = sub_dep.srcAccessMask;
+        const auto &sub_dst_access_mask = sub_dep.dstAccessMask;
+        for (uint32_t i = 0; i < mem_barrier_count; ++i) {
+            const auto &mb_src_access_mask = mem_barriers[i].srcAccessMask;
+            if (mb_src_access_mask != (sub_src_access_mask & mb_src_access_mask)) {
+                skip |= log_msg(device_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT,
+                                VK_DEBUG_REPORT_OBJECT_TYPE_RENDER_PASS_EXT, rp_handle, __LINE__, VALIDATION_ERROR_1b80092e, "CORE",
+                                "%s: Barrier pMemoryBarriers[%d].srcAccessMask(0x%X) is not a subset of VkSubpassDependency "
+                                "srcAccessMask(0x%X) of "
+                                "subpass %d of renderPass 0x%" PRIx64 ". %s",
+                                funcName, i, mb_src_access_mask, sub_src_access_mask, active_subpass, rp_handle,
+                                validation_error_map[VALIDATION_ERROR_1b80092e]);
+            }
+            const auto &mb_dst_access_mask = mem_barriers[i].dstAccessMask;
+            if (mb_dst_access_mask != (sub_dst_access_mask & mb_dst_access_mask)) {
+                skip |= log_msg(device_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT,
+                                VK_DEBUG_REPORT_OBJECT_TYPE_RENDER_PASS_EXT, rp_handle, __LINE__, VALIDATION_ERROR_1b800930, "CORE",
+                                "%s: Barrier pMemoryBarriers[%d].dstAccessMask(0x%X) is not a subset of VkSubpassDependency "
+                                "dstAccessMask(0x%X) of "
+                                "subpass %d of renderPass 0x%" PRIx64 ". %s",
+                                funcName, i, mb_dst_access_mask, sub_dst_access_mask, active_subpass, rp_handle,
+                                validation_error_map[VALIDATION_ERROR_1b800930]);
+            }
+        }
+        skip |= ValidateRenderPassImageBarriers(device_data, funcName, cb_state, active_subpass, sub_desc, rp_handle,
+                                                sub_src_access_mask, sub_dst_access_mask, image_mem_barrier_count, image_barriers);
+        if (sub_dep.dependencyFlags != dependency_flags) {
+            skip |= log_msg(device_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_RENDER_PASS_EXT,
+                            rp_handle, __LINE__, VALIDATION_ERROR_1b800932, "CORE",
+                            "%s: dependencyFlags param (0x%X) does not equal VkSubpassDependency "
+                            "dependencyFlags value (0x%X) for "
+                            "subpass %d of renderPass 0x%" PRIx64 ". %s",
+                            funcName, dependency_flags, sub_dep.dependencyFlags, cb_state->activeSubpass, rp_handle,
+                            validation_error_map[VALIDATION_ERROR_1b800932]);
+        }
+    }
+    return skip;
+}
+
+// Array to mask individual accessMask to corresponding stageMask
+//  accessMask active bit position (0-31) maps to index
+const static VkPipelineStageFlags AccessMaskToPipeStage[20] = {
+    // VK_ACCESS_INDIRECT_COMMAND_READ_BIT = 0
+    VK_PIPELINE_STAGE_DRAW_INDIRECT_BIT,
+    // VK_ACCESS_INDEX_READ_BIT = 1
+    VK_PIPELINE_STAGE_VERTEX_INPUT_BIT,
+    // VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT = 2
+    VK_PIPELINE_STAGE_VERTEX_INPUT_BIT,
+    // VK_ACCESS_UNIFORM_READ_BIT = 3
+    VK_PIPELINE_STAGE_VERTEX_SHADER_BIT | VK_PIPELINE_STAGE_TESSELLATION_CONTROL_SHADER_BIT |
+        VK_PIPELINE_STAGE_TESSELLATION_EVALUATION_SHADER_BIT | VK_PIPELINE_STAGE_GEOMETRY_SHADER_BIT |
+        VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT | VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+    // VK_ACCESS_INPUT_ATTACHMENT_READ_BIT = 4
+    VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
+    // VK_ACCESS_SHADER_READ_BIT = 5
+    VK_PIPELINE_STAGE_VERTEX_SHADER_BIT | VK_PIPELINE_STAGE_TESSELLATION_CONTROL_SHADER_BIT |
+        VK_PIPELINE_STAGE_TESSELLATION_EVALUATION_SHADER_BIT | VK_PIPELINE_STAGE_GEOMETRY_SHADER_BIT |
+        VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT | VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+    // VK_ACCESS_SHADER_WRITE_BIT = 6
+    VK_PIPELINE_STAGE_VERTEX_SHADER_BIT | VK_PIPELINE_STAGE_TESSELLATION_CONTROL_SHADER_BIT |
+        VK_PIPELINE_STAGE_TESSELLATION_EVALUATION_SHADER_BIT | VK_PIPELINE_STAGE_GEOMETRY_SHADER_BIT |
+        VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT | VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+    // VK_ACCESS_COLOR_ATTACHMENT_READ_BIT = 7
+    VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+    // VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT = 8
+    VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+    // VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT = 9
+    VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT,
+    // VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT = 10
+    VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT,
+    // VK_ACCESS_TRANSFER_READ_BIT = 11
+    VK_PIPELINE_STAGE_TRANSFER_BIT,
+    // VK_ACCESS_TRANSFER_WRITE_BIT = 12
+    VK_PIPELINE_STAGE_TRANSFER_BIT,
+    // VK_ACCESS_HOST_READ_BIT = 13
+    VK_PIPELINE_STAGE_HOST_BIT,
+    // VK_ACCESS_HOST_WRITE_BIT = 14
+    VK_PIPELINE_STAGE_HOST_BIT,
+    // VK_ACCESS_MEMORY_READ_BIT = 15
+    VK_ACCESS_FLAG_BITS_MAX_ENUM,  // Always match
+    // VK_ACCESS_MEMORY_WRITE_BIT = 16
+    VK_ACCESS_FLAG_BITS_MAX_ENUM,  // Always match
+    // VK_ACCESS_COMMAND_PROCESS_READ_BIT_NVX = 17
+    VK_PIPELINE_STAGE_COMMAND_PROCESS_BIT_NVX,
+    // VK_ACCESS_COMMAND_PROCESS_WRITE_BIT_NVX = 18
+    VK_PIPELINE_STAGE_COMMAND_PROCESS_BIT_NVX,
+};
+
+// Verify that all bits of access_mask are supported by the src_stage_mask
+static bool ValidateAccessMaskPipelineStage(VkAccessFlags access_mask, VkPipelineStageFlags stage_mask) {
+    // Early out if all commands set, or access_mask NULL
+    if ((stage_mask & VK_PIPELINE_STAGE_ALL_COMMANDS_BIT) || (0 == access_mask)) return true;
+
+    stage_mask = ExpandPipelineStageFlags(stage_mask);
+    int index = 0;
+    // for each of the set bits in access_mask, make sure that supporting stage mask bit(s) are set
+    while (access_mask) {
+        index = (u_ffs(access_mask) - 1);
+        assert(index >= 0);
+        // Must have "!= 0" compare to prevent warning from MSVC
+        if ((AccessMaskToPipeStage[index] & stage_mask) == 0) return false;  // early out
+        access_mask &= ~(1 << index);                                        // Mask off bit that's been checked
+    }
+    return true;
+}
+
+static bool ValidateBarriers(layer_data *device_data, const char *funcName, GLOBAL_CB_NODE const *cb_state,
+                             VkPipelineStageFlags src_stage_mask, VkPipelineStageFlags dst_stage_mask, uint32_t memBarrierCount,
                              const VkMemoryBarrier *pMemBarriers, uint32_t bufferBarrierCount,
                              const VkBufferMemoryBarrier *pBufferMemBarriers, uint32_t imageMemBarrierCount,
                              const VkImageMemoryBarrier *pImageMemBarriers) {
     bool skip = false;
-    layer_data *dev_data = GetLayerDataPtr(get_dispatch_key(cmdBuffer), layer_data_map);
-    GLOBAL_CB_NODE *pCB = GetCBNode(dev_data, cmdBuffer);
-    if (pCB->activeRenderPass && memBarrierCount) {
-        if (!pCB->activeRenderPass->hasSelfDependency[pCB->activeSubpass]) {
-            skip |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
-                            HandleToUint64(cmdBuffer), __LINE__, DRAWSTATE_INVALID_BARRIER, "DS",
-                            "%s: Barriers cannot be set during subpass %d "
-                            "with no self dependency specified.",
-                            funcName, pCB->activeSubpass);
+    for (uint32_t i = 0; i < memBarrierCount; ++i) {
+        const auto &mem_barrier = pMemBarriers[i];
+        if (!ValidateAccessMaskPipelineStage(mem_barrier.srcAccessMask, src_stage_mask)) {
+            skip |= log_msg(device_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
+                            HandleToUint64(cb_state->commandBuffer), __LINE__, VALIDATION_ERROR_1b800940, "DS",
+                            "%s: pMemBarriers[%d].srcAccessMask (0x%X) is not supported by srcStageMask (0x%X). %s", funcName, i,
+                            mem_barrier.srcAccessMask, src_stage_mask, validation_error_map[VALIDATION_ERROR_1b800940]);
+        }
+        if (!ValidateAccessMaskPipelineStage(mem_barrier.dstAccessMask, dst_stage_mask)) {
+            skip |= log_msg(device_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
+                            HandleToUint64(cb_state->commandBuffer), __LINE__, VALIDATION_ERROR_1b800942, "DS",
+                            "%s: pMemBarriers[%d].dstAccessMask (0x%X) is not supported by dstStageMask (0x%X). %s", funcName, i,
+                            mem_barrier.dstAccessMask, dst_stage_mask, validation_error_map[VALIDATION_ERROR_1b800942]);
         }
     }
     for (uint32_t i = 0; i < imageMemBarrierCount; ++i) {
         auto mem_barrier = &pImageMemBarriers[i];
-        auto image_data = GetImageState(dev_data, mem_barrier->image);
+        if (!ValidateAccessMaskPipelineStage(mem_barrier->srcAccessMask, src_stage_mask)) {
+            skip |= log_msg(device_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
+                            HandleToUint64(cb_state->commandBuffer), __LINE__, VALIDATION_ERROR_1b800940, "DS",
+                            "%s: pImageMemBarriers[%d].srcAccessMask (0x%X) is not supported by srcStageMask (0x%X). %s", funcName,
+                            i, mem_barrier->srcAccessMask, src_stage_mask, validation_error_map[VALIDATION_ERROR_1b800940]);
+        }
+        if (!ValidateAccessMaskPipelineStage(mem_barrier->dstAccessMask, dst_stage_mask)) {
+            skip |= log_msg(device_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
+                            HandleToUint64(cb_state->commandBuffer), __LINE__, VALIDATION_ERROR_1b800942, "DS",
+                            "%s: pImageMemBarriers[%d].dstAccessMask (0x%X) is not supported by dstStageMask (0x%X). %s", funcName,
+                            i, mem_barrier->dstAccessMask, dst_stage_mask, validation_error_map[VALIDATION_ERROR_1b800942]);
+        }
+        auto image_data = GetImageState(device_data, mem_barrier->image);
         if (image_data) {
             uint32_t src_q_f_index = mem_barrier->srcQueueFamilyIndex;
             uint32_t dst_q_f_index = mem_barrier->dstQueueFamilyIndex;
@@ -6162,12 +6487,13 @@ static bool ValidateBarriers(const char *funcName, VkCommandBuffer cmdBuffer, ui
                 // srcQueueFamilyIndex and dstQueueFamilyIndex must both
                 // be VK_QUEUE_FAMILY_IGNORED
                 if ((src_q_f_index != VK_QUEUE_FAMILY_IGNORED) || (dst_q_f_index != VK_QUEUE_FAMILY_IGNORED)) {
-                    skip |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT,
-                                    VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, HandleToUint64(cmdBuffer), __LINE__,
-                                    DRAWSTATE_INVALID_QUEUE_INDEX, "DS", "%s: Image Barrier for image 0x%" PRIx64
-                                                                         " was created with sharingMode of "
-                                                                         "VK_SHARING_MODE_CONCURRENT. Src and dst "
-                                                                         "queueFamilyIndices must be VK_QUEUE_FAMILY_IGNORED.",
+                    skip |= log_msg(device_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT,
+                                    VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, HandleToUint64(cb_state->commandBuffer),
+                                    __LINE__, DRAWSTATE_INVALID_QUEUE_INDEX, "DS",
+                                    "%s: Image Barrier for image 0x%" PRIx64
+                                    " was created with sharingMode of "
+                                    "VK_SHARING_MODE_CONCURRENT. Src and dst "
+                                    "queueFamilyIndices must be VK_QUEUE_FAMILY_IGNORED.",
                                     funcName, HandleToUint64(mem_barrier->image));
                 }
             } else {
@@ -6176,99 +6502,99 @@ static bool ValidateBarriers(const char *funcName, VkCommandBuffer cmdBuffer, ui
                 // or both be a valid queue family
                 if (((src_q_f_index == VK_QUEUE_FAMILY_IGNORED) || (dst_q_f_index == VK_QUEUE_FAMILY_IGNORED)) &&
                     (src_q_f_index != dst_q_f_index)) {
-                    skip |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT,
-                                    VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, HandleToUint64(cmdBuffer), __LINE__,
-                                    DRAWSTATE_INVALID_QUEUE_INDEX, "DS", "%s: Image 0x%" PRIx64
-                                                                         " was created with sharingMode "
-                                                                         "of VK_SHARING_MODE_EXCLUSIVE. If one of src- or "
-                                                                         "dstQueueFamilyIndex is VK_QUEUE_FAMILY_IGNORED, both "
-                                                                         "must be.",
+                    skip |= log_msg(device_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT,
+                                    VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, HandleToUint64(cb_state->commandBuffer),
+                                    __LINE__, DRAWSTATE_INVALID_QUEUE_INDEX, "DS",
+                                    "%s: Image 0x%" PRIx64
+                                    " was created with sharingMode "
+                                    "of VK_SHARING_MODE_EXCLUSIVE. If one of src- or "
+                                    "dstQueueFamilyIndex is VK_QUEUE_FAMILY_IGNORED, both "
+                                    "must be.",
                                     funcName, HandleToUint64(mem_barrier->image));
                 } else if (((src_q_f_index != VK_QUEUE_FAMILY_IGNORED) && (dst_q_f_index != VK_QUEUE_FAMILY_IGNORED)) &&
-                           ((src_q_f_index >= dev_data->phys_dev_properties.queue_family_properties.size()) ||
-                            (dst_q_f_index >= dev_data->phys_dev_properties.queue_family_properties.size()))) {
-                    skip |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT,
-                                    VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, HandleToUint64(cmdBuffer), __LINE__,
-                                    DRAWSTATE_INVALID_QUEUE_INDEX, "DS",
+                           ((src_q_f_index >= device_data->phys_dev_properties.queue_family_properties.size()) ||
+                            (dst_q_f_index >= device_data->phys_dev_properties.queue_family_properties.size()))) {
+                    skip |= log_msg(device_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT,
+                                    VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, HandleToUint64(cb_state->commandBuffer),
+                                    __LINE__, DRAWSTATE_INVALID_QUEUE_INDEX, "DS",
                                     "%s: Image 0x%" PRIx64
                                     " was created with sharingMode "
                                     "of VK_SHARING_MODE_EXCLUSIVE, but srcQueueFamilyIndex %d"
                                     " or dstQueueFamilyIndex %d is greater than " PRINTF_SIZE_T_SPECIFIER
                                     "queueFamilies crated for this device.",
                                     funcName, HandleToUint64(mem_barrier->image), src_q_f_index, dst_q_f_index,
-                                    dev_data->phys_dev_properties.queue_family_properties.size());
+                                    device_data->phys_dev_properties.queue_family_properties.size());
                 }
             }
         }
 
         if (mem_barrier->oldLayout != mem_barrier->newLayout) {
-            if (pCB->activeRenderPass) {
-                skip |=
-                    log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
-                            HandleToUint64(cmdBuffer), __LINE__, VALIDATION_ERROR_1b80093a, "DS",
-                            "%s: As the Image Barrier for image 0x%" PRIx64
-                            " is being executed within a render pass instance, oldLayout must equal newLayout yet they are "
-                            "%s and %s. %s",
-                            funcName, HandleToUint64(mem_barrier->image), string_VkImageLayout(mem_barrier->oldLayout),
-                            string_VkImageLayout(mem_barrier->newLayout), validation_error_map[VALIDATION_ERROR_1b80093a]);
-            }
-            skip |= ValidateMaskBitsFromLayouts(dev_data, cmdBuffer, mem_barrier->srcAccessMask, mem_barrier->oldLayout, "Source");
-            skip |= ValidateMaskBitsFromLayouts(dev_data, cmdBuffer, mem_barrier->dstAccessMask, mem_barrier->newLayout, "Dest");
+            skip |= ValidateMaskBitsFromLayouts(device_data, cb_state->commandBuffer, mem_barrier->srcAccessMask,
+                                                mem_barrier->oldLayout, "Source");
+            skip |= ValidateMaskBitsFromLayouts(device_data, cb_state->commandBuffer, mem_barrier->dstAccessMask,
+                                                mem_barrier->newLayout, "Dest");
         }
         if (mem_barrier->newLayout == VK_IMAGE_LAYOUT_UNDEFINED || mem_barrier->newLayout == VK_IMAGE_LAYOUT_PREINITIALIZED) {
-            skip |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
-                            HandleToUint64(cmdBuffer), __LINE__, DRAWSTATE_INVALID_BARRIER, "DS",
+            skip |= log_msg(device_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
+                            HandleToUint64(cb_state->commandBuffer), __LINE__, DRAWSTATE_INVALID_BARRIER, "DS",
                             "%s: Image Layout cannot be transitioned to UNDEFINED or "
                             "PREINITIALIZED.",
                             funcName);
         }
         if (image_data) {
             auto aspect_mask = mem_barrier->subresourceRange.aspectMask;
-            skip |= ValidateImageAspectMask(dev_data, image_data->image, image_data->createInfo.format, aspect_mask, funcName);
+            skip |= ValidateImageAspectMask(device_data, image_data->image, image_data->createInfo.format, aspect_mask, funcName);
 
             std::string param_name = "pImageMemoryBarriers[" + std::to_string(i) + "].subresourceRange";
-            skip |= ValidateImageSubresourceRange(dev_data, image_data, false, mem_barrier->subresourceRange, funcName,
+            skip |= ValidateImageSubresourceRange(device_data, image_data, false, mem_barrier->subresourceRange, funcName,
                                                   param_name.c_str());
         }
     }
 
     for (uint32_t i = 0; i < bufferBarrierCount; ++i) {
         auto mem_barrier = &pBufferMemBarriers[i];
-        if (pCB->activeRenderPass) {
-            skip |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
-                            HandleToUint64(cmdBuffer), __LINE__, DRAWSTATE_INVALID_BARRIER, "DS",
-                            "%s: Buffer Barriers cannot be used during a render pass.", funcName);
-        }
         if (!mem_barrier) continue;
 
+        if (!ValidateAccessMaskPipelineStage(mem_barrier->srcAccessMask, src_stage_mask)) {
+            skip |= log_msg(device_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
+                            HandleToUint64(cb_state->commandBuffer), __LINE__, VALIDATION_ERROR_1b800940, "DS",
+                            "%s: pBufferMemBarriers[%d].srcAccessMask (0x%X) is not supported by srcStageMask (0x%X). %s", funcName,
+                            i, mem_barrier->srcAccessMask, src_stage_mask, validation_error_map[VALIDATION_ERROR_1b800940]);
+        }
+        if (!ValidateAccessMaskPipelineStage(mem_barrier->dstAccessMask, dst_stage_mask)) {
+            skip |= log_msg(device_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
+                            HandleToUint64(cb_state->commandBuffer), __LINE__, VALIDATION_ERROR_1b800942, "DS",
+                            "%s: pBufferMemBarriers[%d].dstAccessMask (0x%X) is not supported by dstStageMask (0x%X). %s", funcName,
+                            i, mem_barrier->dstAccessMask, dst_stage_mask, validation_error_map[VALIDATION_ERROR_1b800942]);
+        }
         // Validate buffer barrier queue family indices
         if ((mem_barrier->srcQueueFamilyIndex != VK_QUEUE_FAMILY_IGNORED &&
-             mem_barrier->srcQueueFamilyIndex >= dev_data->phys_dev_properties.queue_family_properties.size()) ||
+             mem_barrier->srcQueueFamilyIndex >= device_data->phys_dev_properties.queue_family_properties.size()) ||
             (mem_barrier->dstQueueFamilyIndex != VK_QUEUE_FAMILY_IGNORED &&
-             mem_barrier->dstQueueFamilyIndex >= dev_data->phys_dev_properties.queue_family_properties.size())) {
-            skip |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
-                            HandleToUint64(cmdBuffer), __LINE__, DRAWSTATE_INVALID_QUEUE_INDEX, "DS",
+             mem_barrier->dstQueueFamilyIndex >= device_data->phys_dev_properties.queue_family_properties.size())) {
+            skip |= log_msg(device_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
+                            HandleToUint64(cb_state->commandBuffer), __LINE__, DRAWSTATE_INVALID_QUEUE_INDEX, "DS",
                             "%s: Buffer Barrier 0x%" PRIx64
                             " has QueueFamilyIndex greater "
                             "than the number of QueueFamilies (" PRINTF_SIZE_T_SPECIFIER ") for this device.",
                             funcName, HandleToUint64(mem_barrier->buffer),
-                            dev_data->phys_dev_properties.queue_family_properties.size());
+                            device_data->phys_dev_properties.queue_family_properties.size());
         }
 
-        auto buffer_state = GetBufferState(dev_data, mem_barrier->buffer);
+        auto buffer_state = GetBufferState(device_data, mem_barrier->buffer);
         if (buffer_state) {
             auto buffer_size = buffer_state->requirements.size;
             if (mem_barrier->offset >= buffer_size) {
-                skip |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT,
-                                VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, HandleToUint64(cmdBuffer), __LINE__,
-                                DRAWSTATE_INVALID_BARRIER, "DS", "%s: Buffer Barrier 0x%" PRIx64 " has offset 0x%" PRIx64
-                                                                 " which is not less than total size 0x%" PRIx64 ".",
-                                funcName, HandleToUint64(mem_barrier->buffer), HandleToUint64(mem_barrier->offset),
-                                HandleToUint64(buffer_size));
+                skip |= log_msg(
+                    device_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
+                    HandleToUint64(cb_state->commandBuffer), __LINE__, DRAWSTATE_INVALID_BARRIER, "DS",
+                    "%s: Buffer Barrier 0x%" PRIx64 " has offset 0x%" PRIx64 " which is not less than total size 0x%" PRIx64 ".",
+                    funcName, HandleToUint64(mem_barrier->buffer), HandleToUint64(mem_barrier->offset),
+                    HandleToUint64(buffer_size));
             } else if (mem_barrier->size != VK_WHOLE_SIZE && (mem_barrier->offset + mem_barrier->size > buffer_size)) {
                 skip |=
-                    log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
-                            HandleToUint64(cmdBuffer), __LINE__, DRAWSTATE_INVALID_BARRIER, "DS",
+                    log_msg(device_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
+                            HandleToUint64(cb_state->commandBuffer), __LINE__, DRAWSTATE_INVALID_BARRIER, "DS",
                             "%s: Buffer Barrier 0x%" PRIx64 " has offset 0x%" PRIx64 " and size 0x%" PRIx64
                             " whose sum is greater than total size 0x%" PRIx64 ".",
                             funcName, HandleToUint64(mem_barrier->buffer), HandleToUint64(mem_barrier->offset),
@@ -6370,7 +6696,7 @@ bool CheckStageMaskQueueCompatibility(layer_data *dev_data, VkCommandBuffer comm
     return skip;
 }
 
-bool ValidateStageMasksAgainstQueueCapabilities(layer_data *dev_data, GLOBAL_CB_NODE *cb_state,
+bool ValidateStageMasksAgainstQueueCapabilities(layer_data *dev_data, GLOBAL_CB_NODE const *cb_state,
                                                 VkPipelineStageFlags source_stage_mask, VkPipelineStageFlags dest_stage_mask,
                                                 const char *function, UNIQUE_VALIDATION_ERROR_CODE error_code) {
     bool skip = false;
@@ -6429,14 +6755,13 @@ VKAPI_ATTR void VKAPI_CALL CmdWaitEvents(VkCommandBuffer commandBuffer, uint32_t
         skip |= ValidateCmdQueueFlags(dev_data, cb_state, "vkCmdWaitEvents()", VK_QUEUE_GRAPHICS_BIT | VK_QUEUE_COMPUTE_BIT,
                                       VALIDATION_ERROR_1e602415);
         skip |= ValidateCmd(dev_data, cb_state, CMD_WAITEVENTS, "vkCmdWaitEvents()");
-        skip |=
-            ValidateBarriersToImages(dev_data, commandBuffer, imageMemoryBarrierCount, pImageMemoryBarriers, "vkCmdWaitEvents()");
+        skip |= ValidateBarriersToImages(dev_data, cb_state, imageMemoryBarrierCount, pImageMemoryBarriers, "vkCmdWaitEvents()");
         if (!skip) {
             TransitionImageLayouts(dev_data, commandBuffer, imageMemoryBarrierCount, pImageMemoryBarriers);
         }
-
-        skip |= ValidateBarriers("vkCmdWaitEvents()", commandBuffer, memoryBarrierCount, pMemoryBarriers, bufferMemoryBarrierCount,
-                                 pBufferMemoryBarriers, imageMemoryBarrierCount, pImageMemoryBarriers);
+        skip |= ValidateBarriers(dev_data, "vkCmdWaitEvents()", cb_state, sourceStageMask, dstStageMask, memoryBarrierCount,
+                                 pMemoryBarriers, bufferMemoryBarrierCount, pBufferMemoryBarriers, imageMemoryBarrierCount,
+                                 pImageMemoryBarriers);
     }
     lock.unlock();
     if (!skip)
@@ -6445,8 +6770,8 @@ VKAPI_ATTR void VKAPI_CALL CmdWaitEvents(VkCommandBuffer commandBuffer, uint32_t
                                                imageMemoryBarrierCount, pImageMemoryBarriers);
 }
 
-static bool PreCallValidateCmdPipelineBarrier(layer_data *device_data, GLOBAL_CB_NODE *cb_state, VkCommandBuffer commandBuffer,
-                                              VkPipelineStageFlags srcStageMask, VkPipelineStageFlags dstStageMask,
+static bool PreCallValidateCmdPipelineBarrier(layer_data *device_data, GLOBAL_CB_NODE *cb_state, VkPipelineStageFlags srcStageMask,
+                                              VkPipelineStageFlags dstStageMask, VkDependencyFlags dependencyFlags,
                                               uint32_t memoryBarrierCount, const VkMemoryBarrier *pMemoryBarriers,
                                               uint32_t bufferMemoryBarrierCount, const VkBufferMemoryBarrier *pBufferMemoryBarriers,
                                               uint32_t imageMemoryBarrierCount, const VkImageMemoryBarrier *pImageMemoryBarriers) {
@@ -6460,10 +6785,17 @@ static bool PreCallValidateCmdPipelineBarrier(layer_data *device_data, GLOBAL_CB
                                          VALIDATION_ERROR_1b800924);
     skip |= ValidateStageMaskGsTsEnables(device_data, dstStageMask, "vkCmdPipelineBarrier()", VALIDATION_ERROR_1b800922,
                                          VALIDATION_ERROR_1b800926);
-    skip |= ValidateBarriersToImages(device_data, commandBuffer, imageMemoryBarrierCount, pImageMemoryBarriers,
-                                     "vkCmdPipelineBarrier()");
-    skip |= ValidateBarriers("vkCmdPipelineBarrier()", commandBuffer, memoryBarrierCount, pMemoryBarriers, bufferMemoryBarrierCount,
-                             pBufferMemoryBarriers, imageMemoryBarrierCount, pImageMemoryBarriers);
+    if (cb_state->activeRenderPass) {
+        skip |= ValidateRenderPassPipelineBarriers(device_data, "vkCmdPipelineBarrier()", cb_state, srcStageMask, dstStageMask,
+                                                   dependencyFlags, memoryBarrierCount, pMemoryBarriers, bufferMemoryBarrierCount,
+                                                   pBufferMemoryBarriers, imageMemoryBarrierCount, pImageMemoryBarriers);
+        if (skip) return true;  // Early return to avoid redundant errors from below calls
+    }
+    skip |=
+        ValidateBarriersToImages(device_data, cb_state, imageMemoryBarrierCount, pImageMemoryBarriers, "vkCmdPipelineBarrier()");
+    skip |= ValidateBarriers(device_data, "vkCmdPipelineBarrier()", cb_state, srcStageMask, dstStageMask, memoryBarrierCount,
+                             pMemoryBarriers, bufferMemoryBarrierCount, pBufferMemoryBarriers, imageMemoryBarrierCount,
+                             pImageMemoryBarriers);
     return skip;
 }
 
@@ -6482,7 +6814,7 @@ VKAPI_ATTR void VKAPI_CALL CmdPipelineBarrier(VkCommandBuffer commandBuffer, VkP
     unique_lock_t lock(global_lock);
     GLOBAL_CB_NODE *cb_state = GetCBNode(device_data, commandBuffer);
     if (cb_state) {
-        skip |= PreCallValidateCmdPipelineBarrier(device_data, cb_state, commandBuffer, srcStageMask, dstStageMask,
+        skip |= PreCallValidateCmdPipelineBarrier(device_data, cb_state, srcStageMask, dstStageMask, dependencyFlags,
                                                   memoryBarrierCount, pMemoryBarriers, bufferMemoryBarrierCount,
                                                   pBufferMemoryBarriers, imageMemoryBarrierCount, pImageMemoryBarriers);
         if (!skip) {
@@ -6656,7 +6988,7 @@ VKAPI_ATTR void VKAPI_CALL CmdCopyQueryPoolResults(VkCommandBuffer commandBuffer
     lock.lock();
     if (cb_node && dst_buff_state) {
         AddCommandBufferBindingBuffer(dev_data, cb_node, dst_buff_state);
-        cb_node->validate_functions.emplace_back([=]() {
+        cb_node->queue_submit_functions.emplace_back([=]() {
             SetBufferMemoryValid(dev_data, dst_buff_state, true);
             return false;
         });
@@ -7203,11 +7535,13 @@ static bool ValidateDependencies(const layer_data *dev_data, FRAMEBUFFER_STATE c
 }
 
 static bool CreatePassDAG(const layer_data *dev_data, const VkRenderPassCreateInfo *pCreateInfo,
-                          std::vector<DAGNode> &subpass_to_node, std::vector<bool> &has_self_dependency) {
+                          std::vector<DAGNode> &subpass_to_node, std::vector<bool> &has_self_dependency,
+                          std::vector<int32_t> &subpass_to_dep_index) {
     bool skip = false;
     for (uint32_t i = 0; i < pCreateInfo->subpassCount; ++i) {
         DAGNode &subpass_node = subpass_to_node[i];
         subpass_node.pass = i;
+        subpass_to_dep_index[i] = -1;  // Default to no dependency and overwrite below as needed
     }
     for (uint32_t i = 0; i < pCreateInfo->dependencyCount; ++i) {
         const VkSubpassDependency &dependency = pCreateInfo->pDependencies[i];
@@ -7220,12 +7554,15 @@ static bool CreatePassDAG(const layer_data *dev_data, const VkRenderPassCreateIn
         } else if (dependency.srcSubpass > dependency.dstSubpass) {
             skip |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0,
                             __LINE__, DRAWSTATE_INVALID_RENDERPASS, "DS",
-                            "Depedency graph must be specified such that an earlier pass cannot depend on a later pass.");
+                            "Dependency graph must be specified such that an earlier pass cannot depend on a later pass.");
         } else if (dependency.srcSubpass == dependency.dstSubpass) {
             has_self_dependency[dependency.srcSubpass] = true;
         } else {
             subpass_to_node[dependency.dstSubpass].prev.push_back(dependency.srcSubpass);
             subpass_to_node[dependency.srcSubpass].next.push_back(dependency.dstSubpass);
+        }
+        if (dependency.srcSubpass != VK_SUBPASS_EXTERNAL) {
+            subpass_to_dep_index[dependency.srcSubpass] = i;
         }
     }
     return skip;
@@ -7429,12 +7766,14 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateRenderPass(VkDevice device, const VkRenderP
 
         std::vector<bool> has_self_dependency(pCreateInfo->subpassCount);
         std::vector<DAGNode> subpass_to_node(pCreateInfo->subpassCount);
-        skip |= CreatePassDAG(dev_data, pCreateInfo, subpass_to_node, has_self_dependency);
+        std::vector<int32_t> subpass_to_dep_index(pCreateInfo->subpassCount);
+        skip |= CreatePassDAG(dev_data, pCreateInfo, subpass_to_node, has_self_dependency, subpass_to_dep_index);
 
         auto render_pass = unique_ptr<RENDER_PASS_STATE>(new RENDER_PASS_STATE(pCreateInfo));
         render_pass->renderPass = *pRenderPass;
         render_pass->hasSelfDependency = has_self_dependency;
         render_pass->subpassToNode = subpass_to_node;
+        render_pass->subpass_to_dependency_index = subpass_to_dep_index;
 
         for (uint32_t i = 0; i < pCreateInfo->subpassCount; ++i) {
             const VkSubpassDescription &subpass = pCreateInfo->pSubpasses[i];
@@ -7527,28 +7866,28 @@ VKAPI_ATTR void VKAPI_CALL CmdBeginRenderPass(VkCommandBuffer commandBuffer, con
                         SetImageMemoryValid(dev_data, GetImageState(dev_data, fb_info.image), true);
                         return false;
                     };
-                    cb_node->validate_functions.push_back(function);
+                    cb_node->queue_submit_functions.push_back(function);
                 } else if (FormatSpecificLoadAndStoreOpSettings(pAttachment->format, pAttachment->loadOp,
                                                                 pAttachment->stencilLoadOp, VK_ATTACHMENT_LOAD_OP_DONT_CARE)) {
                     std::function<bool()> function = [=]() {
                         SetImageMemoryValid(dev_data, GetImageState(dev_data, fb_info.image), false);
                         return false;
                     };
-                    cb_node->validate_functions.push_back(function);
+                    cb_node->queue_submit_functions.push_back(function);
                 } else if (FormatSpecificLoadAndStoreOpSettings(pAttachment->format, pAttachment->loadOp,
                                                                 pAttachment->stencilLoadOp, VK_ATTACHMENT_LOAD_OP_LOAD)) {
                     std::function<bool()> function = [=]() {
                         return ValidateImageMemoryIsValid(dev_data, GetImageState(dev_data, fb_info.image),
                                                           "vkCmdBeginRenderPass()");
                     };
-                    cb_node->validate_functions.push_back(function);
+                    cb_node->queue_submit_functions.push_back(function);
                 }
                 if (render_pass_state->attachment_first_read[i]) {
                     std::function<bool()> function = [=]() {
                         return ValidateImageMemoryIsValid(dev_data, GetImageState(dev_data, fb_info.image),
                                                           "vkCmdBeginRenderPass()");
                     };
-                    cb_node->validate_functions.push_back(function);
+                    cb_node->queue_submit_functions.push_back(function);
                 }
             }
             if (clear_op_size > pRenderPassBegin->clearValueCount) {
@@ -7651,14 +7990,14 @@ VKAPI_ATTR void VKAPI_CALL CmdEndRenderPass(VkCommandBuffer commandBuffer) {
                         SetImageMemoryValid(dev_data, GetImageState(dev_data, fb_info.image), true);
                         return false;
                     };
-                    pCB->validate_functions.push_back(function);
+                    pCB->queue_submit_functions.push_back(function);
                 } else if (FormatSpecificLoadAndStoreOpSettings(pAttachment->format, pAttachment->storeOp,
                                                                 pAttachment->stencilStoreOp, VK_ATTACHMENT_STORE_OP_DONT_CARE)) {
                     std::function<bool()> function = [=]() {
                         SetImageMemoryValid(dev_data, GetImageState(dev_data, fb_info.image), false);
                         return false;
                     };
-                    pCB->validate_functions.push_back(function);
+                    pCB->queue_submit_functions.push_back(function);
                 }
             }
         }
@@ -7935,6 +8274,12 @@ VKAPI_ATTR void VKAPI_CALL CmdExecuteCommands(VkCommandBuffer commandBuffer, uin
                         }
                         //  If framebuffer for secondary CB is not NULL, then it must match active FB from primaryCB
                         skip |= validateFramebuffer(dev_data, commandBuffer, pCB, pCommandBuffers[i], pSubCB);
+                        if (VK_NULL_HANDLE == pSubCB->activeFramebuffer) {
+                            //  Inherit primary's activeFramebuffer and while running validate functions
+                            for (auto &function : pSubCB->cmd_execute_commands_functions) {
+                                skip |= function(pCB->activeFramebuffer);
+                            }
+                        }
                     }
                     string errorString = "";
                     // secondaryCB must have been created w/ RP compatible w/ primaryCB active renderpass
@@ -8543,11 +8888,10 @@ static bool PreCallValidateCreateSwapchainKHR(layer_data *dev_data, const char *
         }
 
         // Validate pCreateInfo->imageExtent against VkSurfaceCapabilitiesKHR::{current|min|max}ImageExtent:
-        if ((capabilities.currentExtent.width == kSurfaceSizeFromSwapchain) &&
-            ((pCreateInfo->imageExtent.width < capabilities.minImageExtent.width) ||
-             (pCreateInfo->imageExtent.width > capabilities.maxImageExtent.width) ||
-             (pCreateInfo->imageExtent.height < capabilities.minImageExtent.height) ||
-             (pCreateInfo->imageExtent.height > capabilities.maxImageExtent.height))) {
+        if ((pCreateInfo->imageExtent.width < capabilities.minImageExtent.width) ||
+            (pCreateInfo->imageExtent.width > capabilities.maxImageExtent.width) ||
+            (pCreateInfo->imageExtent.height < capabilities.minImageExtent.height) ||
+            (pCreateInfo->imageExtent.height > capabilities.maxImageExtent.height)) {
             if (log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
                         HandleToUint64(dev_data->device), __LINE__, VALIDATION_ERROR_146009f4, "DS",
                         "%s called with imageExtent = (%d,%d), which is outside the bounds returned by "
@@ -10135,7 +10479,7 @@ VKAPI_ATTR VkResult VKAPI_CALL GetDisplayPlaneCapabilitiesKHR(VkPhysicalDevice p
     return result;
 }
 
-VKAPI_ATTR VkResult VKAPI_CALL DebugMarkerSetObjectNameEXT(VkDevice device, VkDebugMarkerObjectNameInfoEXT *pNameInfo) {
+VKAPI_ATTR VkResult VKAPI_CALL DebugMarkerSetObjectNameEXT(VkDevice device, const VkDebugMarkerObjectNameInfoEXT *pNameInfo) {
     std::unique_lock<std::mutex> lock(global_lock);
     layer_data *device_data = GetLayerDataPtr(get_dispatch_key(device), layer_data_map);
     if (pNameInfo->pObjectName) {

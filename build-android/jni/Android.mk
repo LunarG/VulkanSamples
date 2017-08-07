@@ -68,7 +68,8 @@ include $(BUILD_SHARED_LIBRARY)
 
 include $(CLEAR_VARS)
 LOCAL_MODULE := VkLayer_object_tracker
-LOCAL_SRC_FILES += $(SRC_DIR)/layers/object_tracker.cpp
+LOCAL_SRC_FILES += $(LAYER_DIR)/include/object_tracker.cpp
+LOCAL_SRC_FILES += $(SRC_DIR)/layers/object_tracker_utils.cpp
 LOCAL_SRC_FILES += $(SRC_DIR)/layers/vk_layer_table.cpp
 LOCAL_C_INCLUDES += $(SRC_DIR)/include \
                     $(SRC_DIR)/layers \

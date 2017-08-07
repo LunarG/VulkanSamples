@@ -20,6 +20,8 @@
 
 #if defined(VK_USE_PLATFORM_XLIB_KHR) || defined(VK_USE_PLATFORM_XCB_KHR)
 #include <X11/Xutil.h>
+#elif defined(VK_USE_PLATFORM_WAYLAND_KHR)
+#include <linux/input.h>
 #endif
 
 #include <cassert>
@@ -206,6 +208,183 @@ typedef struct {
     vk::DescriptorSet descriptor_set;
 } SwapchainImageResources;
 
+struct Demo {
+    Demo();
+    void build_image_ownership_cmd(uint32_t const &);
+    vk::Bool32 check_layers(uint32_t, const char *const *, uint32_t, vk::LayerProperties *);
+    void cleanup();
+    void create_device();
+    void destroy_texture_image(texture_object *);
+    void draw();
+    void draw_build_cmd(vk::CommandBuffer);
+    void flush_init_cmd();
+    void init(int, char **);
+    void init_connection();
+    void init_vk();
+    void init_vk_swapchain();
+    void prepare();
+    void prepare_buffers();
+    void prepare_cube_data_buffers();
+    void prepare_depth();
+    void prepare_descriptor_layout();
+    void prepare_descriptor_pool();
+    void prepare_descriptor_set();
+    void prepare_framebuffers();
+    vk::ShaderModule prepare_fs();
+    void prepare_pipeline();
+    void prepare_render_pass();
+    vk::ShaderModule prepare_shader_module(const void *, size_t);
+    void prepare_texture_image(const char *, texture_object *, vk::ImageTiling, vk::ImageUsageFlags, vk::MemoryPropertyFlags);
+    void prepare_textures();
+    vk::ShaderModule prepare_vs();
+    char *read_spv(const char *, size_t *);
+    void resize();
+    void set_image_layout(vk::Image, vk::ImageAspectFlags, vk::ImageLayout, vk::ImageLayout, vk::AccessFlags,
+                          vk::PipelineStageFlags, vk::PipelineStageFlags);
+    void update_data_buffer();
+    bool loadTexture(const char *, uint8_t *, vk::SubresourceLayout *, int32_t *, int32_t *);
+    bool memory_type_from_properties(uint32_t, vk::MemoryPropertyFlags, uint32_t *);
+
+#if defined(VK_USE_PLATFORM_WIN32_KHR)
+    void run();
+    void create_window();
+#elif defined(VK_USE_PLATFORM_XLIB_KHR)
+    void create_xlib_window();
+    void handle_xlib_event(const XEvent *);
+    void run_xlib();
+#elif defined(VK_USE_PLATFORM_XCB_KHR)
+    void handle_xcb_event(const xcb_generic_event_t *);
+    void run_xcb();
+    void create_xcb_window();
+#elif defined(VK_USE_PLATFORM_WAYLAND_KHR)
+    void run();
+    void create_window();
+#elif defined(VK_USE_PLATFORM_MIR_KHR)
+#elif defined(VK_USE_PLATFORM_DISPLAY_KHR)
+    vk::Result create_display_surface();
+    void run_display();
+#endif
+
+#if defined(VK_USE_PLATFORM_WIN32_KHR)
+    HINSTANCE connection;         // hInstance - Windows Instance
+    HWND window;                  // hWnd - window handle
+    POINT minsize;                // minimum window size
+    char name[APP_NAME_STR_LEN];  // Name to put on the window/icon
+#elif defined(VK_USE_PLATFORM_XLIB_KHR)
+    Window xlib_window;
+    Atom xlib_wm_delete_window;
+    Display *display;
+#elif defined(VK_USE_PLATFORM_XCB_KHR)
+    xcb_window_t xcb_window;
+    xcb_screen_t *screen;
+    xcb_connection_t *connection;
+    xcb_intern_atom_reply_t *atom_wm_delete_window;
+#elif defined(VK_USE_PLATFORM_WAYLAND_KHR)
+    wl_display *display;
+    wl_registry *registry;
+    wl_compositor *compositor;
+    wl_surface *window;
+    wl_shell *shell;
+    wl_shell_surface *shell_surface;
+    wl_seat *seat;
+    wl_pointer *pointer;
+    wl_keyboard *keyboard;
+#elif defined(VK_USE_PLATFORM_MIR_KHR)
+#endif
+
+    vk::SurfaceKHR surface;
+    bool prepared;
+    bool use_staging_buffer;
+    bool use_xlib;
+    bool separate_present_queue;
+
+    vk::Instance inst;
+    vk::PhysicalDevice gpu;
+    vk::Device device;
+    vk::Queue graphics_queue;
+    vk::Queue present_queue;
+    uint32_t graphics_queue_family_index;
+    uint32_t present_queue_family_index;
+    vk::Semaphore image_acquired_semaphores[FRAME_LAG];
+    vk::Semaphore draw_complete_semaphores[FRAME_LAG];
+    vk::Semaphore image_ownership_semaphores[FRAME_LAG];
+    vk::PhysicalDeviceProperties gpu_props;
+    std::unique_ptr<vk::QueueFamilyProperties[]> queue_props;
+    vk::PhysicalDeviceMemoryProperties memory_properties;
+
+    uint32_t enabled_extension_count;
+    uint32_t enabled_layer_count;
+    char const *extension_names[64];
+    char const *enabled_layers[64];
+
+    uint32_t width;
+    uint32_t height;
+    vk::Format format;
+    vk::ColorSpaceKHR color_space;
+
+    uint32_t swapchainImageCount;
+    vk::SwapchainKHR swapchain;
+    std::unique_ptr<SwapchainImageResources[]> swapchain_image_resources;
+    vk::PresentModeKHR presentMode;
+    vk::Fence fences[FRAME_LAG];
+    uint32_t frame_index;
+
+    vk::CommandPool cmd_pool;
+    vk::CommandPool present_cmd_pool;
+
+    struct {
+        vk::Format format;
+        vk::Image image;
+        vk::MemoryAllocateInfo mem_alloc;
+        vk::DeviceMemory mem;
+        vk::ImageView view;
+    } depth;
+
+    static int32_t const texture_count = 1;
+    texture_object textures[texture_count];
+    texture_object staging_texture;
+
+    struct {
+        vk::Buffer buf;
+        vk::MemoryAllocateInfo mem_alloc;
+        vk::DeviceMemory mem;
+        vk::DescriptorBufferInfo buffer_info;
+    } uniform_data;
+
+    vk::CommandBuffer cmd;  // Buffer for initialization commands
+    vk::PipelineLayout pipeline_layout;
+    vk::DescriptorSetLayout desc_layout;
+    vk::PipelineCache pipelineCache;
+    vk::RenderPass render_pass;
+    vk::Pipeline pipeline;
+
+    mat4x4 projection_matrix;
+    mat4x4 view_matrix;
+    mat4x4 model_matrix;
+
+    float spin_angle;
+    float spin_increment;
+    bool pause;
+
+    vk::ShaderModule vert_shader_module;
+    vk::ShaderModule frag_shader_module;
+
+    vk::DescriptorPool desc_pool;
+    vk::DescriptorSet desc_set;
+
+    std::unique_ptr<vk::Framebuffer[]> framebuffers;
+
+    bool quit;
+    uint32_t curFrame;
+    uint32_t frameCount;
+    bool validate;
+    bool use_break;
+    bool suppress_popups;
+
+    uint32_t current_buffer;
+    uint32_t queue_family_count;
+};
+
 #ifdef _WIN32
 // MS-Windows event handling function:
 LRESULT CALLBACK WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
@@ -222,63 +401,154 @@ static void handle_popup_done(void *data, wl_shell_surface *shell_surface) {}
 
 static const wl_shell_surface_listener shell_surface_listener = {handle_ping, handle_configure, handle_popup_done};
 
-static void handle_announce_global_object(void *data, struct wl_registry *wl_registry, uint32_t name, const char *interface,
-                                          uint32_t version) {}
+static void pointer_handle_enter(void *data, struct wl_pointer *pointer, uint32_t serial, struct wl_surface *surface, wl_fixed_t sx,
+                                 wl_fixed_t sy) {}
 
-static void handle_announce_global_object_remove(void *data, struct wl_registry *wl_registry, uint32_t name) {}
+static void pointer_handle_leave(void *data, struct wl_pointer *pointer, uint32_t serial, struct wl_surface *surface) {}
 
-static const wl_registry_listener registry_listener = {handle_announce_global_object, handle_announce_global_object_remove};
+static void pointer_handle_motion(void *data, struct wl_pointer *pointer, uint32_t time, wl_fixed_t sx, wl_fixed_t sy) {}
+
+static void pointer_handle_button(void *data, struct wl_pointer *wl_pointer, uint32_t serial, uint32_t time, uint32_t button,
+                                  uint32_t state) {
+    Demo *demo = (Demo *)data;
+    if (button == BTN_LEFT && state == WL_POINTER_BUTTON_STATE_PRESSED) {
+        wl_shell_surface_move(demo->shell_surface, demo->seat, serial);
+    }
+}
+
+static void pointer_handle_axis(void *data, struct wl_pointer *wl_pointer, uint32_t time, uint32_t axis, wl_fixed_t value) {}
+
+static const struct wl_pointer_listener pointer_listener = {
+    pointer_handle_enter, pointer_handle_leave, pointer_handle_motion, pointer_handle_button, pointer_handle_axis,
+};
+
+static void keyboard_handle_keymap(void *data, struct wl_keyboard *keyboard, uint32_t format, int fd, uint32_t size) {}
+
+static void keyboard_handle_enter(void *data, struct wl_keyboard *keyboard, uint32_t serial, struct wl_surface *surface,
+                                  struct wl_array *keys) {}
+
+static void keyboard_handle_leave(void *data, struct wl_keyboard *keyboard, uint32_t serial, struct wl_surface *surface) {}
+
+static void keyboard_handle_key(void *data, struct wl_keyboard *keyboard, uint32_t serial, uint32_t time, uint32_t key,
+                                uint32_t state) {
+    if (state != WL_KEYBOARD_KEY_STATE_RELEASED) return;
+    Demo *demo = (Demo *)data;
+    switch (key) {
+        case KEY_ESC:  // Escape
+            demo->quit = true;
+            break;
+        case KEY_LEFT:  // left arrow key
+            demo->spin_angle -= demo->spin_increment;
+            break;
+        case KEY_RIGHT:  // right arrow key
+            demo->spin_angle += demo->spin_increment;
+            break;
+        case KEY_SPACE:  // space bar
+            demo->pause = !demo->pause;
+            break;
+    }
+}
+
+static void keyboard_handle_modifiers(void *data, wl_keyboard *keyboard, uint32_t serial, uint32_t mods_depressed,
+                                      uint32_t mods_latched, uint32_t mods_locked, uint32_t group) {}
+
+static const struct wl_keyboard_listener keyboard_listener = {
+    keyboard_handle_keymap, keyboard_handle_enter, keyboard_handle_leave, keyboard_handle_key, keyboard_handle_modifiers,
+};
+
+static void seat_handle_capabilities(void *data, wl_seat *seat, uint32_t caps) {
+    // Subscribe to pointer events
+    Demo *demo = (Demo *)data;
+    if ((caps & WL_SEAT_CAPABILITY_POINTER) && !demo->pointer) {
+        demo->pointer = wl_seat_get_pointer(seat);
+        wl_pointer_add_listener(demo->pointer, &pointer_listener, demo);
+    } else if (!(caps & WL_SEAT_CAPABILITY_POINTER) && demo->pointer) {
+        wl_pointer_destroy(demo->pointer);
+        demo->pointer = NULL;
+    }
+    // Subscribe to keyboard events
+    if (caps & WL_SEAT_CAPABILITY_KEYBOARD) {
+        demo->keyboard = wl_seat_get_keyboard(seat);
+        wl_keyboard_add_listener(demo->keyboard, &keyboard_listener, demo);
+    } else if (!(caps & WL_SEAT_CAPABILITY_KEYBOARD)) {
+        wl_keyboard_destroy(demo->keyboard);
+        demo->keyboard = NULL;
+    }
+}
+
+static const wl_seat_listener seat_listener = {
+    seat_handle_capabilities,
+};
+
+static void registry_handle_global(void *data, wl_registry *registry, uint32_t id, const char *interface, uint32_t version) {
+    Demo *demo = (Demo *)data;
+    // pickup wayland objects when they appear
+    if (strcmp(interface, "wl_compositor") == 0) {
+        demo->compositor = (wl_compositor *)wl_registry_bind(registry, id, &wl_compositor_interface, 1);
+    } else if (strcmp(interface, "wl_shell") == 0) {
+        demo->shell = (wl_shell *)wl_registry_bind(registry, id, &wl_shell_interface, 1);
+    } else if (strcmp(interface, "wl_seat") == 0) {
+        demo->seat = (wl_seat *)wl_registry_bind(registry, id, &wl_seat_interface, 1);
+        wl_seat_add_listener(demo->seat, &seat_listener, demo);
+    }
+}
+
+static void registry_handle_global_remove(void *data, wl_registry *registry, uint32_t name) {}
+
+static const wl_registry_listener registry_listener = {registry_handle_global, registry_handle_global_remove};
 #elif defined(VK_USE_PLATFORM_MIR_KHR)
 #endif
 
-struct Demo {
-    Demo()
-        :
+Demo::Demo()
+    :
 #if defined(VK_USE_PLATFORM_WIN32_KHR)
-          connection{nullptr},
-          window{nullptr},
-          minsize(POINT{0, 0}),  // Use explicit construction to avoid MSVC error C2797.
+      connection{nullptr},
+      window{nullptr},
+      minsize(POINT{0, 0}),  // Use explicit construction to avoid MSVC error C2797.
 #endif
 
 #if defined(VK_USE_PLATFORM_XLIB_KHR)
-          xlib_window{0},
-          xlib_wm_delete_window{0},
-          display{nullptr},
+      xlib_window{0},
+      xlib_wm_delete_window{0},
+      display{nullptr},
 #elif defined(VK_USE_PLATFORM_XCB_KHR)
-          xcb_window{0},
-          screen{nullptr},
-          connection{nullptr},
+      xcb_window{0},
+      screen{nullptr},
+      connection{nullptr},
 #elif defined(VK_USE_PLATFORM_WAYLAND_KHR)
-          display{nullptr},
-          registry{nullptr},
-          compositor{nullptr},
-          window{nullptr},
-          shell{nullptr},
-          shell_surface{nullptr},
+      display{nullptr},
+      registry{nullptr},
+      compositor{nullptr},
+      window{nullptr},
+      shell{nullptr},
+      shell_surface{nullptr},
+      seat{nullptr},
+      pointer{nullptr},
+      keyboard{nullptr},
 #elif defined(VK_USE_PLATFORM_MIR_KHR)
 #endif
-          prepared{false},
-          use_staging_buffer{false},
-          use_xlib{false},
-          graphics_queue_family_index{0},
-          present_queue_family_index{0},
-          enabled_extension_count{0},
-          enabled_layer_count{0},
-          width{0},
-          height{0},
-          swapchainImageCount{0},
-          frame_index{0},
-          spin_angle{0.0f},
-          spin_increment{0.0f},
-          pause{false},
-          quit{false},
-          curFrame{0},
-          frameCount{0},
-          validate{false},
-          use_break{false},
-          suppress_popups{false},
-          current_buffer{0},
-          queue_family_count{0} {
+      prepared{false},
+      use_staging_buffer{false},
+      use_xlib{false},
+      graphics_queue_family_index{0},
+      present_queue_family_index{0},
+      enabled_extension_count{0},
+      enabled_layer_count{0},
+      width{0},
+      height{0},
+      swapchainImageCount{0},
+      frame_index{0},
+      spin_angle{0.0f},
+      spin_increment{0.0f},
+      pause{false},
+      quit{false},
+      curFrame{0},
+      frameCount{0},
+      validate{false},
+      use_break{false},
+      suppress_popups{false},
+      current_buffer{0},
+      queue_family_count{0} {
 #if defined(VK_USE_PLATFORM_WIN32_KHR)
         memset(name, '\0', APP_NAME_STR_LEN);
 #endif
@@ -287,7 +557,7 @@ struct Demo {
         memset(model_matrix, 0, sizeof(model_matrix));
     }
 
-    void build_image_ownership_cmd(uint32_t const &i) {
+    void Demo::build_image_ownership_cmd(uint32_t const &i) {
         auto const cmd_buf_info = vk::CommandBufferBeginInfo().setFlags(vk::CommandBufferUsageFlagBits::eSimultaneousUse);
         auto result = swapchain_image_resources[i].graphics_to_present_cmd.begin(&cmd_buf_info);
         VERIFY(result == vk::Result::eSuccess);
@@ -311,8 +581,8 @@ struct Demo {
         VERIFY(result == vk::Result::eSuccess);
     }
 
-    vk::Bool32 check_layers(uint32_t check_count, char const *const *const check_names, uint32_t layer_count,
-                            vk::LayerProperties *layers) {
+    vk::Bool32 Demo::check_layers(uint32_t check_count, char const *const *const check_names, uint32_t layer_count,
+                                  vk::LayerProperties *layers) {
         for (uint32_t i = 0; i < check_count; i++) {
             vk::Bool32 found = VK_FALSE;
             for (uint32_t j = 0; j < layer_count; j++) {
@@ -329,7 +599,7 @@ struct Demo {
         return VK_TRUE;
     }
 
-    void cleanup() {
+    void Demo::cleanup() {
         prepared = false;
         device.waitIdle();
 
@@ -391,6 +661,9 @@ struct Demo {
         xcb_disconnect(connection);
         free(atom_wm_delete_window);
 #elif defined(VK_USE_PLATFORM_WAYLAND_KHR)
+        wl_keyboard_destroy(keyboard);
+        wl_pointer_destroy(pointer);
+        wl_seat_destroy(seat);
         wl_shell_surface_destroy(shell_surface);
         wl_surface_destroy(window);
         wl_shell_destroy(shell);
@@ -403,7 +676,7 @@ struct Demo {
         inst.destroy(nullptr);
     }
 
-    void create_device() {
+    void Demo::create_device() {
         float const priorities[1] = {0.0};
 
         vk::DeviceQueueCreateInfo queues[2];
@@ -431,13 +704,13 @@ struct Demo {
         VERIFY(result == vk::Result::eSuccess);
     }
 
-    void destroy_texture_image(texture_object *tex_objs) {
+    void Demo::destroy_texture_image(texture_object *tex_objs) {
         // clean up staging resources
         device.freeMemory(tex_objs->mem, nullptr);
         device.destroyImage(tex_objs->image, nullptr);
     }
 
-    void draw() {
+    void Demo::draw() {
         // Ensure no more than FRAME_LAG renderings are outstanding
         device.waitForFences(1, &fences[frame_index], VK_TRUE, UINT64_MAX);
         device.resetFences(1, &fences[frame_index]);
@@ -521,7 +794,7 @@ struct Demo {
         }
     }
 
-    void draw_build_cmd(vk::CommandBuffer commandBuffer) {
+    void Demo::draw_build_cmd(vk::CommandBuffer commandBuffer) {
         auto const commandInfo = vk::CommandBufferBeginInfo().setFlags(vk::CommandBufferUsageFlagBits::eSimultaneousUse);
 
         vk::ClearValue const clearValues[2] = {vk::ClearColorValue(std::array<float, 4>({{0.2f, 0.2f, 0.2f, 0.2f}})),
@@ -582,7 +855,7 @@ struct Demo {
         VERIFY(result == vk::Result::eSuccess);
     }
 
-    void flush_init_cmd() {
+    void Demo::flush_init_cmd() {
         // TODO: hmm.
         // This function could get called twice if the texture uses a staging
         // buffer
@@ -614,7 +887,7 @@ struct Demo {
         cmd = vk::CommandBuffer();
     }
 
-    void init(int argc, char **argv) {
+    void Demo::init(int argc, char **argv) {
         vec3 eye = {0.0f, 3.0f, 5.0f};
         vec3 origin = {0, 0, 0};
         vec3 up = {0.0f, 1.0f, 0.0};
@@ -688,7 +961,7 @@ struct Demo {
         projection_matrix[1][1] *= -1;  // Flip projection matrix from GL to Vulkan orientation.
     }
 
-    void init_connection() {
+    void Demo::init_connection() {
 #if defined(VK_USE_PLATFORM_XCB_KHR)
         const xcb_setup_t *setup;
         xcb_screen_iterator_t iter;
@@ -726,7 +999,7 @@ struct Demo {
 #endif
     }
 
-    void init_vk() {
+    void Demo::init_vk() {
         uint32_t instance_extension_count = 0;
         uint32_t instance_layer_count = 0;
         uint32_t validation_layer_count = 0;
@@ -821,11 +1094,9 @@ struct Demo {
                 }
 #elif defined(VK_USE_PLATFORM_MIR_KHR)
 #elif defined(VK_USE_PLATFORM_DISPLAY_KHR)
-                if (!strcmp(VK_KHR_DISPLAY_EXTENSION_NAME,
-                            instance_extensions[i].extensionName)) {
+                if (!strcmp(VK_KHR_DISPLAY_EXTENSION_NAME, instance_extensions[i].extensionName)) {
                     platformSurfaceExtFound = 1;
-                    extension_names[enabled_extension_count++] =
-                        VK_KHR_DISPLAY_EXTENSION_NAME;
+                    extension_names[enabled_extension_count++] = VK_KHR_DISPLAY_EXTENSION_NAME;
                 }
 
 #endif
@@ -888,13 +1159,15 @@ struct Demo {
                 "information.\n",
                 "vkCreateInstance Failure");
 #elif defined(VK_USE_PLATFORM_DISPLAY_KHR)
-            ERR_EXIT("vkEnumerateInstanceExtensionProperties failed to find "
-                     "the " VK_KHR_DISPLAY_EXTENSION_NAME " extension.\n\n"
-                     "Do you have a compatible Vulkan installable client "
-                     "driver (ICD) installed?\n"
-                     "Please look at the Getting Started guide for additional "
-                     "information.\n",
-                     "vkCreateInstance Failure");
+            ERR_EXIT(
+                "vkEnumerateInstanceExtensionProperties failed to find "
+                "the " VK_KHR_DISPLAY_EXTENSION_NAME
+                " extension.\n\n"
+                "Do you have a compatible Vulkan installable client "
+                "driver (ICD) installed?\n"
+                "Please look at the Getting Started guide for additional "
+                "information.\n",
+                "vkCreateInstance Failure");
 #endif
         }
         auto const app = vk::ApplicationInfo()
@@ -1007,8 +1280,8 @@ struct Demo {
         gpu.getFeatures(&physDevFeatures);
     }
 
-    void init_vk_swapchain() {
-// Create a WSI surface for the window:
+    void Demo::init_vk_swapchain() {
+    // Create a WSI surface for the window:
 #if defined(VK_USE_PLATFORM_WIN32_KHR)
         {
             auto const createInfo = vk::Win32SurfaceCreateInfoKHR().setHinstance(connection).setHwnd(window);
@@ -1147,7 +1420,7 @@ struct Demo {
         gpu.getMemoryProperties(&memory_properties);
     }
 
-    void prepare() {
+    void Demo::prepare() {
         auto const cmd_pool_info = vk::CommandPoolCreateInfo().setQueueFamilyIndex(graphics_queue_family_index);
         auto result = device.createCommandPool(&cmd_pool_info, nullptr, &cmd_pool);
         VERIFY(result == vk::Result::eSuccess);
@@ -1221,7 +1494,7 @@ struct Demo {
         prepared = true;
     }
 
-    void prepare_buffers() {
+    void Demo::prepare_buffers() {
         vk::SwapchainKHR oldSwapchain = swapchain;
 
         // Check the surface capabilities and formats
@@ -1392,7 +1665,7 @@ struct Demo {
         }
     }
 
-    void prepare_cube_data_buffers() {
+    void Demo::prepare_cube_data_buffers() {
         mat4x4 VP;
         mat4x4_mul(VP, projection_matrix, view_matrix);
 
@@ -1445,7 +1718,7 @@ struct Demo {
         }
     }
 
-    void prepare_depth() {
+    void Demo::prepare_depth() {
         depth.format = vk::Format::eD16Unorm;
 
         auto const image = vk::ImageCreateInfo()
@@ -1490,7 +1763,7 @@ struct Demo {
         VERIFY(result == vk::Result::eSuccess);
     }
 
-    void prepare_descriptor_layout() {
+    void Demo::prepare_descriptor_layout() {
         vk::DescriptorSetLayoutBinding const layout_bindings[2] = {vk::DescriptorSetLayoutBinding()
                                                                        .setBinding(0)
                                                                        .setDescriptorType(vk::DescriptorType::eUniformBuffer)
@@ -1515,7 +1788,7 @@ struct Demo {
         VERIFY(result == vk::Result::eSuccess);
     }
 
-    void prepare_descriptor_pool() {
+    void Demo::prepare_descriptor_pool() {
         vk::DescriptorPoolSize const poolSizes[2] = {
             vk::DescriptorPoolSize().setType(vk::DescriptorType::eUniformBuffer).setDescriptorCount(swapchainImageCount),
             vk::DescriptorPoolSize().setType(vk::DescriptorType::eCombinedImageSampler).setDescriptorCount(swapchainImageCount * texture_count)};
@@ -1526,7 +1799,7 @@ struct Demo {
         VERIFY(result == vk::Result::eSuccess);
     }
 
-    void prepare_descriptor_set() {
+    void Demo::prepare_descriptor_set() {
         auto const alloc_info =
             vk::DescriptorSetAllocateInfo().setDescriptorPool(desc_pool).setDescriptorSetCount(1).setPSetLayouts(&desc_layout);
 
@@ -1561,7 +1834,7 @@ struct Demo {
         }
     }
 
-    void prepare_framebuffers() {
+    void Demo::prepare_framebuffers() {
         vk::ImageView attachments[2];
         attachments[1] = depth.view;
 
@@ -1580,7 +1853,7 @@ struct Demo {
         }
     }
 
-    vk::ShaderModule prepare_fs() {
+    vk::ShaderModule Demo::prepare_fs() {
         size_t size = 0;
         void *fragShaderCode = read_spv("cube-frag.spv", &size);
         if (!fragShaderCode) {
@@ -1594,7 +1867,7 @@ struct Demo {
         return frag_shader_module;
     }
 
-    void prepare_pipeline() {
+    void Demo::prepare_pipeline() {
         vk::PipelineCacheCreateInfo const pipelineCacheInfo;
         auto result = device.createPipelineCache(&pipelineCacheInfo, nullptr, &pipelineCache);
         VERIFY(result == vk::Result::eSuccess);
@@ -1671,7 +1944,7 @@ struct Demo {
         device.destroyShaderModule(vert_shader_module, nullptr);
     }
 
-    void prepare_render_pass() {
+    void Demo::prepare_render_pass() {
         // The initial layout for the color and depth attachments will be LAYOUT_UNDEFINED
         // because at the start of the renderpass, we don't care about their contents.
         // At the start of the subpass, the color attachment's layout will be transitioned
@@ -1727,7 +2000,7 @@ struct Demo {
         VERIFY(result == vk::Result::eSuccess);
     }
 
-    vk::ShaderModule prepare_shader_module(const void *code, size_t size) {
+    vk::ShaderModule Demo::prepare_shader_module(const void *code, size_t size) {
         auto const moduleCreateInfo = vk::ShaderModuleCreateInfo().setCodeSize(size).setPCode((uint32_t const *)code);
 
         vk::ShaderModule module;
@@ -1737,8 +2010,8 @@ struct Demo {
         return module;
     }
 
-    void prepare_texture_image(const char *filename, texture_object *tex_obj, vk::ImageTiling tiling, vk::ImageUsageFlags usage,
-                               vk::MemoryPropertyFlags required_props) {
+    void Demo::prepare_texture_image(const char *filename, texture_object *tex_obj, vk::ImageTiling tiling,
+                                     vk::ImageUsageFlags usage, vk::MemoryPropertyFlags required_props) {
         int32_t tex_width;
         int32_t tex_height;
         if (!loadTexture(filename, nullptr, nullptr, &tex_width, &tex_height)) {
@@ -1799,7 +2072,7 @@ struct Demo {
         tex_obj->imageLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
     }
 
-    void prepare_textures() {
+    void Demo::prepare_textures() {
         vk::Format const tex_format = vk::Format::eR8G8B8A8Unorm;
         vk::FormatProperties props;
         gpu.getFormatProperties(tex_format, &props);
@@ -1889,7 +2162,7 @@ struct Demo {
         }
     }
 
-    vk::ShaderModule prepare_vs() {
+    vk::ShaderModule Demo::prepare_vs() {
         size_t size = 0;
         void *vertShaderCode = read_spv("cube-vert.spv", &size);
         if (!vertShaderCode) {
@@ -1903,7 +2176,7 @@ struct Demo {
         return vert_shader_module;
     }
 
-    char *read_spv(const char *filename, size_t *psize) {
+    char *Demo::read_spv(const char *filename, size_t *psize) {
         FILE *fp = fopen(filename, "rb");
         if (!fp) {
             return nullptr;
@@ -1925,7 +2198,7 @@ struct Demo {
         return (char *)shader_code;
     }
 
-    void resize() {
+    void Demo::resize() {
         uint32_t i;
 
         // Don't react to resize until after first initialization.
@@ -1982,8 +2255,9 @@ struct Demo {
         prepare();
     }
 
-    void set_image_layout(vk::Image image, vk::ImageAspectFlags aspectMask, vk::ImageLayout oldLayout, vk::ImageLayout newLayout,
-                          vk::AccessFlags srcAccessMask, vk::PipelineStageFlags src_stages, vk::PipelineStageFlags dest_stages) {
+    void Demo::set_image_layout(vk::Image image, vk::ImageAspectFlags aspectMask, vk::ImageLayout oldLayout,
+                                vk::ImageLayout newLayout, vk::AccessFlags srcAccessMask, vk::PipelineStageFlags src_stages,
+                                vk::PipelineStageFlags dest_stages) {
         assert(cmd);
 
         auto DstAccessMask = [](vk::ImageLayout const &layout) {
@@ -2031,7 +2305,7 @@ struct Demo {
         cmd.pipelineBarrier(src_stages, dest_stages, vk::DependencyFlagBits(), 0, nullptr, 0, nullptr, 1, &barrier);
     }
 
-    void update_data_buffer() {
+    void Demo::update_data_buffer() {
         mat4x4 VP;
         mat4x4_mul(VP, projection_matrix, view_matrix);
 
@@ -2051,7 +2325,8 @@ struct Demo {
         device.unmapMemory(swapchain_image_resources[current_buffer].uniform_memory);
     }
 
-    bool loadTexture(const char *filename, uint8_t *rgba_data, vk::SubresourceLayout *layout, int32_t *width, int32_t *height) {
+    bool Demo::loadTexture(const char *filename, uint8_t *rgba_data, vk::SubresourceLayout *layout, int32_t *width,
+                           int32_t *height) {
         FILE *fPtr = fopen(filename, "rb");
         if (!fPtr) {
             return false;
@@ -2102,7 +2377,7 @@ struct Demo {
         return true;
     }
 
-    bool memory_type_from_properties(uint32_t typeBits, vk::MemoryPropertyFlags requirements_mask, uint32_t *typeIndex) {
+    bool Demo::memory_type_from_properties(uint32_t typeBits, vk::MemoryPropertyFlags requirements_mask, uint32_t *typeIndex) {
         // Search memtypes to find first index with those properties
         for (uint32_t i = 0; i < VK_MAX_MEMORY_TYPES; i++) {
             if ((typeBits & 1) == 1) {
@@ -2120,7 +2395,7 @@ struct Demo {
     }
 
 #if defined(VK_USE_PLATFORM_WIN32_KHR)
-    void run() {
+    void Demo::run() {
         if (!prepared) {
             return;
         }
@@ -2133,7 +2408,7 @@ struct Demo {
         }
     }
 
-    void create_window() {
+    void Demo::create_window() {
         WNDCLASSEX win_class;
 
         // Initialize the window class structure:
@@ -2188,7 +2463,7 @@ struct Demo {
     }
 #elif defined(VK_USE_PLATFORM_XLIB_KHR)
 
-    void create_xlib_window() {
+    void Demo::create_xlib_window() {
         XInitThreads();
         display = XOpenDisplay(nullptr);
         long visualMask = VisualScreenMask;
@@ -2215,7 +2490,7 @@ struct Demo {
         xlib_wm_delete_window = XInternAtom(display, "WM_DELETE_WINDOW", False);
     }
 
-    void handle_xlib_event(const XEvent *event) {
+    void Demo::handle_xlib_event(const XEvent *event) {
         switch (event->type) {
             case ClientMessage:
                 if ((Atom)event->xclient.data.l[0] == xlib_wm_delete_window) {
@@ -2250,7 +2525,7 @@ struct Demo {
         }
     }
 
-    void run_xlib() {
+    void Demo::run_xlib() {
         while (!quit) {
             XEvent event;
 
@@ -2273,7 +2548,7 @@ struct Demo {
     }
 #elif defined(VK_USE_PLATFORM_XCB_KHR)
 
-    void handle_xcb_event(const xcb_generic_event_t *event) {
+    void Demo::handle_xcb_event(const xcb_generic_event_t *event) {
         uint8_t event_code = event->response_type & 0x7f;
         switch (event_code) {
             case XCB_EXPOSE:
@@ -2315,7 +2590,7 @@ struct Demo {
         }
     }
 
-    void run_xcb() {
+    void Demo::run_xcb() {
         xcb_flush(connection);
 
         while (!quit) {
@@ -2340,7 +2615,7 @@ struct Demo {
         }
     }
 
-    void create_xcb_window() {
+    void Demo::create_xcb_window() {
         uint32_t value_mask, value_list[32];
 
         xcb_window = xcb_generate_id(connection);
@@ -2373,17 +2648,23 @@ struct Demo {
     }
 #elif defined(VK_USE_PLATFORM_WAYLAND_KHR)
 
-    void run() {
+    void Demo::run() {
         while (!quit) {
-            draw();
-            curFrame++;
-            if (frameCount != UINT32_MAX && curFrame == frameCount) {
-                quit = true;
+            if (pause) {
+                wl_display_dispatch(display);
+            } else {
+                wl_display_dispatch_pending(display);
+                update_data_buffer();
+                draw();
+                curFrame++;
+                if (frameCount != UINT32_MAX && curFrame == frameCount) {
+                    quit = true;
+                }
             }
         }
     }
 
-    void create_window() {
+    void Demo::create_window() {
         window = wl_compositor_create_surface(compositor);
         if (!window) {
             printf("Can not create wayland_surface from compositor!\n");
@@ -2405,7 +2686,7 @@ struct Demo {
 #elif defined(VK_USE_PLATFORM_MIR_KHR)
 #elif defined(VK_USE_PLATFORM_DISPLAY_KHR)
 
-    vk::Result create_display_surface() {
+    vk::Result Demo::create_display_surface() {
         vk::Result result;
         uint32_t display_count;
         uint32_t mode_count;
@@ -2430,8 +2711,7 @@ struct Demo {
 
         display_count = 1;
         result = gpu.getDisplayPropertiesKHR(&display_count, &display_props);
-        VERIFY((result == vk::Result::eSuccess) ||
-               (result == vk::Result::eIncomplete));
+        VERIFY((result == vk::Result::eSuccess) || (result == vk::Result::eIncomplete));
 
         display = display_props.display;
 
@@ -2447,8 +2727,7 @@ struct Demo {
 
         mode_count = 1;
         result = gpu.getDisplayModePropertiesKHR(display, &mode_count, &mode_props);
-        VERIFY((result == vk::Result::eSuccess) ||
-               (result == vk::Result::eIncomplete));
+        VERIFY((result == vk::Result::eSuccess) || (result == vk::Result::eIncomplete));
 
         // Get the list of planes
         result = gpu.getDisplayPlanePropertiesKHR(&plane_count, nullptr);
@@ -2460,8 +2739,7 @@ struct Demo {
             exit(1);
         }
 
-        plane_props = (vk::DisplayPlanePropertiesKHR *)
-            malloc(sizeof(vk::DisplayPlanePropertiesKHR) * plane_count);
+        plane_props = (vk::DisplayPlanePropertiesKHR *)malloc(sizeof(vk::DisplayPlanePropertiesKHR) * plane_count);
         VERIFY(plane_props != nullptr);
 
         result = gpu.getDisplayPlanePropertiesKHR(&plane_count, plane_props);
@@ -2473,27 +2751,21 @@ struct Demo {
             vk::DisplayKHR *supported_displays;
 
             // Disqualify planes that are bound to a different display
-            if (plane_props[plane_index].currentDisplay &&
-                (plane_props[plane_index].currentDisplay != display)) {
+            if (plane_props[plane_index].currentDisplay && (plane_props[plane_index].currentDisplay != display)) {
                 continue;
             }
 
-            result = gpu.getDisplayPlaneSupportedDisplaysKHR(plane_index,
-                                                             &supported_count,
-                                                             nullptr);
+            result = gpu.getDisplayPlaneSupportedDisplaysKHR(plane_index, &supported_count, nullptr);
             VERIFY(result == vk::Result::eSuccess);
 
             if (supported_count == 0) {
                 continue;
             }
 
-            supported_displays = (vk::DisplayKHR *)
-                malloc(sizeof(vk::DisplayKHR) * supported_count);
+            supported_displays = (vk::DisplayKHR *)malloc(sizeof(vk::DisplayKHR) * supported_count);
             VERIFY(supported_displays != nullptr);
 
-            result = gpu.getDisplayPlaneSupportedDisplaysKHR(plane_index,
-                                                             &supported_count,
-                                                             supported_displays);
+            result = gpu.getDisplayPlaneSupportedDisplaysKHR(plane_index, &supported_count, supported_displays);
             VERIFY(result == vk::Result::eSuccess);
 
             for (uint32_t i = 0; i < supported_count; i++) {
@@ -2549,7 +2821,7 @@ struct Demo {
         return inst.createDisplayPlaneSurfaceKHR(&createInfo, nullptr, &surface);
     }
 
-    void run_display() {
+    void Demo::run_display() {
         while (!quit) {
             draw();
             curFrame++;
@@ -2560,113 +2832,6 @@ struct Demo {
         }
     }
 #endif
-
-#if defined(VK_USE_PLATFORM_WIN32_KHR)
-    HINSTANCE connection;         // hInstance - Windows Instance
-    HWND window;                  // hWnd - window handle
-    POINT minsize;                // minimum window size
-    char name[APP_NAME_STR_LEN];  // Name to put on the window/icon
-#elif defined(VK_USE_PLATFORM_XLIB_KHR)
-    Window xlib_window;
-    Atom xlib_wm_delete_window;
-    Display *display;
-#elif defined(VK_USE_PLATFORM_XCB_KHR)
-    xcb_window_t xcb_window;
-    xcb_screen_t *screen;
-    xcb_connection_t *connection;
-    xcb_intern_atom_reply_t *atom_wm_delete_window;
-#elif defined(VK_USE_PLATFORM_WAYLAND_KHR)
-    wl_display *display;
-    wl_registry *registry;
-    wl_compositor *compositor;
-    wl_surface *window;
-    wl_shell *shell;
-    wl_shell_surface *shell_surface;
-#elif defined(VK_USE_PLATFORM_MIR_KHR)
-#endif
-
-    vk::SurfaceKHR surface;
-    bool prepared;
-    bool use_staging_buffer;
-    bool use_xlib;
-    bool separate_present_queue;
-
-    vk::Instance inst;
-    vk::PhysicalDevice gpu;
-    vk::Device device;
-    vk::Queue graphics_queue;
-    vk::Queue present_queue;
-    uint32_t graphics_queue_family_index;
-    uint32_t present_queue_family_index;
-    vk::Semaphore image_acquired_semaphores[FRAME_LAG];
-    vk::Semaphore draw_complete_semaphores[FRAME_LAG];
-    vk::Semaphore image_ownership_semaphores[FRAME_LAG];
-    vk::PhysicalDeviceProperties gpu_props;
-    std::unique_ptr<vk::QueueFamilyProperties[]> queue_props;
-    vk::PhysicalDeviceMemoryProperties memory_properties;
-
-    uint32_t enabled_extension_count;
-    uint32_t enabled_layer_count;
-    char const *extension_names[64];
-    char const *enabled_layers[64];
-
-    uint32_t width;
-    uint32_t height;
-    vk::Format format;
-    vk::ColorSpaceKHR color_space;
-
-    uint32_t swapchainImageCount;
-    vk::SwapchainKHR swapchain;
-    std::unique_ptr<SwapchainImageResources[]> swapchain_image_resources;
-    vk::PresentModeKHR presentMode;
-    vk::Fence fences[FRAME_LAG];
-    uint32_t frame_index;
-
-    vk::CommandPool cmd_pool;
-    vk::CommandPool present_cmd_pool;
-
-    struct {
-        vk::Format format;
-        vk::Image image;
-        vk::MemoryAllocateInfo mem_alloc;
-        vk::DeviceMemory mem;
-        vk::ImageView view;
-    } depth;
-
-    static int32_t const texture_count = 1;
-    texture_object textures[texture_count];
-    texture_object staging_texture;
-
-    vk::CommandBuffer cmd;  // Buffer for initialization commands
-    vk::PipelineLayout pipeline_layout;
-    vk::DescriptorSetLayout desc_layout;
-    vk::PipelineCache pipelineCache;
-    vk::RenderPass render_pass;
-    vk::Pipeline pipeline;
-
-    mat4x4 projection_matrix;
-    mat4x4 view_matrix;
-    mat4x4 model_matrix;
-
-    float spin_angle;
-    float spin_increment;
-    bool pause;
-
-    vk::ShaderModule vert_shader_module;
-    vk::ShaderModule frag_shader_module;
-
-    vk::DescriptorPool desc_pool;
-
-    bool quit;
-    uint32_t curFrame;
-    uint32_t frameCount;
-    bool validate;
-    bool use_break;
-    bool suppress_popups;
-
-    uint32_t current_buffer;
-    uint32_t queue_family_count;
-};
 
 #if _WIN32
 // Include header required for parsing the command line options.

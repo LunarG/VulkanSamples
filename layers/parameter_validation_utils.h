@@ -120,20 +120,6 @@ const uint32_t MaxEnumValue = 0x7FFFFFFF;
 template <typename T>
 bool OutputExtensionError(const T *layer_data, const std::string &api_name, const std::string &extension_name);
 
-template <typename T>
-bool is_extension_added_token(T value) {
-    return (value != MaxEnumValue) && (static_cast<uint32_t>(std::abs(static_cast<int32_t>(value))) >= ExtEnumBaseValue);
-}
-
-// VK_SAMPLER_ADDRESS_MODE_MIRROR_CLAMP_TO_EDGE token is a special case that was converted from a core token to an
-// extension added token.  Its original value was intentionally preserved after the conversion, so it does not use
-// the base value that other extension added tokens use, and it does not fall within the enum's begin/end range.
-template <>
-bool is_extension_added_token(VkSamplerAddressMode value) {
-    bool result = is_extension_added_token(static_cast<uint32_t>(value));
-    return result || (value == VK_SAMPLER_ADDRESS_MODE_MIRROR_CLAMP_TO_EDGE);
-}
-
 /**
 * Validate a minimum value.
 *
@@ -631,25 +617,24 @@ static bool validate_bool32(debug_report_data *report_data, const char *apiName,
 * @param apiName Name of API call being validated.
 * @param parameterName Name of parameter being validated.
 * @param enumName Name of the enumeration being validated.
-* @param begin The begin range value for the enumeration.
-* @param end The end range value for the enumeration.
+* @param valid_values The list of valid values for the enumeration.
 * @param value Enumeration value to validate.
 * @return Boolean value indicating that the call should be skipped.
 */
 template <typename T>
 bool validate_ranged_enum(debug_report_data *report_data, const char *apiName, const ParameterName &parameterName,
-                          const char *enumName, T begin, T end, T value, UNIQUE_VALIDATION_ERROR_CODE vuid) {
-    bool skip_call = false;
+                          const char *enumName, const std::vector<T> &valid_values, T value, UNIQUE_VALIDATION_ERROR_CODE vuid) {
+    bool skip = false;
 
-    if (((value < begin) || (value > end)) && !is_extension_added_token(value)) {
-        skip_call |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__, vuid,
-                             LayerName,
-                             "%s: value of %s (%d) does not fall within the begin..end range of the core %s "
-                             "enumeration tokens and is not an extension added token. %s",
-                             apiName, parameterName.get_name().c_str(), value, enumName, validation_error_map[vuid]);
+    if (std::find(valid_values.begin(), valid_values.end(), value) == valid_values.end()) {
+        skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__, vuid,
+                        LayerName,
+                        "%s: value of %s (%d) does not fall within the begin..end range of the core %s "
+                        "enumeration tokens and is not an extension added token. %s",
+                        apiName, parameterName.get_name().c_str(), value, enumName, validation_error_map[vuid]);
     }
 
-    return skip_call;
+    return skip;
 }
 
 /**
@@ -667,8 +652,7 @@ bool validate_ranged_enum(debug_report_data *report_data, const char *apiName, c
 * @param countName Name of count parameter.
 * @param arrayName Name of array parameter.
 * @param enumName Name of the enumeration being validated.
-* @param begin The begin range value for the enumeration.
-* @param end The end range value for the enumeration.
+* @param valid_values The list of valid values for the enumeration.
 * @param count Number of enumeration values in the array.
 * @param array Array of enumeration values to validate.
 * @param countRequired The 'count' parameter may not be 0 when true.
@@ -677,8 +661,8 @@ bool validate_ranged_enum(debug_report_data *report_data, const char *apiName, c
 */
 template <typename T>
 static bool validate_ranged_enum_array(debug_report_data *report_data, const char *apiName, const ParameterName &countName,
-                                       const ParameterName &arrayName, const char *enumName, T begin, T end, uint32_t count,
-                                       const T *array, bool countRequired, bool arrayRequired) {
+                                       const ParameterName &arrayName, const char *enumName, const std::vector<T> &valid_values,
+                                       uint32_t count, const T *array, bool countRequired, bool arrayRequired) {
     bool skip_call = false;
 
     if ((count == 0) || (array == NULL)) {
@@ -686,7 +670,7 @@ static bool validate_ranged_enum_array(debug_report_data *report_data, const cha
                                     VALIDATION_ERROR_UNDEFINED, VALIDATION_ERROR_UNDEFINED);
     } else {
         for (uint32_t i = 0; i < count; ++i) {
-            if (((array[i] < begin) || (array[i] > end)) && !is_extension_added_token(array[i])) {
+            if (std::find(valid_values.begin(), valid_values.end(), array[i]) == valid_values.end()) {
                 skip_call |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0,
                                      __LINE__, UNRECOGNIZED_VALUE, LayerName,
                                      "%s: value of %s[%d] (%d) does not fall within the begin..end range of the core %s "

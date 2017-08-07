@@ -87,7 +87,7 @@ target_include_directories(VkLayer_parameter_validation PRIVATE
 target_link_libraries(VkLayer_parameter_validation PRIVATE log layer_utils)
 
 add_library(VkLayer_object_tracker SHARED
-        ${SRC_DIR}/layers/object_tracker.cpp
+        ${COMMON_DIR}/include/object_tracker.cpp
         ${SRC_DIR}/layers/vk_layer_table.cpp)
 target_include_directories(VkLayer_object_tracker PRIVATE
         ${SRC_DIR}/include

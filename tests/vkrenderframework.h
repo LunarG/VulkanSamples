@@ -107,6 +107,7 @@ class VkRenderFramework : public VkTestFramework {
     uint32_t m_compareMask;
     uint32_t m_writeMask;
     uint32_t m_reference;
+    bool m_addRenderPassSelfDependency;
     std::vector<VkClearValue> m_renderPassClearValues;
     VkRenderPassBeginInfo m_renderPassBeginInfo;
     vector<VkImageObj *> m_renderTargets;
@@ -365,10 +366,10 @@ class VkPipelineObj : public vk_testing::Pipeline {
     void AddColorAttachment(uint32_t binding, const VkPipelineColorBlendAttachmentState *att);
     void MakeDynamic(VkDynamicState state);
 
-    void AddColorAttachment() {
+    void AddColorAttachment(VkColorComponentFlags writeMask = 0xf) {
         VkPipelineColorBlendAttachmentState att = {};
         att.blendEnable = VK_FALSE;
-        att.colorWriteMask = 0xf;
+        att.colorWriteMask = writeMask;
         AddColorAttachment(0, &att);
     }
 

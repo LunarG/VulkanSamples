@@ -108,7 +108,7 @@ class DescriptorSetLayout {
     void FillBindingSet(std::unordered_set<uint32_t> *) const;
     // Return true if given binding is present in this layout
     bool HasBinding(const uint32_t binding) const { return binding_to_index_map_.count(binding) > 0; };
-    // Return true if this layout is compatible with passed in layout,
+    // Return true if this layout is compatible with passed in layout from a pipelineLayout,
     //   else return false and update error_msg with description of incompatibility
     bool IsCompatible(DescriptorSetLayout const *const, std::string *) const;
     // Return true if binding 1 beyond given exists and has same type, stageFlags & immutable sampler use

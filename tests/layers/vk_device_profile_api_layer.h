@@ -23,7 +23,7 @@
 
 #include "vk_lunarg_device_profile_api_layer.h"
 
-typedef struct VkLayerDeviceProfileApifDispatchTable_ {
+typedef struct VkLayerDeviceProfileApiDispatchTable_ {
     PFN_vkSetPhysicalDeviceLimitsEXT vkSetPhysicalDeviceLimitsEXT;
     PFN_vkGetOriginalPhysicalDeviceLimitsEXT vkGetOriginalPhysicalDeviceLimitsEXT;
 } VkLayerDeviceProfileApiDispatchTable;

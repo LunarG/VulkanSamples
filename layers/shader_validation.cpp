@@ -768,8 +768,10 @@ static bool validate_vi_against_vs_inputs(debug_report_data const *report_data, 
 }
 
 static bool validate_fs_outputs_against_render_pass(debug_report_data const *report_data, shader_module const *fs,
-                                                    spirv_inst_iter entrypoint, VkRenderPassCreateInfo const *rpci,
+                                                    spirv_inst_iter entrypoint, PIPELINE_STATE const *pipeline,
                                                     uint32_t subpass_index) {
+    auto rpci = pipeline->render_pass_ci.ptr();
+
     std::map<uint32_t, VkFormat> color_attachments;
     auto subpass = rpci->pSubpasses[subpass_index];
     for (auto i = 0u; i < subpass.colorAttachmentCount; ++i) {
@@ -801,8 +803,13 @@ static bool validate_fs_outputs_against_render_pass(debug_report_data const *rep
                             "fragment shader writes to output location %d with no matching attachment", it_a->first.first);
             it_a++;
         } else if (!b_at_end && (a_at_end || it_a->first.first > it_b->first)) {
-            skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
+            // Only complain if there are unmasked channels for this attachment. If the writemask is 0, it's acceptable for the
+            // shader to not produce a matching output.
+            if (pipeline->attachments[it_b->first].colorWriteMask != 0) {
+                skip |=
+                    log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
                             SHADER_CHECKER_INPUT_NOT_PRODUCED, "SC", "Attachment %d not written by fragment shader", it_b->first);
+            }
             it_b++;
         } else {
             unsigned output_type = get_fundamental_type(fs, it_a->second.type_id);
@@ -1443,8 +1450,8 @@ static bool validate_interface_between_stages(debug_report_data const *report_da
 
 // Validate that the shaders used by the given pipeline and store the active_slots
 //  that are actually used by the pipeline into pPipeline->active_slots
-bool validate_and_capture_pipeline_shader_state(layer_data *dev_data, PIPELINE_STATE *pPipeline) {
-    auto pCreateInfo = pPipeline->graphicsPipelineCI.ptr();
+bool validate_and_capture_pipeline_shader_state(layer_data *dev_data, PIPELINE_STATE *pipeline) {
+    auto pCreateInfo = pipeline->graphicsPipelineCI.ptr();
     int vertex_stage = get_shader_stage_id(VK_SHADER_STAGE_VERTEX_BIT);
     int fragment_stage = get_shader_stage_id(VK_SHADER_STAGE_FRAGMENT_BIT);
     auto report_data = GetReportData(dev_data);
@@ -1458,7 +1465,7 @@ bool validate_and_capture_pipeline_shader_state(layer_data *dev_data, PIPELINE_S
     for (uint32_t i = 0; i < pCreateInfo->stageCount; i++) {
         auto pStage = &pCreateInfo->pStages[i];
         auto stage_id = get_shader_stage_id(pStage->stage);
-        skip |= validate_pipeline_shader_stage(dev_data, pStage, pPipeline, &shaders[stage_id], &entrypoints[stage_id]);
+        skip |= validate_pipeline_shader_stage(dev_data, pStage, pipeline, &shaders[stage_id], &entrypoints[stage_id]);
     }
 
     // if the shader stages are no good individually, cross-stage validation is pointless.
@@ -1495,19 +1502,19 @@ bool validate_and_capture_pipeline_shader_state(layer_data *dev_data, PIPELINE_S
 
     if (shaders[fragment_stage] && shaders[fragment_stage]->has_valid_spirv) {
         skip |= validate_fs_outputs_against_render_pass(report_data, shaders[fragment_stage], entrypoints[fragment_stage],
-                                                        pPipeline->render_pass_ci.ptr(), pCreateInfo->subpass);
+                                                        pipeline, pCreateInfo->subpass);
     }
 
     return skip;
 }
 
-bool validate_compute_pipeline(layer_data *dev_data, PIPELINE_STATE *pPipeline) {
-    auto pCreateInfo = pPipeline->computePipelineCI.ptr();
+bool validate_compute_pipeline(layer_data *dev_data, PIPELINE_STATE *pipeline) {
+    auto pCreateInfo = pipeline->computePipelineCI.ptr();
 
     shader_module const *module;
     spirv_inst_iter entrypoint;
 
-    return validate_pipeline_shader_stage(dev_data, &pCreateInfo->stage, pPipeline, &module, &entrypoint);
+    return validate_pipeline_shader_stage(dev_data, &pCreateInfo->stage, pipeline, &module, &entrypoint);
 }
 
 bool PreCallValidateCreateShaderModule(layer_data *dev_data, VkShaderModuleCreateInfo const *pCreateInfo, bool *spirv_valid) {

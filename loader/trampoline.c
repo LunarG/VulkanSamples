@@ -143,9 +143,12 @@ LOADER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkEnumerateInstanceExtensionPropert
         }
         loader_scanned_icd_clear(NULL, &icd_tramp_list);
 
-        // Append implicit layers.
+        // Append enabled implicit layers.
         loader_implicit_layer_scan(NULL, &instance_layers);
         for (uint32_t i = 0; i < instance_layers.count; i++) {
+            if (!loader_is_implicit_layer_enabled(NULL, &instance_layers.list[i])) {
+                continue;
+            }
             struct loader_extension_list *ext_list = &instance_layers.list[i].instance_extension_list;
             loader_add_to_ext_list(NULL, &local_ext_list, ext_list->count, ext_list->list);
         }

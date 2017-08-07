@@ -38,6 +38,7 @@ VkRenderFramework::VkRenderFramework()
       m_commandBuffer(NULL),
       m_renderPass(VK_NULL_HANDLE),
       m_framebuffer(VK_NULL_HANDLE),
+      m_addRenderPassSelfDependency(false),
       m_width(256.0),   // default window width
       m_height(256.0),  // default window height
       m_render_target_fmt(VK_FORMAT_R8G8B8A8_UNORM),
@@ -417,6 +418,31 @@ void VkRenderFramework::InitRenderTarget(uint32_t targets, VkImageView *dsBindin
     rp_info.pAttachments = attachments.data();
     rp_info.subpassCount = 1;
     rp_info.pSubpasses = &subpass;
+    VkSubpassDependency subpass_dep = {};
+    if (m_addRenderPassSelfDependency) {
+        // Add a subpass self-dependency to subpass 0 of default renderPass
+        subpass_dep.srcSubpass = 0;
+        subpass_dep.dstSubpass = 0;
+        // Just using all framebuffer-space pipeline stages in order to get a reasonably large
+        //  set of bits that can be used for both src & dst
+        subpass_dep.srcStageMask = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT |
+                                   VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+        subpass_dep.dstStageMask = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT |
+                                   VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+        // Add all of the gfx mem access bits that correlate to the fb-space pipeline stages
+        subpass_dep.srcAccessMask = VK_ACCESS_UNIFORM_READ_BIT | VK_ACCESS_INPUT_ATTACHMENT_READ_BIT | VK_ACCESS_SHADER_READ_BIT |
+                                    VK_ACCESS_SHADER_WRITE_BIT | VK_ACCESS_COLOR_ATTACHMENT_READ_BIT |
+                                    VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT |
+                                    VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+        subpass_dep.dstAccessMask = VK_ACCESS_UNIFORM_READ_BIT | VK_ACCESS_INPUT_ATTACHMENT_READ_BIT | VK_ACCESS_SHADER_READ_BIT |
+                                    VK_ACCESS_SHADER_WRITE_BIT | VK_ACCESS_COLOR_ATTACHMENT_READ_BIT |
+                                    VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT |
+                                    VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+        // Must include dep_by_region bit when src & dst both include framebuffer-space stages
+        subpass_dep.dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT;
+        rp_info.dependencyCount = 1;
+        rp_info.pDependencies = &subpass_dep;
+    }
 
     vkCreateRenderPass(device(), &rp_info, NULL, &m_renderPass);
 

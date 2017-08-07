@@ -260,16 +260,16 @@ VKAPI_ATTR void VKAPI_CALL terminator_GetPhysicalDeviceProperties2KHR(VkPhysical
         void *pNext = pProperties->pNext;
         while (pNext != NULL) {
             switch (*(VkStructureType *)pNext) {
-                case VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ID_PROPERTIES_KHX: {
-                    VkPhysicalDeviceIDPropertiesKHX *id_properties = pNext;
+                case VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ID_PROPERTIES_KHR: {
+                    VkPhysicalDeviceIDPropertiesKHR *id_properties = pNext;
 
-                    // Verify that "VK_KHX_external_memory_capabilities" is enabled
-                    if (icd_term->this_instance->enabled_known_extensions.khx_external_memory_capabilities) {
+                    // Verify that "VK_KHR_external_memory_capabilities" is enabled
+                    if (icd_term->this_instance->enabled_known_extensions.khr_external_memory_capabilities) {
                         loader_log(icd_term->this_instance, VK_DEBUG_REPORT_WARNING_BIT_EXT, 0,
                                    "vkGetPhysicalDeviceProperties2KHR: Emulation cannot generate unique IDs for struct "
-                                   "VkPhysicalDeviceIDPropertiesKHX - setting IDs to zero instead");
+                                   "VkPhysicalDeviceIDPropertiesKHR - setting IDs to zero instead");
 
-                        // Write to the VkPhysicalDeviceIDPropertiesKHX struct
+                        // Write to the VkPhysicalDeviceIDPropertiesKHR struct
                         memset(id_properties->deviceUUID, 0, VK_UUID_SIZE);
                         memset(id_properties->driverUUID, 0, VK_UUID_SIZE);
                         id_properties->deviceLUIDValid = VK_FALSE;
@@ -796,6 +796,140 @@ VKAPI_ATTR VkResult VKAPI_CALL terminator_GetRandROutputDisplayEXT(VkPhysicalDev
 }
 
 #endif  // VK_USE_PLATFORM_XLIB_XRANDR_EXT
+
+// ---- VK_KHR_external_memory_capabilities extension trampoline/terminators
+
+VKAPI_ATTR void VKAPI_CALL GetPhysicalDeviceExternalBufferPropertiesKHR(
+    VkPhysicalDevice physicalDevice, const VkPhysicalDeviceExternalBufferInfoKHR *pExternalBufferInfo,
+    VkExternalBufferPropertiesKHR *pExternalBufferProperties) {
+    const VkLayerInstanceDispatchTable *disp;
+    VkPhysicalDevice unwrapped_phys_dev = loader_unwrap_physical_device(physicalDevice);
+    disp = loader_get_instance_layer_dispatch(physicalDevice);
+    disp->GetPhysicalDeviceExternalBufferPropertiesKHR(unwrapped_phys_dev, pExternalBufferInfo, pExternalBufferProperties);
+}
+
+VKAPI_ATTR void VKAPI_CALL terminator_GetPhysicalDeviceExternalBufferPropertiesKHR(
+    VkPhysicalDevice physicalDevice, const VkPhysicalDeviceExternalBufferInfoKHR *pExternalBufferInfo,
+    VkExternalBufferPropertiesKHR *pExternalBufferProperties) {
+    struct loader_physical_device_term *phys_dev_term = (struct loader_physical_device_term *)physicalDevice;
+    struct loader_icd_term *icd_term = phys_dev_term->this_icd_term;
+
+    if (icd_term->dispatch.GetPhysicalDeviceExternalBufferPropertiesKHR) {
+        // Pass the call to the driver
+        icd_term->dispatch.GetPhysicalDeviceExternalBufferPropertiesKHR(phys_dev_term->phys_dev, pExternalBufferInfo,
+                                                                        pExternalBufferProperties);
+    } else {
+        // Emulate the call
+        loader_log(icd_term->this_instance, VK_DEBUG_REPORT_INFORMATION_BIT_EXT, 0,
+                   "vkGetPhysicalDeviceExternalBufferPropertiesKHR: Emulating call in ICD \"%s\"", icd_term->scanned_icd->lib_name);
+
+        if (pExternalBufferInfo->pNext != NULL) {
+            loader_log(icd_term->this_instance, VK_DEBUG_REPORT_WARNING_BIT_EXT, 0,
+                       "vkGetPhysicalDeviceExternalBufferPropertiesKHR: Emulation found unrecognized structure type in "
+                       "pExternalBufferInfo->pNext - this struct will be ignored");
+        }
+
+        // Fill in everything being unsupported
+        memset(&pExternalBufferProperties->externalMemoryProperties, 0, sizeof(VkExternalMemoryPropertiesKHR));
+
+        if (pExternalBufferProperties->pNext != NULL) {
+            loader_log(icd_term->this_instance, VK_DEBUG_REPORT_WARNING_BIT_EXT, 0,
+                       "vkGetPhysicalDeviceExternalBufferPropertiesKHR: Emulation found unrecognized structure type in "
+                       "pExternalBufferProperties->pNext - this struct will be ignored");
+        }
+    }
+}
+
+// ---- VK_KHR_external_semaphore_capabilities extension trampoline/terminators
+
+VKAPI_ATTR void VKAPI_CALL GetPhysicalDeviceExternalSemaphorePropertiesKHR(
+    VkPhysicalDevice physicalDevice, const VkPhysicalDeviceExternalSemaphoreInfoKHR *pExternalSemaphoreInfo,
+    VkExternalSemaphorePropertiesKHR *pExternalSemaphoreProperties) {
+    const VkLayerInstanceDispatchTable *disp;
+    VkPhysicalDevice unwrapped_phys_dev = loader_unwrap_physical_device(physicalDevice);
+    disp = loader_get_instance_layer_dispatch(physicalDevice);
+    disp->GetPhysicalDeviceExternalSemaphorePropertiesKHR(unwrapped_phys_dev, pExternalSemaphoreInfo, pExternalSemaphoreProperties);
+}
+
+VKAPI_ATTR void VKAPI_CALL terminator_GetPhysicalDeviceExternalSemaphorePropertiesKHR(
+    VkPhysicalDevice physicalDevice, const VkPhysicalDeviceExternalSemaphoreInfoKHR *pExternalSemaphoreInfo,
+    VkExternalSemaphorePropertiesKHR *pExternalSemaphoreProperties) {
+    struct loader_physical_device_term *phys_dev_term = (struct loader_physical_device_term *)physicalDevice;
+    struct loader_icd_term *icd_term = phys_dev_term->this_icd_term;
+
+    if (icd_term->dispatch.GetPhysicalDeviceExternalSemaphorePropertiesKHR != NULL) {
+        // Pass the call to the driver
+        icd_term->dispatch.GetPhysicalDeviceExternalSemaphorePropertiesKHR(phys_dev_term->phys_dev, pExternalSemaphoreInfo,
+                                                                           pExternalSemaphoreProperties);
+    } else {
+        // Emulate the call
+        loader_log(icd_term->this_instance, VK_DEBUG_REPORT_INFORMATION_BIT_EXT, 0,
+                   "vkGetPhysicalDeviceExternalSemaphorePropertiesKHR: Emulating call in ICD \"%s\"",
+                   icd_term->scanned_icd->lib_name);
+
+        if (pExternalSemaphoreInfo->pNext != NULL) {
+            loader_log(icd_term->this_instance, VK_DEBUG_REPORT_WARNING_BIT_EXT, 0,
+                       "vkGetPhysicalDeviceExternalSemaphorePropertiesKHR: Emulation found unrecognized structure type in "
+                       "pExternalSemaphoreInfo->pNext - this struct will be ignored");
+        }
+
+        // Fill in everything being unsupported
+        pExternalSemaphoreProperties->exportFromImportedHandleTypes = 0;
+        pExternalSemaphoreProperties->compatibleHandleTypes = 0;
+        pExternalSemaphoreProperties->externalSemaphoreFeatures = 0;
+
+        if (pExternalSemaphoreProperties->pNext != NULL) {
+            loader_log(icd_term->this_instance, VK_DEBUG_REPORT_WARNING_BIT_EXT, 0,
+                       "vkGetPhysicalDeviceExternalSemaphorePropertiesKHR: Emulation found unrecognized structure type in "
+                       "pExternalSemaphoreProperties->pNext - this struct will be ignored");
+        }
+    }
+}
+
+// ---- VK_KHR_external_fence_capabilities extension trampoline/terminators
+
+VKAPI_ATTR void VKAPI_CALL GetPhysicalDeviceExternalFencePropertiesKHR(
+    VkPhysicalDevice physicalDevice, const VkPhysicalDeviceExternalFenceInfoKHR *pExternalFenceInfo,
+    VkExternalFencePropertiesKHR *pExternalFenceProperties) {
+    const VkLayerInstanceDispatchTable *disp;
+    VkPhysicalDevice unwrapped_phys_dev = loader_unwrap_physical_device(physicalDevice);
+    disp = loader_get_instance_layer_dispatch(physicalDevice);
+    disp->GetPhysicalDeviceExternalFencePropertiesKHR(unwrapped_phys_dev, pExternalFenceInfo, pExternalFenceProperties);
+}
+
+VKAPI_ATTR void VKAPI_CALL terminator_GetPhysicalDeviceExternalFencePropertiesKHR(
+    VkPhysicalDevice physicalDevice, const VkPhysicalDeviceExternalFenceInfoKHR *pExternalFenceInfo,
+    VkExternalFencePropertiesKHR *pExternalFenceProperties) {
+    struct loader_physical_device_term *phys_dev_term = (struct loader_physical_device_term *)physicalDevice;
+    struct loader_icd_term *icd_term = phys_dev_term->this_icd_term;
+
+    if (icd_term->dispatch.GetPhysicalDeviceExternalFencePropertiesKHR != NULL) {
+        // Pass the call to the driver
+        icd_term->dispatch.GetPhysicalDeviceExternalFencePropertiesKHR(phys_dev_term->phys_dev, pExternalFenceInfo,
+                                                                       pExternalFenceProperties);
+    } else {
+        // Emulate the call
+        loader_log(icd_term->this_instance, VK_DEBUG_REPORT_INFORMATION_BIT_EXT, 0,
+                   "vkGetPhysicalDeviceExternalFencePropertiesKHR: Emulating call in ICD \"%s\"", icd_term->scanned_icd->lib_name);
+
+        if (pExternalFenceInfo->pNext != NULL) {
+            loader_log(icd_term->this_instance, VK_DEBUG_REPORT_WARNING_BIT_EXT, 0,
+                       "vkGetPhysicalDeviceExternalFencePropertiesKHR: Emulation found unrecognized structure type in "
+                       "pExternalFenceInfo->pNext - this struct will be ignored");
+        }
+
+        // Fill in everything being unsupported
+        pExternalFenceProperties->exportFromImportedHandleTypes = 0;
+        pExternalFenceProperties->compatibleHandleTypes = 0;
+        pExternalFenceProperties->externalFenceFeatures = 0;
+
+        if (pExternalFenceProperties->pNext != NULL) {
+            loader_log(icd_term->this_instance, VK_DEBUG_REPORT_WARNING_BIT_EXT, 0,
+                       "vkGetPhysicalDeviceExternalFencePropertiesKHR: Emulation found unrecognized structure type in "
+                       "pExternalFenceProperties->pNext - this struct will be ignored");
+        }
+    }
+}
 
 // ---- Helper functions
 

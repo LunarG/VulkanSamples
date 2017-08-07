@@ -155,6 +155,7 @@ class ParamCheckerOutputGenerator(OutputGenerator):
         self.structMembers = []                           # List of StructMemberData records for all Vulkan structs
         self.validatedStructs = dict()                    # Map of structs type names to generated validation code for that struct type
         self.enumRanges = dict()                          # Map of enum name to BEGIN/END range values
+        self.enumValueLists = ''                          # String containing enumerated type map definitions
         self.flags = set()                                # Map of flags typenames
         self.flagBits = dict()                            # Map of flag bits typename to list of values
         self.newFlags = set()                             # Map of flags typenames /defined in the current feature/
@@ -249,6 +250,8 @@ class ParamCheckerOutputGenerator(OutputGenerator):
         write('namespace parameter_validation {', file = self.outFile)
     def endFile(self):
         # C-specific
+        self.newline()
+        write(self.enumValueLists, file=self.outFile)
         self.newline()
         commands_text = '\n'.join(self.validation)
         write(commands_text, file=self.outFile)
@@ -422,13 +425,12 @@ class ParamCheckerOutputGenerator(OutputGenerator):
                                                 iscount=iscount,
                                                 noautovalidity=noautovalidity,
                                                 len=self.getLen(member),
-                                                extstructs=member.attrib.get('validextensionstructs') if name == 'pNext' else None,
+                                                extstructs=self.registry.validextensionstructs[typeName] if name == 'pNext' else None,
                                                 condition=conditions[name] if conditions and name in conditions else None,
                                                 cdecl=cdecl))
         self.structMembers.append(self.StructMemberData(name=typeName, members=membersInfo))
     #
-    # Capture group (e.g. C "enum" type) info to be used for
-    # param check code generation.
+    # Capture group (e.g. C "enum" type) info to be used for param check code generation.
     # These are concatenated together with other types.
     def genGroup(self, groupinfo, groupName):
         OutputGenerator.genGroup(self, groupinfo, groupName)
@@ -457,9 +459,16 @@ class ParamCheckerOutputGenerator(OutputGenerator):
             isEnum = ('FLAG_BITS' not in expandPrefix)
             if isEnum:
                 self.enumRanges[groupName] = (expandPrefix + '_BEGIN_RANGE' + expandSuffix, expandPrefix + '_END_RANGE' + expandSuffix)
+                # Create definition for a list containing valid enum values for this enumerated type
+                enum_entry = 'const std::vector<%s> All%sEnums = {' % (groupName, groupName)
+                for enum in groupElem:
+                    name = enum.get('name')
+                    if name is not None and enum.get('supported') != 'disabled':
+                        enum_entry += '%s, ' % name
+                enum_entry += '};\n'
+                self.enumValueLists += enum_entry
     #
-    # Capture command parameter info to be used for param
-    # check code generation.
+    # Capture command parameter info to be used for param check code generation.
     def genCmd(self, cmdinfo, name):
         OutputGenerator.genCmd(self, cmdinfo, name)
         interface_functions = [
@@ -793,11 +802,10 @@ class ParamCheckerOutputGenerator(OutputGenerator):
         extStructNames = 'NULL'
         vuid = self.GetVuid("VUID-%s-pNext-pNext" % struct_type_name)
         if value.extstructs:
-            structs = value.extstructs.split(',')
-            checkExpr.append('const VkStructureType allowedStructs[] = {' + ', '.join([self.getStructType(s) for s in structs]) + '};\n')
-            extStructCount = 'ARRAY_SIZE(allowedStructs)'
-            extStructVar = 'allowedStructs'
-            extStructNames = '"' + ', '.join(structs) + '"'
+            extStructVar = 'allowed_structs_{}'.format(struct_type_name)
+            extStructCount = 'ARRAY_SIZE({})'.format(extStructVar)
+            extStructNames = '"' + ', '.join(value.extstructs) + '"'
+            checkExpr.append('const VkStructureType {}[] = {{ {} }};\n'.format(extStructVar, ', '.join([self.getStructType(s) for s in value.extstructs])))
         checkExpr.append('skipCall |= validate_struct_pnext(layer_data->report_data, "{}", {ppp}"{}"{pps}, {}, {}{}, {}, {}, GeneratedHeaderVersion, {});\n'.format(
             funcPrintName, valuePrintName, extStructNames, prefix, value.name, extStructCount, extStructVar, vuid, **postProcSpec))
         return checkExpr
@@ -1007,8 +1015,8 @@ class ParamCheckerOutputGenerator(OutputGenerator):
                     elif value.isbool and value.isconst:
                         usedLines.append('skipCall |= validate_bool32_array(layer_data->report_data, "{}", {ppp}"{}"{pps}, {ppp}"{}"{pps}, {pf}{}, {pf}{}, {}, {});\n'.format(funcName, lenDisplayName, valueDisplayName, lenParam.name, value.name, cvReq, req, pf=valuePrefix, **postProcSpec))
                     elif value.israngedenum and value.isconst:
-                        enumRange = self.enumRanges[value.type]
-                        usedLines.append('skipCall |= validate_ranged_enum_array(layer_data->report_data, "{}", {ppp}"{}"{pps}, {ppp}"{}"{pps}, "{}", {}, {}, {pf}{}, {pf}{}, {}, {});\n'.format(funcName, lenDisplayName, valueDisplayName, value.type, enumRange[0], enumRange[1], lenParam.name, value.name, cvReq, req, pf=valuePrefix, **postProcSpec))
+                        enum_value_list = 'All%sEnums' % value.type
+                        usedLines.append('skipCall |= validate_ranged_enum_array(layer_data->report_data, "{}", {ppp}"{}"{pps}, {ppp}"{}"{pps}, "{}", {}, {pf}{}, {pf}{}, {}, {});\n'.format(funcName, lenDisplayName, valueDisplayName, value.type, enum_value_list, lenParam.name, value.name, cvReq, req, pf=valuePrefix, **postProcSpec))
                     elif value.name == 'pNext':
                         # We need to ignore VkDeviceCreateInfo and VkInstanceCreateInfo, as the loader manipulates them in a way that is not documented in vk.xml
                         if not structTypeName in ['VkDeviceCreateInfo', 'VkInstanceCreateInfo']:
@@ -1060,9 +1068,9 @@ class ParamCheckerOutputGenerator(OutputGenerator):
                     elif value.isbool:
                         usedLines.append('skipCall |= validate_bool32(layer_data->report_data, "{}", {ppp}"{}"{pps}, {}{});\n'.format(funcName, valueDisplayName, valuePrefix, value.name, **postProcSpec))
                     elif value.israngedenum:
-                        enumRange = self.enumRanges[value.type]
                         vuid = self.GetVuid("VUID-%s-%s-parameter" % (vuid_name_tag, value.name))
-                        usedLines.append('skipCall |= validate_ranged_enum(layer_data->report_data, "{}", {ppp}"{}"{pps}, "{}", {}, {}, {}{}, {});\n'.format(funcName, valueDisplayName, value.type, enumRange[0], enumRange[1], valuePrefix, value.name, vuid, **postProcSpec))
+                        enum_value_list = 'All%sEnums' % value.type
+                        usedLines.append('skipCall |= validate_ranged_enum(layer_data->report_data, "{}", {ppp}"{}"{pps}, "{}", {}, {}{}, {});\n'.format(funcName, valueDisplayName, value.type, enum_value_list, valuePrefix, value.name, vuid, **postProcSpec))
                     #
                     # If this is a struct, see if it contains members that need to be checked
                     if value.type in self.validatedStructs:

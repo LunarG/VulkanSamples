@@ -63,14 +63,14 @@ if(WIN32)
 else()
     list(APPEND libraries PRIVATE -ldl -lrt)
 
-    if(BUILD_WSI_XCB_SUPPORT)
+    if(BUILD_WSI_XCB_SUPPORT AND DEMOS_WSI_SELECTION STREQUAL "XCB")
         find_package(XCB REQUIRED)
 
         list(APPEND sources ShellXcb.cpp ShellXcb.h)
         list(APPEND definitions PRIVATE -DVK_USE_PLATFORM_XCB_KHR)
         list(APPEND includes PRIVATE ${XCB_INCLUDES})
         list(APPEND libraries PRIVATE ${XCB_LIBRARIES})
-    elseif(BUILD_WSI_WAYLAND_SUPPORT)
+    elseif(BUILD_WSI_WAYLAND_SUPPORT AND DEMOS_WSI_SELECTION STREQUAL "WAYLAND")
         find_package(Wayland REQUIRED)
 
         list(APPEND sources ShellWayland.cpp ShellWayland.h)

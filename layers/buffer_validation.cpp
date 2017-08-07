@@ -351,7 +351,7 @@ void TransitionSubpassLayouts(layer_data *device_data, GLOBAL_CB_NODE *pCB, cons
     }
 }
 
-bool ValidateImageAspectLayout(layer_data *device_data, GLOBAL_CB_NODE *pCB, const VkImageMemoryBarrier *mem_barrier,
+bool ValidateImageAspectLayout(layer_data *device_data, GLOBAL_CB_NODE const *pCB, const VkImageMemoryBarrier *mem_barrier,
                                uint32_t level, uint32_t layer, VkImageAspectFlags aspect) {
     if (!(mem_barrier->subresourceRange.aspectMask & aspect)) {
         return false;
@@ -478,9 +478,8 @@ bool ValidateBarrierLayoutToImageUsage(layer_data *device_data, const VkImageMem
 }
 
 // Verify image barriers are compatible with the images they reference.
-bool ValidateBarriersToImages(layer_data *device_data, VkCommandBuffer cmdBuffer, uint32_t imageMemoryBarrierCount,
+bool ValidateBarriersToImages(layer_data *device_data, GLOBAL_CB_NODE const *cb_state, uint32_t imageMemoryBarrierCount,
                               const VkImageMemoryBarrier *pImageMemoryBarriers, const char *func_name) {
-    GLOBAL_CB_NODE *pCB = GetCBNode(device_data, cmdBuffer);
     bool skip = false;
 
     for (uint32_t i = 0; i < imageMemoryBarrierCount; ++i) {
@@ -530,10 +529,10 @@ bool ValidateBarriersToImages(layer_data *device_data, VkCommandBuffer cmdBuffer
             uint32_t level = img_barrier->subresourceRange.baseMipLevel + j;
             for (uint32_t k = 0; k < layer_count; k++) {
                 uint32_t layer = img_barrier->subresourceRange.baseArrayLayer + k;
-                skip |= ValidateImageAspectLayout(device_data, pCB, img_barrier, level, layer, VK_IMAGE_ASPECT_COLOR_BIT);
-                skip |= ValidateImageAspectLayout(device_data, pCB, img_barrier, level, layer, VK_IMAGE_ASPECT_DEPTH_BIT);
-                skip |= ValidateImageAspectLayout(device_data, pCB, img_barrier, level, layer, VK_IMAGE_ASPECT_STENCIL_BIT);
-                skip |= ValidateImageAspectLayout(device_data, pCB, img_barrier, level, layer, VK_IMAGE_ASPECT_METADATA_BIT);
+                skip |= ValidateImageAspectLayout(device_data, cb_state, img_barrier, level, layer, VK_IMAGE_ASPECT_COLOR_BIT);
+                skip |= ValidateImageAspectLayout(device_data, cb_state, img_barrier, level, layer, VK_IMAGE_ASPECT_DEPTH_BIT);
+                skip |= ValidateImageAspectLayout(device_data, cb_state, img_barrier, level, layer, VK_IMAGE_ASPECT_STENCIL_BIT);
+                skip |= ValidateImageAspectLayout(device_data, cb_state, img_barrier, level, layer, VK_IMAGE_ASPECT_METADATA_BIT);
             }
         }
     }
@@ -1031,7 +1030,7 @@ void PreCallRecordCmdClearImage(layer_data *dev_data, VkCommandBuffer commandBuf
             SetImageMemoryValid(dev_data, image_state, true);
             return false;
         };
-        cb_node->validate_functions.push_back(function);
+        cb_node->queue_submit_functions.push_back(function);
         for (uint32_t i = 0; i < rangeCount; ++i) {
             RecordClearImageLayout(dev_data, cb_node, image, pRanges[i], imageLayout);
         }
@@ -1969,12 +1968,12 @@ void PreCallRecordCmdCopyImage(layer_data *device_data, GLOBAL_CB_NODE *cb_node,
     AddCommandBufferBindingImage(device_data, cb_node, src_image_state);
     AddCommandBufferBindingImage(device_data, cb_node, dst_image_state);
     std::function<bool()> function = [=]() { return ValidateImageMemoryIsValid(device_data, src_image_state, "vkCmdCopyImage()"); };
-    cb_node->validate_functions.push_back(function);
+    cb_node->queue_submit_functions.push_back(function);
     function = [=]() {
         SetImageMemoryValid(device_data, dst_image_state, true);
         return false;
     };
-    cb_node->validate_functions.push_back(function);
+    cb_node->queue_submit_functions.push_back(function);
 }
 
 // Returns true if sub_rect is entirely contained within rect
@@ -2185,12 +2184,12 @@ void PreCallRecordCmdResolveImage(layer_data *device_data, GLOBAL_CB_NODE *cb_no
     std::function<bool()> function = [=]() {
         return ValidateImageMemoryIsValid(device_data, src_image_state, "vkCmdResolveImage()");
     };
-    cb_node->validate_functions.push_back(function);
+    cb_node->queue_submit_functions.push_back(function);
     function = [=]() {
         SetImageMemoryValid(device_data, dst_image_state, true);
         return false;
     };
-    cb_node->validate_functions.push_back(function);
+    cb_node->queue_submit_functions.push_back(function);
 }
 
 bool PreCallValidateCmdBlitImage(layer_data *device_data, GLOBAL_CB_NODE *cb_node, IMAGE_STATE *src_image_state,
@@ -2569,12 +2568,12 @@ void PreCallRecordCmdBlitImage(layer_data *device_data, GLOBAL_CB_NODE *cb_node,
     AddCommandBufferBindingImage(device_data, cb_node, dst_image_state);
 
     std::function<bool()> function = [=]() { return ValidateImageMemoryIsValid(device_data, src_image_state, "vkCmdBlitImage()"); };
-    cb_node->validate_functions.push_back(function);
+    cb_node->queue_submit_functions.push_back(function);
     function = [=]() {
         SetImageMemoryValid(device_data, dst_image_state, true);
         return false;
     };
-    cb_node->validate_functions.push_back(function);
+    cb_node->queue_submit_functions.push_back(function);
 }
 
 // This validates that the initial layout specified in the command buffer for
@@ -3203,19 +3202,21 @@ bool PreCallValidateCreateImageView(layer_data *device_data, const VkImageViewCr
         skip |= ValidateImageUsageFlags(
             device_data, image_state,
             VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT |
-                VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
+            VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
             false, -1, "vkCreateImageView()",
             "VK_IMAGE_USAGE_[SAMPLED|STORAGE|COLOR_ATTACHMENT|DEPTH_STENCIL_ATTACHMENT|INPUT_ATTACHMENT]_BIT");
         // If this isn't a sparse image, it needs to have memory backing it at CreateImageView time
         skip |= ValidateMemoryIsBoundToImage(device_data, image_state, "vkCreateImageView()", VALIDATION_ERROR_0ac007f8);
         // Checks imported from image layer
         skip |= ValidateImageSubresourceRange(device_data, image_state, create_info->viewType == VK_IMAGE_VIEW_TYPE_2D_ARRAY,
-                                              create_info->subresourceRange, "vkCreateImageView", "pCreateInfo->subresourceRange");
+            create_info->subresourceRange, "vkCreateImageView", "pCreateInfo->subresourceRange");
 
         VkImageCreateFlags image_flags = image_state->createInfo.flags;
         VkFormat image_format = image_state->createInfo.format;
         VkFormat view_format = create_info->format;
         VkImageAspectFlags aspect_mask = create_info->subresourceRange.aspectMask;
+        VkImageType image_type = image_state->createInfo.imageType;
+        VkImageViewType view_type = create_info->viewType;
 
         // Validate VK_IMAGE_CREATE_MUTABLE_FORMAT_BIT state
         if (image_flags & VK_IMAGE_CREATE_MUTABLE_FORMAT_BIT) {
@@ -3246,6 +3247,79 @@ bool PreCallValidateCreateImageView(layer_data *device_data, const VkImageViewCr
 
         // Validate correct image aspect bits for desired formats and format consistency
         skip |= ValidateImageAspectMask(device_data, image_state->image, image_format, aspect_mask, "vkCreateImageView()");
+
+        switch (image_type) {
+            case VK_IMAGE_TYPE_1D:
+                if (view_type != VK_IMAGE_VIEW_TYPE_1D && view_type != VK_IMAGE_VIEW_TYPE_1D_ARRAY) {
+                    skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0,
+                                    __LINE__, VALIDATION_ERROR_0ac007fa, "IMAGE",
+                                    "vkCreateImageView(): pCreateInfo->viewType %s is not compatible with image type %s. %s",
+                                    string_VkImageViewType(view_type), string_VkImageType(image_type),
+                                    validation_error_map[VALIDATION_ERROR_0ac007fa]);
+                }
+                break;
+            case VK_IMAGE_TYPE_2D:
+                if (view_type != VK_IMAGE_VIEW_TYPE_2D && view_type != VK_IMAGE_VIEW_TYPE_2D_ARRAY) {
+                    if ((view_type == VK_IMAGE_VIEW_TYPE_CUBE || view_type == VK_IMAGE_VIEW_TYPE_CUBE_ARRAY) &&
+                        !(image_flags & VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT)) {
+                        skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0,
+                                        __LINE__, VALIDATION_ERROR_0ac007d6, "IMAGE",
+                                        "vkCreateImageView(): pCreateInfo->viewType %s is not compatible with image type %s. %s",
+                                        string_VkImageViewType(view_type), string_VkImageType(image_type),
+                                        validation_error_map[VALIDATION_ERROR_0ac007d6]);
+                    } else if (view_type != VK_IMAGE_VIEW_TYPE_CUBE && view_type != VK_IMAGE_VIEW_TYPE_CUBE_ARRAY) {
+                        skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0,
+                                        __LINE__, VALIDATION_ERROR_0ac007fa, "IMAGE",
+                                        "vkCreateImageView(): pCreateInfo->viewType %s is not compatible with image type %s. %s",
+                                        string_VkImageViewType(view_type), string_VkImageType(image_type),
+                                        validation_error_map[VALIDATION_ERROR_0ac007fa]);
+                    }
+                }
+                break;
+            case VK_IMAGE_TYPE_3D:
+                if (GetDeviceExtensions(device_data)->vk_khr_maintenance1) {
+                    if (view_type != VK_IMAGE_VIEW_TYPE_3D) {
+                        if ((view_type == VK_IMAGE_VIEW_TYPE_2D || view_type == VK_IMAGE_VIEW_TYPE_2D_ARRAY)) {
+                            if (!(image_flags & VK_IMAGE_CREATE_2D_ARRAY_COMPATIBLE_BIT_KHR)) {
+                                skip |= log_msg(
+                                    report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0,
+                                    __LINE__, VALIDATION_ERROR_0ac007da, "IMAGE",
+                                    "vkCreateImageView(): pCreateInfo->viewType %s is not compatible with image type %s. %s",
+                                    string_VkImageViewType(view_type), string_VkImageType(image_type),
+                                    validation_error_map[VALIDATION_ERROR_0ac007da]);
+                            } else if ((image_flags & (VK_IMAGE_CREATE_SPARSE_BINDING_BIT | VK_IMAGE_CREATE_SPARSE_RESIDENCY_BIT |
+                                                       VK_IMAGE_CREATE_SPARSE_ALIASED_BIT))) {
+                                skip |= log_msg(
+                                    report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0,
+                                    __LINE__, VALIDATION_ERROR_0ac007fa, "IMAGE",
+                                    "vkCreateImageView(): pCreateInfo->viewType %s is not compatible with image type %s when the "
+                                    "VK_IMAGE_CREATE_SPARSE_BINDING_BIT, VK_IMAGE_CREATE_SPARSE_RESIDENCY_BIT, or "
+                                    "VK_IMAGE_CREATE_SPARSE_ALIASED_BIT flags are enabled. %s",
+                                    string_VkImageViewType(view_type), string_VkImageType(image_type),
+                                    validation_error_map[VALIDATION_ERROR_0ac007fa]);
+                            }
+                        } else {
+                            skip |=
+                                log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0,
+                                        __LINE__, VALIDATION_ERROR_0ac007fa, "IMAGE",
+                                        "vkCreateImageView(): pCreateInfo->viewType %s is not compatible with image type %s. %s",
+                                        string_VkImageViewType(view_type), string_VkImageType(image_type),
+                                        validation_error_map[VALIDATION_ERROR_0ac007fa]);
+                        }
+                    }
+                } else {
+                    if (view_type != VK_IMAGE_VIEW_TYPE_3D) {
+                        skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0,
+                                        __LINE__, VALIDATION_ERROR_0ac007fa, "IMAGE",
+                                        "vkCreateImageView(): pCreateInfo->viewType %s is not compatible with image type %s. %s",
+                                        string_VkImageViewType(view_type), string_VkImageType(image_type),
+                                        validation_error_map[VALIDATION_ERROR_0ac007fa]);
+                    }
+                }
+                break;
+            default:
+                break;
+        }
     }
     return skip;
 }
@@ -3286,12 +3360,12 @@ void PreCallRecordCmdCopyBuffer(layer_data *device_data, GLOBAL_CB_NODE *cb_node
     std::function<bool()> function = [=]() {
         return ValidateBufferMemoryIsValid(device_data, src_buffer_state, "vkCmdCopyBuffer()");
     };
-    cb_node->validate_functions.push_back(function);
+    cb_node->queue_submit_functions.push_back(function);
     function = [=]() {
         SetBufferMemoryValid(device_data, dst_buffer_state, true);
         return false;
     };
-    cb_node->validate_functions.push_back(function);
+    cb_node->queue_submit_functions.push_back(function);
 }
 
 static bool validateIdleBuffer(layer_data *device_data, VkBuffer buffer) {
@@ -3392,7 +3466,7 @@ void PreCallRecordCmdFillBuffer(layer_data *device_data, GLOBAL_CB_NODE *cb_node
         SetBufferMemoryValid(device_data, buffer_state, true);
         return false;
     };
-    cb_node->validate_functions.push_back(function);
+    cb_node->queue_submit_functions.push_back(function);
     // Update bindings between buffer and cmd buffer
     AddCommandBufferBindingBuffer(device_data, cb_node, buffer_state);
 }
@@ -3762,12 +3836,12 @@ void PreCallRecordCmdCopyImageToBuffer(layer_data *device_data, GLOBAL_CB_NODE *
     std::function<bool()> function = [=]() {
         return ValidateImageMemoryIsValid(device_data, src_image_state, "vkCmdCopyImageToBuffer()");
     };
-    cb_node->validate_functions.push_back(function);
+    cb_node->queue_submit_functions.push_back(function);
     function = [=]() {
         SetBufferMemoryValid(device_data, dst_buffer_state, true);
         return false;
     };
-    cb_node->validate_functions.push_back(function);
+    cb_node->queue_submit_functions.push_back(function);
 }
 
 bool PreCallValidateCmdCopyBufferToImage(layer_data *device_data, VkImageLayout dstImageLayout, GLOBAL_CB_NODE *cb_node,
@@ -3833,9 +3907,9 @@ void PreCallRecordCmdCopyBufferToImage(layer_data *device_data, GLOBAL_CB_NODE *
         SetImageMemoryValid(device_data, dst_image_state, true);
         return false;
     };
-    cb_node->validate_functions.push_back(function);
+    cb_node->queue_submit_functions.push_back(function);
     function = [=]() { return ValidateBufferMemoryIsValid(device_data, src_buffer_state, "vkCmdCopyBufferToImage()"); };
-    cb_node->validate_functions.push_back(function);
+    cb_node->queue_submit_functions.push_back(function);
 }
 
 bool PreCallValidateGetImageSubresourceLayout(layer_data *device_data, VkImage image, const VkImageSubresource *pSubresource) {
