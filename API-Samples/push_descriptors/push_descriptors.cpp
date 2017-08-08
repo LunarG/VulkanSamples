@@ -67,7 +67,7 @@ const char *fragShaderText =
 int sample_main(int argc, char *argv[]) {
     VkResult U_ASSERT_ONLY res;
     struct sample_info info = {};
-    char sample_title[] = "Draw Textured Cube";
+    char sample_title[] = "Draw Textured Cube with Push Descriptors";
     const bool depthPresent = true;
 
     process_command_line_args(info, argc, argv);
@@ -75,22 +75,42 @@ int sample_main(int argc, char *argv[]) {
     init_instance_extension_names(info);
     init_device_extension_names(info);
     /* VULKAN_KEY_START */
-    // To use a Vulkan device extension, you have to specify it in vkCreateDevice
-    info.device_extension_names.push_back(VK_KHR_PUSH_DESCRIPTOR_EXTENSION_NAME);
+    uint32_t extension_count;
+    char *layer_name = NULL;
+    res = vkEnumerateInstanceExtensionProperties(layer_name, &extension_count, NULL);
+    assert(res == VK_SUCCESS);
+    // To use PUSH_DESCRIPTOR, you must also specify GET_PHYSICAL_DEVICE_PROPERTIES_2
+    bool supports_device_properties_2 = false;
+    if (extension_count > 0) {
+        std::vector<VkExtensionProperties> available_instance_extensions(extension_count);
+
+        res = vkEnumerateInstanceExtensionProperties(layer_name, &extension_count, &available_instance_extensions[0]);
+        assert(res == VK_SUCCESS);
+        for (const auto &extension_props : available_instance_extensions) {
+            if (strcmp(extension_props.extensionName, VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME) == 0) {
+                supports_device_properties_2 = true;
+                break;
+            }
+        }
+    }
+    if (!supports_device_properties_2) {
+        std::cout << "No GET_PHYSICAL_DEVICE_PROPERTIES_2 extension" << std::endl;
+        return 0;
+    }
+    info.instance_extension_names.push_back(VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME);
 
     init_instance(info, sample_title);
     init_enumerate_device(info);
-    // Once device is created, need to make sure the extension is available
+    // Once instance is created, need to make sure the extension is available
     bool supports_push_descriptors = false;
-    uint32_t extension_count;
     res = vkEnumerateDeviceExtensionProperties(info.gpus[0], nullptr, &extension_count, nullptr);
     assert(res == VK_SUCCESS);
     if (extension_count > 0) {
-        std::vector<VkExtensionProperties> available_extensions(extension_count);
+        std::vector<VkExtensionProperties> available_device_extensions(extension_count);
 
-        res = vkEnumerateDeviceExtensionProperties(info.gpus[0], nullptr, &extension_count, &available_extensions[0]);
+        res = vkEnumerateDeviceExtensionProperties(info.gpus[0], nullptr, &extension_count, &available_device_extensions[0]);
         assert(res == VK_SUCCESS);
-        for (const auto &extension_props : available_extensions) {
+        for (const auto &extension_props : available_device_extensions) {
             if (strcmp(extension_props.extensionName, VK_KHR_PUSH_DESCRIPTOR_EXTENSION_NAME) == 0) {
                 supports_push_descriptors = true;
                 break;
@@ -98,8 +118,10 @@ int sample_main(int argc, char *argv[]) {
         }
     }
     if (!supports_push_descriptors) {
+        std::cout << "No extension for push descriptors" << std::endl;
         return 0;
     }
+    info.device_extension_names.push_back(VK_KHR_PUSH_DESCRIPTOR_EXTENSION_NAME);
 
     init_window_size(info, 500, 500);
     init_connection(info);
@@ -114,7 +136,8 @@ int sample_main(int argc, char *argv[]) {
     init_depth_buffer(info);
     init_texture(info);
     init_uniform_buffer(info);
-    init_descriptor_and_pipeline_layouts(info, true);
+    // Need to specify that descriptor set layout will be for push descriptors
+    init_descriptor_and_pipeline_layouts(info, true, VK_DESCRIPTOR_SET_LAYOUT_CREATE_PUSH_DESCRIPTOR_BIT_KHR);
     init_renderpass(info, depthPresent);
     init_shaders(info, vertShaderText, fragShaderText);
     init_framebuffers(info, depthPresent);

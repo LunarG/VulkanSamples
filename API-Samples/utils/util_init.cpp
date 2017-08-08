@@ -1013,7 +1013,8 @@ void init_uniform_buffer(struct sample_info &info) {
     info.uniform_data.buffer_info.range = sizeof(info.MVP);
 }
 
-void init_descriptor_and_pipeline_layouts(struct sample_info &info, bool use_texture) {
+void init_descriptor_and_pipeline_layouts(struct sample_info &info, bool use_texture,
+                                          VkDescriptorSetLayoutCreateFlags descSetLayoutCreateFlags) {
     VkDescriptorSetLayoutBinding layout_bindings[2];
     layout_bindings[0].binding = 0;
     layout_bindings[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
@@ -1034,6 +1035,7 @@ void init_descriptor_and_pipeline_layouts(struct sample_info &info, bool use_tex
     VkDescriptorSetLayoutCreateInfo descriptor_layout = {};
     descriptor_layout.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
     descriptor_layout.pNext = NULL;
+    descriptor_layout.flags = descSetLayoutCreateFlags;
     descriptor_layout.bindingCount = use_texture ? 2 : 1;
     descriptor_layout.pBindings = layout_bindings;
 
