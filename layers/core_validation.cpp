@@ -6546,8 +6546,8 @@ static bool ValidateBarriers(layer_data *device_data, const char *funcName, GLOB
             skip |= ValidateImageAspectMask(device_data, image_data->image, image_data->createInfo.format, aspect_mask, funcName);
 
             std::string param_name = "pImageMemoryBarriers[" + std::to_string(i) + "].subresourceRange";
-            skip |= ValidateImageSubresourceRange(device_data, image_data, false, mem_barrier->subresourceRange, funcName,
-                                                  param_name.c_str());
+            skip |= ValidateImageBarrierSubresourceRange(device_data, image_data, mem_barrier->subresourceRange, funcName,
+                                                         param_name.c_str());
         }
     }
 
