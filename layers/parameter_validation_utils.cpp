@@ -64,6 +64,8 @@ std::string to_string(T var) {
 
 namespace parameter_validation {
 
+extern std::unordered_map<std::string, void *> custom_functions;
+
 extern bool parameter_validation_vkCreateInstance(VkInstance instance, const VkInstanceCreateInfo *pCreateInfo,
                                                   const VkAllocationCallbacks *pAllocator, VkInstance *pInstance);
 extern bool parameter_validation_vkDestroyInstance(VkInstance instance, const VkAllocationCallbacks *pAllocator);
@@ -523,7 +525,6 @@ VKAPI_ATTR void VKAPI_CALL vkDestroyDevice(VkDevice device, const VkAllocationCa
     FreeLayerDataPtr(key, layer_data_map);
 }
 
-extern bool (*manual_vkGetDeviceQueue)(VkDevice device, uint32_t queueFamilyIndex, uint32_t queueIndex, VkQueue *pQueue);
 bool pv_vkGetDeviceQueue(VkDevice device, uint32_t queueFamilyIndex, uint32_t queueIndex, VkQueue *pQueue) {
     bool skip = false;
     layer_data *device_data = GetLayerDataPtr(get_dispatch_key(device), layer_data_map);
@@ -589,8 +590,6 @@ VKAPI_ATTR VkResult VKAPI_CALL vkCreateQueryPool(VkDevice device, const VkQueryP
     return result;
 }
 
-extern bool (*manual_vkCreateBuffer)(VkDevice device, const VkBufferCreateInfo *pCreateInfo,
-                                     const VkAllocationCallbacks *pAllocator, VkBuffer *pBuffer);
 bool pv_vkCreateBuffer(VkDevice device, const VkBufferCreateInfo *pCreateInfo, const VkAllocationCallbacks *pAllocator,
                        VkBuffer *pBuffer) {
     bool skip = false;
@@ -645,8 +644,6 @@ bool pv_vkCreateBuffer(VkDevice device, const VkBufferCreateInfo *pCreateInfo, c
     return skip;
 }
 
-extern bool (*manual_vkCreateImage)(VkDevice device, const VkImageCreateInfo *pCreateInfo, const VkAllocationCallbacks *pAllocator,
-                                    VkImage *pImage);
 bool pv_vkCreateImage(VkDevice device, const VkImageCreateInfo *pCreateInfo, const VkAllocationCallbacks *pAllocator,
                       VkImage *pImage) {
     bool skip = false;
@@ -852,8 +849,6 @@ bool pv_vkCreateImage(VkDevice device, const VkImageCreateInfo *pCreateInfo, con
     return skip;
 }
 
-extern bool (*manual_vkCreateImageView)(VkDevice device, const VkImageViewCreateInfo *pCreateInfo,
-                                        const VkAllocationCallbacks *pAllocator, VkImageView *pView);
 bool pv_vkCreateImageView(VkDevice device, const VkImageViewCreateInfo *pCreateInfo, const VkAllocationCallbacks *pAllocator,
                           VkImageView *pView) {
     bool skip = false;
@@ -920,9 +915,6 @@ bool pv_vkCreateImageView(VkDevice device, const VkImageViewCreateInfo *pCreateI
     return skip;
 }
 
-extern bool (*manual_vkCreateGraphicsPipelines)(VkDevice device, VkPipelineCache pipelineCache, uint32_t createInfoCount,
-                                                const VkGraphicsPipelineCreateInfo *pCreateInfos,
-                                                const VkAllocationCallbacks *pAllocator, VkPipeline *pPipelines);
 bool pv_vkCreateGraphicsPipelines(VkDevice device, VkPipelineCache pipelineCache, uint32_t createInfoCount,
                                   const VkGraphicsPipelineCreateInfo *pCreateInfos, const VkAllocationCallbacks *pAllocator,
                                   VkPipeline *pPipelines) {
@@ -1479,9 +1471,6 @@ bool pv_vkCreateGraphicsPipelines(VkDevice device, VkPipelineCache pipelineCache
     return skip;
 }
 
-extern bool (*manual_vkCreateComputePipelines)(VkDevice device, VkPipelineCache pipelineCache, uint32_t createInfoCount,
-                                               const VkComputePipelineCreateInfo *pCreateInfos,
-                                               const VkAllocationCallbacks *pAllocator, VkPipeline *pPipelines);
 bool pv_vkCreateComputePipelines(VkDevice device, VkPipelineCache pipelineCache, uint32_t createInfoCount,
                                  const VkComputePipelineCreateInfo *pCreateInfos, const VkAllocationCallbacks *pAllocator,
                                  VkPipeline *pPipelines) {
@@ -1497,8 +1486,6 @@ bool pv_vkCreateComputePipelines(VkDevice device, VkPipelineCache pipelineCache,
     return skip;
 }
 
-extern bool (*manual_vkCreateSampler)(VkDevice device, const VkSamplerCreateInfo *pCreateInfo,
-                                      const VkAllocationCallbacks *pAllocator, VkSampler *pSampler);
 bool pv_vkCreateSampler(VkDevice device, const VkSamplerCreateInfo *pCreateInfo, const VkAllocationCallbacks *pAllocator,
                         VkSampler *pSampler) {
     bool skip = false;
@@ -1547,8 +1534,6 @@ bool pv_vkCreateSampler(VkDevice device, const VkSamplerCreateInfo *pCreateInfo,
     return skip;
 }
 
-extern bool (*manual_vkCreateDescriptorSetLayout)(VkDevice device, const VkDescriptorSetLayoutCreateInfo *pCreateInfo,
-                                                  const VkAllocationCallbacks *pAllocator, VkDescriptorSetLayout *pSetLayout);
 bool pv_vkCreateDescriptorSetLayout(VkDevice device, const VkDescriptorSetLayoutCreateInfo *pCreateInfo,
                                     const VkAllocationCallbacks *pAllocator, VkDescriptorSetLayout *pSetLayout) {
     bool skip = false;
@@ -1595,8 +1580,6 @@ bool pv_vkCreateDescriptorSetLayout(VkDevice device, const VkDescriptorSetLayout
     return skip;
 }
 
-extern bool (*manual_vkFreeDescriptorSets)(VkDevice device, VkDescriptorPool descriptorPool, uint32_t descriptorSetCount,
-                                           const VkDescriptorSet *pDescriptorSets);
 bool pv_vkFreeDescriptorSets(VkDevice device, VkDescriptorPool descriptorPool, uint32_t descriptorSetCount,
                              const VkDescriptorSet *pDescriptorSets) {
     bool skip = false;
@@ -1611,9 +1594,6 @@ bool pv_vkFreeDescriptorSets(VkDevice device, VkDescriptorPool descriptorPool, u
     return skip;
 }
 
-extern bool (*manual_vkUpdateDescriptorSets)(VkDevice device, uint32_t descriptorWriteCount,
-                                             const VkWriteDescriptorSet *pDescriptorWrites, uint32_t descriptorCopyCount,
-                                             const VkCopyDescriptorSet *pDescriptorCopies);
 bool pv_vkUpdateDescriptorSets(VkDevice device, uint32_t descriptorWriteCount, const VkWriteDescriptorSet *pDescriptorWrites,
                                uint32_t descriptorCopyCount, const VkCopyDescriptorSet *pDescriptorCopies) {
     bool skip = false;
@@ -1754,8 +1734,6 @@ bool pv_vkUpdateDescriptorSets(VkDevice device, uint32_t descriptorWriteCount, c
     return skip;
 }
 
-extern bool (*manual_vkCreateRenderPass)(VkDevice device, const VkRenderPassCreateInfo *pCreateInfo,
-                                         const VkAllocationCallbacks *pAllocator, VkRenderPass *pRenderPass);
 bool pv_vkCreateRenderPass(VkDevice device, const VkRenderPassCreateInfo *pCreateInfo, const VkAllocationCallbacks *pAllocator,
                            VkRenderPass *pRenderPass) {
     bool skip = false;
@@ -1806,7 +1784,6 @@ bool pv_vkFreeCommandBuffers(VkDevice device, VkCommandPool commandPool, uint32_
     return skip;
 }
 
-extern bool (*manual_vkBeginCommandBuffer)(VkCommandBuffer commandBuffer, const VkCommandBufferBeginInfo *pBeginInfo);
 bool pv_vkBeginCommandBuffer(VkCommandBuffer commandBuffer, const VkCommandBufferBeginInfo *pBeginInfo) {
     bool skip = false;
     layer_data *device_data = GetLayerDataPtr(get_dispatch_key(commandBuffer), layer_data_map);
@@ -1855,8 +1832,6 @@ bool pv_vkBeginCommandBuffer(VkCommandBuffer commandBuffer, const VkCommandBuffe
     return skip;
 }
 
-extern bool (*manual_vkCmdSetViewport)(VkCommandBuffer commandBuffer, uint32_t firstViewport, uint32_t viewportCount,
-                                       const VkViewport *pViewports);
 bool pv_vkCmdSetViewport(VkCommandBuffer commandBuffer, uint32_t firstViewport, uint32_t viewportCount,
                          const VkViewport *pViewports) {
     bool skip = false;
@@ -1950,8 +1925,6 @@ bool pv_vkCmdSetViewport(VkCommandBuffer commandBuffer, uint32_t firstViewport, 
     return skip;
 }
 
-extern bool (*manual_vkCmdSetScissor)(VkCommandBuffer commandBuffer, uint32_t firstScissor, uint32_t scissorCount,
-                                      const VkRect2D *pScissors);
 bool pv_vkCmdSetScissor(VkCommandBuffer commandBuffer, uint32_t firstScissor, uint32_t scissorCount, const VkRect2D *pScissors) {
     bool skip = false;
     layer_data *device_data = GetLayerDataPtr(get_dispatch_key(commandBuffer), layer_data_map);
@@ -2000,8 +1973,6 @@ bool pv_vkCmdSetScissor(VkCommandBuffer commandBuffer, uint32_t firstScissor, ui
     return skip;
 }
 
-extern bool (*manual_vkCmdDraw)(VkCommandBuffer commandBuffer, uint32_t vertexCount, uint32_t instanceCount, uint32_t firstVertex,
-                                uint32_t firstInstance);
 bool pv_vkCmdDraw(VkCommandBuffer commandBuffer, uint32_t vertexCount, uint32_t instanceCount, uint32_t firstVertex,
                   uint32_t firstInstance) {
     bool skip = false;
@@ -2022,8 +1993,6 @@ bool pv_vkCmdDraw(VkCommandBuffer commandBuffer, uint32_t vertexCount, uint32_t 
     return skip;
 }
 
-extern bool (*manual_vkCmdDrawIndirect)(VkCommandBuffer commandBuffer, VkBuffer buffer, VkDeviceSize offset, uint32_t drawCount,
-                                        uint32_t stride);
 bool pv_vkCmdDrawIndirect(VkCommandBuffer commandBuffer, VkBuffer buffer, VkDeviceSize offset, uint32_t count, uint32_t stride) {
     bool skip = false;
     layer_data *device_data = GetLayerDataPtr(get_dispatch_key(commandBuffer), layer_data_map);
@@ -2036,8 +2005,6 @@ bool pv_vkCmdDrawIndirect(VkCommandBuffer commandBuffer, VkBuffer buffer, VkDevi
     return skip;
 }
 
-extern bool (*manual_vkCmdDrawIndexedIndirect)(VkCommandBuffer commandBuffer, VkBuffer buffer, VkDeviceSize offset,
-                                               uint32_t drawCount, uint32_t stride);
 bool pv_vkCmdDrawIndexedIndirect(VkCommandBuffer commandBuffer, VkBuffer buffer, VkDeviceSize offset, uint32_t count,
                                  uint32_t stride) {
     bool skip = false;
@@ -2051,9 +2018,6 @@ bool pv_vkCmdDrawIndexedIndirect(VkCommandBuffer commandBuffer, VkBuffer buffer,
     return skip;
 }
 
-extern bool (*manual_vkCmdCopyImage)(VkCommandBuffer commandBuffer, VkImage srcImage, VkImageLayout srcImageLayout,
-                                     VkImage dstImage, VkImageLayout dstImageLayout, uint32_t regionCount,
-                                     const VkImageCopy *pRegions);
 bool pv_vkCmdCopyImage(VkCommandBuffer commandBuffer, VkImage srcImage, VkImageLayout srcImageLayout, VkImage dstImage,
                        VkImageLayout dstImageLayout, uint32_t regionCount, const VkImageCopy *pRegions) {
     bool skip = false;
@@ -2080,9 +2044,6 @@ bool pv_vkCmdCopyImage(VkCommandBuffer commandBuffer, VkImage srcImage, VkImageL
     return skip;
 }
 
-extern bool (*manual_vkCmdBlitImage)(VkCommandBuffer commandBuffer, VkImage srcImage, VkImageLayout srcImageLayout,
-                                     VkImage dstImage, VkImageLayout dstImageLayout, uint32_t regionCount,
-                                     const VkImageBlit *pRegions, VkFilter filter);
 bool pv_vkCmdBlitImage(VkCommandBuffer commandBuffer, VkImage srcImage, VkImageLayout srcImageLayout, VkImage dstImage,
                        VkImageLayout dstImageLayout, uint32_t regionCount, const VkImageBlit *pRegions, VkFilter filter) {
     bool skip = false;
@@ -2107,8 +2068,6 @@ bool pv_vkCmdBlitImage(VkCommandBuffer commandBuffer, VkImage srcImage, VkImageL
     return skip;
 }
 
-extern bool (*manual_vkCmdCopyBufferToImage)(VkCommandBuffer commandBuffer, VkBuffer srcBuffer, VkImage dstImage,
-                                             VkImageLayout dstImageLayout, uint32_t regionCount, const VkBufferImageCopy *pRegions);
 bool pv_vkCmdCopyBufferToImage(VkCommandBuffer commandBuffer, VkBuffer srcBuffer, VkImage dstImage, VkImageLayout dstImageLayout,
                                uint32_t regionCount, const VkBufferImageCopy *pRegions) {
     bool skip = false;
@@ -2127,8 +2086,6 @@ bool pv_vkCmdCopyBufferToImage(VkCommandBuffer commandBuffer, VkBuffer srcBuffer
     return skip;
 }
 
-extern bool (*manual_vkCmdCopyImageToBuffer)(VkCommandBuffer commandBuffer, VkImage srcImage, VkImageLayout srcImageLayout,
-                                             VkBuffer dstBuffer, uint32_t regionCount, const VkBufferImageCopy *pRegions);
 bool pv_vkCmdCopyImageToBuffer(VkCommandBuffer commandBuffer, VkImage srcImage, VkImageLayout srcImageLayout, VkBuffer dstBuffer,
                                uint32_t regionCount, const VkBufferImageCopy *pRegions) {
     bool skip = false;
@@ -2146,8 +2103,6 @@ bool pv_vkCmdCopyImageToBuffer(VkCommandBuffer commandBuffer, VkImage srcImage, 
     return skip;
 }
 
-extern bool (*manual_vkCmdUpdateBuffer)(VkCommandBuffer commandBuffer, VkBuffer dstBuffer, VkDeviceSize dstOffset,
-                                        VkDeviceSize dataSize, const void *pData);
 bool pv_vkCmdUpdateBuffer(VkCommandBuffer commandBuffer, VkBuffer dstBuffer, VkDeviceSize dstOffset, VkDeviceSize dataSize,
                           const void *pData) {
     bool skip = false;
@@ -2175,8 +2130,6 @@ bool pv_vkCmdUpdateBuffer(VkCommandBuffer commandBuffer, VkBuffer dstBuffer, VkD
     return skip;
 }
 
-extern bool (*manual_vkCmdFillBuffer)(VkCommandBuffer commandBuffer, VkBuffer dstBuffer, VkDeviceSize dstOffset, VkDeviceSize size,
-                                      uint32_t data);
 bool pv_vkCmdFillBuffer(VkCommandBuffer commandBuffer, VkBuffer dstBuffer, VkDeviceSize dstOffset, VkDeviceSize size,
                         uint32_t data) {
     bool skip = false;
@@ -2248,8 +2201,6 @@ static bool require_device_extension(layer_data *device_data, bool flag, char co
     return false;
 }
 
-extern bool (*manual_vkCreateSwapchainKHR)(VkDevice device, const VkSwapchainCreateInfoKHR *pCreateInfo,
-                                           const VkAllocationCallbacks *pAllocator, VkSwapchainKHR *pSwapchain);
 bool pv_vkCreateSwapchainKHR(VkDevice device, const VkSwapchainCreateInfoKHR *pCreateInfo, const VkAllocationCallbacks *pAllocator,
                              VkSwapchainKHR *pSwapchain) {
     bool skip = false;
@@ -2321,7 +2272,6 @@ bool pv_vkCreateSwapchainKHR(VkDevice device, const VkSwapchainCreateInfoKHR *pC
     return skip;
 }
 
-extern bool (*manual_vkQueuePresentKHR)(VkQueue queue, const VkPresentInfoKHR *pPresentInfo);
 bool pv_vkQueuePresentKHR(VkQueue queue, const VkPresentInfoKHR *pPresentInfo) {
     bool skip = false;
     layer_data *device_data = GetLayerDataPtr(get_dispatch_key(queue), layer_data_map);
@@ -2367,8 +2317,6 @@ bool pv_vkQueuePresentKHR(VkQueue queue, const VkPresentInfoKHR *pPresentInfo) {
 }
 
 #ifdef VK_USE_PLATFORM_WIN32_KHR
-extern bool (*manual_vkCreateWin32SurfaceKHR)(VkInstance instance, const VkWin32SurfaceCreateInfoKHR *pCreateInfo,
-                                              const VkAllocationCallbacks *pAllocator, VkSurfaceKHR *pSurface);
 bool pv_vkCreateWin32SurfaceKHR(VkInstance instance, const VkWin32SurfaceCreateInfoKHR *pCreateInfo,
                                 const VkAllocationCallbacks *pAllocator, VkSurfaceKHR *pSurface) {
     auto device_data = GetLayerDataPtr(get_dispatch_key(instance), instance_layer_data_map);
@@ -2385,7 +2333,6 @@ bool pv_vkCreateWin32SurfaceKHR(VkInstance instance, const VkWin32SurfaceCreateI
 }
 #endif  // VK_USE_PLATFORM_WIN32_KHR
 
-extern bool (*manual_vkDebugMarkerSetObjectNameEXT)(VkDevice device, const VkDebugMarkerObjectNameInfoEXT *pNameInfo);
 bool pv_vkDebugMarkerSetObjectNameEXT(VkDevice device, const VkDebugMarkerObjectNameInfoEXT *pNameInfo) {
     auto device_data = GetLayerDataPtr(get_dispatch_key(device), layer_data_map);
     if (pNameInfo->pObjectName) {
@@ -2432,31 +2379,31 @@ VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL vkGetPhysicalDeviceProcAddr(VkInstance 
 // If additional validation is needed outside of the generated checks, a manual routine can be added to this file
 // and the address filled in here. The autogenerated source will call these routines if the pointers are not NULL.
 void InitializeManualParameterValidationFunctionPointers(void) {
-    manual_vkGetDeviceQueue = pv_vkGetDeviceQueue;
-    manual_vkCreateBuffer = pv_vkCreateBuffer;
-    manual_vkCreateImage = pv_vkCreateImage;
-    manual_vkCreateImageView = pv_vkCreateImageView;
-    manual_vkCreateGraphicsPipelines = pv_vkCreateGraphicsPipelines;
-    manual_vkCreateComputePipelines = pv_vkCreateComputePipelines;
-    manual_vkCreateSampler = pv_vkCreateSampler;
-    manual_vkCreateDescriptorSetLayout = pv_vkCreateDescriptorSetLayout;
-    manual_vkFreeDescriptorSets = pv_vkFreeDescriptorSets;
-    manual_vkUpdateDescriptorSets = pv_vkUpdateDescriptorSets;
-    manual_vkCreateRenderPass = pv_vkCreateRenderPass;
-    manual_vkBeginCommandBuffer = pv_vkBeginCommandBuffer;
-    manual_vkCmdSetViewport = pv_vkCmdSetViewport;
-    manual_vkCmdSetScissor = pv_vkCmdSetScissor;
-    manual_vkCmdDraw = pv_vkCmdDraw;
-    manual_vkCmdDrawIndirect = pv_vkCmdDrawIndirect;
-    manual_vkCmdDrawIndexedIndirect = pv_vkCmdDrawIndexedIndirect;
-    manual_vkCmdCopyImage = pv_vkCmdCopyImage;
-    manual_vkCmdBlitImage = pv_vkCmdBlitImage;
-    manual_vkCmdCopyBufferToImage = pv_vkCmdCopyBufferToImage;
-    manual_vkCmdCopyImageToBuffer = pv_vkCmdCopyImageToBuffer;
-    manual_vkCmdUpdateBuffer = pv_vkCmdUpdateBuffer;
-    manual_vkCmdFillBuffer = pv_vkCmdFillBuffer;
-    manual_vkCreateSwapchainKHR = pv_vkCreateSwapchainKHR;
-    manual_vkQueuePresentKHR = pv_vkQueuePresentKHR;
+    custom_functions["vkGetDeviceQueue"] = (void*)pv_vkGetDeviceQueue;
+    custom_functions["vkCreateBuffer"] = (void*)pv_vkCreateBuffer;
+    custom_functions["vkCreateImage"] = (void*)pv_vkCreateImage;
+    custom_functions["vkCreateImageView"] = (void*)pv_vkCreateImageView;
+    custom_functions["vkCreateGraphicsPipelines"] = (void*)pv_vkCreateGraphicsPipelines;
+    custom_functions["vkCreateComputePipelines"] = (void*)pv_vkCreateComputePipelines;
+    custom_functions["vkCreateSampler"] = (void*)pv_vkCreateSampler;
+    custom_functions["vkCreateDescriptorSetLayout"] = (void*)pv_vkCreateDescriptorSetLayout;
+    custom_functions["vkFreeDescriptorSets"] = (void*)pv_vkFreeDescriptorSets;
+    custom_functions["vkUpdateDescriptorSets"] = (void*)pv_vkUpdateDescriptorSets;
+    custom_functions["vkCreateRenderPass"] = (void*)pv_vkCreateRenderPass;
+    custom_functions["vkBeginCommandBuffer"] = (void*)pv_vkBeginCommandBuffer;
+    custom_functions["vkCmdSetViewport"] = (void*)pv_vkCmdSetViewport;
+    custom_functions["vkCmdSetScissor"] = (void*)pv_vkCmdSetScissor;
+    custom_functions["vkCmdDraw"] = (void*)pv_vkCmdDraw;
+    custom_functions["vkCmdDrawIndirect"] = (void*)pv_vkCmdDrawIndirect;
+    custom_functions["vkCmdDrawIndexedIndirect"] = (void*)pv_vkCmdDrawIndexedIndirect;
+    custom_functions["vkCmdCopyImage"] = (void*)pv_vkCmdCopyImage;
+    custom_functions["vkCmdBlitImage"] = (void*)pv_vkCmdBlitImage;
+    custom_functions["vkCmdCopyBufferToImage"] = (void*)pv_vkCmdCopyBufferToImage;
+    custom_functions["vkCmdCopyImageToBuffer"] = (void*)pv_vkCmdCopyImageToBuffer;
+    custom_functions["vkCmdUpdateBuffer"] = (void*)pv_vkCmdUpdateBuffer;
+    custom_functions["vkCmdFillBuffer"] = (void*)pv_vkCmdFillBuffer;
+    custom_functions["vkCreateSwapchainKHR"] = (void*)pv_vkCreateSwapchainKHR;
+    custom_functions["vkQueuePresentKHR"] = (void*)pv_vkQueuePresentKHR;
 }
 
 }  // namespace parameter_validation

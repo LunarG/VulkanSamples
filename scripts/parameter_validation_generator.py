@@ -292,6 +292,9 @@ class ParameterValidationOutputGenerator(OutputGenerator):
         write('extern std::unordered_map<void *, layer_data *> layer_data_map;', file = self.outFile)
         write('extern std::unordered_map<void *, instance_layer_data *> instance_layer_data_map;', file = self.outFile)
         self.newline()
+        #
+        # FuncPtrMap
+        self.func_pointers += 'std::unordered_map<std::string, void *> custom_functions = {\n'
     #
     # Called at end-time for final content output
     def endFile(self):
@@ -301,6 +304,7 @@ class ParameterValidationOutputGenerator(OutputGenerator):
         self.newline()
         write(self.typedefs, file=self.outFile)
         self.newline()
+        self.func_pointers += '};\n'
         write(self.func_pointers, file=self.outFile)
         self.newline()
         ext_template  = 'template <typename T>\n'
@@ -531,7 +535,7 @@ class ParameterValidationOutputGenerator(OutputGenerator):
                     self.typedefs += '#ifdef %s\n' % self.featureExtraProtect
             if (name not in self.validate_only):
                 self.typedefs += 'typedef bool (*PFN_manual_%s)%s\n' % (name, typedef)
-                self.func_pointers += 'PFN_manual_%s manual_%s = (PFN_manual_%s)nullptr;\n' % (name, name, name)
+                self.func_pointers += '    {"%s", nullptr},\n' % name
             self.intercepts += [ '    {"%s", (void*)%s},' % (name,name) ]
             # Strip off 'vk' from API name
             self.declarations += [ '%s' % decls[0].replace("VKAPI_CALL vk", "VKAPI_CALL ") ]
@@ -1198,8 +1202,9 @@ class ParameterValidationOutputGenerator(OutputGenerator):
                         params_text += '%s, ' % param.name
                     params_text = params_text[:-2]
                     # Generate call to manual function if its function pointer is non-null
-                    cmdDef += '%sif (manual_%s != nullptr) {\n' % (indent, command.name)
-                    cmdDef += '    %sskip |= manual_%s(%s);\n' % (indent, command.name, params_text)
+                    cmdDef += '%sPFN_manual_%s custom_func = (PFN_manual_%s)custom_functions["%s"];\n' % (indent, command.name, command.name, command.name)
+                    cmdDef += '%sif (custom_func != nullptr) {\n' % indent
+                    cmdDef += '    %sskip |= custom_func(%s);\n' % (indent, params_text)
                     cmdDef += '%s}\n\n' % indent
                     # Release the validation lock
                     cmdDef += '%slock.unlock();\n' % indent
