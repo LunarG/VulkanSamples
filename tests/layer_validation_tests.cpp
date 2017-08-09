@@ -5331,58 +5331,19 @@ TEST_F(VkLayerTest, WriteDescriptorSetConsecutiveUpdates) {
     ASSERT_NO_FATAL_FAILURE(InitViewport());
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
 
-    VkDescriptorPoolSize ds_type_count = {};
-    ds_type_count.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-    ds_type_count.descriptorCount = 4;
-
-    VkDescriptorPoolCreateInfo ds_pool_ci = {};
-    ds_pool_ci.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
-    ds_pool_ci.maxSets = 3;
-    ds_pool_ci.poolSizeCount = sizeof(ds_type_count) / sizeof(VkDescriptorPoolSize);
-    ds_pool_ci.pPoolSizes = &ds_type_count;
-
-    VkDescriptorPool ds_pool;
-    VkResult err = vkCreateDescriptorPool(m_device->device(), &ds_pool_ci, NULL, &ds_pool);
-    ASSERT_VK_SUCCESS(err);
-
-    VkDescriptorSetLayoutBinding layout_binding[2] = {};
-    layout_binding[0].binding = 0;
-    layout_binding[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-    layout_binding[0].descriptorCount = 2;
-    layout_binding[0].stageFlags = VK_SHADER_STAGE_ALL;
-    layout_binding[0].pImmutableSamplers = NULL;
-
-    layout_binding[1].binding = 1;
-    layout_binding[1].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-    layout_binding[1].descriptorCount = 1;
-    layout_binding[1].stageFlags = VK_SHADER_STAGE_ALL;
-    layout_binding[1].pImmutableSamplers = NULL;
-
-    VkDescriptorSetLayoutCreateInfo ds_layout_ci = {};
-    ds_layout_ci.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-    ds_layout_ci.bindingCount = sizeof(layout_binding) / sizeof(VkDescriptorSetLayoutBinding);
-    ds_layout_ci.pBindings = layout_binding;
-    VkDescriptorSetLayout ds_layout;
-    err = vkCreateDescriptorSetLayout(m_device->device(), &ds_layout_ci, NULL, &ds_layout);
-    ASSERT_VK_SUCCESS(err);
-
-    VkDescriptorSetAllocateInfo alloc_info = {};
-    alloc_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-    alloc_info.descriptorSetCount = 1;
-    alloc_info.descriptorPool = ds_pool;
-    alloc_info.pSetLayouts = &ds_layout;
-    VkDescriptorSet descriptor_set;
-    err = vkAllocateDescriptorSets(m_device->device(), &alloc_info, &descriptor_set);
-    ASSERT_VK_SUCCESS(err);
+    OneOffDescriptorSet ds(m_device->device(), {
+                                                   {0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 2, VK_SHADER_STAGE_ALL, nullptr},
+                                                   {1, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1, VK_SHADER_STAGE_ALL, nullptr},
+                                               });
 
     VkPipelineLayoutCreateInfo pipeline_layout_ci = {};
     pipeline_layout_ci.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
     pipeline_layout_ci.pNext = NULL;
     pipeline_layout_ci.setLayoutCount = 1;
-    pipeline_layout_ci.pSetLayouts = &ds_layout;
+    pipeline_layout_ci.pSetLayouts = &ds.layout_;
 
     VkPipelineLayout pipeline_layout;
-    err = vkCreatePipelineLayout(m_device->device(), &pipeline_layout_ci, NULL, &pipeline_layout);
+    VkResult err = vkCreatePipelineLayout(m_device->device(), &pipeline_layout_ci, NULL, &pipeline_layout);
     ASSERT_VK_SUCCESS(err);
 
     uint32_t qfi = 0;
@@ -5413,7 +5374,7 @@ TEST_F(VkLayerTest, WriteDescriptorSetConsecutiveUpdates) {
 
         VkWriteDescriptorSet descriptor_write = {};
         descriptor_write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-        descriptor_write.dstSet = descriptor_set;
+        descriptor_write.dstSet = ds.set_;  // descriptor_set;
         descriptor_write.dstBinding = 0;
         descriptor_write.descriptorCount = 3;
         descriptor_write.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
@@ -5452,8 +5413,8 @@ TEST_F(VkLayerTest, WriteDescriptorSetConsecutiveUpdates) {
         m_commandBuffer->BeginRenderPass(m_renderPassBeginInfo);
 
         vkCmdBindPipeline(m_commandBuffer->handle(), VK_PIPELINE_BIND_POINT_GRAPHICS, pipe.handle());
-        vkCmdBindDescriptorSets(m_commandBuffer->handle(), VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_layout, 0, 1, &descriptor_set,
-                                0, nullptr);
+        vkCmdBindDescriptorSets(m_commandBuffer->handle(), VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_layout, 0, 1, &ds.set_, 0,
+                                nullptr);
 
         VkViewport viewport = {0, 0, 16, 16, 0, 1};
         vkCmdSetViewport(m_commandBuffer->handle(), 0, 1, &viewport);
@@ -5473,8 +5434,6 @@ TEST_F(VkLayerTest, WriteDescriptorSetConsecutiveUpdates) {
     err = vkQueueSubmit(m_device->m_queue, 1, &submit_info, VK_NULL_HANDLE);
     m_errorMonitor->VerifyFound();
     vkDestroyPipelineLayout(m_device->device(), pipeline_layout, NULL);
-    vkDestroyDescriptorSetLayout(m_device->device(), ds_layout, NULL);
-    vkDestroyDescriptorPool(m_device->device(), ds_pool, NULL);
 }
 
 TEST_F(VkLayerTest, InvalidCmdBufferBufferDestroyed) {
