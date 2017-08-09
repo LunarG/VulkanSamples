@@ -529,7 +529,7 @@ out:
 //
 // *reg_data contains a string list of filenames as pointer.
 // When done using the returned string list, the caller should free the pointer.
-VkResult loaderGetDeviceRegistryFiles(const struct loader_instance *inst, char **reg_data) {
+VkResult loaderGetDeviceRegistryFiles(const struct loader_instance *inst, char **reg_data, PDWORD reg_data_size) {
     static const char* softwareComponentGUID = "{5c4c3332-344d-483c-8739-259e934c9cc8}";
     static const char* displayGUID = "{4d36e968-e325-11ce-bfc1-08002be10318}";
     const ULONG flags = CM_GETIDLIST_FILTER_CLASS | CM_GETIDLIST_FILTER_PRESENT;
@@ -538,7 +538,6 @@ VkResult loaderGetDeviceRegistryFiles(const struct loader_instance *inst, char *
     ULONG childGuidSize = sizeof(childGuid);
 
     DEVINST devID = 0, childID = 0;
-    DWORD totalSize = 4096;
     char *pDeviceNames = NULL;
     ULONG deviceNamesSize = 0;
     VkResult result = VK_SUCCESS;
@@ -594,7 +593,7 @@ VkResult loaderGetDeviceRegistryFiles(const struct loader_instance *inst, char *
             loader_log(inst, VK_DEBUG_REPORT_WARNING_BIT_EXT, 0,
                 "loaderGetRegistryFiles: opening device %s", deviceName);
 
-            if (loaderGetDeviceRegistryEntry(inst, reg_data, &totalSize, devID, &result)) {
+            if (loaderGetDeviceRegistryEntry(inst, reg_data, reg_data_size, devID, &result)) {
                 found = true;
                 continue;
             }
@@ -628,7 +627,7 @@ VkResult loaderGetDeviceRegistryFiles(const struct loader_instance *inst, char *
                     continue;
                 }
 
-                if (loaderGetDeviceRegistryEntry(inst, reg_data, &totalSize, childID, &result)) {
+                if (loaderGetDeviceRegistryEntry(inst, reg_data, reg_data_size, childID, &result)) {
                     found = true;
                     break; // check next-display-device
                 }
@@ -661,7 +660,7 @@ static char *loader_get_next_path(char *path);
 //
 // *reg_data contains a string list of filenames as pointer.
 // When done using the returned string list, the caller should free the pointer.
-VkResult loaderGetRegistryFiles(const struct loader_instance *inst, char *location, bool use_secondary_hive, char **reg_data) {
+VkResult loaderGetRegistryFiles(const struct loader_instance *inst, char *location, bool use_secondary_hive, char **reg_data, PDWORD reg_data_size) {
     LONG rtn_value;
     HKEY hive = DEFAULT_VK_REGISTRY_HIVE, key;
     DWORD access_flags;
@@ -671,7 +670,6 @@ VkResult loaderGetRegistryFiles(const struct loader_instance *inst, char *locati
     DWORD idx;
     DWORD name_size = sizeof(name);
     DWORD value;
-    DWORD total_size = 4096;
     DWORD value_size = sizeof(value);
     VkResult result = VK_SUCCESS;
     bool found = false;
@@ -691,7 +689,7 @@ VkResult loaderGetRegistryFiles(const struct loader_instance *inst, char *locati
                    ERROR_SUCCESS) {
                 if (value_size == sizeof(value) && value == 0) {
                     if (NULL == *reg_data) {
-                        *reg_data = loader_instance_heap_alloc(inst, total_size, VK_SYSTEM_ALLOCATION_SCOPE_INSTANCE);
+                        *reg_data = loader_instance_heap_alloc(inst, *reg_data_size, VK_SYSTEM_ALLOCATION_SCOPE_INSTANCE);
                         if (NULL == *reg_data) {
                             loader_log(inst, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
                                        "loaderGetRegistryFiles: Failed to allocate space for registry data for key %s", name);
@@ -699,19 +697,19 @@ VkResult loaderGetRegistryFiles(const struct loader_instance *inst, char *locati
                             goto out;
                         }
                         *reg_data[0] = '\0';
-                    } else if (strlen(*reg_data) + name_size + 1 > total_size) {
-                        void *new_ptr = loader_instance_heap_realloc(inst, *reg_data, total_size, total_size * 2,
+                    } else if (strlen(*reg_data) + name_size + 1 > *reg_data_size) {
+                        void *new_ptr = loader_instance_heap_realloc(inst, *reg_data, *reg_data_size, *reg_data_size * 2,
                                                                      VK_SYSTEM_ALLOCATION_SCOPE_INSTANCE);
                         if (NULL == new_ptr) {
                             loader_log(
                                 inst, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
                                 "loaderGetRegistryFiles: Failed to reallocate space for registry value of size %d for key %s",
-                                total_size * 2, name);
+                                *reg_data_size * 2, name);
                             result = VK_ERROR_OUT_OF_HOST_MEMORY;
                             goto out;
                         }
                         *reg_data = new_ptr;
-                        total_size *= 2;
+                        *reg_data_size *= 2;
                     }
                     loader_log(
                         inst, VK_DEBUG_REPORT_INFORMATION_BIT_EXT, 0, "Located json file \"%s\" from registry \"%s\\%s\"", name,
@@ -2993,12 +2991,14 @@ static VkResult loader_get_manifest_files(const struct loader_instance *inst, co
 #if defined(_WIN32)
         VkResult regHKR_result = VK_SUCCESS;
 
+        DWORD reg_size = 4096;
+
         if (!strncmp(loc, DEFAULT_VK_DRIVERS_INFO, sizeof(DEFAULT_VK_DRIVERS_INFO)))
         {
-            regHKR_result = loaderGetDeviceRegistryFiles(inst, &reg);
+            regHKR_result = loaderGetDeviceRegistryFiles(inst, &reg, &reg_size);
         }
 
-        VkResult reg_result = loaderGetRegistryFiles(inst, loc, is_layer, &reg);
+        VkResult reg_result = loaderGetRegistryFiles(inst, loc, is_layer, &reg, &reg_size);
 
         if ((VK_SUCCESS != reg_result && VK_SUCCESS != regHKR_result) || NULL == reg) {
             if (!is_layer) {
