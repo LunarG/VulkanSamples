@@ -3087,7 +3087,16 @@ static VkResult loader_get_manifest_files(const struct loader_instance *inst, co
             // Look for files ending with ".json" suffix
             uint32_t nlen = (uint32_t)strlen(name);
             const char *suf = name + nlen - 5;
-            if ((nlen > 5) && !strncmp(suf, ".json", 5)) {
+
+            // Check if the file is already present
+            bool file_already_loaded = false;
+            for (uint32_t i = 0; i < out_files->count; ++i) {
+                if (!strcmp(out_files->filename_list[i], name)) {
+                    file_already_loaded = true;
+                }
+            }
+
+            if (!file_already_loaded && (nlen > 5) && !strncmp(suf, ".json", 5)) {
                 if (out_files->count == 0) {
                     out_files->filename_list =
                         loader_instance_heap_alloc(inst, alloced_count * sizeof(char *), VK_SYSTEM_ALLOCATION_SCOPE_COMMAND);
@@ -3122,6 +3131,9 @@ static VkResult loader_get_manifest_files(const struct loader_instance *inst, co
                 }
                 strcpy(out_files->filename_list[out_files->count], name);
                 out_files->count++;
+            } else if(file_already_loaded) {
+                loader_log(inst, VK_DEBUG_REPORT_WARNING_BIT_EXT, 0,
+                    "Skipping manifest file %s - The file has already been read once", name);
             } else if (!list_is_dirs) {
                 loader_log(inst, VK_DEBUG_REPORT_WARNING_BIT_EXT, 0, "Skipping manifest file %s, file name must end in .json",
                            name);
