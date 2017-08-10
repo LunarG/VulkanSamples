@@ -27,7 +27,7 @@
 #    VK_DBG_LAYER_ACTION_CALLBACK - Call user defined callback function(s) that
 #       have been registered via the VK_EXT_debug_report extension. Since
 #       app must register callback, this is a NOOP for the settings file.
-#    VK_DBG_LAYER_DEBUG_OUTPUT [Windows only] - Log a txt message using the
+#    VK_DBG_LAYER_ACTION_DEBUG_OUTPUT [Windows only] - Log a txt message using the
 #       Windows OutputDebugString function -- messages will show up in the
 #       Visual Studio output window, for instance.
 #    VK_DBG_LAYER_ACTION_BREAK - Trigger a breakpoint.
