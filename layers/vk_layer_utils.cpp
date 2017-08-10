@@ -133,4 +133,18 @@ VK_LAYER_EXPORT void layer_debug_actions(debug_report_data *report_data, std::ve
         layer_create_msg_callback(report_data, default_layer_callback, &dbgCreateInfo, pAllocator, &callback);
         logging_callback.push_back(callback);
     }
+
+    callback = VK_NULL_HANDLE;
+
+    if (debug_action & VK_DBG_LAYER_ACTION_BREAK) {
+        VkDebugReportCallbackCreateInfoEXT dbgCreateInfo;
+        memset(&dbgCreateInfo, 0, sizeof(dbgCreateInfo));
+        dbgCreateInfo.sType = VK_STRUCTURE_TYPE_DEBUG_REPORT_CREATE_INFO_EXT;
+        dbgCreateInfo.flags = report_flags;
+        dbgCreateInfo.pfnCallback = DebugBreakCallback;
+        dbgCreateInfo.pUserData = NULL;
+        layer_create_msg_callback(report_data, default_layer_callback, &dbgCreateInfo, pAllocator, &callback);
+        logging_callback.push_back(callback);
+    }
+
 }
