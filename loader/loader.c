@@ -442,7 +442,7 @@ bool loaderGetDeviceRegistryEntry(const struct loader_instance *inst, char **reg
         &requiredSize);
 
     if (ret != ERROR_SUCCESS) {
-        loader_log(inst, VK_DEBUG_REPORT_WARNING_BIT_EXT, 0,
+        loader_log(inst, VK_DEBUG_REPORT_INFORMATION_BIT_EXT, 0,
             "loaderGetDeviceRegistryEntry: DeviceID(%d) Failed to obtain VulkanDriverName size", devID);
         goto out;
     }
@@ -585,12 +585,12 @@ VkResult loaderGetDeviceRegistryFiles(const struct loader_instance *inst, char *
             }
             if ((ulStatus & DN_HAS_PROBLEM) && (ulProblem == CM_PROB_NEED_RESTART || ulProblem == DN_NEED_RESTART))
             {
-                loader_log(inst, VK_DEBUG_REPORT_WARNING_BIT_EXT, 0,
+                loader_log(inst, VK_DEBUG_REPORT_INFORMATION_BIT_EXT, 0,
                     "loaderGetRegistryFiles: device %s is pending reboot, skipping ...", deviceName);
                 continue;
             }
 
-            loader_log(inst, VK_DEBUG_REPORT_WARNING_BIT_EXT, 0,
+            loader_log(inst, VK_DEBUG_REPORT_INFORMATION_BIT_EXT, 0,
                 "loaderGetRegistryFiles: opening device %s", deviceName);
 
             if (loaderGetDeviceRegistryEntry(inst, reg_data, reg_data_size, devID, &result)) {
@@ -600,7 +600,7 @@ VkResult loaderGetDeviceRegistryFiles(const struct loader_instance *inst, char *
 
             status = CM_Get_Child(&childID, devID, 0);
             if (status != CR_SUCCESS) {
-                loader_log(inst, VK_DEBUG_REPORT_WARNING_BIT_EXT, 0,
+                loader_log(inst, VK_DEBUG_REPORT_INFORMATION_BIT_EXT, 0,
                     "loaderGetRegistryFiles: unable to open child-device error:%d", status);
                 continue;
             }
@@ -609,7 +609,7 @@ VkResult loaderGetDeviceRegistryFiles(const struct loader_instance *inst, char *
                 char buffer[MAX_DEVICE_ID_LEN];
                 CM_Get_Device_ID(childID, buffer, MAX_DEVICE_ID_LEN, 0);
 
-                loader_log(inst, VK_DEBUG_REPORT_WARNING_BIT_EXT, 0,
+                loader_log(inst, VK_DEBUG_REPORT_INFORMATION_BIT_EXT, 0,
                     "loaderGetRegistryFiles: Opening child device %d - %s", childID, buffer);
 
                 status = CM_Get_DevNode_Registry_Property(childID, CM_DRP_CLASSGUID, NULL, &childGuid, &childGuidSize, 0);
