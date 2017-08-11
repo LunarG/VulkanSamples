@@ -150,6 +150,7 @@ class ObjectTrackerOutputGenerator(OutputGenerator):
             'vkAllocateCommandBuffers',
             'vkAllocateDescriptorSets',
             'vkFreeDescriptorSets',
+            'vkCmdPushDescriptorSetKHR',
             'vkDebugMarkerSetObjectNameEXT',
             'vkGetPhysicalDeviceProcAddr',
             'vkGetDeviceProcAddr',

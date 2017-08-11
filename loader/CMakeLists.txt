@@ -162,7 +162,7 @@ if (WIN32)
     # Suppress conflicting libs warning for debug builds.
     set_target_properties(${API_LOWERCASE}-${MAJOR} PROPERTIES LINK_FLAGS_DEBUG /ignore:4098)
     set_target_properties(VKstatic.${MAJOR} PROPERTIES OUTPUT_NAME VKstatic.${MAJOR})
-    target_link_libraries(${API_LOWERCASE}-${MAJOR} shlwapi)
+    target_link_libraries(${API_LOWERCASE}-${MAJOR} shlwapi Cfgmgr32)
     add_dependencies(${API_LOWERCASE}-${MAJOR} generate_helper_files loader_gen_files loader_asm_gen_files)
 
     target_link_libraries(VKstatic.${MAJOR} shlwapi)

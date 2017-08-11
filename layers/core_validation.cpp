@@ -6546,8 +6546,8 @@ static bool ValidateBarriers(layer_data *device_data, const char *funcName, GLOB
             skip |= ValidateImageAspectMask(device_data, image_data->image, image_data->createInfo.format, aspect_mask, funcName);
 
             std::string param_name = "pImageMemoryBarriers[" + std::to_string(i) + "].subresourceRange";
-            skip |= ValidateImageSubresourceRange(device_data, image_data, false, mem_barrier->subresourceRange, funcName,
-                                                  param_name.c_str());
+            skip |= ValidateImageBarrierSubresourceRange(device_data, image_data, mem_barrier->subresourceRange, funcName,
+                                                         param_name.c_str());
         }
     }
 
@@ -6739,29 +6739,29 @@ VKAPI_ATTR void VKAPI_CALL CmdWaitEvents(VkCommandBuffer commandBuffer, uint32_t
                                              VALIDATION_ERROR_1e600912);
         skip |= ValidateStageMaskGsTsEnables(dev_data, dstStageMask, "vkCmdWaitEvents()", VALIDATION_ERROR_1e600910,
                                              VALIDATION_ERROR_1e600914);
-        auto first_event_index = cb_state->events.size();
-        for (uint32_t i = 0; i < eventCount; ++i) {
-            auto event_state = GetEventNode(dev_data, pEvents[i]);
-            if (event_state) {
-                addCommandBufferBinding(&event_state->cb_bindings, {HandleToUint64(pEvents[i]), kVulkanObjectTypeEvent}, cb_state);
-                event_state->cb_bindings.insert(cb_state);
-            }
-            cb_state->waitedEvents.insert(pEvents[i]);
-            cb_state->events.push_back(pEvents[i]);
-        }
-        cb_state->eventUpdates.emplace_back([=](VkQueue q){
-            return validateEventStageMask(q, cb_state, eventCount, first_event_index, sourceStageMask);
-        });
         skip |= ValidateCmdQueueFlags(dev_data, cb_state, "vkCmdWaitEvents()", VK_QUEUE_GRAPHICS_BIT | VK_QUEUE_COMPUTE_BIT,
                                       VALIDATION_ERROR_1e602415);
         skip |= ValidateCmd(dev_data, cb_state, CMD_WAITEVENTS, "vkCmdWaitEvents()");
         skip |= ValidateBarriersToImages(dev_data, cb_state, imageMemoryBarrierCount, pImageMemoryBarriers, "vkCmdWaitEvents()");
-        if (!skip) {
-            TransitionImageLayouts(dev_data, commandBuffer, imageMemoryBarrierCount, pImageMemoryBarriers);
-        }
         skip |= ValidateBarriers(dev_data, "vkCmdWaitEvents()", cb_state, sourceStageMask, dstStageMask, memoryBarrierCount,
                                  pMemoryBarriers, bufferMemoryBarrierCount, pBufferMemoryBarriers, imageMemoryBarrierCount,
                                  pImageMemoryBarriers);
+        if (!skip) {
+            auto first_event_index = cb_state->events.size();
+            for (uint32_t i = 0; i < eventCount; ++i) {
+                auto event_state = GetEventNode(dev_data, pEvents[i]);
+                if (event_state) {
+                    addCommandBufferBinding(&event_state->cb_bindings, {HandleToUint64(pEvents[i]), kVulkanObjectTypeEvent}, cb_state);
+                    event_state->cb_bindings.insert(cb_state);
+                }
+                cb_state->waitedEvents.insert(pEvents[i]);
+                cb_state->events.push_back(pEvents[i]);
+            }
+            cb_state->eventUpdates.emplace_back([=](VkQueue q){
+                return validateEventStageMask(q, cb_state, eventCount, first_event_index, sourceStageMask);
+            });
+            TransitionImageLayouts(dev_data, commandBuffer, imageMemoryBarrierCount, pImageMemoryBarriers);
+        }
     }
     lock.unlock();
     if (!skip)

@@ -47,6 +47,12 @@
 #include "cJSON.h"
 #include "murmurhash.h"
 
+#if defined(_WIN32)
+#include <Cfgmgr32.h>
+#include <initguid.h>
+#include <Devpkey.h>
+#endif
+
 // This is a CMake generated file with #defines for any functions/includes
 // that it found present.  This is currently necessary to properly determine
 // if secure_getenv or __secure_getenv are present
@@ -401,6 +407,244 @@ VKAPI_ATTR VkResult VKAPI_CALL vkSetDeviceDispatch(VkDevice device, void *object
 }
 
 #if defined(WIN32)
+// Find the list of registry files (names VulkanDriverName/VulkanDriverNameWow) in hkr.
+//
+// This function looks for filename in given device handle, filename is then added to return list
+// function return true if filename was appended to reg_data list
+// If error occures result is updated with failure reason
+bool loaderGetDeviceRegistryEntry(const struct loader_instance *inst, char **reg_data,PDWORD total_size, DEVINST devID, VkResult *result)
+{
+    HKEY hkrKey = INVALID_HANDLE_VALUE;
+    DWORD requiredSize, dataType;
+    char *pVkDriverPath = NULL;
+    bool found = false;
+
+    if (NULL == total_size || NULL == reg_data) {
+        *result = VK_ERROR_INITIALIZATION_FAILED;
+        return false;
+    }
+
+    CONFIGRET status = CM_Open_DevNode_Key(devID, KEY_QUERY_VALUE, 0, RegDisposition_OpenExisting, &hkrKey, CM_REGISTRY_SOFTWARE);
+    if (status != CR_SUCCESS) {
+        loader_log(inst, VK_DEBUG_REPORT_WARNING_BIT_EXT, 0,
+            "loaderGetDeviceRegistryEntry: Failed to open registry key for DeviceID(%d)", devID);
+        *result = VK_ERROR_INITIALIZATION_FAILED;
+        return false;
+    }
+
+    // query value
+    LSTATUS ret = RegQueryValueEx(
+        hkrKey,
+        HKR_VK_DRIVER_NAME,
+        NULL,
+        NULL,
+        NULL,
+        &requiredSize);
+
+    if (ret != ERROR_SUCCESS) {
+        loader_log(inst, VK_DEBUG_REPORT_INFORMATION_BIT_EXT, 0,
+            "loaderGetDeviceRegistryEntry: DeviceID(%d) Failed to obtain VulkanDriverName size", devID);
+        goto out;
+    }
+
+    pVkDriverPath = loader_instance_heap_alloc(inst, requiredSize, VK_SYSTEM_ALLOCATION_SCOPE_INSTANCE);
+    if (pVkDriverPath == NULL) {
+        loader_log(inst, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
+            "loaderGetDeviceRegistryEntry: Failed to allocate space for DriverName.");
+        *result = VK_ERROR_OUT_OF_HOST_MEMORY;
+        goto out;
+    }
+
+    ret = RegQueryValueEx(
+        hkrKey,
+        HKR_VK_DRIVER_NAME,
+        NULL,
+        &dataType,
+        pVkDriverPath,
+        &requiredSize
+    );
+
+    if (ret != ERROR_SUCCESS) {
+        loader_log(inst, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
+            "loaderGetDeviceRegistryEntry: DeviceID(%d) Failed to obtain VulkanDriverName");
+
+        *result = VK_ERROR_INITIALIZATION_FAILED;
+        goto out;
+    }
+
+    if (dataType != REG_SZ) {
+        loader_log(inst, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
+            "loaderGetDeviceRegistryEntry: Invalid VulkanDriverName data type. Expected REG_SZ.");
+        *result = VK_ERROR_INITIALIZATION_FAILED;
+        goto out;
+    }
+
+    if (NULL == *reg_data) {
+        *reg_data = loader_instance_heap_alloc(inst, *total_size, VK_SYSTEM_ALLOCATION_SCOPE_INSTANCE);
+        if (NULL == *reg_data) {
+            loader_log(inst, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
+                "loaderGetDeviceRegistryEntry: Failed to allocate space for registry data for key %s", pVkDriverPath);
+            *result = VK_ERROR_OUT_OF_HOST_MEMORY;
+            goto out;
+        }
+        *reg_data[0] = '\0';
+    } else if (strlen(*reg_data) + requiredSize + 1 > *total_size) {
+        void *new_ptr = loader_instance_heap_realloc(inst, *reg_data, *total_size, *total_size * 2,
+            VK_SYSTEM_ALLOCATION_SCOPE_INSTANCE);
+        if (NULL == new_ptr) {
+            loader_log(
+                inst, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
+                "loaderGetDeviceRegistryEntry: Failed to reallocate space for registry value of size %d for key %s",
+                *total_size * 2, pVkDriverPath);
+            *result = VK_ERROR_OUT_OF_HOST_MEMORY;
+            goto out;
+        }
+        *reg_data = new_ptr;
+        *total_size *= 2;
+    }
+
+    if (strlen(*reg_data) == 0) {
+        (void)snprintf(*reg_data, requiredSize + 1, "%s", pVkDriverPath);
+    } else {
+        (void)snprintf(*reg_data + strlen(*reg_data), requiredSize + 2, "%c%s", PATH_SEPARATOR, pVkDriverPath);
+    }
+    found = true;
+
+out:
+    if (pVkDriverPath != NULL) {
+        loader_instance_heap_free(inst, pVkDriverPath);
+    }
+    RegCloseKey(hkrKey);
+    return found;
+}
+
+// Find the list of registry files (names VulkanDriverName/VulkanDriverNameWow) in hkr .
+//
+// This function looks for display devices and childish software components
+// for a list of files which are added to a returned list (function return
+// value).
+// Function return is a string with a ';'  separated list of filenames.
+// Function return is NULL if no valid name/value pairs  are found in the key,
+// or the key is not found.
+//
+// *reg_data contains a string list of filenames as pointer.
+// When done using the returned string list, the caller should free the pointer.
+VkResult loaderGetDeviceRegistryFiles(const struct loader_instance *inst, char **reg_data, PDWORD reg_data_size) {
+    static const char* softwareComponentGUID = "{5c4c3332-344d-483c-8739-259e934c9cc8}";
+    static const char* displayGUID = "{4d36e968-e325-11ce-bfc1-08002be10318}";
+    const ULONG flags = CM_GETIDLIST_FILTER_CLASS | CM_GETIDLIST_FILTER_PRESENT;
+   
+    char childGuid[MAX_GUID_STRING_LEN + 2]; // +2 for brackets {}
+    ULONG childGuidSize = sizeof(childGuid);
+
+    DEVINST devID = 0, childID = 0;
+    char *pDeviceNames = NULL;
+    ULONG deviceNamesSize = 0;
+    VkResult result = VK_SUCCESS;
+    bool found = false;
+
+    if (NULL == reg_data) {
+        result = VK_ERROR_INITIALIZATION_FAILED;
+        return result;
+    }
+
+    // if after obtaining the DeviceNameSize, new device is added start over
+    do {
+        CM_Get_Device_ID_List_Size(&deviceNamesSize, displayGUID, flags);
+
+        if (pDeviceNames != NULL) {
+            loader_instance_heap_free(inst, pDeviceNames);
+        }
+
+        pDeviceNames = loader_instance_heap_alloc(inst, deviceNamesSize, VK_SYSTEM_ALLOCATION_SCOPE_INSTANCE);
+        if (pDeviceNames == NULL) {
+            loader_log(inst, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
+                "loaderGetDeviceRegistryFiles: Failed to allocate space for display device names.");
+            result = VK_ERROR_OUT_OF_HOST_MEMORY;
+            return false;
+        }
+    } while (CM_Get_Device_ID_List(displayGUID, pDeviceNames, deviceNamesSize, flags) == CR_BUFFER_SMALL); 
+    
+    if (pDeviceNames) {
+
+        for (char *deviceName = pDeviceNames; *deviceName; deviceName += strlen(deviceName) + 1) {
+            CONFIGRET status = CM_Locate_DevNode(&devID, deviceName, CM_LOCATE_DEVNODE_NORMAL);
+            if (CR_SUCCESS != status) {
+                loader_log(inst, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
+                    "loaderGetRegistryFiles: failed to open DevNode %s", deviceName);
+                continue;
+            }
+            ULONG ulStatus, ulProblem;
+            status = CM_Get_DevNode_Status(&ulStatus, &ulProblem, devID, 0);
+
+            if (CR_SUCCESS != status)
+            {
+                loader_log(inst, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
+                    "loaderGetRegistryFiles: failed to probe device status %s", deviceName);
+                continue;
+            }
+            if ((ulStatus & DN_HAS_PROBLEM) && (ulProblem == CM_PROB_NEED_RESTART || ulProblem == DN_NEED_RESTART))
+            {
+                loader_log(inst, VK_DEBUG_REPORT_INFORMATION_BIT_EXT, 0,
+                    "loaderGetRegistryFiles: device %s is pending reboot, skipping ...", deviceName);
+                continue;
+            }
+
+            loader_log(inst, VK_DEBUG_REPORT_INFORMATION_BIT_EXT, 0,
+                "loaderGetRegistryFiles: opening device %s", deviceName);
+
+            if (loaderGetDeviceRegistryEntry(inst, reg_data, reg_data_size, devID, &result)) {
+                found = true;
+                continue;
+            }
+
+            status = CM_Get_Child(&childID, devID, 0);
+            if (status != CR_SUCCESS) {
+                loader_log(inst, VK_DEBUG_REPORT_INFORMATION_BIT_EXT, 0,
+                    "loaderGetRegistryFiles: unable to open child-device error:%d", status);
+                continue;
+            }
+
+            do {
+                char buffer[MAX_DEVICE_ID_LEN];
+                CM_Get_Device_ID(childID, buffer, MAX_DEVICE_ID_LEN, 0);
+
+                loader_log(inst, VK_DEBUG_REPORT_INFORMATION_BIT_EXT, 0,
+                    "loaderGetRegistryFiles: Opening child device %d - %s", childID, buffer);
+
+                status = CM_Get_DevNode_Registry_Property(childID, CM_DRP_CLASSGUID, NULL, &childGuid, &childGuidSize, 0);
+                if (status != CR_SUCCESS) {
+                    loader_log(inst, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
+                        "loaderGetRegistryFiles: unable to obtain GUID for:%d error:%d", childID, status);
+
+                    result = VK_ERROR_INITIALIZATION_FAILED;
+                    continue;
+                }
+
+                if (strcmp(childGuid, softwareComponentGUID) != 0) {
+                    loader_log(inst, VK_DEBUG_REPORT_DEBUG_BIT_EXT, 0,
+                        "loaderGetRegistryFiles: GUID for %d is not SoftwareComponent skipping", childID);
+                    continue;
+                }
+
+                if (loaderGetDeviceRegistryEntry(inst, reg_data, reg_data_size, childID, &result)) {
+                    found = true;
+                    break; // check next-display-device
+                }
+
+            } while (CM_Get_Sibling(&childID, childID, 0) == CR_SUCCESS);
+        }
+
+        loader_instance_heap_free(inst, pDeviceNames);
+    }
+
+    if (!found && result != VK_ERROR_OUT_OF_HOST_MEMORY) {
+        result = VK_ERROR_INITIALIZATION_FAILED;
+    }
+
+    return result;
+}
+
 static char *loader_get_next_path(char *path);
 
 // Find the list of registry files (names within a key) in key "location".
@@ -416,7 +660,7 @@ static char *loader_get_next_path(char *path);
 //
 // *reg_data contains a string list of filenames as pointer.
 // When done using the returned string list, the caller should free the pointer.
-VkResult loaderGetRegistryFiles(const struct loader_instance *inst, char *location, bool use_secondary_hive, char **reg_data) {
+VkResult loaderGetRegistryFiles(const struct loader_instance *inst, char *location, bool use_secondary_hive, char **reg_data, PDWORD reg_data_size) {
     LONG rtn_value;
     HKEY hive = DEFAULT_VK_REGISTRY_HIVE, key;
     DWORD access_flags;
@@ -426,7 +670,6 @@ VkResult loaderGetRegistryFiles(const struct loader_instance *inst, char *locati
     DWORD idx;
     DWORD name_size = sizeof(name);
     DWORD value;
-    DWORD total_size = 4096;
     DWORD value_size = sizeof(value);
     VkResult result = VK_SUCCESS;
     bool found = false;
@@ -446,7 +689,7 @@ VkResult loaderGetRegistryFiles(const struct loader_instance *inst, char *locati
                    ERROR_SUCCESS) {
                 if (value_size == sizeof(value) && value == 0) {
                     if (NULL == *reg_data) {
-                        *reg_data = loader_instance_heap_alloc(inst, total_size, VK_SYSTEM_ALLOCATION_SCOPE_INSTANCE);
+                        *reg_data = loader_instance_heap_alloc(inst, *reg_data_size, VK_SYSTEM_ALLOCATION_SCOPE_INSTANCE);
                         if (NULL == *reg_data) {
                             loader_log(inst, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
                                        "loaderGetRegistryFiles: Failed to allocate space for registry data for key %s", name);
@@ -454,19 +697,19 @@ VkResult loaderGetRegistryFiles(const struct loader_instance *inst, char *locati
                             goto out;
                         }
                         *reg_data[0] = '\0';
-                    } else if (strlen(*reg_data) + name_size + 1 > total_size) {
-                        void *new_ptr = loader_instance_heap_realloc(inst, *reg_data, total_size, total_size * 2,
+                    } else if (strlen(*reg_data) + name_size + 1 > *reg_data_size) {
+                        void *new_ptr = loader_instance_heap_realloc(inst, *reg_data, *reg_data_size, *reg_data_size * 2,
                                                                      VK_SYSTEM_ALLOCATION_SCOPE_INSTANCE);
                         if (NULL == new_ptr) {
                             loader_log(
                                 inst, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
                                 "loaderGetRegistryFiles: Failed to reallocate space for registry value of size %d for key %s",
-                                total_size * 2, name);
+                                *reg_data_size * 2, name);
                             result = VK_ERROR_OUT_OF_HOST_MEMORY;
                             goto out;
                         }
                         *reg_data = new_ptr;
-                        total_size *= 2;
+                        *reg_data_size *= 2;
                     }
                     loader_log(
                         inst, VK_DEBUG_REPORT_INFORMATION_BIT_EXT, 0, "Located json file \"%s\" from registry \"%s\\%s\"", name,
@@ -491,7 +734,7 @@ VkResult loaderGetRegistryFiles(const struct loader_instance *inst, char *locati
         }
     }
 
-    if (!found) {
+    if (!found && result != VK_ERROR_OUT_OF_HOST_MEMORY) {
         result = VK_ERROR_INITIALIZATION_FAILED;
     }
 
@@ -2746,14 +2989,26 @@ static VkResult loader_get_manifest_files(const struct loader_instance *inst, co
         *loc_write = '\0';
 
 #if defined(_WIN32)
-        VkResult reg_result = loaderGetRegistryFiles(inst, loc, is_layer, &reg);
-        if (VK_SUCCESS != reg_result || NULL == reg) {
+        VkResult regHKR_result = VK_SUCCESS;
+
+        DWORD reg_size = 4096;
+
+        if (!strncmp(loc, DEFAULT_VK_DRIVERS_INFO, sizeof(DEFAULT_VK_DRIVERS_INFO)))
+        {
+            regHKR_result = loaderGetDeviceRegistryFiles(inst, &reg, &reg_size);
+        }
+
+        VkResult reg_result = loaderGetRegistryFiles(inst, loc, is_layer, &reg, &reg_size);
+
+        if ((VK_SUCCESS != reg_result && VK_SUCCESS != regHKR_result) || NULL == reg) {
             if (!is_layer) {
                 loader_log(inst, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
                            "loader_get_manifest_files: Registry lookup failed "
                            "to get ICD manifest files.  Possibly missing Vulkan"
                            " driver?");
-                if (VK_SUCCESS == reg_result || VK_ERROR_OUT_OF_HOST_MEMORY == reg_result) {
+                if (VK_SUCCESS == regHKR_result || VK_ERROR_OUT_OF_HOST_MEMORY == regHKR_result) {
+                    res = regHKR_result;
+                } else if (VK_SUCCESS == reg_result || VK_ERROR_OUT_OF_HOST_MEMORY == reg_result) {
                     res = reg_result;
                 } else {
                     res = VK_ERROR_INCOMPATIBLE_DRIVER;
@@ -2832,7 +3087,16 @@ static VkResult loader_get_manifest_files(const struct loader_instance *inst, co
             // Look for files ending with ".json" suffix
             uint32_t nlen = (uint32_t)strlen(name);
             const char *suf = name + nlen - 5;
-            if ((nlen > 5) && !strncmp(suf, ".json", 5)) {
+
+            // Check if the file is already present
+            bool file_already_loaded = false;
+            for (uint32_t i = 0; i < out_files->count; ++i) {
+                if (!strcmp(out_files->filename_list[i], name)) {
+                    file_already_loaded = true;
+                }
+            }
+
+            if (!file_already_loaded && (nlen > 5) && !strncmp(suf, ".json", 5)) {
                 if (out_files->count == 0) {
                     out_files->filename_list =
                         loader_instance_heap_alloc(inst, alloced_count * sizeof(char *), VK_SYSTEM_ALLOCATION_SCOPE_COMMAND);
@@ -2867,6 +3131,9 @@ static VkResult loader_get_manifest_files(const struct loader_instance *inst, co
                 }
                 strcpy(out_files->filename_list[out_files->count], name);
                 out_files->count++;
+            } else if(file_already_loaded) {
+                loader_log(inst, VK_DEBUG_REPORT_WARNING_BIT_EXT, 0,
+                    "Skipping manifest file %s - The file has already been read once", name);
             } else if (!list_is_dirs) {
                 loader_log(inst, VK_DEBUG_REPORT_WARNING_BIT_EXT, 0, "Skipping manifest file %s, file name must end in .json",
                            name);

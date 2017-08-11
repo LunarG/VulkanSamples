@@ -190,6 +190,50 @@ bool ValidateDescriptorSet(VkDevice device, VkDescriptorPool descriptor_pool, Vk
     return skip;
 }
 
+VKAPI_ATTR void VKAPI_CALL CmdPushDescriptorSetKHR(VkCommandBuffer commandBuffer, VkPipelineBindPoint pipelineBindPoint,
+                                                   VkPipelineLayout layout, uint32_t set, uint32_t descriptorWriteCount,
+                                                   const VkWriteDescriptorSet *pDescriptorWrites) {
+    bool skip = false;
+    {
+        std::lock_guard<std::mutex> lock(global_lock);
+        skip |= ValidateObject(commandBuffer, commandBuffer, kVulkanObjectTypeCommandBuffer, false, VALIDATION_ERROR_1be02401,
+                               VALIDATION_ERROR_1be00009);
+        skip |= ValidateObject(commandBuffer, layout, kVulkanObjectTypePipelineLayout, false, VALIDATION_ERROR_1be0be01,
+                               VALIDATION_ERROR_1be00009);
+        if (pDescriptorWrites) {
+            for (uint32_t index0 = 0; index0 < descriptorWriteCount; ++index0) {
+                if (pDescriptorWrites[index0].pImageInfo) {
+                    for (uint32_t index1 = 0; index1 < pDescriptorWrites[index0].descriptorCount; ++index1) {
+                        skip |=
+                            ValidateObject(commandBuffer, pDescriptorWrites[index0].pImageInfo[index1].sampler,
+                                           kVulkanObjectTypeSampler, false, VALIDATION_ERROR_UNDEFINED, VALIDATION_ERROR_04600009);
+                        skip |= ValidateObject(commandBuffer, pDescriptorWrites[index0].pImageInfo[index1].imageView,
+                                               kVulkanObjectTypeImageView, false, VALIDATION_ERROR_UNDEFINED,
+                                               VALIDATION_ERROR_04600009);
+                    }
+                }
+                if (pDescriptorWrites[index0].pBufferInfo) {
+                    for (uint32_t index1 = 0; index1 < pDescriptorWrites[index0].descriptorCount; ++index1) {
+                        skip |=
+                            ValidateObject(commandBuffer, pDescriptorWrites[index0].pBufferInfo[index1].buffer,
+                                           kVulkanObjectTypeBuffer, false, VALIDATION_ERROR_04401a01, VALIDATION_ERROR_UNDEFINED);
+                    }
+                }
+                if (pDescriptorWrites[index0].pTexelBufferView) {
+                    for (uint32_t index1 = 0; index1 < pDescriptorWrites[index0].descriptorCount; ++index1) {
+                        skip |= ValidateObject(commandBuffer, pDescriptorWrites[index0].pTexelBufferView[index1],
+                                               kVulkanObjectTypeBufferView, false, VALIDATION_ERROR_UNDEFINED,
+                                               VALIDATION_ERROR_15c00009);
+                    }
+                }
+            }
+        }
+    }
+    if (skip) return;
+    get_dispatch_table(ot_device_table_map, commandBuffer)
+        ->CmdPushDescriptorSetKHR(commandBuffer, pipelineBindPoint, layout, set, descriptorWriteCount, pDescriptorWrites);
+}
+
 void CreateQueue(VkDevice device, VkQueue vkObj) {
     layer_data *device_data = GetLayerDataPtr(get_dispatch_key(device), layer_data_map);
 
