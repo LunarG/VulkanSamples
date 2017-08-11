@@ -14,10 +14,16 @@ trap
     exit 1
 }
 
+$global:total_errors = 0
+
 function Exec
 {
     param ($Command)
-    & $dPath\$Command
+    $out = Invoke-Expression $dPath\$Command
+    Write-Host ( $out | Out-String )
+    $errors = Select-String -InputObject $out -Pattern "ERROR" -AllMatches -CaseSensitive
+    $count = $errors.Matches.Count
+    $global:total_errors += $count
     if ($LastExitCode -ne 0) {
         throw "Error running sample"
     }
@@ -109,3 +115,6 @@ echo "SPIR-V Assembly"
 Exec "spirv_assembly"
 echo "SPIR-V Specialization"
 Exec "spirv_specialization"
+if ($global:total_errors -gt 2) {
+    throw "$global:total_errors is too many errors"
+}
