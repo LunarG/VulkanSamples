@@ -4,7 +4,7 @@
         "name": "VK_LAYER_GOOGLE_threading",
         "type": "GLOBAL",
         "library_path": "./libVkLayer_threading.so",
-        "api_version": "1.0.57",
+        "api_version": "1.0.58",
         "implementation_version": "1",
         "description": "Google Validation Layer",
         "instance_extensions": [
