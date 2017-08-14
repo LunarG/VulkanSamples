@@ -1250,7 +1250,7 @@ static void demo_prepare_buffers(struct demo *demo) {
         VK_COMPOSITE_ALPHA_POST_MULTIPLIED_BIT_KHR,
         VK_COMPOSITE_ALPHA_INHERIT_BIT_KHR,
     };
-    for (uint32_t i = 0; i < sizeof(compositeAlphaFlags); i++) {
+    for (uint32_t i = 0; i < ARRAY_SIZE(compositeAlphaFlags); i++) {
         if (surfCapabilities.supportedCompositeAlpha & compositeAlphaFlags[i]) {
             compositeAlpha = compositeAlphaFlags[i];
             break;
