@@ -1712,6 +1712,7 @@ static void resetCB(layer_data *dev_data, const VkCommandBuffer cb) {
         pCB->state = CB_NEW;
         pCB->submitCount = 0;
         pCB->status = 0;
+        pCB->static_status = 0;
         pCB->viewportMask = 0;
         pCB->scissorMask = 0;
 
@@ -5132,12 +5133,10 @@ VKAPI_ATTR void VKAPI_CALL CmdBindPipeline(VkCommandBuffer commandBuffer, VkPipe
 
         auto pipe_state = getPipelineState(dev_data, pipeline);
         if (VK_PIPELINE_BIND_POINT_GRAPHICS == pipelineBindPoint) {
-            auto old_pipe_state = cb_state->lastBound[pipelineBindPoint].pipeline_state;
-            if (old_pipe_state) {
-                cb_state->status &= ~MakeStaticStateMask(old_pipe_state->graphicsPipelineCI.ptr()->pDynamicState);
-            }
+            cb_state->status &= ~cb_state->static_status;
             if (pipe_state) {
-                cb_state->status |= MakeStaticStateMask(pipe_state->graphicsPipelineCI.ptr()->pDynamicState);
+                cb_state->static_status = MakeStaticStateMask(pipe_state->graphicsPipelineCI.ptr()->pDynamicState);
+                cb_state->status |= cb_state->static_status;
             }
         }
         if (pipe_state) {
