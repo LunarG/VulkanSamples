@@ -1809,11 +1809,6 @@ CBStatusFlags MakeStaticStateMask(VkPipelineDynamicStateCreateInfo const *ds) {
     return flags;
 }
 
-// Set PSO-related status bits for CB, including dynamic state set via PSO
-static void set_cb_pso_status(GLOBAL_CB_NODE *pCB, const PIPELINE_STATE *pPipe) {
-    pCB->status |= MakeStaticStateMask(pPipe->graphicsPipelineCI.ptr()->pDynamicState);
-}
-
 // Flags validation error if the associated call is made inside a render pass. The apiName routine should ONLY be called outside a
 // render pass.
 bool insideRenderPass(const layer_data *dev_data, const GLOBAL_CB_NODE *pCB, const char *apiName,
@@ -5138,7 +5133,7 @@ VKAPI_ATTR void VKAPI_CALL CmdBindPipeline(VkCommandBuffer commandBuffer, VkPipe
         PIPELINE_STATE *pipe_state = getPipelineState(dev_data, pipeline);
         if (pipe_state) {
             cb_state->lastBound[pipelineBindPoint].pipeline_state = pipe_state;
-            set_cb_pso_status(cb_state, pipe_state);
+            pCB->status |= MakeStaticStateMask(pipe_state->graphicsPipelineCI.ptr()->pDynamicState);
             set_pipeline_state(pipe_state);
             skip |= validate_dual_src_blend_feature(dev_data, pipe_state);
         } else {
