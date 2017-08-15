@@ -206,6 +206,7 @@ void Path::generate_subpath() {
 
     if (current_.curve) {
         current_.origin += current_.curve->evaluate(current_.end - current_.start);
+        current_.origin = glm::mod(current_.origin, glm::vec3(2.0f));
         current_.start = current_.end;
     } else {
         std::uniform_real_distribution<float> origin(0.0f, 2.0f);
