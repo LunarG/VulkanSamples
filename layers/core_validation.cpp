@@ -5130,10 +5130,18 @@ VKAPI_ATTR void VKAPI_CALL CmdBindPipeline(VkCommandBuffer commandBuffer, VkPipe
         }
         // TODO: VALIDATION_ERROR_18000612 VALIDATION_ERROR_18000616
 
-        PIPELINE_STATE *pipe_state = getPipelineState(dev_data, pipeline);
+        auto pipe_state = getPipelineState(dev_data, pipeline);
+        if (VK_PIPELINE_BIND_POINT_GRAPHICS == pipelineBindPoint) {
+            auto old_pipe_state = cb_state->lastBound[pipelineBindPoint].pipeline_state;
+            if (old_pipe_state) {
+                cb_state->status &= ~MakeStaticStateMask(old_pipe_state->graphicsPipelineCI.ptr()->pDynamicState);
+            }
+            if (pipe_state) {
+                cb_state->status |= MakeStaticStateMask(pipe_state->graphicsPipelineCI.ptr()->pDynamicState);
+            }
+        }
         if (pipe_state) {
             cb_state->lastBound[pipelineBindPoint].pipeline_state = pipe_state;
-            pCB->status |= MakeStaticStateMask(pipe_state->graphicsPipelineCI.ptr()->pDynamicState);
             set_pipeline_state(pipe_state);
             skip |= validate_dual_src_blend_feature(dev_data, pipe_state);
         } else {
