@@ -5172,7 +5172,9 @@ VKAPI_ATTR void VKAPI_CALL CmdSetViewport(VkCommandBuffer commandBuffer, uint32_
     if (pCB) {
         skip |= ValidateCmdQueueFlags(dev_data, pCB, "vkCmdSetViewport()", VK_QUEUE_GRAPHICS_BIT, VALIDATION_ERROR_1e002415);
         skip |= ValidateCmd(dev_data, pCB, CMD_SETVIEWPORTSTATE, "vkCmdSetViewport()");
-        pCB->viewportMask |= ((1u << viewportCount) - 1u) << firstViewport;
+        if (!skip) {
+            pCB->viewportMask |= ((1u << viewportCount) - 1u) << firstViewport;
+        }
     }
     lock.unlock();
     if (!skip) dev_data->dispatch_table.CmdSetViewport(commandBuffer, firstViewport, viewportCount, pViewports);
@@ -5187,7 +5189,9 @@ VKAPI_ATTR void VKAPI_CALL CmdSetScissor(VkCommandBuffer commandBuffer, uint32_t
     if (pCB) {
         skip |= ValidateCmdQueueFlags(dev_data, pCB, "vkCmdSetScissor()", VK_QUEUE_GRAPHICS_BIT, VALIDATION_ERROR_1d802415);
         skip |= ValidateCmd(dev_data, pCB, CMD_SETSCISSORSTATE, "vkCmdSetScissor()");
-        pCB->scissorMask |= ((1u << scissorCount) - 1u) << firstScissor;
+        if (!skip) {
+            pCB->scissorMask |= ((1u << scissorCount) - 1u) << firstScissor;
+        }
     }
     lock.unlock();
     if (!skip) dev_data->dispatch_table.CmdSetScissor(commandBuffer, firstScissor, scissorCount, pScissors);
@@ -5201,18 +5205,19 @@ VKAPI_ATTR void VKAPI_CALL CmdSetLineWidth(VkCommandBuffer commandBuffer, float 
     if (pCB) {
         skip |= ValidateCmdQueueFlags(dev_data, pCB, "vkCmdSetLineWidth()", VK_QUEUE_GRAPHICS_BIT, VALIDATION_ERROR_1d602415);
         skip |= ValidateCmd(dev_data, pCB, CMD_SETLINEWIDTHSTATE, "vkCmdSetLineWidth()");
-        pCB->status |= CBSTATUS_LINE_WIDTH_SET;
 
-        PIPELINE_STATE *pPipeTrav = pCB->lastBound[VK_PIPELINE_BIND_POINT_GRAPHICS].pipeline_state;
-        if (pPipeTrav != NULL && !isDynamic(pPipeTrav, VK_DYNAMIC_STATE_LINE_WIDTH)) {
-            skip |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_WARNING_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
+        if (pCB->static_status & CBSTATUS_LINE_WIDTH_SET) {
+            skip |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
                             HandleToUint64(commandBuffer), __LINE__, VALIDATION_ERROR_1d600626, "DS",
                             "vkCmdSetLineWidth called but pipeline was created without VK_DYNAMIC_STATE_LINE_WIDTH "
-                            "flag.  This is undefined behavior and could be ignored. %s",
+                            "flag. %s",
                             validation_error_map[VALIDATION_ERROR_1d600626]);
         } else {
             skip |= verifyLineWidth(dev_data, DRAWSTATE_INVALID_SET, kVulkanObjectTypeCommandBuffer, HandleToUint64(commandBuffer),
                                     lineWidth);
+        }
+        if (!skip) {
+            pCB->status |= CBSTATUS_LINE_WIDTH_SET;
         }
     }
     lock.unlock();
@@ -5228,6 +5233,12 @@ VKAPI_ATTR void VKAPI_CALL CmdSetDepthBias(VkCommandBuffer commandBuffer, float 
     if (pCB) {
         skip |= ValidateCmdQueueFlags(dev_data, pCB, "vkCmdSetDepthBias()", VK_QUEUE_GRAPHICS_BIT, VALIDATION_ERROR_1cc02415);
         skip |= ValidateCmd(dev_data, pCB, CMD_SETDEPTHBIASSTATE, "vkCmdSetDepthBias()");
+        if (pCB->static_status & CBSTATUS_DEPTH_BIAS_SET) {
+            skip |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
+                            HandleToUint64(commandBuffer), __LINE__, VALIDATION_ERROR_1cc0062a, "DS",
+                            "vkCmdSetDepthBias(): pipeline was created without VK_DYNAMIC_STATE_DEPTH_BIAS flag. %s.",
+                            validation_error_map[VALIDATION_ERROR_1cc0062a]);
+        }
         if ((depthBiasClamp != 0.0) && (!dev_data->enabled_features.depthBiasClamp)) {
             skip |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
                             HandleToUint64(commandBuffer), __LINE__, VALIDATION_ERROR_1cc0062c, "DS",
@@ -5252,7 +5263,15 @@ VKAPI_ATTR void VKAPI_CALL CmdSetBlendConstants(VkCommandBuffer commandBuffer, c
     if (pCB) {
         skip |= ValidateCmdQueueFlags(dev_data, pCB, "vkCmdSetBlendConstants()", VK_QUEUE_GRAPHICS_BIT, VALIDATION_ERROR_1ca02415);
         skip |= ValidateCmd(dev_data, pCB, CMD_SETBLENDSTATE, "vkCmdSetBlendConstants()");
-        pCB->status |= CBSTATUS_BLEND_CONSTANTS_SET;
+        if (pCB->static_status & CBSTATUS_BLEND_CONSTANTS_SET) {
+            skip |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
+                            HandleToUint64(commandBuffer), __LINE__, VALIDATION_ERROR_1ca004c8, "DS",
+                            "vkCmdSetBlendConstants(): pipeline was created without VK_DYNAMIC_STATE_BLEND_CONSTANTS flag. %s.",
+                            validation_error_map[VALIDATION_ERROR_1ca004c8]);
+        }
+        if (!skip) {
+            pCB->status |= CBSTATUS_BLEND_CONSTANTS_SET;
+        }
     }
     lock.unlock();
     if (!skip) dev_data->dispatch_table.CmdSetBlendConstants(commandBuffer, blendConstants);
@@ -5266,7 +5285,15 @@ VKAPI_ATTR void VKAPI_CALL CmdSetDepthBounds(VkCommandBuffer commandBuffer, floa
     if (pCB) {
         skip |= ValidateCmdQueueFlags(dev_data, pCB, "vkCmdSetDepthBounds()", VK_QUEUE_GRAPHICS_BIT, VALIDATION_ERROR_1ce02415);
         skip |= ValidateCmd(dev_data, pCB, CMD_SETDEPTHBOUNDSSTATE, "vkCmdSetDepthBounds()");
-        pCB->status |= CBSTATUS_DEPTH_BOUNDS_SET;
+        if (pCB->static_status & CBSTATUS_DEPTH_BOUNDS_SET) {
+            skip |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
+                            HandleToUint64(commandBuffer), __LINE__, VALIDATION_ERROR_1ce004ae, "DS",
+                            "vkCmdSetDepthBounds(): pipeline was created without VK_DYNAMIC_STATE_DEPTH_BOUNDS flag. %s.",
+                            validation_error_map[VALIDATION_ERROR_1ce004ae]);
+        }
+        if (!skip) {
+            pCB->status |= CBSTATUS_DEPTH_BOUNDS_SET;
+        }
     }
     lock.unlock();
     if (!skip) dev_data->dispatch_table.CmdSetDepthBounds(commandBuffer, minDepthBounds, maxDepthBounds);
@@ -5282,7 +5309,15 @@ VKAPI_ATTR void VKAPI_CALL CmdSetStencilCompareMask(VkCommandBuffer commandBuffe
         skip |=
             ValidateCmdQueueFlags(dev_data, pCB, "vkCmdSetStencilCompareMask()", VK_QUEUE_GRAPHICS_BIT, VALIDATION_ERROR_1da02415);
         skip |= ValidateCmd(dev_data, pCB, CMD_SETSTENCILREADMASKSTATE, "vkCmdSetStencilCompareMask()");
-        pCB->status |= CBSTATUS_STENCIL_READ_MASK_SET;
+        if (pCB->static_status & CBSTATUS_STENCIL_READ_MASK_SET) {
+            skip |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
+                            HandleToUint64(commandBuffer), __LINE__, VALIDATION_ERROR_1da004b4, "DS",
+                            "vkCmdSetStencilCompareMask(): pipeline was created without VK_DYNAMIC_STATE_STENCIL_COMPARE_MASK flag. %s.",
+                            validation_error_map[VALIDATION_ERROR_1da004b4]);
+        }
+        if (!skip) {
+            pCB->status |= CBSTATUS_STENCIL_READ_MASK_SET;
+        }
     }
     lock.unlock();
     if (!skip) dev_data->dispatch_table.CmdSetStencilCompareMask(commandBuffer, faceMask, compareMask);
@@ -5297,7 +5332,15 @@ VKAPI_ATTR void VKAPI_CALL CmdSetStencilWriteMask(VkCommandBuffer commandBuffer,
         skip |=
             ValidateCmdQueueFlags(dev_data, pCB, "vkCmdSetStencilWriteMask()", VK_QUEUE_GRAPHICS_BIT, VALIDATION_ERROR_1de02415);
         skip |= ValidateCmd(dev_data, pCB, CMD_SETSTENCILWRITEMASKSTATE, "vkCmdSetStencilWriteMask()");
-        pCB->status |= CBSTATUS_STENCIL_WRITE_MASK_SET;
+        if (pCB->static_status & CBSTATUS_STENCIL_WRITE_MASK_SET) {
+            skip |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
+                            HandleToUint64(commandBuffer), __LINE__, VALIDATION_ERROR_1de004b6, "DS",
+                            "vkCmdSetStencilWriteMask(): pipeline was created without VK_DYNAMIC_STATE_STENCIL_WRITE_MASK flag. %s.",
+                            validation_error_map[VALIDATION_ERROR_1de004b6]);
+        }
+        if (!skip) {
+            pCB->status |= CBSTATUS_STENCIL_WRITE_MASK_SET;
+        }
     }
     lock.unlock();
     if (!skip) dev_data->dispatch_table.CmdSetStencilWriteMask(commandBuffer, faceMask, writeMask);
@@ -5312,7 +5355,15 @@ VKAPI_ATTR void VKAPI_CALL CmdSetStencilReference(VkCommandBuffer commandBuffer,
         skip |=
             ValidateCmdQueueFlags(dev_data, pCB, "vkCmdSetStencilReference()", VK_QUEUE_GRAPHICS_BIT, VALIDATION_ERROR_1dc02415);
         skip |= ValidateCmd(dev_data, pCB, CMD_SETSTENCILREFERENCESTATE, "vkCmdSetStencilReference()");
-        pCB->status |= CBSTATUS_STENCIL_REFERENCE_SET;
+        if (pCB->static_status & CBSTATUS_STENCIL_REFERENCE_SET) {
+            skip |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
+                            HandleToUint64(commandBuffer), __LINE__, VALIDATION_ERROR_1dc004b8, "DS",
+                            "vkCmdSetStencilReference(): pipeline was created without VK_DYNAMIC_STATE_STENCIL_REFERENCE flag. %s.",
+                            validation_error_map[VALIDATION_ERROR_1dc004b8]);
+        }
+        if (!skip) {
+            pCB->status |= CBSTATUS_STENCIL_REFERENCE_SET;
+        }
     }
     lock.unlock();
     if (!skip) dev_data->dispatch_table.CmdSetStencilReference(commandBuffer, faceMask, reference);
