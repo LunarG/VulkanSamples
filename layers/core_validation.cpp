@@ -1772,47 +1772,46 @@ static void resetCB(layer_data *dev_data, const VkCommandBuffer cb) {
     }
 }
 
-// Set PSO-related status bits for CB, including dynamic state set via PSO
-static void set_cb_pso_status(GLOBAL_CB_NODE *pCB, const PIPELINE_STATE *pPipe) {
-    // Account for any dynamic state not set via this PSO
-    if (!pPipe->graphicsPipelineCI.pDynamicState ||
-        !pPipe->graphicsPipelineCI.pDynamicState->dynamicStateCount) {  // All state is static
-        pCB->status |= CBSTATUS_ALL_STATE_SET;
-    } else {
-        // First consider all state on
-        // Then unset any state that's noted as dynamic in PSO
-        // Finally OR that into CB statemask
-        CBStatusFlags psoDynStateMask = CBSTATUS_ALL_STATE_SET;
-        for (uint32_t i = 0; i < pPipe->graphicsPipelineCI.pDynamicState->dynamicStateCount; i++) {
-            switch (pPipe->graphicsPipelineCI.pDynamicState->pDynamicStates[i]) {
+CBStatusFlags MakeStaticStateMask(VkPipelineDynamicStateCreateInfo const *ds) {
+    // initially assume everything is static state
+    CBStatusFlags flags = CBSTATUS_ALL_STATE_SET;
+
+    if (ds) {
+        for (uint32_t i = 0; i < ds->dynamicStateCount; i++) {
+            switch (ds->pDynamicStates[i]) {
                 case VK_DYNAMIC_STATE_LINE_WIDTH:
-                    psoDynStateMask &= ~CBSTATUS_LINE_WIDTH_SET;
+                    flags &= ~CBSTATUS_LINE_WIDTH_SET;
                     break;
                 case VK_DYNAMIC_STATE_DEPTH_BIAS:
-                    psoDynStateMask &= ~CBSTATUS_DEPTH_BIAS_SET;
+                    flags &= ~CBSTATUS_DEPTH_BIAS_SET;
                     break;
                 case VK_DYNAMIC_STATE_BLEND_CONSTANTS:
-                    psoDynStateMask &= ~CBSTATUS_BLEND_CONSTANTS_SET;
+                    flags &= ~CBSTATUS_BLEND_CONSTANTS_SET;
                     break;
                 case VK_DYNAMIC_STATE_DEPTH_BOUNDS:
-                    psoDynStateMask &= ~CBSTATUS_DEPTH_BOUNDS_SET;
+                    flags &= ~CBSTATUS_DEPTH_BOUNDS_SET;
                     break;
                 case VK_DYNAMIC_STATE_STENCIL_COMPARE_MASK:
-                    psoDynStateMask &= ~CBSTATUS_STENCIL_READ_MASK_SET;
+                    flags &= ~CBSTATUS_STENCIL_READ_MASK_SET;
                     break;
                 case VK_DYNAMIC_STATE_STENCIL_WRITE_MASK:
-                    psoDynStateMask &= ~CBSTATUS_STENCIL_WRITE_MASK_SET;
+                    flags &= ~CBSTATUS_STENCIL_WRITE_MASK_SET;
                     break;
                 case VK_DYNAMIC_STATE_STENCIL_REFERENCE:
-                    psoDynStateMask &= ~CBSTATUS_STENCIL_REFERENCE_SET;
+                    flags &= ~CBSTATUS_STENCIL_REFERENCE_SET;
                     break;
                 default:
-                    // TODO : Flag error here
                     break;
             }
         }
-        pCB->status |= psoDynStateMask;
     }
+
+    return flags;
+}
+
+// Set PSO-related status bits for CB, including dynamic state set via PSO
+static void set_cb_pso_status(GLOBAL_CB_NODE *pCB, const PIPELINE_STATE *pPipe) {
+    pCB->status |= MakeStaticStateMask(pPipe->graphicsPipelineCI.ptr()->pDynamicState);
 }
 
 // Flags validation error if the associated call is made inside a render pass. The apiName routine should ONLY be called outside a

@@ -596,6 +596,7 @@ class PIPELINE_STATE : public BASE_NODE {
             }
         }
     }
+
     void initComputePipeline(const VkComputePipelineCreateInfo *pCreateInfo) {
         computePipelineCI.initialize(pCreateInfo);
         // Make sure gfx pipeline is null
