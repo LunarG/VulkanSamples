@@ -4131,8 +4131,6 @@ static void processCommand(struct android_app* app, int32_t cmd) {
 
 void android_main(struct android_app *app)
 {
-    app_dummy();
-
 #ifdef ANDROID
     int vulkanSupport = InitVulkan();
     if (vulkanSupport == 0)

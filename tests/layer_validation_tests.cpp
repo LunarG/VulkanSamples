@@ -24873,8 +24873,6 @@ static void processCommand(struct android_app *app, int32_t cmd) {
 }
 
 void android_main(struct android_app *app) {
-    app_dummy();
-
     int vulkanSupport = InitVulkan();
     if (vulkanSupport == 0) {
         __android_log_print(ANDROID_LOG_INFO, appTag, "==== FAILED ==== No Vulkan support found");

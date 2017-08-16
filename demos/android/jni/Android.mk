@@ -29,6 +29,7 @@ LOCAL_C_INCLUDES += $(SRC_DIR)/include \
 LOCAL_CFLAGS += -DVK_USE_PLATFORM_ANDROID_KHR --include=$(SRC_DIR)/common/vulkan_wrapper.h
 LOCAL_WHOLE_STATIC_LIBRARIES += android_native_app_glue
 LOCAL_LDLIBS    := -llog -landroid
+LOCAL_LDFLAGS   := -u ANativeActivity_onCreate
 include $(BUILD_SHARED_LIBRARY)
 
 $(call import-module,android/native_app_glue)
