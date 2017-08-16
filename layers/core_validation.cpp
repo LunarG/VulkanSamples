@@ -5547,11 +5547,24 @@ VKAPI_ATTR void VKAPI_CALL CmdBindDescriptorSets(VkCommandBuffer commandBuffer, 
     skip = PreCallValidateCmdBindDescriptorSets(device_data, cb_state, pipelineBindPoint, layout, firstSet, setCount,
                                                 pDescriptorSets, dynamicOffsetCount, pDynamicOffsets);
     lock.unlock();
-    if (!skip)
-        PostCallRecordCmdBindDescriptorSets(device_data, cb_state, pipelineBindPoint, layout, firstSet, setCount,
-                                            pDescriptorSets, dynamicOffsetCount, pDynamicOffsets);
-    device_data->dispatch_table.CmdBindDescriptorSets(commandBuffer, pipelineBindPoint, layout, firstSet, setCount, pDescriptorSets,
-                                                      dynamicOffsetCount, pDynamicOffsets);
+    if (!skip) {
+        device_data->dispatch_table.CmdBindDescriptorSets(commandBuffer, pipelineBindPoint, layout, firstSet, setCount,
+                                                          pDescriptorSets, dynamicOffsetCount, pDynamicOffsets);
+        PostCallRecordCmdBindDescriptorSets(device_data, cb_state, pipelineBindPoint, layout, firstSet, setCount, pDescriptorSets,
+                                            dynamicOffsetCount, pDynamicOffsets);
+    }
+}
+
+static void PostCallRecordCmdPushDesriptorSetKHR(layer_data *device_data, VkCommandBuffer commandBuffer,
+                                                 VkPipelineBindPoint pipelineBindPoint, VkPipelineLayout layout, uint32_t set,
+                                                 uint32_t descriptorWriteCount, const VkWriteDescriptorSet *pDescriptorWrites) {
+    auto cb_state = GetCBNode(device_data, commandBuffer);
+    VkDescriptorSet desc_set;
+    // Loop through descwrites, binding each desc set in turn
+    for (uint32_t i = 0; i < descriptorWriteCount; i++) {
+        desc_set = pDescriptorWrites[i].dstSet;
+        PostCallRecordCmdBindDescriptorSets(device_data, cb_state, pipelineBindPoint, layout, 0, 1, &desc_set, 0, nullptr);
+    }
 }
 
 VKAPI_ATTR void VKAPI_CALL CmdPushDescriptorSetKHR(VkCommandBuffer commandBuffer, VkPipelineBindPoint pipelineBindPoint,
@@ -5560,6 +5573,11 @@ VKAPI_ATTR void VKAPI_CALL CmdPushDescriptorSetKHR(VkCommandBuffer commandBuffer
     layer_data *device_data = GetLayerDataPtr(get_dispatch_key(commandBuffer), layer_data_map);
     device_data->dispatch_table.CmdPushDescriptorSetKHR(commandBuffer, pipelineBindPoint, layout, set, descriptorWriteCount,
                                                         pDescriptorWrites);
+    unique_lock_t lock(global_lock);
+
+    PostCallRecordCmdPushDesriptorSetKHR(device_data, commandBuffer, pipelineBindPoint, layout, set, descriptorWriteCount,
+                                         pDescriptorWrites);
+    lock.unlock();
 }
 
 VKAPI_ATTR void VKAPI_CALL CmdBindIndexBuffer(VkCommandBuffer commandBuffer, VkBuffer buffer, VkDeviceSize offset,
