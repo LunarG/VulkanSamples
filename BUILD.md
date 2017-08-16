@@ -333,7 +333,18 @@ adb install -r ../demos/android/cube-with-layers/bin/cube-with-layers.apk
 adb shell am start com.example.CubeWithLayers/android.app.NativeActivity
 adb shell am start -a android.intent.action.MAIN -c android-intent.category.LAUNCH -n com.example.CubeWithLayers/android.app.NativeActivity --es args "--validate"
 ```
+vkjson_info for Android is built as an executable for devices with root access.
 
+To use, simply push it to the device and run it:
+```
+./build_all.sh
+adb push obj/local/<abi>/vkjson_info /data/tmp/
+adb shell /data/tmp/vkjson_info
+```
+The resulting json file will be found in:
+```
+/sdcard/Android/<device_name>.json
+```
 To build, install, and run the Smoke demo for Android, run the following, and any
 prompts that come back from the script:
 ```

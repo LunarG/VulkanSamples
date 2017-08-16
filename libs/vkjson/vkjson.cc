@@ -22,6 +22,7 @@
 
 #include <assert.h>
 #include <string.h>
+#include <stdlib.h>
 
 #include <cmath>
 #include <cinttypes>
@@ -38,7 +39,12 @@
 namespace {
 
 inline bool IsIntegral(double value) {
+#if defined(ANDROID)
+  // Android NDK doesn't provide std::trunc yet
+  return trunc(value) == value;
+#else
   return std::trunc(value) == value;
+#endif
 }
 
 template <typename T> struct EnumTraits;
