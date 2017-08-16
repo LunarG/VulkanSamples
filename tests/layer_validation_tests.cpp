@@ -14118,6 +14118,11 @@ TEST_F(VkLayerTest, CreateImageViewFormatFeatureMismatch) {
 
     // Test for VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT.  Needs special formats
 
+    // Only run this test if format supported
+    if (!ImageFormatIsSupported(gpu(), VK_FORMAT_D24_UNORM_S8_UINT, VK_IMAGE_TILING_OPTIMAL)) {
+        printf("             VK_FORMAT_D24_UNORM_S8_UINT format not supported - skipped.\n");
+        return;
+    }
     // Modify formats to have mismatched features
 
     // Format for image
