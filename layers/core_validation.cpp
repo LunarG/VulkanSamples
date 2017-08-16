@@ -5554,6 +5554,14 @@ VKAPI_ATTR void VKAPI_CALL CmdBindDescriptorSets(VkCommandBuffer commandBuffer, 
                                                       dynamicOffsetCount, pDynamicOffsets);
 }
 
+VKAPI_ATTR void VKAPI_CALL CmdPushDescriptorSetKHR(VkCommandBuffer commandBuffer, VkPipelineBindPoint pipelineBindPoint,
+                                                   VkPipelineLayout layout, uint32_t set, uint32_t descriptorWriteCount,
+                                                   const VkWriteDescriptorSet *pDescriptorWrites) {
+    layer_data *device_data = GetLayerDataPtr(get_dispatch_key(commandBuffer), layer_data_map);
+    device_data->dispatch_table.CmdPushDescriptorSetKHR(commandBuffer, pipelineBindPoint, layout, set, descriptorWriteCount,
+                                                        pDescriptorWrites);
+}
+
 VKAPI_ATTR void VKAPI_CALL CmdBindIndexBuffer(VkCommandBuffer commandBuffer, VkBuffer buffer, VkDeviceSize offset,
                                               VkIndexType indexType) {
     bool skip = false;
@@ -10622,6 +10630,7 @@ static const std::unordered_map<std::string, void*> name_to_funcptr_map = {
     {"vkDestroyDescriptorUpdateTemplateKHR", (void*)DestroyDescriptorUpdateTemplateKHR},
     {"vkUpdateDescriptorSetWithTemplateKHR", (void*)UpdateDescriptorSetWithTemplateKHR},
     {"vkCmdPushDescriptorSetWithTemplateKHR", (void*)CmdPushDescriptorSetWithTemplateKHR},
+    {"vkCmdPushDescriptorSetKHR", (void*)CmdPushDescriptorSetKHR},
     {"vkCreateSwapchainKHR", (void*)CreateSwapchainKHR},
     {"vkDestroySwapchainKHR", (void*)DestroySwapchainKHR},
     {"vkGetSwapchainImagesKHR", (void*)GetSwapchainImagesKHR},
