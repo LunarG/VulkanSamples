@@ -1801,6 +1801,12 @@ CBStatusFlags MakeStaticStateMask(VkPipelineDynamicStateCreateInfo const *ds) {
                 case VK_DYNAMIC_STATE_STENCIL_REFERENCE:
                     flags &= ~CBSTATUS_STENCIL_REFERENCE_SET;
                     break;
+                case VK_DYNAMIC_STATE_SCISSOR:
+                    flags &= ~CBSTATUS_SCISSOR_SET;
+                    break;
+                case VK_DYNAMIC_STATE_VIEWPORT:
+                    flags &= ~CBSTATUS_VIEWPORT_SET;
+                    break;
                 default:
                     break;
             }
