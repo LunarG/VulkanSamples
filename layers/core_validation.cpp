@@ -8394,6 +8394,9 @@ VKAPI_ATTR void VKAPI_CALL CmdExecuteCommands(VkCommandBuffer commandBuffer, uin
             for (auto &function : pSubCB->queryUpdates) {
                 pCB->queryUpdates.push_back(function);
             }
+            for (auto &function : pSubCB->queue_submit_functions) {
+                pCB->queue_submit_functions.push_back(function);
+            }
         }
         skip |= validatePrimaryCommandBuffer(dev_data, pCB, "vkCmdExecuteCommands()", VALIDATION_ERROR_1b200019);
         skip |=
