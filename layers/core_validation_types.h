@@ -824,8 +824,8 @@ bool ValidateCmdSubpassState(const layer_data *dev_data, const GLOBAL_CB_NODE *p
 
 
 // Prototypes for layer_data accessor functions.  These should be in their own header file at some point
-const VkFormatProperties *GetFormatProperties(core_validation::layer_data *device_data, VkFormat format);
-const VkImageFormatProperties *GetImageFormatProperties(core_validation::layer_data *device_data, VkFormat format,
+VkFormatProperties GetFormatProperties(core_validation::layer_data *device_data, VkFormat format);
+VkImageFormatProperties GetImageFormatProperties(core_validation::layer_data *device_data, VkFormat format,
                                                         VkImageType image_type, VkImageTiling tiling, VkImageUsageFlags usage,
                                                         VkImageCreateFlags flags);
 const debug_report_data *GetReportData(const layer_data *);

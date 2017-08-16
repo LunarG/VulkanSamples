@@ -648,9 +648,9 @@ bool PreCallValidateCreateImage(layer_data *device_data, const VkImageCreateInfo
         return skip;
     }
 
-    const VkFormatProperties *properties = GetFormatProperties(device_data, pCreateInfo->format);
+    VkFormatProperties properties = GetFormatProperties(device_data, pCreateInfo->format);
 
-    if ((pCreateInfo->tiling == VK_IMAGE_TILING_LINEAR) && (properties->linearTilingFeatures == 0)) {
+    if ((pCreateInfo->tiling == VK_IMAGE_TILING_LINEAR) && (properties.linearTilingFeatures == 0)) {
         std::stringstream ss;
         ss << "vkCreateImage format parameter (" << string_VkFormat(pCreateInfo->format) << ") is an unsupported format";
         skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
@@ -660,7 +660,7 @@ bool PreCallValidateCreateImage(layer_data *device_data, const VkImageCreateInfo
         return skip;
     }
 
-    if ((pCreateInfo->tiling == VK_IMAGE_TILING_OPTIMAL) && (properties->optimalTilingFeatures == 0)) {
+    if ((pCreateInfo->tiling == VK_IMAGE_TILING_OPTIMAL) && (properties.optimalTilingFeatures == 0)) {
         std::stringstream ss;
         ss << "vkCreateImage format parameter (" << string_VkFormat(pCreateInfo->format) << ") is an unsupported format";
         skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
@@ -673,7 +673,7 @@ bool PreCallValidateCreateImage(layer_data *device_data, const VkImageCreateInfo
     // Validate that format supports usage as color attachment
     if (pCreateInfo->usage & VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT) {
         if ((pCreateInfo->tiling == VK_IMAGE_TILING_OPTIMAL) &&
-            ((properties->optimalTilingFeatures & VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT) == 0)) {
+            ((properties.optimalTilingFeatures & VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT) == 0)) {
             std::stringstream ss;
             ss << "vkCreateImage: VkFormat for TILING_OPTIMAL image (" << string_VkFormat(pCreateInfo->format)
                << ") does not support requested Image usage type VK_IMAGE_USAGE_COLOR_ATTACHMENT";
@@ -682,7 +682,7 @@ bool PreCallValidateCreateImage(layer_data *device_data, const VkImageCreateInfo
                             validation_error_map[VALIDATION_ERROR_09e007b2]);
         }
         if ((pCreateInfo->tiling == VK_IMAGE_TILING_LINEAR) &&
-            ((properties->linearTilingFeatures & VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT) == 0)) {
+            ((properties.linearTilingFeatures & VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT) == 0)) {
             std::stringstream ss;
             ss << "vkCreateImage: VkFormat for TILING_LINEAR image (" << string_VkFormat(pCreateInfo->format)
                << ") does not support requested Image usage type VK_IMAGE_USAGE_COLOR_ATTACHMENT";
@@ -695,7 +695,7 @@ bool PreCallValidateCreateImage(layer_data *device_data, const VkImageCreateInfo
     // Validate that format supports usage as depth/stencil attachment
     if (pCreateInfo->usage & VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT) {
         if ((pCreateInfo->tiling == VK_IMAGE_TILING_OPTIMAL) &&
-            ((properties->optimalTilingFeatures & VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT) == 0)) {
+            ((properties.optimalTilingFeatures & VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT) == 0)) {
             std::stringstream ss;
             ss << "vkCreateImage: VkFormat for TILING_OPTIMAL image (" << string_VkFormat(pCreateInfo->format)
                << ") does not support requested Image usage type VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT";
@@ -704,7 +704,7 @@ bool PreCallValidateCreateImage(layer_data *device_data, const VkImageCreateInfo
                             validation_error_map[VALIDATION_ERROR_09e007b4]);
         }
         if ((pCreateInfo->tiling == VK_IMAGE_TILING_LINEAR) &&
-            ((properties->linearTilingFeatures & VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT) == 0)) {
+            ((properties.linearTilingFeatures & VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT) == 0)) {
             std::stringstream ss;
             ss << "vkCreateImage: VkFormat for TILING_LINEAR image (" << string_VkFormat(pCreateInfo->format)
                << ") does not support requested Image usage type VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT";
@@ -714,7 +714,7 @@ bool PreCallValidateCreateImage(layer_data *device_data, const VkImageCreateInfo
         }
     }
 
-    const VkImageFormatProperties *ImageFormatProperties = GetImageFormatProperties(
+    VkImageFormatProperties ImageFormatProperties = GetImageFormatProperties(
         device_data, pCreateInfo->format, pCreateInfo->imageType, pCreateInfo->tiling, pCreateInfo->usage, pCreateInfo->flags);
 
     VkDeviceSize imageGranularity = GetPhysicalDeviceProperties(device_data)->limits.bufferImageGranularity;
@@ -731,16 +731,16 @@ bool PreCallValidateCreateImage(layer_data *device_data, const VkImageCreateInfo
 
     // TODO: VALIDATION_ERROR_09e00770 VALIDATION_ERROR_09e00772 VALIDATION_ERROR_09e00776 VALIDATION_ERROR_09e0076e
     // All these extent-related VUs should be checked here
-    if ((pCreateInfo->extent.depth > ImageFormatProperties->maxExtent.depth) ||
-        (pCreateInfo->extent.width > ImageFormatProperties->maxExtent.width) ||
-        (pCreateInfo->extent.height > ImageFormatProperties->maxExtent.height)) {
+    if ((pCreateInfo->extent.depth > ImageFormatProperties.maxExtent.depth) ||
+        (pCreateInfo->extent.width > ImageFormatProperties.maxExtent.width) ||
+        (pCreateInfo->extent.height > ImageFormatProperties.maxExtent.height)) {
         skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT, 0, __LINE__,
                         IMAGE_INVALID_FORMAT_LIMITS_VIOLATION, "Image",
                         "CreateImage extents exceed allowable limits for format: "
                         "Width = %d Height = %d Depth = %d:  Limits for Width = %d Height = %d Depth = %d for format %s.",
                         pCreateInfo->extent.width, pCreateInfo->extent.height, pCreateInfo->extent.depth,
-                        ImageFormatProperties->maxExtent.width, ImageFormatProperties->maxExtent.height,
-                        ImageFormatProperties->maxExtent.depth, string_VkFormat(pCreateInfo->format));
+                        ImageFormatProperties.maxExtent.width, ImageFormatProperties.maxExtent.height,
+                        ImageFormatProperties.maxExtent.depth, string_VkFormat(pCreateInfo->format));
     }
 
     uint64_t totalSize =
@@ -749,34 +749,34 @@ bool PreCallValidateCreateImage(layer_data *device_data, const VkImageCreateInfo
          (uint64_t)imageGranularity) &
         ~(uint64_t)imageGranularity;
 
-    if (totalSize > ImageFormatProperties->maxResourceSize) {
+    if (totalSize > ImageFormatProperties.maxResourceSize) {
         skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT, 0, __LINE__,
                         IMAGE_INVALID_FORMAT_LIMITS_VIOLATION, "Image",
                         "CreateImage resource size exceeds allowable maximum "
                         "Image resource size = 0x%" PRIxLEAST64 ", maximum resource size = 0x%" PRIxLEAST64 " ",
-                        totalSize, ImageFormatProperties->maxResourceSize);
+                        totalSize, ImageFormatProperties.maxResourceSize);
     }
 
     // TODO: VALIDATION_ERROR_09e0077e
-    if (pCreateInfo->mipLevels > ImageFormatProperties->maxMipLevels) {
+    if (pCreateInfo->mipLevels > ImageFormatProperties.maxMipLevels) {
         skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT, 0, __LINE__,
                         IMAGE_INVALID_FORMAT_LIMITS_VIOLATION, "Image",
                         "CreateImage mipLevels=%d exceeds allowable maximum supported by format of %d", pCreateInfo->mipLevels,
-                        ImageFormatProperties->maxMipLevels);
+                        ImageFormatProperties.maxMipLevels);
     }
 
-    if (pCreateInfo->arrayLayers > ImageFormatProperties->maxArrayLayers) {
+    if (pCreateInfo->arrayLayers > ImageFormatProperties.maxArrayLayers) {
         skip |=
             log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT, 0, __LINE__,
                     VALIDATION_ERROR_09e00780, "Image",
                     "CreateImage arrayLayers=%d exceeds allowable maximum supported by format of %d. %s", pCreateInfo->arrayLayers,
-                    ImageFormatProperties->maxArrayLayers, validation_error_map[VALIDATION_ERROR_09e00780]);
+                    ImageFormatProperties.maxArrayLayers, validation_error_map[VALIDATION_ERROR_09e00780]);
     }
 
-    if ((pCreateInfo->samples & ImageFormatProperties->sampleCounts) == 0) {
+    if ((pCreateInfo->samples & ImageFormatProperties.sampleCounts) == 0) {
         skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT, 0, __LINE__,
                         VALIDATION_ERROR_09e0078e, "Image", "CreateImage samples %s is not supported by format 0x%.8X. %s",
-                        string_VkSampleCountFlagBits(pCreateInfo->samples), ImageFormatProperties->sampleCounts,
+                        string_VkSampleCountFlagBits(pCreateInfo->samples), ImageFormatProperties.sampleCounts,
                         validation_error_map[VALIDATION_ERROR_09e0078e]);
     }
 
@@ -2216,10 +2216,10 @@ bool PreCallValidateCmdBlitImage(layer_data *device_data, GLOBAL_CB_NODE *cb_nod
         VkImageType src_type = src_image_state->createInfo.imageType;
         VkImageType dst_type = dst_image_state->createInfo.imageType;
 
-        const VkFormatProperties *props = GetFormatProperties(device_data, src_format);
+        VkFormatProperties props = GetFormatProperties(device_data, src_format);
         VkImageTiling tiling = src_image_state->createInfo.tiling;
         VkFormatFeatureFlags flags =
-            (tiling == VK_IMAGE_TILING_LINEAR ? props->linearTilingFeatures : props->optimalTilingFeatures);
+            (tiling == VK_IMAGE_TILING_LINEAR ? props.linearTilingFeatures : props.optimalTilingFeatures);
         if (VK_FORMAT_FEATURE_BLIT_SRC_BIT != (flags & VK_FORMAT_FEATURE_BLIT_SRC_BIT)) {
             skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
                             HandleToUint64(cb_node->commandBuffer), __LINE__, VALIDATION_ERROR_184001b4, "IMAGE",
@@ -2252,7 +2252,7 @@ bool PreCallValidateCmdBlitImage(layer_data *device_data, GLOBAL_CB_NODE *cb_nod
 
         props = GetFormatProperties(device_data, dst_format);
         tiling = dst_image_state->createInfo.tiling;
-        flags = (tiling == VK_IMAGE_TILING_LINEAR ? props->linearTilingFeatures : props->optimalTilingFeatures);
+        flags = (tiling == VK_IMAGE_TILING_LINEAR ? props.linearTilingFeatures : props.optimalTilingFeatures);
         if (VK_FORMAT_FEATURE_BLIT_DST_BIT != (flags & VK_FORMAT_FEATURE_BLIT_DST_BIT)) {
             skip |=
                 log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
@@ -3383,7 +3383,7 @@ bool PreCallValidateCreateImageView(layer_data *device_data, const VkImageViewCr
                 break;
         }
 
-        const VkFormatProperties *format_properties = GetFormatProperties(device_data, view_format);
+        VkFormatProperties format_properties = GetFormatProperties(device_data, view_format);
         bool check_tiling_features = false;
         VkFormatFeatureFlags tiling_features = 0;
         UNIQUE_VALIDATION_ERROR_CODE linear_error_codes[] = {
@@ -3396,11 +3396,11 @@ bool PreCallValidateCreateImageView(layer_data *device_data, const VkImageViewCr
         };
         UNIQUE_VALIDATION_ERROR_CODE *error_codes = nullptr;
         if (image_tiling == VK_IMAGE_TILING_LINEAR) {
-            tiling_features = format_properties->linearTilingFeatures;
+            tiling_features = format_properties.linearTilingFeatures;
             error_codes = linear_error_codes;
             check_tiling_features = true;
         } else if (image_tiling == VK_IMAGE_TILING_OPTIMAL) {
-            tiling_features = format_properties->optimalTilingFeatures;
+            tiling_features = format_properties.optimalTilingFeatures;
             error_codes = optimal_error_codes;
             check_tiling_features = true;
         }
