@@ -8386,7 +8386,17 @@ VKAPI_ATTR void VKAPI_CALL CmdExecuteCommands(VkCommandBuffer commandBuffer, uin
             // TODO: separate validate from update! This is very tangled.
             // Propagate layout transitions to the primary cmd buffer
             for (auto ilm_entry : pSubCB->imageLayoutMap) {
-                SetLayout(dev_data, pCB, ilm_entry.first, ilm_entry.second);
+                if (pCB->imageLayoutMap.find(ilm_entry.first) != pCB->imageLayoutMap.end()) {
+                    pCB->imageLayoutMap[ilm_entry.first].layout = ilm_entry.second.layout;
+                } else {
+                    assert(ilm_entry.first.hasSubresource);
+                    IMAGE_CMD_BUF_LAYOUT_NODE node;
+                    if (!FindCmdBufLayout(dev_data, pCB, ilm_entry.first.image, ilm_entry.first.subresource, node)) {
+                        node.initialLayout = ilm_entry.second.initialLayout;
+                    }
+                    node.layout = ilm_entry.second.layout;
+                    SetLayout(dev_data, pCB, ilm_entry.first, node);
+                }
             }
             pSubCB->primaryCommandBuffer = pCB->commandBuffer;
             pCB->linkedCommandBuffers.insert(pSubCB);
