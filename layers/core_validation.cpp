@@ -5162,8 +5162,15 @@ VKAPI_ATTR void VKAPI_CALL CmdSetViewport(VkCommandBuffer commandBuffer, uint32_
     if (pCB) {
         skip |= ValidateCmdQueueFlags(dev_data, pCB, "vkCmdSetViewport()", VK_QUEUE_GRAPHICS_BIT, VALIDATION_ERROR_1e002415);
         skip |= ValidateCmd(dev_data, pCB, CMD_SETVIEWPORTSTATE, "vkCmdSetViewport()");
+        if (pCB->static_status & CBSTATUS_VIEWPORT_SET) {
+            skip |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
+                            HandleToUint64(commandBuffer), __LINE__, VALIDATION_ERROR_1e00098a, "DS",
+                            "vkCmdSetViewport(): pipeline was created without VK_DYNAMIC_STATE_VIEWPORT flag. %s.",
+                            validation_error_map[VALIDATION_ERROR_1e00098a]);
+        }
         if (!skip) {
             pCB->viewportMask |= ((1u << viewportCount) - 1u) << firstViewport;
+            pCB->status |= CBSTATUS_VIEWPORT_SET;
         }
     }
     lock.unlock();
