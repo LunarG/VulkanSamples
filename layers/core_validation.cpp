@@ -5140,21 +5140,12 @@ VKAPI_ATTR void VKAPI_CALL CmdBindPipeline(VkCommandBuffer commandBuffer, VkPipe
         auto pipe_state = getPipelineState(dev_data, pipeline);
         if (VK_PIPELINE_BIND_POINT_GRAPHICS == pipelineBindPoint) {
             cb_state->status &= ~cb_state->static_status;
-            if (pipe_state) {
-                cb_state->static_status = MakeStaticStateMask(pipe_state->graphicsPipelineCI.ptr()->pDynamicState);
-                cb_state->status |= cb_state->static_status;
-            }
+            cb_state->static_status = MakeStaticStateMask(pipe_state->graphicsPipelineCI.ptr()->pDynamicState);
+            cb_state->status |= cb_state->static_status;
         }
-        if (pipe_state) {
-            cb_state->lastBound[pipelineBindPoint].pipeline_state = pipe_state;
-            set_pipeline_state(pipe_state);
-            skip |= validate_dual_src_blend_feature(dev_data, pipe_state);
-        } else {
-            skip |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_PIPELINE_EXT,
-                            HandleToUint64(pipeline), __LINE__, VALIDATION_ERROR_18027e01, "DS",
-                            "Attempt to bind Pipeline 0x%" PRIxLEAST64 " that doesn't exist! %s", HandleToUint64(pipeline),
-                            validation_error_map[VALIDATION_ERROR_18027e01]);
-        }
+        cb_state->lastBound[pipelineBindPoint].pipeline_state = pipe_state;
+        set_pipeline_state(pipe_state);
+        skip |= validate_dual_src_blend_feature(dev_data, pipe_state);
         addCommandBufferBinding(&pipe_state->cb_bindings, {HandleToUint64(pipeline), kVulkanObjectTypePipeline}, cb_state);
         if (VK_PIPELINE_BIND_POINT_GRAPHICS == pipelineBindPoint) {
             // Add binding for child renderpass
