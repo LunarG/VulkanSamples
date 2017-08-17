@@ -5352,10 +5352,10 @@ VKAPI_ATTR void VKAPI_CALL CmdSetStencilReference(VkCommandBuffer commandBuffer,
     if (!skip) dev_data->dispatch_table.CmdSetStencilReference(commandBuffer, faceMask, reference);
 }
 
-static void PostCallRecordCmdBindDescriptorSets(layer_data *device_data, GLOBAL_CB_NODE *cb_state,
-                                                VkPipelineBindPoint pipelineBindPoint, VkPipelineLayout layout, uint32_t firstSet,
-                                                uint32_t setCount, const VkDescriptorSet *pDescriptorSets,
-                                                uint32_t dynamicOffsetCount, const uint32_t *pDynamicOffsets) {
+static void PreCallRecordCmdBindDescriptorSets(layer_data *device_data, GLOBAL_CB_NODE *cb_state,
+                                               VkPipelineBindPoint pipelineBindPoint, VkPipelineLayout layout, uint32_t firstSet,
+                                               uint32_t setCount, const VkDescriptorSet *pDescriptorSets,
+                                               uint32_t dynamicOffsetCount, const uint32_t *pDynamicOffsets) {
     uint32_t total_dynamic_descriptors = 0;
     string error_string = "";
     uint32_t last_set_index = firstSet + setCount - 1;
@@ -5546,24 +5546,27 @@ VKAPI_ATTR void VKAPI_CALL CmdBindDescriptorSets(VkCommandBuffer commandBuffer, 
     assert(cb_state);
     skip = PreCallValidateCmdBindDescriptorSets(device_data, cb_state, pipelineBindPoint, layout, firstSet, setCount,
                                                 pDescriptorSets, dynamicOffsetCount, pDynamicOffsets);
-    lock.unlock();
     if (!skip) {
+        PreCallRecordCmdBindDescriptorSets(device_data, cb_state, pipelineBindPoint, layout, firstSet, setCount, pDescriptorSets,
+                                           dynamicOffsetCount, pDynamicOffsets);
+        lock.unlock();
         device_data->dispatch_table.CmdBindDescriptorSets(commandBuffer, pipelineBindPoint, layout, firstSet, setCount,
                                                           pDescriptorSets, dynamicOffsetCount, pDynamicOffsets);
-        PostCallRecordCmdBindDescriptorSets(device_data, cb_state, pipelineBindPoint, layout, firstSet, setCount, pDescriptorSets,
-                                            dynamicOffsetCount, pDynamicOffsets);
+    } else {
+        lock.unlock();
+
     }
 }
 
-static void PostCallRecordCmdPushDesriptorSetKHR(layer_data *device_data, VkCommandBuffer commandBuffer,
-                                                 VkPipelineBindPoint pipelineBindPoint, VkPipelineLayout layout, uint32_t set,
-                                                 uint32_t descriptorWriteCount, const VkWriteDescriptorSet *pDescriptorWrites) {
+static void PreCallRecordCmdPushDesriptorSetKHR(layer_data *device_data, VkCommandBuffer commandBuffer,
+                                                VkPipelineBindPoint pipelineBindPoint, VkPipelineLayout layout, uint32_t set,
+                                                uint32_t descriptorWriteCount, const VkWriteDescriptorSet *pDescriptorWrites) {
     auto cb_state = GetCBNode(device_data, commandBuffer);
     VkDescriptorSet desc_set;
     // Loop through descwrites, binding each desc set in turn
     for (uint32_t i = 0; i < descriptorWriteCount; i++) {
         desc_set = pDescriptorWrites[i].dstSet;
-        PostCallRecordCmdBindDescriptorSets(device_data, cb_state, pipelineBindPoint, layout, 0, 1, &desc_set, 0, nullptr);
+        PreCallRecordCmdBindDescriptorSets(device_data, cb_state, pipelineBindPoint, layout, 0, 1, &desc_set, 0, nullptr);
     }
 }
 
@@ -5571,13 +5574,12 @@ VKAPI_ATTR void VKAPI_CALL CmdPushDescriptorSetKHR(VkCommandBuffer commandBuffer
                                                    VkPipelineLayout layout, uint32_t set, uint32_t descriptorWriteCount,
                                                    const VkWriteDescriptorSet *pDescriptorWrites) {
     layer_data *device_data = GetLayerDataPtr(get_dispatch_key(commandBuffer), layer_data_map);
-    device_data->dispatch_table.CmdPushDescriptorSetKHR(commandBuffer, pipelineBindPoint, layout, set, descriptorWriteCount,
-                                                        pDescriptorWrites);
     unique_lock_t lock(global_lock);
-
-    PostCallRecordCmdPushDesriptorSetKHR(device_data, commandBuffer, pipelineBindPoint, layout, set, descriptorWriteCount,
+    PreCallRecordCmdPushDesriptorSetKHR(device_data, commandBuffer, pipelineBindPoint, layout, set, descriptorWriteCount,
                                          pDescriptorWrites);
     lock.unlock();
+    device_data->dispatch_table.CmdPushDescriptorSetKHR(commandBuffer, pipelineBindPoint, layout, set, descriptorWriteCount,
+                                                        pDescriptorWrites);
 }
 
 VKAPI_ATTR void VKAPI_CALL CmdBindIndexBuffer(VkCommandBuffer commandBuffer, VkBuffer buffer, VkDeviceSize offset,
