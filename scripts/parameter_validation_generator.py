@@ -1170,8 +1170,8 @@ class ParameterValidationOutputGenerator(OutputGenerator):
                     cmdDef = jv_def + cmdDef
                 cmdDef += '{\n'
 
-                # Add list of commands to skip -- just generate the routine signature and put the manual source in PV_utils.cpp
-                if command.params[0].type in ["VkInstance", "VkPhysicalDevice"] or command.name == 'VkCreateInstance':
+                # Add list of commands to skip -- just generate the routine signature and put the manual source in parameter_validation_utils.cpp
+                if command.params[0].type in ["VkInstance", "VkPhysicalDevice"] or command.name == 'vkCreateInstance':
                     map_name = 'instance_layer_data_map'
                     map_type = 'instance_layer_data'
                 else:
