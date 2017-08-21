@@ -1064,6 +1064,7 @@ static bool verify_set_layout_compatibility(const cvdescriptorset::DescriptorSet
         errorMsg = errorStr.str();
         return false;
     }
+    if (descriptor_set->IsPushDescriptor()) return true;
     auto layout_node = pipeline_layout->set_layouts[layoutIndex];
     return descriptor_set->IsCompatible(layout_node.get(), &errorMsg);
 }
@@ -1116,7 +1117,8 @@ static bool ValidateDrawState(layer_data *dev_data, GLOBAL_CB_NODE *cb_node, con
                 cvdescriptorset::DescriptorSet *descriptor_set = state.boundDescriptorSets[setIndex];
                 // Validate the draw-time state for this descriptor set
                 std::string err_str;
-                if (!descriptor_set->ValidateDrawState(set_binding_pair.second, state.dynamicOffsets[setIndex], cb_node, function,
+                if (!descriptor_set->IsPushDescriptor() &&
+                    !descriptor_set->ValidateDrawState(set_binding_pair.second, state.dynamicOffsets[setIndex], cb_node, function,
                                                        &err_str)) {
                     auto set = descriptor_set->GetSet();
                     result |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT,
@@ -1143,10 +1145,12 @@ static void UpdateDrawState(layer_data *dev_data, GLOBAL_CB_NODE *cb_state, cons
             uint32_t setIndex = set_binding_pair.first;
             // Pull the set node
             cvdescriptorset::DescriptorSet *descriptor_set = state.boundDescriptorSets[setIndex];
-            // Bind this set and its active descriptor resources to the command buffer
-            descriptor_set->BindCommandBuffer(cb_state, set_binding_pair.second);
-            // For given active slots record updated images & buffers
-            descriptor_set->GetStorageUpdates(set_binding_pair.second, &cb_state->updateBuffers, &cb_state->updateImages);
+            if (!descriptor_set->IsPushDescriptor()) {
+                // Bind this set and its active descriptor resources to the command buffer
+                descriptor_set->BindCommandBuffer(cb_state, set_binding_pair.second);
+                // For given active slots record updated images & buffers
+                descriptor_set->GetStorageUpdates(set_binding_pair.second, &cb_state->updateBuffers, &cb_state->updateImages);
+            }
         }
     }
     if (pPipe->vertexBindingDescriptions.size() > 0) {
@@ -5359,22 +5363,32 @@ static void PreCallRecordCmdBindDescriptorSets(layer_data *device_data, GLOBAL_C
     uint32_t total_dynamic_descriptors = 0;
     string error_string = "";
     uint32_t last_set_index = firstSet + setCount - 1;
-    if (last_set_index >= cb_state->lastBound[pipelineBindPoint].boundDescriptorSets.size()) {
-        cb_state->lastBound[pipelineBindPoint].boundDescriptorSets.resize(last_set_index + 1);
-        cb_state->lastBound[pipelineBindPoint].dynamicOffsets.resize(last_set_index + 1);
+    auto last_bound = &cb_state->lastBound[pipelineBindPoint];
+
+    if (last_set_index >= last_bound->boundDescriptorSets.size()) {
+        last_bound->boundDescriptorSets.resize(last_set_index + 1);
+        last_bound->dynamicOffsets.resize(last_set_index + 1);
     }
-    auto old_final_bound_set = cb_state->lastBound[pipelineBindPoint].boundDescriptorSets[last_set_index];
+    auto old_final_bound_set = last_bound->boundDescriptorSets[last_set_index];
     auto pipeline_layout = getPipelineLayout(device_data, layout);
     for (uint32_t set_idx = 0; set_idx < setCount; set_idx++) {
         cvdescriptorset::DescriptorSet *descriptor_set = GetSetNode(device_data, pDescriptorSets[set_idx]);
         if (descriptor_set) {
-            cb_state->lastBound[pipelineBindPoint].pipeline_layout = *pipeline_layout;
-            cb_state->lastBound[pipelineBindPoint].boundDescriptorSets[set_idx + firstSet] = descriptor_set;
+            last_bound->pipeline_layout = *pipeline_layout;
+
+            if ((last_bound->boundDescriptorSets[set_idx + firstSet] != nullptr) &&
+                last_bound->boundDescriptorSets[set_idx + firstSet]->IsPushDescriptor()) {
+                delete last_bound->push_descriptors[set_idx + firstSet];
+                last_bound->push_descriptors[set_idx + firstSet] = nullptr;
+                last_bound->boundDescriptorSets[set_idx + firstSet] = nullptr;
+            }
+
+            last_bound->boundDescriptorSets[set_idx + firstSet] = descriptor_set;
 
             auto set_dynamic_descriptor_count = descriptor_set->GetDynamicDescriptorCount();
-            cb_state->lastBound[pipelineBindPoint].dynamicOffsets[firstSet + set_idx].clear();
+            last_bound->dynamicOffsets[firstSet + set_idx].clear();
             if (set_dynamic_descriptor_count) {
-                cb_state->lastBound[pipelineBindPoint].dynamicOffsets[firstSet + set_idx] =
+                last_bound->dynamicOffsets[firstSet + set_idx] =
                     std::vector<uint32_t>(pDynamicOffsets + total_dynamic_descriptors,
                                           pDynamicOffsets + total_dynamic_descriptors + set_dynamic_descriptor_count);
                 total_dynamic_descriptors += set_dynamic_descriptor_count;
@@ -5383,18 +5397,17 @@ static void PreCallRecordCmdBindDescriptorSets(layer_data *device_data, GLOBAL_C
         // For any previously bound sets, need to set them to "invalid" if they were disturbed by this update
         if (firstSet > 0) {
             for (uint32_t i = 0; i < firstSet; ++i) {
-                if (cb_state->lastBound[pipelineBindPoint].boundDescriptorSets[i] &&
-                    !verify_set_layout_compatibility(cb_state->lastBound[pipelineBindPoint].boundDescriptorSets[i], pipeline_layout,
-                                                     i, error_string)) {
-                    cb_state->lastBound[pipelineBindPoint].boundDescriptorSets[i] = VK_NULL_HANDLE;
+                if (last_bound->boundDescriptorSets[i] &&
+                    !verify_set_layout_compatibility(last_bound->boundDescriptorSets[i], pipeline_layout, i, error_string)) {
+                    last_bound->boundDescriptorSets[i] = VK_NULL_HANDLE;
                 }
             }
         }
         // Check if newly last bound set invalidates any remaining bound sets
-        if ((cb_state->lastBound[pipelineBindPoint].boundDescriptorSets.size() - 1) > (last_set_index)) {
+        if ((last_bound->boundDescriptorSets.size() - 1) > (last_set_index)) {
             if (old_final_bound_set &&
                 !verify_set_layout_compatibility(old_final_bound_set, pipeline_layout, last_set_index, error_string)) {
-                cb_state->lastBound[pipelineBindPoint].boundDescriptorSets.resize(last_set_index + 1);
+                last_bound->boundDescriptorSets.resize(last_set_index + 1);
             }
         }
     }
@@ -5558,16 +5571,47 @@ VKAPI_ATTR void VKAPI_CALL CmdBindDescriptorSets(VkCommandBuffer commandBuffer, 
     }
 }
 
-static void PreCallRecordCmdPushDesriptorSetKHR(layer_data *device_data, VkCommandBuffer commandBuffer,
-                                                VkPipelineBindPoint pipelineBindPoint, VkPipelineLayout layout, uint32_t set,
-                                                uint32_t descriptorWriteCount, const VkWriteDescriptorSet *pDescriptorWrites) {
+static void PreCallRecordCmdPushDescriptorSetKHR(layer_data *device_data, VkCommandBuffer commandBuffer,
+                                                 VkPipelineBindPoint pipelineBindPoint, VkPipelineLayout layout, uint32_t set,
+                                                 uint32_t descriptorWriteCount, const VkWriteDescriptorSet *pDescriptorWrites) {
     auto cb_state = GetCBNode(device_data, commandBuffer);
-    VkDescriptorSet desc_set;
-    // Loop through descwrites, binding each desc set in turn
-    for (uint32_t i = 0; i < descriptorWriteCount; i++) {
-        desc_set = pDescriptorWrites[i].dstSet;
-        PreCallRecordCmdBindDescriptorSets(device_data, cb_state, pipelineBindPoint, layout, 0, 1, &desc_set, 0, nullptr);
+
+    if (set >= cb_state->lastBound[pipelineBindPoint].push_descriptors.size()) {
+        cb_state->lastBound[pipelineBindPoint].push_descriptors.resize(set + 1);
     }
+    if (set >= cb_state->lastBound[pipelineBindPoint].boundDescriptorSets.size()) {
+        cb_state->lastBound[pipelineBindPoint].boundDescriptorSets.resize(set + 1);
+        cb_state->lastBound[pipelineBindPoint].dynamicOffsets.resize(set + 1);
+    } else {
+        log_msg(device_data->report_data, VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0,
+                __LINE__, DRAWSTATE_NONE, "DS",
+                "vkCmdPushDescriptorSet called multiple times for set %d in pipeline layout 0x%" PRIxLEAST64 ".", set,
+                HandleToUint64(layout));
+        if (cb_state->lastBound[pipelineBindPoint].boundDescriptorSets[set]->IsPushDescriptor()) {
+            delete cb_state->lastBound[pipelineBindPoint].push_descriptors[set];
+            cb_state->lastBound[pipelineBindPoint].push_descriptors[set] = nullptr;
+        }
+    }
+    VkDescriptorSetLayoutCreateInfo layout_create_info{};
+    VkDescriptorSetLayoutBinding *bindings = new VkDescriptorSetLayoutBinding[descriptorWriteCount];
+    layout_create_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+    layout_create_info.flags = VK_DESCRIPTOR_SET_LAYOUT_CREATE_PUSH_DESCRIPTOR_BIT_KHR;
+    layout_create_info.bindingCount = descriptorWriteCount;
+    layout_create_info.pBindings = bindings;
+    for (uint32_t i = 0; i < descriptorWriteCount; i++) {
+        bindings[i].binding = pDescriptorWrites[i].dstBinding;
+        bindings[i].descriptorCount = pDescriptorWrites[i].descriptorCount;
+        bindings[i].descriptorType = pDescriptorWrites[i].descriptorType;
+        bindings[i].stageFlags = 0;
+        bindings[i].pImmutableSamplers = nullptr;
+    }
+
+    const VkDescriptorSetLayout desc_set_layout = 0;
+    auto const shared_ds_layout = std::make_shared<cvdescriptorset::DescriptorSetLayout>(&layout_create_info, desc_set_layout);
+    auto new_desc = new cvdescriptorset::DescriptorSet(0, 0, shared_ds_layout, device_data);
+    new_desc->SetPushDescriptor();
+    cb_state->lastBound[pipelineBindPoint].push_descriptors[set] = new_desc;
+    cb_state->lastBound[pipelineBindPoint].boundDescriptorSets[set] = new_desc;
 }
 
 VKAPI_ATTR void VKAPI_CALL CmdPushDescriptorSetKHR(VkCommandBuffer commandBuffer, VkPipelineBindPoint pipelineBindPoint,
@@ -5575,7 +5619,7 @@ VKAPI_ATTR void VKAPI_CALL CmdPushDescriptorSetKHR(VkCommandBuffer commandBuffer
                                                    const VkWriteDescriptorSet *pDescriptorWrites) {
     layer_data *device_data = GetLayerDataPtr(get_dispatch_key(commandBuffer), layer_data_map);
     unique_lock_t lock(global_lock);
-    PreCallRecordCmdPushDesriptorSetKHR(device_data, commandBuffer, pipelineBindPoint, layout, set, descriptorWriteCount,
+    PreCallRecordCmdPushDescriptorSetKHR(device_data, commandBuffer, pipelineBindPoint, layout, set, descriptorWriteCount,
                                          pDescriptorWrites);
     lock.unlock();
     device_data->dispatch_table.CmdPushDescriptorSetKHR(commandBuffer, pipelineBindPoint, layout, set, descriptorWriteCount,

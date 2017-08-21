@@ -383,6 +383,8 @@ class DescriptorSet : public BASE_NODE {
     };
     // Return true if any part of set has ever been updated
     bool IsUpdated() const { return some_update_; };
+    bool IsPushDescriptor() const { return push_descriptor_; };
+    void SetPushDescriptor() { push_descriptor_ = true;  };
 
    private:
     bool VerifyWriteUpdateContents(const VkWriteDescriptorSet *, const uint32_t, UNIQUE_VALIDATION_ERROR_CODE *,
@@ -402,6 +404,7 @@ class DescriptorSet : public BASE_NODE {
     // Ptr to device data used for various data look-ups
     const core_validation::layer_data *device_data_;
     const VkPhysicalDeviceLimits limits_;
+    bool push_descriptor_;
 };
 }
 #endif  // CORE_VALIDATION_DESCRIPTOR_SETS_H_
