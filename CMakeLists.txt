@@ -38,6 +38,7 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
 
     if (BUILD_WSI_WAYLAND_SUPPORT)
         find_package(Wayland REQUIRED)
+        include_directories(${WAYLAND_CLIENT_INCLUDE_DIR})
     endif()
 
     if (BUILD_WSI_MIR_SUPPORT)
