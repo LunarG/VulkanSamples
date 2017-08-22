@@ -5490,14 +5490,8 @@ VKAPI_ATTR void VKAPI_CALL CmdBindDescriptorSets(VkCommandBuffer commandBuffer, 
                     if (cb_state->lastBound[pipelineBindPoint].boundDescriptorSets[i] &&
                         !verify_set_layout_compatibility(cb_state->lastBound[pipelineBindPoint].boundDescriptorSets[i],
                                                          pipeline_layout, i, error_string)) {
-                        skip |= log_msg(
-                            dev_data->report_data, VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT,
-                            VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT,
-                            HandleToUint64(cb_state->lastBound[pipelineBindPoint].boundDescriptorSets[i]), __LINE__, DRAWSTATE_NONE,
-                            "DS", "DescriptorSet 0x%" PRIxLEAST64
-                                  " previously bound as set #%u was disturbed by newly bound pipelineLayout (0x%" PRIxLEAST64 ")",
-                            HandleToUint64(cb_state->lastBound[pipelineBindPoint].boundDescriptorSets[i]), i,
-                            HandleToUint64(layout));
+                        // TODO: Flag descriptor as disturbed and then if/when attempt to be used when unbound, note that it was
+                        // previously disturbed
                         cb_state->lastBound[pipelineBindPoint].boundDescriptorSets[i] = VK_NULL_HANDLE;
                     }
                 }

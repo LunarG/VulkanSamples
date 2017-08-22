@@ -8225,11 +8225,12 @@ TEST_F(VkLayerTest, DescriptorSetCompatibility) {
     // First bind sets 0 & 1
     vkCmdBindDescriptorSets(m_commandBuffer->handle(), VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_layout, 0, 2, &descriptorSet[0], 0,
                             NULL);
+    // TODO: Removed this perf warning and planning to update to only note disturbed descriptor when used unbound (See #2022)
     // 1. Disturb bound set0 by re-binding set1 w/ updated pipelineLayout
-    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT, " previously bound as set #0 was disturbed ");
-    vkCmdBindDescriptorSets(m_commandBuffer->handle(), VK_PIPELINE_BIND_POINT_GRAPHICS, pipe_layout_bad_set0, 1, 1,
-                            &descriptorSet[1], 0, NULL);
-    m_errorMonitor->VerifyFound();
+//    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT, " previously bound as set #0 was disturbed ");
+//    vkCmdBindDescriptorSets(m_commandBuffer->handle(), VK_PIPELINE_BIND_POINT_GRAPHICS, pipe_layout_bad_set0, 1, 1,
+//                            &descriptorSet[1], 0, NULL);
+//    m_errorMonitor->VerifyFound();
 
     vkCmdBindDescriptorSets(m_commandBuffer->handle(), VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_layout, 0, 2, &descriptorSet[0], 0,
                             NULL);
