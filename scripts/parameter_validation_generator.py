@@ -1142,10 +1142,8 @@ class ParameterValidationOutputGenerator(OutputGenerator):
             # Skip first parameter if it is a dispatch handle (everything except vkCreateInstance)
             startIndex = 0 if command.name == 'vkCreateInstance' else 1
             lines, unused = self.genFuncBody(command.name, command.params[startIndex:], '', '', None)
-            # Cannot validate extension dependencies for device extension APIs a physical device as their dispatchable object
-            if self.required_extensions and self.extension_type == 'device' and command.params[0].type != 'VkPhysicalDevice':
-                # The actual extension names are not all available yet, so we'll tag these now and replace them just before
-                # writing the validation routines out to a file
+            # Cannot validate extension dependencies for device extension APIs having a physical device as their dispatchable object
+            if self.required_extensions and (self.extension_type != 'device' or command.params[0].type != 'VkPhysicalDevice'):
                 ext_test = ''
                 for ext in self.required_extensions:
                     ext_name_define = ''
