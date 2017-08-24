@@ -175,7 +175,7 @@ class ParameterValidationOutputGenerator(OutputGenerator):
         self.flags = set()                                # Map of flags typenames
         self.flagBits = dict()                            # Map of flag bits typename to list of values
         self.newFlags = set()                             # Map of flags typenames /defined in the current feature/
-        self.required_extensions = []                     # List of required extensions for the current extension
+        self.required_extensions = dict()                 # Dictionary of required extensions for each item in the current extension
         self.extension_type = ''                          # Type of active feature (extension), device or instance
         self.extension_names = dict()                     # Dictionary of extension names to extension name defines
         self.valid_vuids = set()                          # Set of all valid VUIDs
@@ -345,19 +345,34 @@ class ParameterValidationOutputGenerator(OutputGenerator):
         self.commands = []
         self.structMembers = []
         self.newFlags = set()
-        # Save list of required extensions for this extension
-        self.required_extensions = []
+
+        # Get base list of extension dependencies for all items in this extension
+        base_required_extensions = []
         if self.featureName != "VK_VERSION_1_0":
             # Save Name Define to get correct enable name later
             nameElem = interface[0][1]
             name = nameElem.get('name')
             self.extension_names[self.featureName] = name
             # This extension is the first dependency for this command
-            self.required_extensions.append(self.featureName)
-        # Add any defined extension dependencies to the dependency list for this command
-        required_extensions = interface.get('requires')
-        if required_extensions is not None:
-            self.required_extensions.extend(required_extensions.split(','))
+            base_required_extensions.append(self.featureName)
+        # Add any defined extension dependencies to the base dependency list for this extension
+        requires = interface.get('requires')
+        if requires is not None:
+            base_required_extensions.extend(requires.split(','))
+
+        # Build dictionary of extension dependencies for each item in this extension
+        self.required_extensions = dict()
+        for require_element in interface.findall('require'):
+            # Copy base extension dependency list
+            required_extensions = list(base_required_extensions)
+            # Add any additional extension dependencies specified in this require block
+            additional_extensions = require_element.get('extension')
+            if additional_extensions:
+                required_extensions.extend(additional_extensions.split(','))
+            # Save full extension list for all named items
+            for element in require_element.findall('*[@name]'):
+                self.required_extensions[element.get('name')] = required_extensions
+
         # And note if this is an Instance or Device extension
         self.extension_type = interface.get('type')
     #
@@ -1143,9 +1158,9 @@ class ParameterValidationOutputGenerator(OutputGenerator):
             startIndex = 0 if command.name == 'vkCreateInstance' else 1
             lines, unused = self.genFuncBody(command.name, command.params[startIndex:], '', '', None)
             # Cannot validate extension dependencies for device extension APIs having a physical device as their dispatchable object
-            if self.required_extensions and (self.extension_type != 'device' or command.params[0].type != 'VkPhysicalDevice'):
+            if (command.name in self.required_extensions) and (self.extension_type != 'device' or command.params[0].type != 'VkPhysicalDevice'):
                 ext_test = ''
-                for ext in self.required_extensions:
+                for ext in self.required_extensions[command.name]:
                     ext_name_define = ''
                     ext_enable_name = ''
                     for extension in self.registry.extensions:
