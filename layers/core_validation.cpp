@@ -149,7 +149,7 @@ struct layer_data {
     unordered_map<VkImage, unique_ptr<IMAGE_STATE>> imageMap;
     unordered_map<VkBufferView, unique_ptr<BUFFER_VIEW_STATE>> bufferViewMap;
     unordered_map<VkBuffer, unique_ptr<BUFFER_STATE>> bufferMap;
-    unordered_map<VkPipeline, PIPELINE_STATE *> pipelineMap;
+    unordered_map<VkPipeline, unique_ptr<PIPELINE_STATE>> pipelineMap;
     unordered_map<VkCommandPool, COMMAND_POOL_NODE> commandPoolMap;
     unordered_map<VkDescriptorPool, DESCRIPTOR_POOL_STATE *> descriptorPoolMap;
     unordered_map<VkDescriptorSet, cvdescriptorset::DescriptorSet *> setMap;
@@ -694,7 +694,7 @@ static PIPELINE_STATE *getPipelineState(layer_data const *dev_data, VkPipeline p
     if (it == dev_data->pipelineMap.end()) {
         return nullptr;
     }
-    return it->second;
+    return it->second.get();
 }
 
 RENDER_PASS_STATE *GetRenderPassState(layer_data const *dev_data, VkRenderPass renderpass) {
@@ -1449,15 +1449,6 @@ static bool ValidatePipelineUnlocked(layer_data *dev_data, std::vector<std::uniq
     return skip;
 }
 
-// Free the Pipeline nodes
-static void deletePipelines(layer_data *dev_data) {
-    if (dev_data->pipelineMap.size() <= 0) return;
-    for (auto &pipe_map_pair : dev_data->pipelineMap) {
-        delete pipe_map_pair.second;
-    }
-    dev_data->pipelineMap.clear();
-}
-
 // Block of code at start here specifically for managing/tracking DSs
 
 // Return Pool node ptr for specified pool or else NULL
@@ -2118,7 +2109,7 @@ VKAPI_ATTR void VKAPI_CALL DestroyDevice(VkDevice device, const VkAllocationCall
     layer_data *dev_data = GetLayerDataPtr(key, layer_data_map);
     // Free all the memory
     unique_lock_t lock(global_lock);
-    deletePipelines(dev_data);
+    dev_data->pipelineMap.clear();
     dev_data->renderPassMap.clear();
     for (auto ii = dev_data->commandBufferMap.begin(); ii != dev_data->commandBufferMap.end(); ++ii) {
         delete (*ii).second;
@@ -3786,7 +3777,6 @@ static void PostCallRecordDestroyPipeline(layer_data *dev_data, VkPipeline pipel
                                           VK_OBJECT obj_struct) {
     // Any bound cmd buffers are now invalid
     invalidateCommandBuffers(dev_data, pipeline_state->cb_bindings, obj_struct);
-    delete getPipelineState(dev_data, pipeline);
     dev_data->pipelineMap.erase(pipeline);
 }
 
@@ -4463,7 +4453,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateGraphicsPipelines(VkDevice device, VkPipeli
     for (i = 0; i < count; i++) {
         if (pPipelines[i] != VK_NULL_HANDLE) {
             pipe_state[i]->pipeline = pPipelines[i];
-            dev_data->pipelineMap[pPipelines[i]] = pipe_state[i].release();
+            dev_data->pipelineMap[pPipelines[i]] = std::move(pipe_state[i]);
         }
     }
 
@@ -4505,7 +4495,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateComputePipelines(VkDevice device, VkPipelin
     for (i = 0; i < count; i++) {
         if (pPipelines[i] != VK_NULL_HANDLE) {
             pPipeState[i]->pipeline = pPipelines[i];
-            dev_data->pipelineMap[pPipelines[i]] = pPipeState[i].release();
+            dev_data->pipelineMap[pPipelines[i]] = std::move(pPipeState[i]);
         }
     }
 
