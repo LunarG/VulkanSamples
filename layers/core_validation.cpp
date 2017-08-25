@@ -1182,10 +1182,10 @@ static bool verifyLineWidth(layer_data *dev_data, DRAW_STATE_ERROR dsError, Vulk
     return skip;
 }
 
-static bool ValidatePipelineLocked(layer_data *dev_data, std::vector<std::unique_ptr<PIPELINE_STATE>> const &pPipelines, int pipelineIndex) {
+static bool ValidatePipelineLocked(layer_data *dev_data, std::vector<PIPELINE_STATE *> const &pPipelines, int pipelineIndex) {
     bool skip = false;
 
-    PIPELINE_STATE *pPipeline = pPipelines[pipelineIndex].get();
+    PIPELINE_STATE *pPipeline = pPipelines[pipelineIndex];
 
     // If create derivative bit is set, check that we've specified a base
     // pipeline correctly, and that the base pipeline was created to allow
@@ -1206,7 +1206,7 @@ static bool ValidatePipelineLocked(layer_data *dev_data, std::vector<std::unique
                             "Invalid Pipeline CreateInfo: base pipeline must occur earlier in array than derivative pipeline. %s",
                             validation_error_map[VALIDATION_ERROR_208005a0]);
             } else {
-                pBasePipeline = pPipelines[pPipeline->graphicsPipelineCI.basePipelineIndex].get();
+                pBasePipeline = pPipelines[pPipeline->graphicsPipelineCI.basePipelineIndex];
             }
         } else if (pPipeline->graphicsPipelineCI.basePipelineHandle != VK_NULL_HANDLE) {
             pBasePipeline = getPipelineState(dev_data, pPipeline->graphicsPipelineCI.basePipelineHandle);
@@ -1223,10 +1223,10 @@ static bool ValidatePipelineLocked(layer_data *dev_data, std::vector<std::unique
 }
 
 // UNLOCKED pipeline validation. DO NOT lookup objects in the layer_data->* maps in this function.
-static bool ValidatePipelineUnlocked(layer_data *dev_data, std::vector<std::unique_ptr<PIPELINE_STATE>> const &pPipelines, int pipelineIndex) {
+static bool ValidatePipelineUnlocked(layer_data *dev_data, std::vector<PIPELINE_STATE *> const &pPipelines, int pipelineIndex) {
     bool skip = false;
 
-    PIPELINE_STATE *pPipeline = pPipelines[pipelineIndex].get();
+        PIPELINE_STATE *pPipeline = pPipelines[pipelineIndex];
 
     // Ensure the subpass index is valid. If not, then validate_and_capture_pipeline_shader_state
     // produces nonsense errors that confuse users. Other layers should already
@@ -4428,15 +4428,14 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateGraphicsPipelines(VkDevice device, VkPipeli
     //  3. If everything looks good, we'll then create the pipeline and add NODE to pipelineMap
     bool skip = false;
     // TODO : Improve this data struct w/ unique_ptrs so cleanup below is automatic
-    vector<std::unique_ptr<PIPELINE_STATE>> pipe_state;
-    pipe_state.reserve(count);
+    vector<PIPELINE_STATE *> pipe_state(count);
     layer_data *dev_data = GetLayerDataPtr(get_dispatch_key(device), layer_data_map);
 
     uint32_t i = 0;
     unique_lock_t lock(global_lock);
 
     for (i = 0; i < count; i++) {
-        pipe_state.push_back(std::unique_ptr<PIPELINE_STATE>(new PIPELINE_STATE));
+        pipe_state[i] = new PIPELINE_STATE;
         pipe_state[i]->initGraphicsPipeline(&pCreateInfos[i]);
         pipe_state[i]->render_pass_ci.initialize(GetRenderPassState(dev_data, pCreateInfos[i].renderPass)->createInfo.ptr());
         pipe_state[i]->pipeline_layout = *getPipelineLayout(dev_data, pCreateInfos[i].layout);
@@ -4454,6 +4453,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateGraphicsPipelines(VkDevice device, VkPipeli
 
     if (skip) {
         for (i = 0; i < count; i++) {
+            delete pipe_state[i];
             pPipelines[i] = VK_NULL_HANDLE;
         }
         return VK_ERROR_VALIDATION_FAILED_EXT;
@@ -4463,9 +4463,11 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateGraphicsPipelines(VkDevice device, VkPipeli
         dev_data->dispatch_table.CreateGraphicsPipelines(device, pipelineCache, count, pCreateInfos, pAllocator, pPipelines);
     lock.lock();
     for (i = 0; i < count; i++) {
-        if (pPipelines[i] != VK_NULL_HANDLE) {
+        if (pPipelines[i] == VK_NULL_HANDLE) {
+            delete pipe_state[i];
+        } else {
             pipe_state[i]->pipeline = pPipelines[i];
-            dev_data->pipelineMap[pipe_state[i]->pipeline] = pipe_state[i].release();
+            dev_data->pipelineMap[pipe_state[i]->pipeline] = pipe_state[i];
         }
     }
 
