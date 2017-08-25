@@ -4463,7 +4463,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateGraphicsPipelines(VkDevice device, VkPipeli
     for (i = 0; i < count; i++) {
         if (pPipelines[i] != VK_NULL_HANDLE) {
             pipe_state[i]->pipeline = pPipelines[i];
-            dev_data->pipelineMap[pipe_state[i]->pipeline] = pipe_state[i].release();
+            dev_data->pipelineMap[pPipelines[i]] = pipe_state[i].release();
         }
     }
 
@@ -4505,7 +4505,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateComputePipelines(VkDevice device, VkPipelin
     for (i = 0; i < count; i++) {
         if (pPipelines[i] != VK_NULL_HANDLE) {
             pPipeState[i]->pipeline = pPipelines[i];
-            dev_data->pipelineMap[pPipeState[i]->pipeline] = pPipeState[i].release();
+            dev_data->pipelineMap[pPipelines[i]] = pPipeState[i].release();
         }
     }
 
