@@ -312,7 +312,7 @@ cd build-android
 ./build_all.sh
 adb install -r bin/VulkanLayerValidationTests.apk
 adb shell am start com.example.VulkanLayerValidationTests/android.app.NativeActivity
-
+```
 Alternatively, you can use the test_APK script to install and run the layer validation tests:
 ```
 test_APK.sh -s <serial number> -p <plaform name> -f <gtest_filter>
