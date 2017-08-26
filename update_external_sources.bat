@@ -105,7 +105,7 @@ REM // ======== Dependency checking ======== //
       if not defined FOUND (
          echo Dependency check failed:
          echo   cmake.exe not found
-         echo   Get CNake 2.8 for Windows here:  http://www.cmake.org/cmake/resources/software.html
+         echo   Get CMake for Windows here:  http://www.cmake.org/cmake/resources/software.html
          echo   Install and ensure each makes it into your PATH, default is "C:\Program Files (x86)\CMake\bin"
          set errorCode=1
       )

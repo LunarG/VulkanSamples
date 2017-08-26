@@ -194,7 +194,7 @@ Windows 7+ with additional required software packages:
   - Need python3.3 or later to get the Windows py.exe launcher that is used to get python3 rather than python2 if both are installed on Windows
   - 32 bit python works
 - [Git](http://git-scm.com/download/win).
-  - Note: If you use Cygwin, you can normally use Cygwin's "git.exe".  However, in order to use the "update\_external\_sources.bat" script, you must have this version.
+  - Note: If you use Cygwin, you can normally use Cygwin's "git.exe", and "update\_external\_sources.sh --no-build" does support Cygwin's git.  However, in order to use the "update\_external\_sources.bat" script, you must have this version.
   - Tell the installer to allow it to be used for "Developer Prompt" as well as "Git Bash".
   - Tell the installer to treat line endings "as is" (i.e. both DOS and Unix-style line endings).
   - Install each a 32-bit and a 64-bit version, as the 64-bit installer does not install the 32-bit libraries and tools.
@@ -224,6 +224,15 @@ To run Vulkan programs you must tell the icd loader where to find the libraries.
 This is described in a `LoaderAndLayerInterface` document in the `loader` folder in this repository.
 This specification describes both how ICDs and layers should be properly
 packaged, and how developers can point to ICDs and layers within their builds.
+
+### Cygwin
+
+If you are using Cygwin git instead of win32-native git, you can use Cygwin's git to sync external sources:
+```
+./update_external_sources.sh --no-build
+```
+
+Unfortunately, "update\_external\_sources.bat" does not have a --no-sync option. To build the external sources you have to modify "update\_external\_sources.bat" to skip the sync portions of the script.
 
 ## Android Build
 Install the required tools for Linux and Windows covered above, then add the following.
