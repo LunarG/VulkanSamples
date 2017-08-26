@@ -97,8 +97,12 @@ REM // ======== Parameter parsing ======== //
       echo     --no-sync           skip sync from git
       echo     --no-build          skip build
       echo.
+      echo   If any component enables are provided, only those components are enabled.
+      echo   If no component enables are provided, all components are enabled.
+      echo.
       echo   Sync uses git to pull a specific revision.
       echo   Build configures CMake, builds Release and Debug.
+
 
       goto:error
 

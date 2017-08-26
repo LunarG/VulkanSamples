@@ -96,8 +96,6 @@ function build_spirv-tools () {
    make -j $CORE_COUNT
 }
 
-# If any options are provided, just sync and compile those tools
-# If no options are provided, sync and build everything
 INCLUDE_GLSLANG=false
 INCLUDE_SPIRV_TOOLS=false
 NO_SYNC=false
@@ -134,11 +132,16 @@ do
       ;;
       *)
       echo "Unrecognized option: $option"
-      echo "Try the following:"
-      echo " -g | --glslang      # enable glslang"
-      echo " -s | --spirv-tools  # enable spirv-tools"
-      echo " --no-sync           # skip sync from git"
-      echo " --no-build          # skip build"
+      echo "Usage: update_external_sources.sh [options]"
+      echo "  Available options:"
+      echo "    -g | --glslang      # enable glslang component"
+      echo "    -s | --spirv-tools  # enable spirv-tools component"
+      echo "    --no-sync           # skip sync from git"
+      echo "    --no-build          # skip build"
+      echo "  If any component enables are provided, only those components are enabled."
+      echo "  If no component enables are provided, all components are enabled."
+      echo "  Sync uses git to pull a specific revision."
+      echo "  Build configures CMake, builds Release."
       exit 1
       ;;
   esac
