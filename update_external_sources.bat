@@ -20,16 +20,94 @@ set SPIRV_TOOLS_DIR=%BASE_DIR%\spirv-tools
 
 REM // ======== Parameter parsing ======== //
 
-   if "%1" == "" (
+   set arg-use-implicit-component-list=1
+   set arg-do-glslang=0
+   set arg-do-spirv-tools=0
+   set arg-no-sync=0
+   set arg-no-build=0
+
+   :parameterLoop
+
+      if "%1"=="" goto:parameterContinue
+
+      if "%1" == "--glslang" (
+         set arg-do-glslang=1
+         set arg-use-implicit-component-list=0
+         echo Building glslang ^(%1^)
+         shift
+         goto:parameterLoop
+      )
+
+      if "%1" == "-g" (
+         set arg-do-glslang=1
+         set arg-use-implicit-component-list=0
+         echo Building glslang ^(%1^)
+         shift
+         goto:parameterLoop
+      )
+
+      if "%1" == "--spirv-tools" (
+         set arg-do-spirv-tools=1
+         set arg-use-implicit-component-list=0
+         echo Building spirv-tools ^(%1^)
+         shift
+         goto:parameterLoop
+      )
+
+      if "%1" == "-s" (
+         set arg-do-spirv-tools=1
+         set arg-use-implicit-component-list=0
+         echo Building spirv-tools ^(%1^)
+         shift
+         goto:parameterLoop
+      )
+
+      if "%1" == "--all" (
+         set arg-do-glslang=1
+         set arg-do-spirv-tools=1
+         set arg-use-implicit-component-list=0
+         echo Building glslang, spirv-tools ^(%1^)
+         shift
+         goto:parameterLoop
+      )
+
+      if "%1" == "--no-sync" (
+         set arg-no-sync=1
+         echo Skipping sync ^(%1^)
+         shift
+         goto:parameterLoop
+      )
+
+      if "%1" == "--no-build" (
+         set arg-no-build=1
+         echo Skipping build ^(%1^)
+         shift
+         goto:parameterLoop
+      )
+
+      echo.
+      echo Unrecognized option "%1"
+      echo.
       echo usage: update_external_sources.bat [options]
       echo.
-      echo Available options:
-      echo   --sync-glslang      just pull glslang_revision
-      echo   --sync-spirv-tools  just pull spirv-tools_revision
-      echo   --build-glslang     pulls glslang_revision, configures CMake, builds Release and Debug
-      echo   --build-spirv-tools pulls spirv-tools_revision, configures CMake, builds Release and Debug
-      echo   --all               sync and build glslang, spirv-tools
-      goto:finish
+      echo   Available options:
+      echo     -g ^| --glslang      enable glslang component
+      echo     -s ^| --spirv-tools  enable spirv-tools component
+      echo     --all               enable all components
+      echo     --no-sync           skip sync from git
+      echo     --no-build          skip build
+      echo.
+      echo   Sync uses git to pull a specific revision.
+      echo   Build configures CMake, builds Release and Debug.
+
+      goto:error
+
+   :parameterContinue
+
+   if %arg-use-implicit-component-list% equ 1 (
+      echo Building glslang, spirv-tools
+      set arg-do-glslang=1
+      set arg-do-spirv-tools=1
    )
 
    set sync-glslang=0
@@ -38,53 +116,37 @@ REM // ======== Parameter parsing ======== //
    set build-spirv-tools=0
    set check-glslang-build-dependencies=0
 
-   :parameterLoop
-
-      if "%1"=="" goto:parameterContinue
-
-      if "%1" == "--sync-glslang" (
+   if %arg-do-glslang% equ 1 (
+      if %arg-no-sync% equ 0 (
          set sync-glslang=1
-         shift
-         goto:parameterLoop
       )
-
-      if "%1" == "--sync-spirv-tools" (
-         set sync-spirv-tools=1
-         shift
-         goto:parameterLoop
-      )
-
-      if "%1" == "--build-glslang" (
-         set sync-glslang=1
+      if %arg-no-build% equ 0 (
          set check-glslang-build-dependencies=1
          set build-glslang=1
-         shift
-         goto:parameterLoop
       )
+   )
 
-      if "%1" == "--build-spirv-tools" (
+   if %arg-do-spirv-tools% equ 1 (
+      if %arg-no-sync% equ 0 (
          set sync-spirv-tools=1
-         REM glslang has the same needs as spirv-tools
+      )
+      if %arg-no-build% equ 0 (
+         REM glslang has the same dependencies as spirv-tools
          set check-glslang-build-dependencies=1
          set build-spirv-tools=1
-         shift
-         goto:parameterLoop
       )
+   )
 
-      if "%1" == "--all" (
-         set sync-glslang=1
-         set sync-spirv-tools=1
-         set build-glslang=1
-         set build-spirv-tools=1
-         set check-glslang-build-dependencies=1
-         shift
-         goto:parameterLoop
-      )
-
-      echo Unrecognized options "%1"
+   REM this is a debugging aid that can be enabled while debugging command-line parsing
+   if 0 equ 1 (
+      set arg
+      set sync-glslang
+      set sync-spirv-tools
+      set build-glslang
+      set build-spirv-tools
+      set check-glslang-build-dependencies
       goto:error
-
-   :parameterContinue
+   )
 
 REM // ======== end Parameter parsing ======== //
 

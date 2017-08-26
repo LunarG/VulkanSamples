@@ -212,7 +212,7 @@ for the Properties->Details tab of the loader vulkan-1.dll file that is built.
 Build all Windows targets after installing required software and cloning the Loader and Validation Layer repo as described above by completing the following steps in a "Developer Command Prompt for VS2013" window (Note that the update\_external\_sources script used below builds external tools into predefined locations. See **Loader and Validation Layer Dependencies** for more information and other options):
 ```
 cd Vulkan-LoaderAndValidationLayers  # cd to the root of the cloned git repository
-update_external_sources.bat --all
+update_external_sources.bat
 build_windows_targets.bat
 ```
 
@@ -225,14 +225,19 @@ This is described in a `LoaderAndLayerInterface` document in the `loader` folder
 This specification describes both how ICDs and layers should be properly
 packaged, and how developers can point to ICDs and layers within their builds.
 
-### Cygwin
+### Using Cygwin Git
 
-If you are using Cygwin git instead of win32-native git, you can use Cygwin's git to sync external sources:
+If you are using Cygwin git instead of win32-native git, you can use the *sh* script to sync using Cygwin's git (but not also build), then use the *bat* script to build (but not also sync).
+
+In a cygwin shell do this:
 ```
 ./update_external_sources.sh --no-build
 ```
 
-Unfortunately, "update\_external\_sources.bat" does not have a --no-sync option. To build the external sources you have to modify "update\_external\_sources.bat" to skip the sync portions of the script.
+Then in a Visual Studio Developer Command Prompt shell do this:
+```
+update_external_sources.bat --no-sync
+```
 
 ## Android Build
 Install the required tools for Linux and Windows covered above, then add the following.
