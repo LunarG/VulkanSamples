@@ -134,6 +134,10 @@ bool VkRenderFramework::DeviceExtensionSupported(VkPhysicalDevice dev, const cha
 };
 
 void VkRenderFramework::InitFramework(PFN_vkDebugReportCallbackEXT dbgFunction, void *userData) {
+    if (InstanceLayerSupported("VK_LAYER_LUNARG_device_profile_api")) {
+        m_instance_layer_names.push_back("VK_LAYER_LUNARG_device_profile_api");
+    }
+
     // Assert not already initialized
     ASSERT_EQ((VkInstance)0, inst);
 
