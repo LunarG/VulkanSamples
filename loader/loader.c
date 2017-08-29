@@ -3976,7 +3976,7 @@ void *loader_dev_ext_gpa(struct loader_instance *inst, const char *funcName) {
 
     // Check if funcName is supported in either ICDs or a layer library
     if (!loader_check_icds_for_dev_ext_address(inst, funcName) &&
-        !loader_check_layer_list_for_dev_ext_address(&inst->instance_layer_list, funcName)) {
+        !loader_check_layer_list_for_dev_ext_address(&inst->app_activated_layer_list, funcName)) {
         // if support found in layers continue on
         return NULL;
     }
