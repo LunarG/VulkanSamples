@@ -141,7 +141,7 @@ void VkRenderFramework::InitFramework(PFN_vkDebugReportCallbackEXT dbgFunction, 
     for (auto layer = m_instance_layer_names.begin(); layer != m_instance_layer_names.end();) {
         if (!InstanceLayerSupported(*layer)) {
             ADD_FAILURE() << "InitFramework(): Requested layer " << *layer << " was not found. Disabled.";
-            layer = m_instance_extension_names.erase(layer);
+            layer = m_instance_layer_names.erase(layer);
         } else {
             ++layer;
         }
