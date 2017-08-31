@@ -435,7 +435,7 @@ bool loaderGetDeviceRegistryEntry(const struct loader_instance *inst, char **reg
     // query value
     LSTATUS ret = RegQueryValueEx(
         hkrKey,
-        HKR_VK_DRIVER_NAME,
+        LoaderPnpDriverRegistry(),
         NULL,
         NULL,
         NULL,
@@ -457,7 +457,7 @@ bool loaderGetDeviceRegistryEntry(const struct loader_instance *inst, char **reg
 
     ret = RegQueryValueEx(
         hkrKey,
-        HKR_VK_DRIVER_NAME,
+        LoaderPnpDriverRegistry(),
         NULL,
         &dataType,
         pVkDriverPath,

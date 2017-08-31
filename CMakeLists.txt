@@ -347,6 +347,8 @@ add_custom_target(uninstall
     COMMAND ${CMAKE_COMMAND} -P ${CMAKE_CURRENT_BINARY_DIR}/cmake_uninstall.cmake)
 endif()
 
+add_definitions(-DAPI_NAME="${API_NAME}")
+
 # loader: Generic VULKAN ICD loader
 # tests: VULKAN tests
 if(BUILD_LOADER)

@@ -80,8 +80,6 @@ set(OPT_LOADER_SRCS
     phys_dev_ext.c
 )
 
-add_definitions(-DAPI_NAME="${API_NAME}")
-
 # Check for assembler support
 set(ASM_FAILURE_MSG "The build will fall back on building with C code\n")
 set(ASM_FAILURE_MSG "${ASM_FAILURE_MSG}Note that this may be unsafe, as the C code requires tail-call optimizations to remove")
