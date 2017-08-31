@@ -195,6 +195,22 @@ static inline const char *LoaderPnpDriverRegistry() {
     IsWow64Process(GetCurrentProcess(), &is_wow);
     return is_wow ? (API_NAME "DriverNameWow") : (API_NAME "DriverName");
 }
+
+// Get the key for the plug 'n play explicit layer registry
+// The string returned by this function should NOT be freed
+static inline const char *LoaderPnpELayerRegistry() {
+    BOOL is_wow;
+    IsWow64Process(GetCurrentProcess(), &is_wow);
+    return is_wow ? (API_NAME "ExplicitLayersWow") : (API_NAME "ExplicitLayers");
+}
+// Get the key for the plug 'n play implicit layer registry
+// The string returned by this function should NOT be freed
+
+static inline const char *LoaderPnpILayerRegistry() {
+    BOOL is_wow;
+    IsWow64Process(GetCurrentProcess(), &is_wow);
+    return is_wow ? (API_NAME "ImplicitLayersWow") : (API_NAME "ImplicitLayers");
+}
 #endif
 
 // File IO
