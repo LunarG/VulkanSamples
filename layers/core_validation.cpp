@@ -5430,7 +5430,6 @@ static bool PreCallValidateCmdBindDescriptorSets(layer_data *device_data, GLOBAL
         cb_state->lastBound[pipelineBindPoint].boundDescriptorSets.resize(last_set_index + 1);
         cb_state->lastBound[pipelineBindPoint].dynamicOffsets.resize(last_set_index + 1);
     }
-    auto old_final_bound_set = cb_state->lastBound[pipelineBindPoint].boundDescriptorSets[last_set_index];
     auto pipeline_layout = getPipelineLayout(device_data, layout);
     for (uint32_t set_idx = 0; set_idx < setCount; set_idx++) {
         cvdescriptorset::DescriptorSet *descriptor_set = GetSetNode(device_data, pDescriptorSets[set_idx]);
@@ -5509,32 +5508,6 @@ static bool PreCallValidateCmdBindDescriptorSets(layer_data *device_data, GLOBAL
                             HandleToUint64(pDescriptorSets[set_idx]), __LINE__, DRAWSTATE_INVALID_SET, "DS",
                             "Attempt to bind descriptor set 0x%" PRIxLEAST64 " that doesn't exist!",
                             HandleToUint64(pDescriptorSets[set_idx]));
-        }
-        if (firstSet > 0) {  // Check set #s below the first bound set
-            for (uint32_t i = 0; i < firstSet; ++i) {
-                if (cb_state->lastBound[pipelineBindPoint].boundDescriptorSets[i] &&
-                    !verify_set_layout_compatibility(cb_state->lastBound[pipelineBindPoint].boundDescriptorSets[i], pipeline_layout,
-                                                     i, error_string)) {
-                    // TODO: Flag descriptor as disturbed and then if/when attempt to be used when unbound, note that it was
-                    // previously disturbed
-                }
-            }
-        }
-        // Check if newly last bound set invalidates any remaining bound sets
-        if ((cb_state->lastBound[pipelineBindPoint].boundDescriptorSets.size() - 1) > (last_set_index)) {
-            if (old_final_bound_set &&
-                !verify_set_layout_compatibility(old_final_bound_set, pipeline_layout, last_set_index, error_string)) {
-                auto old_set = old_final_bound_set->GetSet();
-                skip |=
-                    log_msg(device_data->report_data, VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT,
-                            VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT, HandleToUint64(old_set), __LINE__, DRAWSTATE_NONE, "DS",
-                            "DescriptorSet 0x%" PRIxLEAST64 " previously bound as set #%u is incompatible with set 0x%" PRIxLEAST64
-                            " newly bound as set #%u so set #%u and any subsequent sets were "
-                            "disturbed by newly bound pipelineLayout (0x%" PRIxLEAST64 ")",
-                            HandleToUint64(old_set), last_set_index,
-                            HandleToUint64(cb_state->lastBound[pipelineBindPoint].boundDescriptorSets[last_set_index]),
-                            last_set_index, last_set_index + 1, HandleToUint64(layout));
-            }
         }
     }
     //  dynamicOffsetCount must equal the total number of dynamic descriptors in the sets being bound
