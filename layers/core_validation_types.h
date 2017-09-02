@@ -622,7 +622,7 @@ struct LAST_BOUND_STATE {
     // Track each set that has been bound
     // Ordered bound set tracking where index is set# that given set is bound to
     std::vector<cvdescriptorset::DescriptorSet *> boundDescriptorSets;
-    std::vector<cvdescriptorset::DescriptorSet *> push_descriptors;
+    std::vector<std::unique_ptr<cvdescriptorset::DescriptorSet>> push_descriptors;
     // one dynamic offset per dynamic descriptor bound to this CB
     std::vector<std::vector<uint32_t>> dynamicOffsets;
 

@@ -22,6 +22,7 @@
 
 #include "core_validation_types.h"
 #include "core_validation_error_enums.h"
+#include "descriptor_sets.h"
 #include "vulkan/vk_layer.h"
 #include <limits.h>
 #include <memory>

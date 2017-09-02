@@ -5378,7 +5378,6 @@ static void PreCallRecordCmdBindDescriptorSets(layer_data *device_data, GLOBAL_C
 
             if ((last_bound->boundDescriptorSets[set_idx + firstSet] != nullptr) &&
                 last_bound->boundDescriptorSets[set_idx + firstSet]->IsPushDescriptor()) {
-                delete last_bound->push_descriptors[set_idx + firstSet];
                 last_bound->push_descriptors[set_idx + firstSet] = nullptr;
                 last_bound->boundDescriptorSets[set_idx + firstSet] = nullptr;
             }
@@ -5561,7 +5560,6 @@ static void PreCallRecordCmdPushDescriptorSetKHR(layer_data *device_data, VkComm
                 "vkCmdPushDescriptorSet called multiple times for set %d in pipeline layout 0x%" PRIxLEAST64 ".", set,
                 HandleToUint64(layout));
         if (cb_state->lastBound[pipelineBindPoint].boundDescriptorSets[set]->IsPushDescriptor()) {
-            delete cb_state->lastBound[pipelineBindPoint].push_descriptors[set];
             cb_state->lastBound[pipelineBindPoint].push_descriptors[set] = nullptr;
         }
     }
@@ -5581,10 +5579,10 @@ static void PreCallRecordCmdPushDescriptorSetKHR(layer_data *device_data, VkComm
 
     const VkDescriptorSetLayout desc_set_layout = 0;
     auto const shared_ds_layout = std::make_shared<cvdescriptorset::DescriptorSetLayout>(&layout_create_info, desc_set_layout);
-    auto new_desc = new cvdescriptorset::DescriptorSet(0, 0, shared_ds_layout, device_data);
+    std::unique_ptr<cvdescriptorset::DescriptorSet> new_desc{new cvdescriptorset::DescriptorSet(0, 0, shared_ds_layout, device_data)};
     new_desc->SetPushDescriptor();
-    cb_state->lastBound[pipelineBindPoint].push_descriptors[set] = new_desc;
-    cb_state->lastBound[pipelineBindPoint].boundDescriptorSets[set] = new_desc;
+    cb_state->lastBound[pipelineBindPoint].boundDescriptorSets[set] = new_desc.get();
+    cb_state->lastBound[pipelineBindPoint].push_descriptors[set] = std::move(new_desc);
 }
 
 VKAPI_ATTR void VKAPI_CALL CmdPushDescriptorSetKHR(VkCommandBuffer commandBuffer, VkPipelineBindPoint pipelineBindPoint,
