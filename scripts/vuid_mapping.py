@@ -540,6 +540,21 @@ func_struct_id_map = {
 'vkGetImageSparseMemoryRequirements2KHR' : 484,
 'VkPhysicalDevice16BitStorageFeaturesKHR' : 485,
 'VkPhysicalDeviceVariablePointerFeaturesKHR' : 486,
+'VkSampleLocationsInfoEXT' : 487,
+'VkRenderPassSampleLocationsBeginInfoEXT' : 488,
+'VkPipelineSampleLocationsStateCreateInfoEXT' : 489,
+'VkPhysicalDeviceSampleLocationsPropertiesEXT' : 490,
+'VkMultisamplePropertiesEXT' : 491,
+'vkGetPhysicalDeviceMultisamplePropertiesEXT' : 492,
+'VkValidationCacheCreateInfoEXT' : 493,
+'VkShaderModuleValidationCacheCreateInfoEXT' : 494,
+'vkCreateValidationCacheEXT' : 495,
+'vkGetValidationCacheDataEXT' : 496,
+'vkCmdSetSampleLocationsEXT' : 497,
+'vkDestroyValidationCacheEXT' : 498,
+'vkMergeValidationCachesEXT' : 499,
+'VkAttachmentSampleLocationsEXT' : 500,
+'VkSubpassSampleLocationsEXT' : 501,
 ### ADD New func/struct mappings above this line
 }
 # Mapping of params to unique IDs
@@ -1017,6 +1032,19 @@ implicit_param_map = {
 'basePipelineHandle' : 470,
 'pImmutableSamplers' : 471,
 'pTexelBufferView' : 472,
+'sampleLocationsPerPixel' : 473,
+'sampleLocationsCount' : 474,
+'pSampleLocations' : 475,
+'attachmentInitialSampleLocationsCount' : 476,
+'pAttachmentInitialSampleLocations' : 477,
+'postSubpassSampleLocationsCount' : 478,
+'pSubpassSampleLocations' : 479,
+'sampleLocationSampleCounts' : 480,
+'pValidationCache' : 481,
+'validationCache' : 482,
+'sampleLocationsInfo' : 483,
+'pSampleLocationsInfo' : 484,
+'pMultisampleProperties' : 485,
 ### ADD New implicit param mappings above this line
 }
 
