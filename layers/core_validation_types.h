@@ -763,10 +763,10 @@ class FRAMEBUFFER_STATE : public BASE_NODE {
 public:
     VkFramebuffer framebuffer;
     safe_VkFramebufferCreateInfo createInfo;
-    safe_VkRenderPassCreateInfo renderPassCreateInfo;
+    const RENDER_PASS_STATE *rp_state;
     std::vector<MT_FB_ATTACHMENT_INFO> attachments;
-    FRAMEBUFFER_STATE(VkFramebuffer fb, const VkFramebufferCreateInfo *pCreateInfo, const VkRenderPassCreateInfo *pRPCI)
-        : framebuffer(fb), createInfo(pCreateInfo), renderPassCreateInfo(pRPCI) {};
+    FRAMEBUFFER_STATE(VkFramebuffer fb, const VkFramebufferCreateInfo *pCreateInfo, const RENDER_PASS_STATE *rpstate)
+        : framebuffer(fb), createInfo(pCreateInfo), rp_state(rpstate){};
 };
 
 struct shader_module;
