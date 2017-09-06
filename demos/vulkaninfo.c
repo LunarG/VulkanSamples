@@ -926,17 +926,12 @@ static void AppCreateXcbWindow(struct AppInstance *inst) {
     xcb_screen_iterator_t iter;
     int scr;
 
+    // API guarantees non-null xcb_connection
     inst->xcb_connection = xcb_connect(NULL, &scr);
-    if (inst->xcb_connection == NULL) {
-        printf("XCB failed to connect to the X server.\nExiting ...\n");
-        fflush(stdout);
-        exit(1);
-    }
-
     int conn_error = xcb_connection_has_error(inst->xcb_connection);
     if (conn_error) {
-        printf("XCB failed to connect to the X server due to error:%d.\nExiting ...\n", conn_error);
-        fflush(stdout);
+        fprintf(stderr, "XCB failed to connect to the X server due to error:%d.\nExiting ...\n", conn_error);
+        fflush(stderr);
         exit(1);
     }
 
