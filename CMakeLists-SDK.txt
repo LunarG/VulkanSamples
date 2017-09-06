@@ -20,16 +20,24 @@ set(MAJOR "1")
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake")
 
-if(NOT WIN32)
-    include(FindPkgConfig)
-endif()
-
 set (CMAKE_INSTALL_PREFIX "")
 
 set (UTILS_NAME vsamputils)
 
 if(NOT WIN32)
-    find_package(XCB REQUIRED)
+    include(FindPkgConfig)
+    option(BUILD_WSI_XCB_SUPPORT "Build XCB WSI support" ON)
+    option(BUILD_WSI_WAYLAND_SUPPORT "Build Wayland WSI support" OFF)
+    set(DEMOS_WSI_SELECTION "XCB" CACHE STRING "Select WSI target for demos (XCB, XLIB, WAYLAND, MIR, DISPLAY)")
+
+    if (BUILD_WSI_XCB_SUPPORT)
+         find_package(XCB REQUIRED)
+    endif()
+
+    if (BUILD_WSI_WAYLAND_SUPPORT)
+        find_package(Wayland REQUIRED)
+    endif()
+
     set (BUILDTGT_DIR build)
     set (BINDATA_DIR x86_64/bin)
     set (LIBSOURCE_DIR Lib)
