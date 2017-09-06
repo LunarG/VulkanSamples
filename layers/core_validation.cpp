@@ -5093,21 +5093,12 @@ VKAPI_ATTR VkResult VKAPI_CALL BeginCommandBuffer(VkCommandBuffer commandBuffer,
                     string errorString = "";
                     auto framebuffer = GetFramebufferState(dev_data, pInfo->framebuffer);
                     if (framebuffer) {
-                        if ((framebuffer->createInfo.renderPass != pInfo->renderPass) &&
-                            !verify_renderpass_compatibility(dev_data, framebuffer->rp_state->createInfo.ptr(),
-                                                             GetRenderPassState(dev_data, pInfo->renderPass)->createInfo.ptr(),
-                                                             errorString)) {
+                        if (framebuffer->createInfo.renderPass != pInfo->renderPass) {
                             // renderPass that framebuffer was created with must be compatible with local renderPass
-                            skip |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT,
-                                            VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, HandleToUint64(commandBuffer), __LINE__,
-                                            VALIDATION_ERROR_0280006e, "DS",
-                                            "vkBeginCommandBuffer(): Secondary Command "
-                                            "Buffer (0x%p) renderPass (0x%" PRIxLEAST64
-                                            ") is incompatible w/ framebuffer "
-                                            "(0x%" PRIxLEAST64 ") w/ render pass (0x%" PRIxLEAST64 ") due to: %s. %s",
-                                            commandBuffer, HandleToUint64(pInfo->renderPass), HandleToUint64(pInfo->framebuffer),
-                                            HandleToUint64(framebuffer->createInfo.renderPass), errorString.c_str(),
-                                            validation_error_map[VALIDATION_ERROR_0280006e]);
+                            skip |=
+                                validateRenderPassCompatibility(dev_data, "framebuffer", framebuffer->rp_state, "command buffer",
+                                                                GetRenderPassState(dev_data, pInfo->renderPass),
+                                                                "vkBeginCommandBuffer()", VALIDATION_ERROR_0280006e);
                         }
                         // Connect this framebuffer and its children to this cmdBuffer
                         AddFramebufferBinding(dev_data, cb_node, framebuffer);
