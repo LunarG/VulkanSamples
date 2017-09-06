@@ -12182,7 +12182,7 @@ TEST_F(VkLayerTest, CopyDescriptorUpdateErrors) {
     ASSERT_NO_FATAL_FAILURE(Init());
     OneOffDescriptorSet ds(m_device->device(), {
         { 0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1, VK_SHADER_STAGE_ALL, nullptr },
-        { 1, VK_DESCRIPTOR_TYPE_SAMPLER, 1, VK_SHADER_STAGE_ALL, nullptr }, 
+        { 1, VK_DESCRIPTOR_TYPE_SAMPLER, 1, VK_SHADER_STAGE_ALL, nullptr },
     });
 
     VkSamplerCreateInfo sampler_ci = {};
@@ -24915,6 +24915,133 @@ TEST_F(VkPositiveLayerTest, ClearDepthStencilWithValidRange) {
         vkCmdClearDepthStencilImage(cb_handle, image.handle(), image.Layout(), &clear_value, 1, &range);
         m_errorMonitor->VerifyNotFound();
     }
+}
+
+TEST_F(VkLayerTest, AMDMixedAttachmentSamplesValidateRenderPass) {
+    TEST_DESCRIPTION(
+        "Verify error messages for supported and unsupported "
+        "sample counts in render pass attachments.");
+
+    ASSERT_NO_FATAL_FAILURE(InitFramework(myDbgFunc, m_errorMonitor));
+    if (DeviceExtensionSupported(gpu(), nullptr, VK_AMD_MIXED_ATTACHMENT_SAMPLES_EXTENSION_NAME)) {
+        m_device_extension_names.push_back(VK_AMD_MIXED_ATTACHMENT_SAMPLES_EXTENSION_NAME);
+    } else {
+        return;
+    }
+    ASSERT_NO_FATAL_FAILURE(InitState());
+
+    m_errorMonitor->ExpectSuccess();
+
+    std::vector<VkAttachmentDescription> attachments;
+
+    {
+        VkAttachmentDescription att = {};
+        att.format = VK_FORMAT_R8G8B8A8_UNORM;
+        att.samples = VK_SAMPLE_COUNT_1_BIT;
+        att.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+        att.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+        att.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+        att.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+        att.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+        att.finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+
+        attachments.push_back(att);
+
+        att.format = VK_FORMAT_D16_UNORM;
+        att.samples = VK_SAMPLE_COUNT_4_BIT;
+        att.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+        att.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+        att.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+        att.stencilStoreOp = VK_ATTACHMENT_STORE_OP_STORE;
+        att.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+        att.finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+
+        attachments.push_back(att);
+    }
+
+    VkAttachmentReference color_ref = {};
+    color_ref.attachment = 0;
+    color_ref.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+
+    VkAttachmentReference depth_ref = {};
+    depth_ref.attachment = 1;
+    depth_ref.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+
+    VkSubpassDescription subpass = {};
+    subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
+    subpass.colorAttachmentCount = 1;
+    subpass.pColorAttachments = &color_ref;
+    subpass.pDepthStencilAttachment = &depth_ref;
+
+    VkRenderPassCreateInfo rp_info = {};
+    rp_info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
+    rp_info.attachmentCount = attachments.size();
+    rp_info.pAttachments = attachments.data();
+    rp_info.subpassCount = 1;
+    rp_info.pSubpasses = &subpass;
+
+    vkCreateRenderPass(device(), &rp_info, NULL, &m_renderPass);
+    m_errorMonitor->VerifyNotFound();
+
+    // Expect an error message for invalid sample counts
+
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_14000bc4);
+
+    attachments[0].samples = VK_SAMPLE_COUNT_4_BIT;
+    attachments[1].samples = VK_SAMPLE_COUNT_1_BIT;
+
+    {
+        VkRenderPass render_pass;
+        VkResult err = vkCreateRenderPass(device(), &rp_info, NULL, &render_pass);
+        m_errorMonitor->VerifyFound();
+        ASSERT_NE(err, VK_SUCCESS);
+    }
+}
+
+TEST_F(VkLayerTest, AMDMixedAttachmentSamplesValidateGraphicsPipeline) {
+    TEST_DESCRIPTION(
+        "Verify an error message for an incorrect graphics pipeline "
+        "rasterization sample count.");
+
+    ASSERT_NO_FATAL_FAILURE(InitFramework(myDbgFunc, m_errorMonitor));
+    if (DeviceExtensionSupported(gpu(), nullptr, VK_AMD_MIXED_ATTACHMENT_SAMPLES_EXTENSION_NAME)) {
+        m_device_extension_names.push_back(VK_AMD_MIXED_ATTACHMENT_SAMPLES_EXTENSION_NAME);
+    } else {
+        return;
+    }
+    ASSERT_NO_FATAL_FAILURE(InitState());
+
+    VkRenderpassObj render_pass(m_device);
+
+    VkPipelineLayoutCreateInfo pipeline_layout_ci = {};
+    pipeline_layout_ci.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+
+    VkPipelineLayout pipeline_layout;
+    VkResult err = vkCreatePipelineLayout(m_device->device(), &pipeline_layout_ci, NULL, &pipeline_layout);
+    ASSERT_VK_SUCCESS(err);
+
+    VkShaderObj vs(m_device, bindStateVertShaderText, VK_SHADER_STAGE_VERTEX_BIT, this);
+    VkShaderObj fs(m_device, bindStateFragShaderText, VK_SHADER_STAGE_FRAGMENT_BIT, this);
+
+    // Set a mismatched sample count
+
+    VkPipelineMultisampleStateCreateInfo ms_state_ci = {};
+    ms_state_ci.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
+    ms_state_ci.rasterizationSamples = VK_SAMPLE_COUNT_4_BIT;
+
+    VkPipelineObj pipe(m_device);
+    pipe.AddShader(&vs);
+    pipe.AddShader(&fs);
+    pipe.AddColorAttachment();
+    pipe.SetMSAA(&ms_state_ci);
+
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_09600bc2);
+
+    pipe.CreateVKPipeline(pipeline_layout, render_pass.handle());
+
+    m_errorMonitor->VerifyFound();
+
+    vkDestroyPipelineLayout(m_device->device(), pipeline_layout, NULL);
 }
 
 #if defined(ANDROID) && defined(VALIDATION_APK)

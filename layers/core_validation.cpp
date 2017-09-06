@@ -1047,7 +1047,8 @@ static bool ValidatePipelineDrawtimeState(layer_data const *dev_data, LAST_BOUND
                 subpass_num_samples |= (unsigned)render_pass_info->pAttachments[attachment].samples;
             }
 
-            if (subpass_num_samples && static_cast<unsigned>(pso_num_samples) != subpass_num_samples) {
+            if (!dev_data->extensions.vk_amd_mixed_attachment_samples &&
+                ((subpass_num_samples & static_cast<unsigned>(pso_num_samples)) != subpass_num_samples)) {
                 skip |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_PIPELINE_EXT,
                                 HandleToUint64(pPipeline->pipeline), __LINE__, DRAWSTATE_NUM_SAMPLES_MISMATCH, "DS",
                                 "Num samples mismatch! At draw-time in Pipeline (0x%" PRIxLEAST64
@@ -1509,6 +1510,28 @@ static bool ValidatePipelineUnlocked(layer_data *dev_data, std::vector<std::uniq
                         "(%s) is not a supported vertex buffer format. %s",
                     pipelineIndex, j, string_VkFormat(format), validation_error_map[VALIDATION_ERROR_14a004de]);
             }
+        }
+    }
+
+    if (dev_data->extensions.vk_amd_mixed_attachment_samples) {
+        VkSampleCountFlagBits max_sample_count = static_cast<VkSampleCountFlagBits>(0);
+        for (uint32_t i = 0; i < subpass_desc->colorAttachmentCount; ++i) {
+            if (subpass_desc->pColorAttachments[i].attachment != VK_ATTACHMENT_UNUSED) {
+                max_sample_count = std::max(max_sample_count, pPipeline->render_pass_ci.pAttachments[subpass_desc->pColorAttachments[i].attachment].samples);
+            }
+        }
+        if (subpass_desc->pDepthStencilAttachment && subpass_desc->pDepthStencilAttachment->attachment != VK_ATTACHMENT_UNUSED) {
+            max_sample_count = std::max(max_sample_count, pPipeline->render_pass_ci.pAttachments[subpass_desc->pDepthStencilAttachment->attachment].samples);
+        }
+        if (pPipeline->graphicsPipelineCI.pMultisampleState->rasterizationSamples != max_sample_count) {
+            skip |=
+                log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_PIPELINE_EXT,
+                        HandleToUint64(pPipeline->pipeline), __LINE__, VALIDATION_ERROR_09600bc2, "DS",
+                        "vkCreateGraphicsPipelines: pCreateInfo[%d].pMultisampleState->rasterizationSamples (%s) != max attachment samples (%s) "
+                        "used in subpass %u. %s",
+                        pipelineIndex, string_VkSampleCountFlagBits(pPipeline->graphicsPipelineCI.pMultisampleState->rasterizationSamples),
+                        string_VkSampleCountFlagBits(max_sample_count), pPipeline->graphicsPipelineCI.subpass,
+                        validation_error_map[VALIDATION_ERROR_09600bc2]);
         }
     }
 
@@ -7866,6 +7889,19 @@ static bool ValidateRenderpassAttachmentUsage(layer_data *dev_data, const VkRend
                                     i, j, color_desc.format, resolve_desc.format, validation_error_map[VALIDATION_ERROR_140006a4]);
                     }
                 }
+
+                if (dev_data->extensions.vk_amd_mixed_attachment_samples &&
+                    subpass.pDepthStencilAttachment && subpass.pDepthStencilAttachment->attachment != VK_ATTACHMENT_UNUSED) {
+                    const auto depth_stencil_sample_count = pCreateInfo->pAttachments[subpass.pDepthStencilAttachment->attachment].samples;
+                    if (pCreateInfo->pAttachments[attachment].samples > depth_stencil_sample_count) {
+                        skip |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0,
+                                        __LINE__, VALIDATION_ERROR_14000bc4, "DS",
+                                        "CreateRenderPass:  Subpass %u pColorAttachments[%u] has %s which is larger than "
+                                        "depth/stencil attachment %s. %s",
+                                        i, j, string_VkSampleCountFlagBits(pCreateInfo->pAttachments[attachment].samples),
+                                        string_VkSampleCountFlagBits(depth_stencil_sample_count), validation_error_map[VALIDATION_ERROR_14000bc4]);
+                    }
+                }
             }
         }
 
@@ -7883,7 +7919,8 @@ static bool ValidateRenderpassAttachmentUsage(layer_data *dev_data, const VkRend
             skip |= ValidateAttachmentIndex(dev_data, attachment, pCreateInfo->attachmentCount, "Input");
         }
 
-        if (sample_count && !IsPowerOfTwo(sample_count)) {
+        if (!dev_data->extensions.vk_amd_mixed_attachment_samples &&
+            sample_count && !IsPowerOfTwo(sample_count)) {
             skip |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0,
                             __LINE__, VALIDATION_ERROR_0082b401, "DS",
                             "CreateRenderPass:  Subpass %u attempts to render to "
