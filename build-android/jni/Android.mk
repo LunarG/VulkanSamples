@@ -53,7 +53,8 @@ include $(BUILD_SHARED_LIBRARY)
 
 include $(CLEAR_VARS)
 LOCAL_MODULE := VkLayer_parameter_validation
-LOCAL_SRC_FILES += $(SRC_DIR)/layers/parameter_validation.cpp
+LOCAL_SRC_FILES += $(LAYER_DIR)/include/parameter_validation.cpp
+LOCAL_SRC_FILES += $(SRC_DIR)/layers/parameter_validation_utils.cpp
 LOCAL_SRC_FILES += $(SRC_DIR)/layers/vk_layer_table.cpp
 LOCAL_C_INCLUDES += $(SRC_DIR)/include \
                     $(LAYER_DIR)/include \
@@ -200,7 +201,33 @@ LOCAL_SHARED_LIBRARIES += shaderc-prebuilt glslang-prebuilt OGLCompiler-prebuilt
 LOCAL_CPPFLAGS += -DVK_USE_PLATFORM_ANDROID_KHR -fvisibility=hidden -DVALIDATION_APK --include=$(SRC_DIR)/common/vulkan_wrapper.h
 LOCAL_WHOLE_STATIC_LIBRARIES += android_native_app_glue
 LOCAL_LDLIBS := -llog -landroid
+LOCAL_LDFLAGS := -u ANativeActivity_onCreate
 include $(BUILD_SHARED_LIBRARY)
+
+include $(CLEAR_VARS)
+LOCAL_MODULE := vkjson
+LOCAL_SRC_FILES += $(SRC_DIR)/libs/vkjson/vkjson.cc \
+                   $(SRC_DIR)/libs/vkjson/vkjson_instance.cc \
+                   $(SRC_DIR)/common/vulkan_wrapper.cpp \
+                   $(SRC_DIR)/loader/cJSON.c
+LOCAL_C_INCLUDES += $(SRC_DIR)/include \
+                    $(SRC_DIR)/loader
+
+LOCAL_CPPFLAGS += -DVK_USE_PLATFORM_ANDROID_KHR -fvisibility=hidden --include=$(SRC_DIR)/common/vulkan_wrapper.h
+include $(BUILD_STATIC_LIBRARY)
+
+include $(CLEAR_VARS)
+LOCAL_MODULE := vkjson_info
+LOCAL_SRC_FILES += $(SRC_DIR)/libs/vkjson/vkjson_info.cc \
+                   $(SRC_DIR)/common/vulkan_wrapper.cpp
+LOCAL_C_INCLUDES += $(SRC_DIR)/loader \
+                    $(SRC_DIR)/include
+
+LOCAL_STATIC_LIBRARIES += vkjson
+LOCAL_CPPFLAGS += -Wno-sign-compare -DVK_USE_PLATFORM_ANDROID_KHR --include=$(SRC_DIR)/common/vulkan_wrapper.h
+LOCAL_LDLIBS := -llog
+LOCAL_LDFLAGS += -Wl,--exclude-libs,ALL
+include $(BUILD_EXECUTABLE)
 
 $(call import-module,android/native_app_glue)
 $(call import-module,third_party/googletest)

@@ -39,6 +39,7 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
 
     if (BUILD_WSI_WAYLAND_SUPPORT)
         find_package(Wayland REQUIRED)
+        include_directories(${WAYLAND_CLIENT_INCLUDE_DIR})
     endif()
 
     if (BUILD_WSI_MIR_SUPPORT)
@@ -347,6 +348,8 @@ configure_file(
 add_custom_target(uninstall
     COMMAND ${CMAKE_COMMAND} -P ${CMAKE_CURRENT_BINARY_DIR}/cmake_uninstall.cmake)
 endif()
+
+add_definitions(-DAPI_NAME="${API_NAME}")
 
 # loader: Generic VULKAN ICD loader
 # tests: VULKAN tests

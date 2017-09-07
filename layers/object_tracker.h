@@ -170,7 +170,7 @@ bool ValidateObject(T1 dispatchable_object, T2 object, VulkanObjectType object_t
                         (object_type == kVulkanObjectTypeImage && other_device_data.second->swapchainImageMap.find(object_handle) !=
                                                                       other_device_data.second->swapchainImageMap.end())) {
                         // Object found on other device, report an error if object has a device parent error code
-                        if (wrong_device_code != VALIDATION_ERROR_UNDEFINED) {
+                        if ((wrong_device_code != VALIDATION_ERROR_UNDEFINED) && (object_type != kVulkanObjectTypeSurfaceKHR)) {
                             return log_msg(device_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, debug_object_type,
                                            object_handle, __LINE__, wrong_device_code, LayerName,
                                            "Object 0x%" PRIxLEAST64

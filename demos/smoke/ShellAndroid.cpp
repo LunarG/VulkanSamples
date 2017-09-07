@@ -112,7 +112,6 @@ ShellAndroid::ShellAndroid(android_app &app, Game &game) : Shell(game), app_(app
 
     instance_extensions_.push_back(VK_KHR_ANDROID_SURFACE_EXTENSION_NAME);
 
-    app_dummy();
     app_.userData = this;
     app_.onAppCmd = on_app_cmd;
     app_.onInputEvent = on_input_event;

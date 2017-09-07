@@ -1604,7 +1604,7 @@ Demo::Demo()
             vk::CompositeAlphaFlagBitsKHR::ePostMultiplied,
             vk::CompositeAlphaFlagBitsKHR::eInherit,
         };
-        for (uint32_t i = 0; i < sizeof(compositeAlphaFlags); i++) {
+        for (uint32_t i = 0; i < ARRAY_SIZE(compositeAlphaFlags); i++) {
             if (surfCapabilities.supportedCompositeAlpha & compositeAlphaFlags[i]) {
                 compositeAlpha = compositeAlphaFlags[i];
                 break;

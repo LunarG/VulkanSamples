@@ -77,7 +77,8 @@ target_link_libraries(VkLayer_core_validation PRIVATE
         log layer_utils SPIRV-Tools-prebuilt)
 
 add_library(VkLayer_parameter_validation SHARED
-        ${SRC_DIR}/layers/parameter_validation.cpp
+        ${COMMON_DIR}/include/parameter_validation.cpp
+        ${SRC_DIR}/layers/parameter_validation_utils.cpp
         ${SRC_DIR}/layers/vk_layer_table.cpp)
 target_include_directories(VkLayer_parameter_validation PRIVATE
         ${SRC_DIR}/include

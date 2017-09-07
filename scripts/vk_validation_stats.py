@@ -50,13 +50,13 @@ generated_layer_source_directories = [
 'release',
 ]
 generated_layer_source_files = [
-'parameter_validation.h',
+'parameter_validation.cpp',
 'object_tracker.cpp',
 ]
 layer_source_files = [
 '../layers/core_validation.cpp',
 '../layers/descriptor_sets.cpp',
-'../layers/parameter_validation.cpp',
+'../layers/parameter_validation_utils.cpp',
 '../layers/object_tracker_utils.cpp',
 '../layers/shader_validation.cpp',
 '../layers/buffer_validation.cpp',

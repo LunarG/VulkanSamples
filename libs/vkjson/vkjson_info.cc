@@ -18,7 +18,10 @@
 // limitations under the License.
 ///////////////////////////////////////////////////////////////////////////////
 
+#ifndef VK_PROTOTYPES
 #define VK_PROTOTYPES
+#endif
+
 #include "vkjson.h"
 
 #include <assert.h>
@@ -121,7 +124,11 @@ bool Dump(const VkJsonInstance& instance, const Options& options) {
   std::string output_file;
   if (options.output_file.empty()) {
     assert(out_device);
+#if defined(ANDROID)
+    output_file.assign("/sdcard/Android/" + std::string(out_device->properties.deviceName));
+#else
     output_file.assign(out_device->properties.deviceName);
+#endif
     output_file.append(".json");
   } else {
     output_file = options.output_file;
@@ -153,6 +160,11 @@ bool Dump(const VkJsonInstance& instance, const Options& options) {
 }
 
 int main(int argc, char* argv[]) {
+#if defined(ANDROID)
+  int vulkanSupport = InitVulkan();
+  if (vulkanSupport == 0)
+    return 1;
+#endif
   Options options;
   if (!ParseOptions(argc, argv, &options))
     return 1;

@@ -134,6 +134,10 @@ bool VkRenderFramework::DeviceExtensionSupported(VkPhysicalDevice dev, const cha
 };
 
 void VkRenderFramework::InitFramework(PFN_vkDebugReportCallbackEXT dbgFunction, void *userData) {
+    if (InstanceLayerSupported("VK_LAYER_LUNARG_device_profile_api")) {
+        m_instance_layer_names.push_back("VK_LAYER_LUNARG_device_profile_api");
+    }
+
     // Assert not already initialized
     ASSERT_EQ((VkInstance)0, inst);
 
@@ -141,7 +145,7 @@ void VkRenderFramework::InitFramework(PFN_vkDebugReportCallbackEXT dbgFunction, 
     for (auto layer = m_instance_layer_names.begin(); layer != m_instance_layer_names.end();) {
         if (!InstanceLayerSupported(*layer)) {
             ADD_FAILURE() << "InitFramework(): Requested layer " << *layer << " was not found. Disabled.";
-            layer = m_instance_extension_names.erase(layer);
+            layer = m_instance_layer_names.erase(layer);
         } else {
             ++layer;
         }

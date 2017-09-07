@@ -851,7 +851,48 @@ values in the following Windows registry keys:
 
 For each value in these keys which has DWORD data set to 0, the loader opens
 the JSON manifest file specified by the name of the value. Each name must be a
-full pathname to the manifest file.  The Vulkan loader will open each info file
+full pathname to the manifest file.
+
+Additionally, the loader will scan through registry keys specific to Display
+Adapters and all Software Components associated with these adapters for the
+locations of JSON manifest files. These keys are located in device keys
+created during driver installation and contain configuration information
+for base settings, including Vulkan, OpenGL, and Direct3D ICD location.
+
+The Device Adapter and Software Component key paths should be obtained through the PnP
+Configuration Manager API. The `000X` key will be a numbered key, where each
+device is assigned a different number.
+
+```
+   HKEY_LOCAL_MACHINE\System\CurrentControlSet\Control\Class\{Adapter GUID}\000X\VulkanExplicitLayers
+   HKEY_LOCAL_MACHINE\System\CurrentControlSet\Control\Class\{Adapter GUID}\000X\VulkanImplicitLayers
+   HKEY_LOCAL_MACHINE\System\CurrentControlSet\Control\Class\{Software Component GUID}\000X\VulkanExplicitLayers
+   HKEY_LOCAL_MACHINE\System\CurrentControlSet\Control\Class\{Software Component GUID}\000X\VulkanImplicitLayers
+```
+
+In addition, on 64-bit systems there may be another set of registry values, listed
+below. These values record the locations of 32-bit layers on 64-bit operating systems,
+in the same way as the Windows-on-Windows functionality.
+
+```
+   HKEY_LOCAL_MACHINE\System\CurrentControlSet\Control\Class\{Adapter GUID}\000X\VulkanExplicitLayersWow
+   HKEY_LOCAL_MACHINE\System\CurrentControlSet\Control\Class\{Adapter GUID}\000X\VulkanImplicitLayersWow
+   HKEY_LOCAL_MACHINE\System\CurrentControlSet\Control\Class\{Software Component GUID}\000X\VulkanExplicitLayersWow
+   HKEY_LOCAL_MACHINE\System\CurrentControlSet\Control\Class\{Software Component GUID}\000X\VulkanImplicitLayersWow
+```
+
+If any of the above values exist and is of type `REG_SZ`, the loader will open the JSON
+manifest file specified by the key value. Each value must be a full absolute
+path to a JSON manifest file. A key value may also be of type `REG_MULTI_SZ`, in
+which case the value will be interpreted as a list of paths to JSON manifest files.
+
+In general, applications should install layers into the `SOFTWARE\Khrosos\Vulkan`
+paths. The PnP registry locations are intended specifically for layers that are
+distrubuted as part of a driver installation. An application installer should not
+modify the device-specific registries, while a device driver should not modify
+the system wide registries.
+
+The Vulkan loader will open each manifest file that is given
 to obtain information about the layer, including the name or pathname of a
 shared library (".dll") file.  However, if VK\_LAYER\_PATH is defined, then the
 loader will instead look at the paths defined by that variable instead of using
@@ -1886,8 +1927,36 @@ for more details.
 
 #### ICD Discovery on Windows
 
-In order to find installed ICDs, the Vulkan loader will scan the
-values in the following Windows registry key:
+In order to find installed ICDs, the loader scans through registry keys specific to Display
+Adapters and all Software Components associated with these adapters for the
+locations of JSON manifest files. These keys are located in device keys
+created during driver installation and contain configuration information
+for base settings, including OpenGL and Direct3D ICD location.
+
+The Device Adapter and Software Component key paths should be obtained through the PnP
+Configuration Manager API. The `000X` key will be a numbered key, where each
+device is assigned a different number.
+
+```
+   HKEY_LOCAL_MACHINE\System\CurrentControlSet\Control\Class\{Adapter GUID}\000X\VulkanDriverName
+   HKEY_LOCAL_MACHINE\System\CurrentControlSet\Control\Class\{SoftwareComponent GUID}\000X\VulkanDriverName
+```
+
+In addition, on 64-bit systems there may be another set of registry values, listed
+below. These values record the locations of 32-bit layers on 64-bit operating systems,
+in the same way as the Windows-on-Windows functionality.
+
+```
+   HKEY_LOCAL_MACHINE\System\CurrentControlSet\Control\Class\{Adapter GUID}\000X\VulkanDriverNameWow
+   HKEY_LOCAL_MACHINE\System\CurrentControlSet\Control\Class\{SoftwareComponent GUID}\000X\VulkanDriverNameWow
+```
+
+If any of the above values exist and is of type `REG_SZ`, the loader will open the JSON
+manifest file specified by the key value. Each value must be a full absolute
+path to a JSON manifest file. The values may also be of type `REG_MULTI_SZ`, in
+which case the value will be interpreted as a list of paths to JSON manifest files.
+
+Additionally, the Vulkan loader will scan the values in the following Windows registry key:
 
 ```
    HKEY_LOCAL_MACHINE\SOFTWARE\Khronos\Vulkan\Drivers
@@ -1900,12 +1969,10 @@ registry location:
    HKEY_LOCAL_MACHINE\SOFTWARE\WOW6432Node\Khronos\Vulkan\Drivers
 ```
 
-The loader will look at the appropriate registry location and check each value
-listed.  If the key is of type DWORD, and it has a value of 0, the loader will
-open the JSON manifest file specified by the name.  Each name must be a full
-pathname to a text manifest file.  The Vulkan loader will attempt to open each
-manifest file to obtain the information about an ICD's shared library (".dll")
-file. 
+Every ICD in these locations should be given as a DWORD, with value 0, where
+the name of the value is the full path to a JSON manifest file. The Vulkan loader
+will attempt to open each manifest file to obtain the information about an ICD's
+shared library (".dll") file.
 
 For example, let us assume the registry contains the following data:
 
@@ -1922,29 +1989,13 @@ the value is 0, then the loader will attempt to load the file.  In this case,
 the loader will open the first and last listings, but not the middle.  This
 is because the value of 1 for vendorb_vk.json disables the driver.
 
-Additionaly the loader will scan through registry keys specific to Display
-Adapters and all SoftwareComponents assocatied with these adapters for the
-locations of JSON manifest files. These keys are reflecting HKR device hive
-created during driver installation and contain configuration for base settings,
-including OpenGL/D3D ICD location.
-
-The Device Adapter and SoftwareComponent key paths should be obtained via PnP
-Configuration Manager API. In each of this path, a "VulkanDriverName" (and
-"VulkanDriverNameWow" for 32-bit Windows on Windows compatibility) key can be
-present, what should look like:
-```
-   HKEY_LOCAL_MACHINE\System\CurrentControlSet\Control\Class\{Adapter GUID}\000X\VulkanDriverName
-   HKEY_LOCAL_MACHINE\System\CurrentControlSet\Control\Class\{Adapter GUID}\000X\VulkanDriverNameWow
-   
-   HKEY_LOCAL_MACHINE\System\CurrentControlSet\Control\Class\{SoftwareComponent GUID}\000X\VulkanDriverName
-   HKEY_LOCAL_MACHINE\System\CurrentControlSet\Control\Class\{SoftwareComponent GUID}\000X\VulkanDriverNameWow
-```
-If any of these keys exsist and is of type REG_SZ, the loader will open the JSON
-manifest file specified by the key valye. Each value must be a full absolute
-path to a JSON manifest file.
-
 The Vulkan loader will open each enabled manifest file found to obtain the name
 or pathname of an ICD shared library (".DLL") file.
+
+ICDs should use the registry locations from the PnP Configuration Manager wherever
+practical. That location clearly ties the ICD to a given device. The
+`SOFTWARE\Khronos\Vulkan\Drivers` location is the older method for locating ICDs,
+and is retained for backwards compatibility.
 
 See the [ICD Manifest File Format](#icd-manifest-file-format) section for more
 details.

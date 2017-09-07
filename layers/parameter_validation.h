@@ -25,6 +25,8 @@
 #include <cstdlib>
 #include <string>
 #include <bitset>
+#include <mutex>
+#include <unordered_set>
 
 #include "vulkan/vulkan.h"
 #include "vk_enum_string_helper.h"
@@ -36,6 +38,22 @@
 #include "parameter_name.h"
 
 namespace parameter_validation {
+
+extern const uint32_t GeneratedHeaderVersion;
+extern const std::unordered_map<std::string, void*> name_to_funcptr_map;
+
+extern const VkQueryPipelineStatisticFlags AllVkQueryPipelineStatisticFlagBits;
+extern const VkColorComponentFlags AllVkColorComponentFlagBits;
+extern const VkShaderStageFlags AllVkShaderStageFlagBits;
+extern const VkQueryControlFlags AllVkQueryControlFlagBits;
+
+extern const std::vector<VkCompareOp> AllVkCompareOpEnums;
+extern const std::vector<VkStencilOp> AllVkStencilOpEnums;
+extern const std::vector<VkBlendFactor> AllVkBlendFactorEnums;
+extern const std::vector<VkBlendOp> AllVkBlendOpEnums;
+extern const std::vector<VkLogicOp> AllVkLogicOpEnums;
+extern const std::vector<VkBorderColor> AllVkBorderColorEnums;
+extern const std::vector<VkImageLayout> AllVkImageLayoutEnums;
 
 struct instance_layer_data {
     VkInstance instance = VK_NULL_HANDLE;
@@ -116,9 +134,6 @@ const uint32_t ExtEnumBaseValue = 1000000000;
 // The value of all VK_xxx_MAX_ENUM tokens
 const uint32_t MaxEnumValue = 0x7FFFFFFF;
 
-// Forward declaration
-template <typename T>
-bool OutputExtensionError(const T *layer_data, const std::string &api_name, const std::string &extension_name);
 
 /**
 * Validate a minimum value.

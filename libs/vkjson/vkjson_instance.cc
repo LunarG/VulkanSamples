@@ -18,7 +18,10 @@
 // limitations under the License.
 ///////////////////////////////////////////////////////////////////////////////
 
+#ifndef VK_PROTOTYPES
 #define VK_PROTOTYPES
+#endif
+
 #include "vkjson.h"
 
 #include <utility>

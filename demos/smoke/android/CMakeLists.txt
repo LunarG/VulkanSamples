@@ -32,6 +32,11 @@ set(CMAKE_CXX_FLAGS
             -Wextra -Wno-unused-parameter \
             -DVK_NO_PROTOTYPES -DVK_USE_PLATFORM_ANDROID_KHR \
             -DGLM_FORCE_RADIANS")
+
+# Force export ANativeActivity_onCreate(),
+# Refer to: https://github.com/android-ndk/ndk/issues/381.
+set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -u ANativeActivity_onCreate")
+
 add_library(Smoke SHARED
             ${smokeDir}/Game.cpp
             ${smokeDir}/Meshes.cpp

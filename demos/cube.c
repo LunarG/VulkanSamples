@@ -1250,7 +1250,7 @@ static void demo_prepare_buffers(struct demo *demo) {
         VK_COMPOSITE_ALPHA_POST_MULTIPLIED_BIT_KHR,
         VK_COMPOSITE_ALPHA_INHERIT_BIT_KHR,
     };
-    for (uint32_t i = 0; i < sizeof(compositeAlphaFlags); i++) {
+    for (uint32_t i = 0; i < ARRAY_SIZE(compositeAlphaFlags); i++) {
         if (surfCapabilities.supportedCompositeAlpha & compositeAlphaFlags[i]) {
             compositeAlpha = compositeAlphaFlags[i];
             break;
@@ -4131,8 +4131,6 @@ static void processCommand(struct android_app* app, int32_t cmd) {
 
 void android_main(struct android_app *app)
 {
-    app_dummy();
-
 #ifdef ANDROID
     int vulkanSupport = InitVulkan();
     if (vulkanSupport == 0)

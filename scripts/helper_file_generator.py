@@ -787,7 +787,15 @@ class HelperFileOutputGenerator(OutputGenerator):
                                     '        break;\n'
                                     '        default:\n'
                                     '        break;\n'
+                                    '    }\n',
+                                    'VkShaderModuleCreateInfo' :
+                                    '    if (in_struct->pCode) {\n'
+                                    '        pCode = reinterpret_cast<uint32_t *>(new uint8_t[codeSize]);\n'
+                                    '        memcpy((void *)pCode, (void *)in_struct->pCode, codeSize);\n'
                                     '    }\n'}
+            custom_destruct_txt = {'VkShaderModuleCreateInfo' :
+                                   '    if (pCode)\n'
+                                   '        delete[] reinterpret_cast<const uint8_t *>(pCode);\n' }
 
             for member in item.members:
                 m_type = member.type
@@ -864,6 +872,8 @@ class HelperFileOutputGenerator(OutputGenerator):
                 init_list = init_list[:-1] # hack off final comma
             if item.name in custom_construct_txt:
                 construct_txt = custom_construct_txt[item.name]
+            if item.name in custom_destruct_txt:
+                destruct_txt = custom_destruct_txt[item.name]
             safe_struct_body.append("\n%s::%s(const %s* in_struct) :%s\n{\n%s}" % (ss_name, ss_name, item.name, init_list, construct_txt))
             if '' != default_init_list:
                 default_init_list = " :%s" % (default_init_list[:-1])

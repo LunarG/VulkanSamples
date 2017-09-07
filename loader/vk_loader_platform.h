@@ -172,11 +172,6 @@ static inline void loader_platform_thread_cond_broadcast(loader_platform_thread_
 #define SECONDARY_VK_REGISTRY_HIVE HKEY_CURRENT_USER
 #define SECONDARY_VK_REGISTRY_HIVE_STR "HKEY_CURRENT_USER"
 #define DEFAULT_VK_DRIVERS_INFO "SOFTWARE\\Khronos\\" API_NAME "\\Drivers"
-#ifdef _WIN64
-#define HKR_VK_DRIVER_NAME API_NAME "DriverName"
-#else
-#define HKR_VK_DRIVER_NAME API_NAME "DriverNameWow"
-#endif
 #define DEFAULT_VK_DRIVERS_PATH ""
 #define DEFAULT_VK_ELAYERS_INFO "SOFTWARE\\Khronos\\" API_NAME "\\ExplicitLayers"
 #define DEFAULT_VK_ILAYERS_INFO "SOFTWARE\\Khronos\\" API_NAME "\\ImplicitLayers"
@@ -191,6 +186,32 @@ static inline void loader_platform_thread_cond_broadcast(loader_platform_thread_
 #define RELATIVE_VK_ELAYERS_INFO ""
 #define RELATIVE_VK_ILAYERS_INFO ""
 #define PRINTF_SIZE_T_SPECIFIER "%Iu"
+
+#if defined(_WIN32)
+// Get the key for the plug n play driver registry
+// The string returned by this function should NOT be freed
+static inline const char *LoaderPnpDriverRegistry() {
+    BOOL is_wow;
+    IsWow64Process(GetCurrentProcess(), &is_wow);
+    return is_wow ? (API_NAME "DriverNameWow") : (API_NAME "DriverName");
+}
+
+// Get the key for the plug 'n play explicit layer registry
+// The string returned by this function should NOT be freed
+static inline const char *LoaderPnpELayerRegistry() {
+    BOOL is_wow;
+    IsWow64Process(GetCurrentProcess(), &is_wow);
+    return is_wow ? (API_NAME "ExplicitLayersWow") : (API_NAME "ExplicitLayers");
+}
+// Get the key for the plug 'n play implicit layer registry
+// The string returned by this function should NOT be freed
+
+static inline const char *LoaderPnpILayerRegistry() {
+    BOOL is_wow;
+    IsWow64Process(GetCurrentProcess(), &is_wow);
+    return is_wow ? (API_NAME "ImplicitLayersWow") : (API_NAME "ImplicitLayers");
+}
+#endif
 
 // File IO
 static bool loader_platform_file_exists(const char *path) {
