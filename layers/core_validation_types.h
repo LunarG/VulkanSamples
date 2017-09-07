@@ -765,10 +765,9 @@ class FRAMEBUFFER_STATE : public BASE_NODE {
 public:
     VkFramebuffer framebuffer;
     safe_VkFramebufferCreateInfo createInfo;
-    std::shared_ptr<RENDER_PASS_STATE> const rp_state;
+    std::shared_ptr<RENDER_PASS_STATE> rp_state;
     std::vector<MT_FB_ATTACHMENT_INFO> attachments;
-    FRAMEBUFFER_STATE(VkFramebuffer fb, const VkFramebufferCreateInfo *pCreateInfo,
-                      std::shared_ptr<RENDER_PASS_STATE> const rpstate)
+    FRAMEBUFFER_STATE(VkFramebuffer fb, const VkFramebufferCreateInfo *pCreateInfo, std::shared_ptr<RENDER_PASS_STATE> &&rpstate)
         : framebuffer(fb), createInfo(pCreateInfo), rp_state(rpstate){};
 };
 
@@ -790,7 +789,7 @@ IMAGE_VIEW_STATE *GetImageViewState(const layer_data *, VkImageView);
 SWAPCHAIN_NODE *GetSwapchainNode(const layer_data *, VkSwapchainKHR);
 GLOBAL_CB_NODE *GetCBNode(layer_data const *my_data, const VkCommandBuffer cb);
 RENDER_PASS_STATE *GetRenderPassState(layer_data const *dev_data, VkRenderPass renderpass);
-std::shared_ptr<RENDER_PASS_STATE> const GetRenderPassStateSharedPtr(layer_data const *dev_data, VkRenderPass renderpass);
+std::shared_ptr<RENDER_PASS_STATE> GetRenderPassStateSharedPtr(layer_data const *dev_data, VkRenderPass renderpass);
 FRAMEBUFFER_STATE *GetFramebufferState(const layer_data *my_data, VkFramebuffer framebuffer);
 COMMAND_POOL_NODE *GetCommandPoolNode(layer_data *dev_data, VkCommandPool pool);
 shader_module const *GetShaderModuleState(layer_data const *dev_data, VkShaderModule module);

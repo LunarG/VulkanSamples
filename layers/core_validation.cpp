@@ -705,7 +705,7 @@ RENDER_PASS_STATE *GetRenderPassState(layer_data const *dev_data, VkRenderPass r
     return it->second.get();
 }
 
-std::shared_ptr<RENDER_PASS_STATE> const GetRenderPassStateSharedPtr(layer_data const *dev_data, VkRenderPass renderpass) {
+std::shared_ptr<RENDER_PASS_STATE> GetRenderPassStateSharedPtr(layer_data const *dev_data, VkRenderPass renderpass) {
     auto it = dev_data->renderPassMap.find(renderpass);
     if (it == dev_data->renderPassMap.end()) {
         return nullptr;
@@ -7938,7 +7938,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateRenderPass(VkDevice device, const VkRenderP
         std::vector<int32_t> subpass_to_dep_index(pCreateInfo->subpassCount);
         skip |= CreatePassDAG(dev_data, pCreateInfo, subpass_to_node, has_self_dependency, subpass_to_dep_index);
 
-        auto render_pass = unique_ptr<RENDER_PASS_STATE>(new RENDER_PASS_STATE(pCreateInfo));
+        auto render_pass = std::make_shared<RENDER_PASS_STATE>(pCreateInfo);
         render_pass->renderPass = *pRenderPass;
         render_pass->hasSelfDependency = has_self_dependency;
         render_pass->subpassToNode = subpass_to_node;
