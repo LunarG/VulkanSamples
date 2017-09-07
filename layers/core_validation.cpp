@@ -804,7 +804,7 @@ static bool logInvalidAttachmentMessage(layer_data const *dev_data, const char *
 static bool validateAttachmentCompatibility(layer_data const *dev_data, const char *type1_string,
                                             const RENDER_PASS_STATE *rp1_state, const char *type2_string,
                                             const RENDER_PASS_STATE *rp2_state, uint32_t primary_attach, uint32_t secondary_attach,
-                                            bool is_multi, const char *caller, UNIQUE_VALIDATION_ERROR_CODE error_code) {
+                                            const char *caller, UNIQUE_VALIDATION_ERROR_CODE error_code) {
     bool skip = false;
     const auto &primaryPassCI = rp1_state->createInfo;
     const auto &secondaryPassCI = rp2_state->createInfo;
@@ -835,7 +835,7 @@ static bool validateAttachmentCompatibility(layer_data const *dev_data, const ch
         skip |= logInvalidAttachmentMessage(dev_data, type1_string, rp1_state, type2_string, rp2_state, primary_attach,
                                             secondary_attach, "They have different samples.", caller, error_code);
     }
-    if (is_multi && primaryPassCI.pAttachments[primary_attach].flags != secondaryPassCI.pAttachments[secondary_attach].flags) {
+    if (primaryPassCI.pAttachments[primary_attach].flags != secondaryPassCI.pAttachments[secondary_attach].flags) {
         skip |=
             logInvalidAttachmentMessage(dev_data, type1_string, rp1_state, type2_string, rp2_state, primary_attach, secondary_attach,
                                         "They have different flags.", caller, error_code);
@@ -846,7 +846,7 @@ static bool validateAttachmentCompatibility(layer_data const *dev_data, const ch
 
 static bool validateSubpassCompatibility(layer_data const *dev_data, const char *type1_string, const RENDER_PASS_STATE *rp1_state,
                                          const char *type2_string, const RENDER_PASS_STATE *rp2_state, const int subpass,
-                                         bool is_multi, const char *caller, UNIQUE_VALIDATION_ERROR_CODE error_code) {
+                                         const char *caller, UNIQUE_VALIDATION_ERROR_CODE error_code) {
     bool skip = false;
     const auto &primary_desc = rp1_state->createInfo.pSubpasses[subpass];
     const auto &secondary_desc = rp2_state->createInfo.pSubpasses[subpass];
@@ -860,7 +860,7 @@ static bool validateSubpassCompatibility(layer_data const *dev_data, const char 
             secondary_input_attach = secondary_desc.pInputAttachments[i].attachment;
         }
         skip |= validateAttachmentCompatibility(dev_data, type1_string, rp1_state, type2_string, rp2_state, primary_input_attach,
-                                                secondary_input_attach, is_multi, caller, error_code);
+                                                secondary_input_attach, caller, error_code);
     }
     uint32_t maxColorAttachmentCount = std::max(primary_desc.colorAttachmentCount, secondary_desc.colorAttachmentCount);
     for (uint32_t i = 0; i < maxColorAttachmentCount; ++i) {
@@ -872,7 +872,7 @@ static bool validateSubpassCompatibility(layer_data const *dev_data, const char 
             secondary_color_attach = secondary_desc.pColorAttachments[i].attachment;
         }
         skip |= validateAttachmentCompatibility(dev_data, type1_string, rp1_state, type2_string, rp2_state, primary_color_attach,
-                                                secondary_color_attach, is_multi, caller, error_code);
+                                                secondary_color_attach, caller, error_code);
         uint32_t primary_resolve_attach = VK_ATTACHMENT_UNUSED, secondary_resolve_attach = VK_ATTACHMENT_UNUSED;
         if (i < primary_desc.colorAttachmentCount && primary_desc.pResolveAttachments) {
             primary_resolve_attach = primary_desc.pResolveAttachments[i].attachment;
@@ -881,7 +881,7 @@ static bool validateSubpassCompatibility(layer_data const *dev_data, const char 
             secondary_resolve_attach = secondary_desc.pResolveAttachments[i].attachment;
         }
         skip |= validateAttachmentCompatibility(dev_data, type1_string, rp1_state, type2_string, rp2_state, primary_resolve_attach,
-                                                secondary_resolve_attach, is_multi, caller, error_code);
+                                                secondary_resolve_attach, caller, error_code);
     }
     uint32_t primary_depthstencil_attach = VK_ATTACHMENT_UNUSED, secondary_depthstencil_attach = VK_ATTACHMENT_UNUSED;
     if (primary_desc.pDepthStencilAttachment) {
@@ -891,7 +891,7 @@ static bool validateSubpassCompatibility(layer_data const *dev_data, const char 
         secondary_depthstencil_attach = secondary_desc.pDepthStencilAttachment[0].attachment;
     }
     skip |= validateAttachmentCompatibility(dev_data, type1_string, rp1_state, type2_string, rp2_state, primary_depthstencil_attach,
-                                            secondary_depthstencil_attach, is_multi, caller, error_code);
+                                            secondary_depthstencil_attach, caller, error_code);
     return skip;
 }
 
@@ -914,8 +914,7 @@ static bool validateRenderPassCompatibility(layer_data const *dev_data, const ch
                     HandleToUint64(rp2_state->renderPass), rp2_state->createInfo.subpassCount, validation_error_map[error_code]);
     } else {
         for (uint32_t i = 0; i < rp1_state->createInfo.subpassCount; ++i) {
-            skip |= validateSubpassCompatibility(dev_data, type1_string, rp1_state, type2_string, rp2_state, i,
-                                                 rp1_state->createInfo.subpassCount > 1, caller, error_code);
+            skip |= validateSubpassCompatibility(dev_data, type1_string, rp1_state, type2_string, rp2_state, i, caller, error_code);
         }
     }
     return skip;
