@@ -5659,6 +5659,7 @@ static void PreCallRecordCmdPushDescriptorSetKHR(layer_data *device_data, VkComm
     new_desc->SetPushDescriptor();
     cb_state->lastBound[pipelineBindPoint].boundDescriptorSets[set] = new_desc.get();
     cb_state->lastBound[pipelineBindPoint].push_descriptors[set] = std::move(new_desc);
+    delete [] bindings;
 }
 
 VKAPI_ATTR void VKAPI_CALL CmdPushDescriptorSetKHR(VkCommandBuffer commandBuffer, VkPipelineBindPoint pipelineBindPoint,
