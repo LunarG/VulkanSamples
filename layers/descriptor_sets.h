@@ -102,6 +102,7 @@ class DescriptorSetLayout {
     VkDescriptorSetLayout GetDescriptorSetLayout() const { return layout_; };
     uint32_t GetTotalDescriptorCount() const { return descriptor_count_; };
     uint32_t GetDynamicDescriptorCount() const { return dynamic_descriptor_count_; };
+    VkDescriptorSetLayoutCreateFlags GetCreateFlags() const { return flags_; }
     // For a given binding, return the number of descriptors in that binding and all successive bindings
     uint32_t GetBindingCount() const { return binding_count_; };
     // Fill passed-in set with bindings
@@ -151,7 +152,7 @@ class DescriptorSetLayout {
     std::unordered_map<uint32_t, uint32_t> binding_to_global_end_index_map_;
     // For a given binding map to associated index in the dynamic offset array
     std::unordered_map<uint32_t, uint32_t> binding_to_dynamic_array_idx_map_;
-    // VkDescriptorSetLayoutCreateFlags flags_;
+    VkDescriptorSetLayoutCreateFlags flags_;
     uint32_t binding_count_;  // # of bindings in this layout
     std::vector<safe_VkDescriptorSetLayoutBinding> bindings_;
     uint32_t descriptor_count_;  // total # descriptors in this layout
@@ -383,8 +384,7 @@ class DescriptorSet : public BASE_NODE {
     };
     // Return true if any part of set has ever been updated
     bool IsUpdated() const { return some_update_; };
-    bool IsPushDescriptor() const { return push_descriptor_; };
-    void SetPushDescriptor() { push_descriptor_ = true;  };
+    bool IsPushDescriptor() const { return p_layout_->GetCreateFlags() & VK_DESCRIPTOR_SET_LAYOUT_CREATE_PUSH_DESCRIPTOR_BIT_KHR; };
 
    private:
     bool VerifyWriteUpdateContents(const VkWriteDescriptorSet *, const uint32_t, UNIQUE_VALIDATION_ERROR_CODE *,
@@ -404,7 +404,6 @@ class DescriptorSet : public BASE_NODE {
     // Ptr to device data used for various data look-ups
     const core_validation::layer_data *device_data_;
     const VkPhysicalDeviceLimits limits_;
-    bool push_descriptor_;
 };
 }
 #endif  // CORE_VALIDATION_DESCRIPTOR_SETS_H_

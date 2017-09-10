@@ -5656,7 +5656,6 @@ static void PreCallRecordCmdPushDescriptorSetKHR(layer_data *device_data, VkComm
     const VkDescriptorSetLayout desc_set_layout = 0;
     auto const shared_ds_layout = std::make_shared<cvdescriptorset::DescriptorSetLayout>(&layout_create_info, desc_set_layout);
     std::unique_ptr<cvdescriptorset::DescriptorSet> new_desc{new cvdescriptorset::DescriptorSet(0, 0, shared_ds_layout, device_data)};
-    new_desc->SetPushDescriptor();
     cb_state->lastBound[pipelineBindPoint].boundDescriptorSets[set] = new_desc.get();
     cb_state->lastBound[pipelineBindPoint].push_descriptors[set] = std::move(new_desc);
     delete [] bindings;
