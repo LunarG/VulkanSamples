@@ -25,8 +25,9 @@
 #include <cstdlib>
 #include <string>
 #include <bitset>
-#include <mutex>
+#include <unordered_map>
 #include <unordered_set>
+#include <mutex>
 
 #include "vulkan/vulkan.h"
 #include "vk_enum_string_helper.h"
@@ -79,6 +80,13 @@ struct layer_data {
     VkPhysicalDevice physical_device = VK_NULL_HANDLE;
     VkDevice device = VK_NULL_HANDLE;
     DeviceExtensions extensions;
+
+    struct SubpassesUsageStates {
+        std::unordered_set<uint32_t> subpasses_using_color_attachment;
+        std::unordered_set<uint32_t> subpasses_using_depthstencil_attachment;
+    };
+
+    std::unordered_map<VkRenderPass, SubpassesUsageStates> renderpasses_states;
 
     VkLayerDispatchTable dispatch_table = {};
 };

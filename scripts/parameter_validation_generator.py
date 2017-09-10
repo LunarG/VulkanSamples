@@ -152,6 +152,8 @@ class ParameterValidationOutputGenerator(OutputGenerator):
             'vkCreateDebugReportCallbackEXT',
             'vkDestroyDebugReportCallbackEXT',
             'vkCreateCommandPool',
+            'vkCreateRenderPass',
+            'vkDestroyRenderPass',
             ]
         # Structure fields to ignore
         self.structMemberBlacklist = { 'VkWriteDescriptorSet' : ['dstSet'] }
