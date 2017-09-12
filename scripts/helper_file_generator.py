@@ -93,15 +93,6 @@ class HelperFileOutputGenerator(OutputGenerator):
         self.StructType = namedtuple('StructType', ['name', 'value'])
         self.CommandParam = namedtuple('CommandParam', ['type', 'name', 'ispointer', 'isstaticarray', 'isconst', 'iscount', 'len', 'extstructs', 'cdecl'])
         self.StructMemberData = namedtuple('StructMemberData', ['name', 'members', 'ifdef_protect'])
-
-        self.custom_construct_params = {
-            # safe_VkGraphicsPipelineCreateInfo needs to know if subpass has color and\or depth\stencil attachments to use its pointers
-            'VkGraphicsPipelineCreateInfo' :
-                ', const bool uses_color_attachment, const bool uses_depthstencil_attachment',
-            # safe_VkPipelineViewportStateCreateInfo needs to know if viewport and scissor is dynamic to use its pointers
-            'VkPipelineViewportStateCreateInfo' :
-                ', const bool is_dynamic_viewports, const bool is_dynamic_scissors',
-        }
     #
     # Called once at the beginning of each run
     def beginFile(self, genOpts):
@@ -566,12 +557,12 @@ class HelperFileOutputGenerator(OutputGenerator):
                             safe_struct_header += '    %s* %s;\n' % (member.type, member.name)
                     else:
                         safe_struct_header += '%s;\n' % member.cdecl
-                safe_struct_header += '    safe_%s(const %s* in_struct%s);\n' % (item.name, item.name, self.custom_construct_params.get(item.name, ''))
-                safe_struct_header += '    safe_%s(const safe_%s& src%s);\n' % (item.name, item.name, self.custom_construct_params.get(item.name, ''))
+                safe_struct_header += '    safe_%s(const %s* in_struct);\n' % (item.name, item.name)
+                safe_struct_header += '    safe_%s(const safe_%s& src);\n' % (item.name, item.name)
                 safe_struct_header += '    safe_%s();\n' % item.name
                 safe_struct_header += '    ~safe_%s();\n' % item.name
-                safe_struct_header += '    void initialize(const %s* in_struct%s);\n' % (item.name, self.custom_construct_params.get(item.name, ''))
-                safe_struct_header += '    void initialize(const safe_%s* src%s);\n' % (item.name, self.custom_construct_params.get(item.name, ''))
+                safe_struct_header += '    void initialize(const %s* in_struct);\n' % item.name
+                safe_struct_header += '    void initialize(const safe_%s* src);\n' % item.name
                 safe_struct_header += '    %s *ptr() { return reinterpret_cast<%s *>(this); }\n' % (item.name, item.name)
                 safe_struct_header += '    %s const *ptr() const { return reinterpret_cast<%s const *>(this); }\n' % (item.name, item.name)
                 safe_struct_header += '};\n'
@@ -759,129 +750,49 @@ class HelperFileOutputGenerator(OutputGenerator):
             init_func_txt = ''      # Txt for initialize() function that takes struct ptr and inits members
             construct_txt = ''      # Body of constuctor as well as body of initialize() func following init_func_txt
             destruct_txt = ''
-
-            custom_construct_txt = {
-                # VkWriteDescriptorSet is special case because pointers may be non-null but ignored
-                'VkWriteDescriptorSet' :
-                    '    switch (descriptorType) {\n'
-                    '        case VK_DESCRIPTOR_TYPE_SAMPLER:\n'
-                    '        case VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER:\n'
-                    '        case VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE:\n'
-                    '        case VK_DESCRIPTOR_TYPE_STORAGE_IMAGE:\n'
-                    '        case VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT:\n'
-                    '        if (descriptorCount && in_struct->pImageInfo) {\n'
-                    '            pImageInfo = new VkDescriptorImageInfo[descriptorCount];\n'
-                    '            for (uint32_t i=0; i<descriptorCount; ++i) {\n'
-                    '                pImageInfo[i] = in_struct->pImageInfo[i];\n'
-                    '            }\n'
-                    '        }\n'
-                    '        break;\n'
-                    '        case VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER:\n'
-                    '        case VK_DESCRIPTOR_TYPE_STORAGE_BUFFER:\n'
-                    '        case VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC:\n'
-                    '        case VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC:\n'
-                    '        if (descriptorCount && in_struct->pBufferInfo) {\n'
-                    '            pBufferInfo = new VkDescriptorBufferInfo[descriptorCount];\n'
-                    '            for (uint32_t i=0; i<descriptorCount; ++i) {\n'
-                    '                pBufferInfo[i] = in_struct->pBufferInfo[i];\n'
-                    '            }\n'
-                    '        }\n'
-                    '        break;\n'
-                    '        case VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER:\n'
-                    '        case VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER:\n'
-                    '        if (descriptorCount && in_struct->pTexelBufferView) {\n'
-                    '            pTexelBufferView = new VkBufferView[descriptorCount];\n'
-                    '            for (uint32_t i=0; i<descriptorCount; ++i) {\n'
-                    '                pTexelBufferView[i] = in_struct->pTexelBufferView[i];\n'
-                    '            }\n'
-                    '        }\n'
-                    '        break;\n'
-                    '        default:\n'
-                    '        break;\n'
-                    '    }\n',
-                    'VkShaderModuleCreateInfo' :
-                    '    if (in_struct->pCode) {\n'
-                    '        pCode = reinterpret_cast<uint32_t *>(new uint8_t[codeSize]);\n'
-                    '        memcpy((void *)pCode, (void *)in_struct->pCode, codeSize);\n'
-                    '    }\n',
-                # VkGraphicsPipelineCreateInfo is special case because its pointers may be non-null but ignored
-                'VkGraphicsPipelineCreateInfo' :
-                    '    if (stageCount && in_struct->pStages) {\n'
-                    '        pStages = new safe_VkPipelineShaderStageCreateInfo[stageCount];\n'
-                    '        for (uint32_t i=0; i<stageCount; ++i) {\n'
-                    '            pStages[i].initialize(&in_struct->pStages[i]);\n'
-                    '        }\n'
-                    '    }\n'
-                    '    if (in_struct->pVertexInputState)\n'
-                    '        pVertexInputState = new safe_VkPipelineVertexInputStateCreateInfo(in_struct->pVertexInputState);\n'
-                    '    else\n'
-                    '        pVertexInputState = NULL;\n'
-                    '    if (in_struct->pInputAssemblyState)\n'
-                    '        pInputAssemblyState = new safe_VkPipelineInputAssemblyStateCreateInfo(in_struct->pInputAssemblyState);\n'
-                    '    else\n'
-                    '        pInputAssemblyState = NULL;\n'
-                    '    bool has_tessellation_stage = false;\n'
-                    '    if (stageCount && pStages)\n'
-                    '        for (uint32_t i=0; i<stageCount && !has_tessellation_stage; ++i)\n'
-                    '            if (pStages[i].stage == VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT || pStages[i].stage == VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT)\n'
-                    '                has_tessellation_stage = true;\n'
-                    '    if (in_struct->pTessellationState && has_tessellation_stage)\n'
-                    '        pTessellationState = new safe_VkPipelineTessellationStateCreateInfo(in_struct->pTessellationState);\n'
-                    '    else\n'
-                    '        pTessellationState = NULL; // original pTessellationState pointer ignored\n'
-                    '    bool has_rasterization = in_struct->pRasterizationState ? !in_struct->pRasterizationState->rasterizerDiscardEnable : false;\n'
-                    '    if (in_struct->pViewportState && has_rasterization) {\n'
-                    '        bool is_dynamic_viewports = false;\n'
-                    '        bool is_dynamic_scissors = false;\n'
-                    '        if (in_struct->pDynamicState && in_struct->pDynamicState->pDynamicStates) {\n'
-                    '            for (uint32_t i = 0; i < in_struct->pDynamicState->dynamicStateCount && !is_dynamic_viewports; ++i)\n'
-                    '                if (in_struct->pDynamicState->pDynamicStates[i] == VK_DYNAMIC_STATE_VIEWPORT)\n'
-                    '                    is_dynamic_viewports = true;\n'
-                    '            for (uint32_t i = 0; i < in_struct->pDynamicState->dynamicStateCount && !is_dynamic_scissors; ++i)\n'
-                    '                if (in_struct->pDynamicState->pDynamicStates[i] == VK_DYNAMIC_STATE_SCISSOR)\n'
-                    '                    is_dynamic_scissors = true;\n'
-                    '        }\n'
-                    '        pViewportState = new safe_VkPipelineViewportStateCreateInfo(in_struct->pViewportState, is_dynamic_viewports, is_dynamic_scissors);\n'
-                    '    } else\n'
-                    '        pViewportState = NULL; // original pViewportState pointer ignored\n'
-                    '    if (in_struct->pRasterizationState)\n'
-                    '        pRasterizationState = new safe_VkPipelineRasterizationStateCreateInfo(in_struct->pRasterizationState);\n'
-                    '    else\n'
-                    '        pRasterizationState = NULL;\n'
-                    '    if (in_struct->pMultisampleState && has_rasterization)\n'
-                    '        pMultisampleState = new safe_VkPipelineMultisampleStateCreateInfo(in_struct->pMultisampleState);\n'
-                    '    else\n'
-                    '        pMultisampleState = NULL; // original pMultisampleState pointer ignored\n'
-                    '    // needs a tracked subpass state uses_depthstencil_attachment\n'
-                    '    if (in_struct->pDepthStencilState && has_rasterization && uses_depthstencil_attachment)\n'
-                    '        pDepthStencilState = new safe_VkPipelineDepthStencilStateCreateInfo(in_struct->pDepthStencilState);\n'
-                    '    else\n'
-                    '        pDepthStencilState = NULL; // original pDepthStencilState pointer ignored\n'
-                    '    // needs a tracked subpass state usesColorAttachment\n'
-                    '    if (in_struct->pColorBlendState && has_rasterization && uses_color_attachment)\n'
-                    '        pColorBlendState = new safe_VkPipelineColorBlendStateCreateInfo(in_struct->pColorBlendState);\n'
-                    '    else\n'
-                    '        pColorBlendState = NULL; // original pColorBlendState pointer ignored\n'
-                    '    if (in_struct->pDynamicState)\n'
-                    '        pDynamicState = new safe_VkPipelineDynamicStateCreateInfo(in_struct->pDynamicState);\n'
-                    '    else\n'
-                    '        pDynamicState = NULL;\n',
-                 # VkPipelineViewportStateCreateInfo is special case because its pointers may be non-null but ignored
-                'VkPipelineViewportStateCreateInfo' :
-                    '    if (in_struct->pViewports && !is_dynamic_viewports) {\n'
-                    '        pViewports = new VkViewport[in_struct->viewportCount];\n'
-                    '        memcpy ((void *)pViewports, (void *)in_struct->pViewports, sizeof(VkViewport)*in_struct->viewportCount);\n'
-                    '    }\n'
-                    '    else\n'
-                    '        pViewports = NULL;\n'
-                    '    if (in_struct->pScissors && !is_dynamic_scissors) {\n'
-                    '        pScissors = new VkRect2D[in_struct->scissorCount];\n'
-                    '        memcpy ((void *)pScissors, (void *)in_struct->pScissors, sizeof(VkRect2D)*in_struct->scissorCount);\n'
-                    '    }\n'
-                    '    else\n'
-                    '        pScissors = NULL;\n',
-            }
-
+            # VkWriteDescriptorSet is special case because pointers may be non-null but ignored
+            custom_construct_txt = {'VkWriteDescriptorSet' :
+                                    '    switch (descriptorType) {\n'
+                                    '        case VK_DESCRIPTOR_TYPE_SAMPLER:\n'
+                                    '        case VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER:\n'
+                                    '        case VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE:\n'
+                                    '        case VK_DESCRIPTOR_TYPE_STORAGE_IMAGE:\n'
+                                    '        case VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT:\n'
+                                    '        if (descriptorCount && in_struct->pImageInfo) {\n'
+                                    '            pImageInfo = new VkDescriptorImageInfo[descriptorCount];\n'
+                                    '            for (uint32_t i=0; i<descriptorCount; ++i) {\n'
+                                    '                pImageInfo[i] = in_struct->pImageInfo[i];\n'
+                                    '            }\n'
+                                    '        }\n'
+                                    '        break;\n'
+                                    '        case VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER:\n'
+                                    '        case VK_DESCRIPTOR_TYPE_STORAGE_BUFFER:\n'
+                                    '        case VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC:\n'
+                                    '        case VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC:\n'
+                                    '        if (descriptorCount && in_struct->pBufferInfo) {\n'
+                                    '            pBufferInfo = new VkDescriptorBufferInfo[descriptorCount];\n'
+                                    '            for (uint32_t i=0; i<descriptorCount; ++i) {\n'
+                                    '                pBufferInfo[i] = in_struct->pBufferInfo[i];\n'
+                                    '            }\n'
+                                    '        }\n'
+                                    '        break;\n'
+                                    '        case VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER:\n'
+                                    '        case VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER:\n'
+                                    '        if (descriptorCount && in_struct->pTexelBufferView) {\n'
+                                    '            pTexelBufferView = new VkBufferView[descriptorCount];\n'
+                                    '            for (uint32_t i=0; i<descriptorCount; ++i) {\n'
+                                    '                pTexelBufferView[i] = in_struct->pTexelBufferView[i];\n'
+                                    '            }\n'
+                                    '        }\n'
+                                    '        break;\n'
+                                    '        default:\n'
+                                    '        break;\n'
+                                    '    }\n',
+                                    'VkShaderModuleCreateInfo' :
+                                    '    if (in_struct->pCode) {\n'
+                                    '        pCode = reinterpret_cast<uint32_t *>(new uint8_t[codeSize]);\n'
+                                    '        memcpy((void *)pCode, (void *)in_struct->pCode, codeSize);\n'
+                                    '    }\n'}
             custom_destruct_txt = {'VkShaderModuleCreateInfo' :
                                    '    if (pCode)\n'
                                    '        delete[] reinterpret_cast<const uint8_t *>(pCode);\n' }
@@ -963,7 +874,7 @@ class HelperFileOutputGenerator(OutputGenerator):
                 construct_txt = custom_construct_txt[item.name]
             if item.name in custom_destruct_txt:
                 destruct_txt = custom_destruct_txt[item.name]
-            safe_struct_body.append("\n%s::%s(const %s* in_struct%s) :%s\n{\n%s}" % (ss_name, ss_name, item.name, self.custom_construct_params.get(item.name, ''), init_list, construct_txt))
+            safe_struct_body.append("\n%s::%s(const %s* in_struct) :%s\n{\n%s}" % (ss_name, ss_name, item.name, init_list, construct_txt))
             if '' != default_init_list:
                 default_init_list = " :%s" % (default_init_list[:-1])
             safe_struct_body.append("\n%s::%s()%s\n{}" % (ss_name, ss_name, default_init_list))
@@ -972,13 +883,13 @@ class HelperFileOutputGenerator(OutputGenerator):
             copy_construct_txt = construct_txt.replace(' (in_struct->', ' (src.')     # Exclude 'if' blocks from next line
             copy_construct_txt = copy_construct_txt.replace('(in_struct->', '(*src.') # Pass object to copy constructors
             copy_construct_txt = copy_construct_txt.replace('in_struct->', 'src.')    # Modify remaining struct refs for src object
-            safe_struct_body.append("\n%s::%s(const %s& src%s)\n{\n%s%s}" % (ss_name, ss_name, ss_name, self.custom_construct_params.get(item.name, ''), copy_construct_init, copy_construct_txt)) # Copy constructor
+            safe_struct_body.append("\n%s::%s(const %s& src)\n{\n%s%s}" % (ss_name, ss_name, ss_name, copy_construct_init, copy_construct_txt)) # Copy constructor
             safe_struct_body.append("\n%s::~%s()\n{\n%s}" % (ss_name, ss_name, destruct_txt))
-            safe_struct_body.append("\nvoid %s::initialize(const %s* in_struct%s)\n{\n%s%s}" % (ss_name, item.name, self.custom_construct_params.get(item.name, ''), init_func_txt, construct_txt))
+            safe_struct_body.append("\nvoid %s::initialize(const %s* in_struct)\n{\n%s%s}" % (ss_name, item.name, init_func_txt, construct_txt))
             # Copy initializer uses same txt as copy constructor but has a ptr and not a reference
             init_copy = copy_construct_init.replace('src.', 'src->')
             init_construct = copy_construct_txt.replace('src.', 'src->')
-            safe_struct_body.append("\nvoid %s::initialize(const %s* src%s)\n{\n%s%s}" % (ss_name, ss_name, self.custom_construct_params.get(item.name, ''), init_copy, init_construct))
+            safe_struct_body.append("\nvoid %s::initialize(const %s* src)\n{\n%s%s}" % (ss_name, ss_name, init_copy, init_construct))
             if item.ifdef_protect != None:
                 safe_struct_body.append("#endif // %s\n" % item.ifdef_protect)
         return "\n".join(safe_struct_body)

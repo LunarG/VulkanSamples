@@ -1304,12 +1304,8 @@ void VkCommandBufferObj::ClearAllBuffers(VkClearColorValue clear_color, float de
     }
 
     if (depthStencilObj) {
-        VkImageAspectFlags aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT;
-        if (FormatIsDepthOnly(depthStencilObj->format())) aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
-        if (FormatIsStencilOnly(depthStencilObj->format())) aspectMask = VK_IMAGE_ASPECT_STENCIL_BIT;
-
         VkImageSubresourceRange dsRange = {};
-        dsRange.aspectMask = aspectMask;
+        dsRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
         dsRange.baseMipLevel = 0;
         dsRange.levelCount = VK_REMAINING_MIP_LEVELS;
         dsRange.baseArrayLayer = 0;
@@ -1317,7 +1313,7 @@ void VkCommandBufferObj::ClearAllBuffers(VkClearColorValue clear_color, float de
 
         // prepare the depth buffer for clear
 
-        memory_barrier.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+        memory_barrier.oldLayout = memory_barrier.newLayout;
         memory_barrier.newLayout = VK_IMAGE_LAYOUT_GENERAL;
         memory_barrier.image = depthStencilObj->handle();
         memory_barrier.subresourceRange = dsRange;
@@ -1329,7 +1325,7 @@ void VkCommandBufferObj::ClearAllBuffers(VkClearColorValue clear_color, float de
 
         // prepare depth buffer for rendering
         memory_barrier.image = depthStencilObj->handle();
-        memory_barrier.newLayout = depthStencilObj->Layout();
+        memory_barrier.newLayout = memory_barrier.oldLayout;
         memory_barrier.oldLayout = VK_IMAGE_LAYOUT_GENERAL;
         memory_barrier.subresourceRange = dsRange;
         vkCmdPipelineBarrier(handle(), src_stages, dest_stages, 0, 0, NULL, 0, NULL, 1, pmemory_barrier);

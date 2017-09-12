@@ -576,23 +576,7 @@ class PIPELINE_STATE : public BASE_NODE {
           pipeline_layout() {}
 
     void initGraphicsPipeline(const VkGraphicsPipelineCreateInfo *pCreateInfo) {
-        bool uses_color_attachment = false;
-        bool uses_depthstencil_attachment = false;
-        if (pCreateInfo->subpass < render_pass_ci.subpassCount) {
-            const auto &subpass = render_pass_ci.pSubpasses[pCreateInfo->subpass];
-
-            for (uint32_t i = 0; i < subpass.colorAttachmentCount; ++i) {
-                if (subpass.pColorAttachments[i].attachment != VK_ATTACHMENT_UNUSED) {
-                    uses_color_attachment = true;
-                    break;
-                }
-            }
-
-            if (subpass.pDepthStencilAttachment && subpass.pDepthStencilAttachment->attachment != VK_ATTACHMENT_UNUSED) {
-                uses_depthstencil_attachment = true;
-            }
-        }
-        graphicsPipelineCI.initialize(pCreateInfo, uses_color_attachment, uses_depthstencil_attachment);
+        graphicsPipelineCI.initialize(pCreateInfo);
         // Make sure compute pipeline is null
         VkComputePipelineCreateInfo emptyComputeCI = {};
         computePipelineCI.initialize(&emptyComputeCI);
@@ -601,15 +585,15 @@ class PIPELINE_STATE : public BASE_NODE {
             this->duplicate_shaders |= this->active_shaders & pPSSCI->stage;
             this->active_shaders |= pPSSCI->stage;
         }
-        if (graphicsPipelineCI.pVertexInputState) {
-            const auto pVICI = graphicsPipelineCI.pVertexInputState;
+        if (pCreateInfo->pVertexInputState) {
+            const VkPipelineVertexInputStateCreateInfo *pVICI = pCreateInfo->pVertexInputState;
             if (pVICI->vertexBindingDescriptionCount) {
                 this->vertexBindingDescriptions = std::vector<VkVertexInputBindingDescription>(
                     pVICI->pVertexBindingDescriptions, pVICI->pVertexBindingDescriptions + pVICI->vertexBindingDescriptionCount);
             }
         }
-        if (graphicsPipelineCI.pColorBlendState) {
-            const auto pCBCI = graphicsPipelineCI.pColorBlendState;
+        if (pCreateInfo->pColorBlendState) {
+            const VkPipelineColorBlendStateCreateInfo *pCBCI = pCreateInfo->pColorBlendState;
             if (pCBCI->attachmentCount) {
                 this->attachments = std::vector<VkPipelineColorBlendAttachmentState>(pCBCI->pAttachments,
                                                                                      pCBCI->pAttachments + pCBCI->attachmentCount);
@@ -621,7 +605,7 @@ class PIPELINE_STATE : public BASE_NODE {
         computePipelineCI.initialize(pCreateInfo);
         // Make sure gfx pipeline is null
         VkGraphicsPipelineCreateInfo emptyGraphicsCI = {};
-        graphicsPipelineCI.initialize(&emptyGraphicsCI, false, false);
+        graphicsPipelineCI.initialize(&emptyGraphicsCI);
         switch (computePipelineCI.stage.stage) {
             case VK_SHADER_STAGE_COMPUTE_BIT:
                 this->active_shaders |= VK_SHADER_STAGE_COMPUTE_BIT;

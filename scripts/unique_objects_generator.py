@@ -150,8 +150,6 @@ class UniqueObjectsOutputGenerator(OutputGenerator):
             'vkGetPhysicalDeviceDisplayProperties2KHR',
             'vkGetPhysicalDeviceDisplayPlaneProperties2KHR',
             'vkGetDisplayModeProperties2KHR',
-            'vkCreateRenderPass',
-            'vkDestroyRenderPass',
             ]
         # Commands shadowed by interface functions and are not implemented
         self.interface_functions = [
