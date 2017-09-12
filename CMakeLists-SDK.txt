@@ -216,8 +216,8 @@ else()
                  HINTS "${CMAKE_SOURCE_DIR}/../${BINDATA_DIR}" "${CMAKE_SOURCE_DIR}/../x86_64/lib" )
 endif()
 
+add_definitions(-DAPI_NAME="${API_NAME}")
+
 add_subdirectory(API-Samples)
 add_subdirectory(Sample-Programs/Hologram)
 add_subdirectory(Layer-Samples/Overlay)
-
-add_definitions(-DAPI_NAME="${API_NAME}")
