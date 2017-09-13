@@ -4935,6 +4935,9 @@ VKAPI_ATTR VkResult VKAPI_CALL terminator_CreateInstance(const VkInstanceCreateI
             goto out;
         }
 
+        // If any error happens after here, we need to remove the ICD from the list,
+        // because we've already added it, but haven't validated it
+
         icd_create_info.enabledExtensionCount = 0;
         struct loader_extension_list icd_exts;
 
@@ -5001,6 +5004,9 @@ VKAPI_ATTR VkResult VKAPI_CALL terminator_CreateInstance(const VkInstanceCreateI
             loader_log(ptr_instance, VK_DEBUG_REPORT_WARNING_BIT_EXT, 0,
                        "terminator_CreateInstance: Failed to CreateInstance and find "
                        "entrypoints with ICD.  Skipping ICD.");
+            ptr_instance->icd_terms = icd_term->next;
+            icd_term->next = NULL;
+            loader_icd_destroy(ptr_instance, icd_term, pAllocator);
             continue;
         }
 
