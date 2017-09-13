@@ -5639,26 +5639,11 @@ static void PreCallRecordCmdPushDescriptorSetKHR(layer_data *device_data, VkComm
             cb_state->lastBound[pipelineBindPoint].push_descriptors[set] = nullptr;
         }
     }
-    VkDescriptorSetLayoutCreateInfo layout_create_info{};
-    VkDescriptorSetLayoutBinding *bindings = new VkDescriptorSetLayoutBinding[descriptorWriteCount];
-    layout_create_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-    layout_create_info.flags = VK_DESCRIPTOR_SET_LAYOUT_CREATE_PUSH_DESCRIPTOR_BIT_KHR;
-    layout_create_info.bindingCount = descriptorWriteCount;
-    layout_create_info.pBindings = bindings;
-    for (uint32_t i = 0; i < descriptorWriteCount; i++) {
-        bindings[i].binding = pDescriptorWrites[i].dstBinding;
-        bindings[i].descriptorCount = pDescriptorWrites[i].descriptorCount;
-        bindings[i].descriptorType = pDescriptorWrites[i].descriptorType;
-        bindings[i].stageFlags = 0;
-        bindings[i].pImmutableSamplers = nullptr;
-    }
-
-    const VkDescriptorSetLayout desc_set_layout = 0;
-    auto const shared_ds_layout = std::make_shared<cvdescriptorset::DescriptorSetLayout>(&layout_create_info, desc_set_layout);
-    std::unique_ptr<cvdescriptorset::DescriptorSet> new_desc{new cvdescriptorset::DescriptorSet(0, 0, shared_ds_layout, device_data)};
+    const auto &layout_state = getPipelineLayout(device_data, layout);
+    std::unique_ptr<cvdescriptorset::DescriptorSet> new_desc{
+        new cvdescriptorset::DescriptorSet(0, 0, layout_state->set_layouts[set], device_data)};
     cb_state->lastBound[pipelineBindPoint].boundDescriptorSets[set] = new_desc.get();
     cb_state->lastBound[pipelineBindPoint].push_descriptors[set] = std::move(new_desc);
-    delete [] bindings;
 }
 
 VKAPI_ATTR void VKAPI_CALL CmdPushDescriptorSetKHR(VkCommandBuffer commandBuffer, VkPipelineBindPoint pipelineBindPoint,
