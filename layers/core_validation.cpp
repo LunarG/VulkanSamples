@@ -5720,35 +5720,43 @@ VKAPI_ATTR void VKAPI_CALL CmdBindVertexBuffers(VkCommandBuffer commandBuffer, u
                                                 const VkBuffer *pBuffers, const VkDeviceSize *pOffsets) {
     bool skip = false;
     layer_data *dev_data = GetLayerDataPtr(get_dispatch_key(commandBuffer), layer_data_map);
-    // TODO : Somewhere need to verify that VBs have correct usage state flagged
     unique_lock_t lock(global_lock);
 
     auto cb_node = GetCBNode(dev_data, commandBuffer);
-    if (cb_node) {
-        skip |=
-            ValidateCmdQueueFlags(dev_data, cb_node, "vkCmdBindVertexBuffers()", VK_QUEUE_GRAPHICS_BIT, VALIDATION_ERROR_18202415);
-        skip |= ValidateCmd(dev_data, cb_node, CMD_BINDVERTEXBUFFER, "vkCmdBindVertexBuffers()");
-        for (uint32_t i = 0; i < bindingCount; ++i) {
-            auto buffer_state = GetBufferState(dev_data, pBuffers[i]);
-            assert(buffer_state);
-            skip |= ValidateMemoryIsBoundToBuffer(dev_data, buffer_state, "vkCmdBindVertexBuffers()", VALIDATION_ERROR_182004e8);
-            std::function<bool()> function = [=]() {
-                return ValidateBufferMemoryIsValid(dev_data, buffer_state, "vkCmdBindVertexBuffers()");
-            };
-            cb_node->queue_submit_functions.push_back(function);
-            if (pOffsets[i] >= buffer_state->createInfo.size) {
-                skip |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT,
-                                HandleToUint64(buffer_state->buffer), __LINE__, VALIDATION_ERROR_182004e4, "DS",
-                                "vkCmdBindVertexBuffers() offset (0x%" PRIxLEAST64 ") is beyond the end of the buffer. %s",
-                                pOffsets[i], validation_error_map[VALIDATION_ERROR_182004e4]);
-            }
+    assert(cb_node);
+
+    skip |= ValidateCmdQueueFlags(dev_data, cb_node, "vkCmdBindVertexBuffers()", VK_QUEUE_GRAPHICS_BIT, VALIDATION_ERROR_18202415);
+    skip |= ValidateCmd(dev_data, cb_node, CMD_BINDVERTEXBUFFER, "vkCmdBindVertexBuffers()");
+    for (uint32_t i = 0; i < bindingCount; ++i) {
+        auto buffer_state = GetBufferState(dev_data, pBuffers[i]);
+        assert(buffer_state);
+        skip |= ValidateBufferUsageFlags(dev_data, buffer_state, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, true,
+                                         VALIDATION_ERROR_182004e6, "vkCmdBindVertexBuffers()", "VK_BUFFER_USAGE_VERTEX_BUFFER_BIT");
+        skip |= ValidateMemoryIsBoundToBuffer(dev_data, buffer_state, "vkCmdBindVertexBuffers()", VALIDATION_ERROR_182004e8);
+        if (pOffsets[i] >= buffer_state->createInfo.size) {
+            skip |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT,
+                            HandleToUint64(buffer_state->buffer), __LINE__, VALIDATION_ERROR_182004e4, "DS",
+                            "vkCmdBindVertexBuffers() offset (0x%" PRIxLEAST64 ") is beyond the end of the buffer. %s",
+                            pOffsets[i], validation_error_map[VALIDATION_ERROR_182004e4]);
         }
-        updateResourceTracking(cb_node, firstBinding, bindingCount, pBuffers);
-    } else {
-        assert(0);
     }
+
+    if (skip)
+        return;
+
+    for (uint32_t i = 0; i < bindingCount; ++i) {
+        auto buffer_state = GetBufferState(dev_data, pBuffers[i]);
+        assert(buffer_state);
+        std::function<bool()> function = [=]() {
+            return ValidateBufferMemoryIsValid(dev_data, buffer_state, "vkCmdBindVertexBuffers()");
+        };
+        cb_node->queue_submit_functions.push_back(function);
+    }
+
+    updateResourceTracking(cb_node, firstBinding, bindingCount, pBuffers);
+
     lock.unlock();
-    if (!skip) dev_data->dispatch_table.CmdBindVertexBuffers(commandBuffer, firstBinding, bindingCount, pBuffers, pOffsets);
+    dev_data->dispatch_table.CmdBindVertexBuffers(commandBuffer, firstBinding, bindingCount, pBuffers, pOffsets);
 }
 
 // Expects global_lock to be held by caller
