@@ -5686,9 +5686,10 @@ VKAPI_ATTR void VKAPI_CALL CmdBindIndexBuffer(VkCommandBuffer commandBuffer, VkB
     auto offset_align = GetIndexAlignment(indexType);
     if (offset % offset_align) {
         skip |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
-                        HandleToUint64(commandBuffer), __LINE__, DRAWSTATE_VTX_INDEX_ALIGNMENT_ERROR, "DS",
-                        "vkCmdBindIndexBuffer() offset (0x%" PRIxLEAST64 ") does not fall on alignment (%s) boundary.", offset,
-                        string_VkIndexType(indexType));
+                        HandleToUint64(commandBuffer), __LINE__, VALIDATION_ERROR_17e00360, "DS",
+                        "vkCmdBindIndexBuffer() offset (0x%" PRIxLEAST64 ") does not fall on alignment (%s) boundary. %s", offset,
+                        string_VkIndexType(indexType),
+                        validation_error_map[VALIDATION_ERROR_17e00360]);
     }
 
     if (skip)
