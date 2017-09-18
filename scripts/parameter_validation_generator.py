@@ -197,7 +197,7 @@ class ParameterValidationOutputGenerator(OutputGenerator):
             ]
         for vuid_filename in vuid_filename_locations:
             if os.path.isfile(vuid_filename):
-                self.vuid_file = open(vuid_filename, "r")
+                self.vuid_file = open(vuid_filename, "r", encoding="utf8")
                 break
         if self.vuid_file == None:
             print("Error: Could not find vk_validation_error_messages.h")

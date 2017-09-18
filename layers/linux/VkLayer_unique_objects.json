@@ -4,7 +4,7 @@
         "name": "VK_LAYER_GOOGLE_unique_objects",
         "type": "GLOBAL",
         "library_path": "./libVkLayer_unique_objects.so",
-        "api_version": "1.0.60",
+        "api_version": "1.0.61",
         "implementation_version": "1",
         "description": "Google Validation Layer"
     }
