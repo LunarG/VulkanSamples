@@ -33,7 +33,7 @@
 # include <memory>
 # include <vector>
 #endif /*VULKAN_HPP_DISABLE_ENHANCED_MODE*/
-static_assert( VK_HEADER_VERSION ==  60 , "Wrong VK_HEADER_VERSION!" );
+static_assert( VK_HEADER_VERSION ==  61 , "Wrong VK_HEADER_VERSION!" );
 
 // 32-bit vulkan is not typesafe for handles, so don't allow copy constructors on this platform by default.
 // To enable this feature on 32-bit platforms please define VULKAN_HPP_TYPESAFE_CONVERSION
@@ -2778,6 +2778,73 @@ namespace vk
 
   static_assert( sizeof( DescriptorUpdateTemplateKHR ) == sizeof( VkDescriptorUpdateTemplateKHR ), "handle and wrapper have different size!" );
 
+  class SamplerYcbcrConversionKHR
+  {
+  public:
+    SamplerYcbcrConversionKHR()
+      : m_samplerYcbcrConversionKHR(VK_NULL_HANDLE)
+    {}
+
+    SamplerYcbcrConversionKHR( std::nullptr_t )
+      : m_samplerYcbcrConversionKHR(VK_NULL_HANDLE)
+    {}
+
+    VULKAN_HPP_TYPESAFE_EXPLICIT SamplerYcbcrConversionKHR( VkSamplerYcbcrConversionKHR samplerYcbcrConversionKHR )
+       : m_samplerYcbcrConversionKHR( samplerYcbcrConversionKHR )
+    {}
+
+#if defined(VULKAN_HPP_TYPESAFE_CONVERSION)
+    SamplerYcbcrConversionKHR & operator=(VkSamplerYcbcrConversionKHR samplerYcbcrConversionKHR)
+    {
+      m_samplerYcbcrConversionKHR = samplerYcbcrConversionKHR;
+      return *this; 
+    }
+#endif
+
+    SamplerYcbcrConversionKHR & operator=( std::nullptr_t )
+    {
+      m_samplerYcbcrConversionKHR = VK_NULL_HANDLE;
+      return *this;
+    }
+
+    bool operator==( SamplerYcbcrConversionKHR const & rhs ) const
+    {
+      return m_samplerYcbcrConversionKHR == rhs.m_samplerYcbcrConversionKHR;
+    }
+
+    bool operator!=(SamplerYcbcrConversionKHR const & rhs ) const
+    {
+      return m_samplerYcbcrConversionKHR != rhs.m_samplerYcbcrConversionKHR;
+    }
+
+    bool operator<(SamplerYcbcrConversionKHR const & rhs ) const
+    {
+      return m_samplerYcbcrConversionKHR < rhs.m_samplerYcbcrConversionKHR;
+    }
+
+
+
+    VULKAN_HPP_TYPESAFE_EXPLICIT operator VkSamplerYcbcrConversionKHR() const
+    {
+      return m_samplerYcbcrConversionKHR;
+    }
+
+    explicit operator bool() const
+    {
+      return m_samplerYcbcrConversionKHR != VK_NULL_HANDLE;
+    }
+
+    bool operator!() const
+    {
+      return m_samplerYcbcrConversionKHR == VK_NULL_HANDLE;
+    }
+
+  private:
+    VkSamplerYcbcrConversionKHR m_samplerYcbcrConversionKHR;
+  };
+
+  static_assert( sizeof( SamplerYcbcrConversionKHR ) == sizeof( VkSamplerYcbcrConversionKHR ), "handle and wrapper have different size!" );
+
   class ValidationCacheEXT
   {
   public:
@@ -5482,7 +5549,9 @@ namespace vk
     eTransferDstOptimal = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
     ePreinitialized = VK_IMAGE_LAYOUT_PREINITIALIZED,
     ePresentSrcKHR = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
-    eSharedPresentKHR = VK_IMAGE_LAYOUT_SHARED_PRESENT_KHR
+    eSharedPresentKHR = VK_IMAGE_LAYOUT_SHARED_PRESENT_KHR,
+    eDepthReadOnlyStencilAttachmentOptimalKHR = VK_IMAGE_LAYOUT_DEPTH_READ_ONLY_STENCIL_ATTACHMENT_OPTIMAL_KHR,
+    eDepthAttachmentStencilReadOnlyOptimalKHR = VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_STENCIL_READ_ONLY_OPTIMAL_KHR
   };
 
   struct DescriptorImageInfo
@@ -6492,7 +6561,41 @@ namespace vk
     ePvrtc12BppSrgbBlockIMG = VK_FORMAT_PVRTC1_2BPP_SRGB_BLOCK_IMG,
     ePvrtc14BppSrgbBlockIMG = VK_FORMAT_PVRTC1_4BPP_SRGB_BLOCK_IMG,
     ePvrtc22BppSrgbBlockIMG = VK_FORMAT_PVRTC2_2BPP_SRGB_BLOCK_IMG,
-    ePvrtc24BppSrgbBlockIMG = VK_FORMAT_PVRTC2_4BPP_SRGB_BLOCK_IMG
+    ePvrtc24BppSrgbBlockIMG = VK_FORMAT_PVRTC2_4BPP_SRGB_BLOCK_IMG,
+    eG8B8G8R8422UnormKHR = VK_FORMAT_G8B8G8R8_422_UNORM_KHR,
+    eB8G8R8G8422UnormKHR = VK_FORMAT_B8G8R8G8_422_UNORM_KHR,
+    eG8B8R83Plane420UnormKHR = VK_FORMAT_G8_B8_R8_3PLANE_420_UNORM_KHR,
+    eG8B8R82Plane420UnormKHR = VK_FORMAT_G8_B8R8_2PLANE_420_UNORM_KHR,
+    eG8B8R83Plane422UnormKHR = VK_FORMAT_G8_B8_R8_3PLANE_422_UNORM_KHR,
+    eG8B8R82Plane422UnormKHR = VK_FORMAT_G8_B8R8_2PLANE_422_UNORM_KHR,
+    eG8B8R83Plane444UnormKHR = VK_FORMAT_G8_B8_R8_3PLANE_444_UNORM_KHR,
+    eR10X6UnormPack16KHR = VK_FORMAT_R10X6_UNORM_PACK16_KHR,
+    eR10X6G10X6Unorm2Pack16KHR = VK_FORMAT_R10X6G10X6_UNORM_2PACK16_KHR,
+    eR10X6G10X6B10X6A10X6Unorm4Pack16KHR = VK_FORMAT_R10X6G10X6B10X6A10X6_UNORM_4PACK16_KHR,
+    eG10X6B10X6G10X6R10X6422Unorm4Pack16KHR = VK_FORMAT_G10X6B10X6G10X6R10X6_422_UNORM_4PACK16_KHR,
+    eB10X6G10X6R10X6G10X6422Unorm4Pack16KHR = VK_FORMAT_B10X6G10X6R10X6G10X6_422_UNORM_4PACK16_KHR,
+    eG10X6B10X6R10X63Plane420Unorm3Pack16KHR = VK_FORMAT_G10X6_B10X6_R10X6_3PLANE_420_UNORM_3PACK16_KHR,
+    eG10X6B10X6R10X62Plane420Unorm3Pack16KHR = VK_FORMAT_G10X6_B10X6R10X6_2PLANE_420_UNORM_3PACK16_KHR,
+    eG10X6B10X6R10X63Plane422Unorm3Pack16KHR = VK_FORMAT_G10X6_B10X6_R10X6_3PLANE_422_UNORM_3PACK16_KHR,
+    eG10X6B10X6R10X62Plane422Unorm3Pack16KHR = VK_FORMAT_G10X6_B10X6R10X6_2PLANE_422_UNORM_3PACK16_KHR,
+    eG10X6B10X6R10X63Plane444Unorm3Pack16KHR = VK_FORMAT_G10X6_B10X6_R10X6_3PLANE_444_UNORM_3PACK16_KHR,
+    eR12X4UnormPack16KHR = VK_FORMAT_R12X4_UNORM_PACK16_KHR,
+    eR12X4G12X4Unorm2Pack16KHR = VK_FORMAT_R12X4G12X4_UNORM_2PACK16_KHR,
+    eR12X4G12X4B12X4A12X4Unorm4Pack16KHR = VK_FORMAT_R12X4G12X4B12X4A12X4_UNORM_4PACK16_KHR,
+    eG12X4B12X4G12X4R12X4422Unorm4Pack16KHR = VK_FORMAT_G12X4B12X4G12X4R12X4_422_UNORM_4PACK16_KHR,
+    eB12X4G12X4R12X4G12X4422Unorm4Pack16KHR = VK_FORMAT_B12X4G12X4R12X4G12X4_422_UNORM_4PACK16_KHR,
+    eG12X4B12X4R12X43Plane420Unorm3Pack16KHR = VK_FORMAT_G12X4_B12X4_R12X4_3PLANE_420_UNORM_3PACK16_KHR,
+    eG12X4B12X4R12X42Plane420Unorm3Pack16KHR = VK_FORMAT_G12X4_B12X4R12X4_2PLANE_420_UNORM_3PACK16_KHR,
+    eG12X4B12X4R12X43Plane422Unorm3Pack16KHR = VK_FORMAT_G12X4_B12X4_R12X4_3PLANE_422_UNORM_3PACK16_KHR,
+    eG12X4B12X4R12X42Plane422Unorm3Pack16KHR = VK_FORMAT_G12X4_B12X4R12X4_2PLANE_422_UNORM_3PACK16_KHR,
+    eG12X4B12X4R12X43Plane444Unorm3Pack16KHR = VK_FORMAT_G12X4_B12X4_R12X4_3PLANE_444_UNORM_3PACK16_KHR,
+    eG16B16G16R16422UnormKHR = VK_FORMAT_G16B16G16R16_422_UNORM_KHR,
+    eB16G16R16G16422UnormKHR = VK_FORMAT_B16G16R16G16_422_UNORM_KHR,
+    eG16B16R163Plane420UnormKHR = VK_FORMAT_G16_B16_R16_3PLANE_420_UNORM_KHR,
+    eG16B16R162Plane420UnormKHR = VK_FORMAT_G16_B16R16_2PLANE_420_UNORM_KHR,
+    eG16B16R163Plane422UnormKHR = VK_FORMAT_G16_B16_R16_3PLANE_422_UNORM_KHR,
+    eG16B16R162Plane422UnormKHR = VK_FORMAT_G16_B16R16_2PLANE_422_UNORM_KHR,
+    eG16B16R163Plane444UnormKHR = VK_FORMAT_G16_B16_R16_3PLANE_444_UNORM_KHR
   };
 
   struct VertexInputAttributeDescription
@@ -6653,13 +6756,13 @@ namespace vk
     eSparseImageFormatProperties2KHR = VK_STRUCTURE_TYPE_SPARSE_IMAGE_FORMAT_PROPERTIES_2_KHR,
     ePhysicalDeviceSparseImageFormatInfo2KHR = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SPARSE_IMAGE_FORMAT_INFO_2_KHR,
     eMemoryAllocateFlagsInfoKHX = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_FLAGS_INFO_KHX,
-    eBindBufferMemoryInfoKHX = VK_STRUCTURE_TYPE_BIND_BUFFER_MEMORY_INFO_KHX,
-    eBindImageMemoryInfoKHX = VK_STRUCTURE_TYPE_BIND_IMAGE_MEMORY_INFO_KHX,
     eDeviceGroupRenderPassBeginInfoKHX = VK_STRUCTURE_TYPE_DEVICE_GROUP_RENDER_PASS_BEGIN_INFO_KHX,
     eDeviceGroupCommandBufferBeginInfoKHX = VK_STRUCTURE_TYPE_DEVICE_GROUP_COMMAND_BUFFER_BEGIN_INFO_KHX,
     eDeviceGroupSubmitInfoKHX = VK_STRUCTURE_TYPE_DEVICE_GROUP_SUBMIT_INFO_KHX,
     eDeviceGroupBindSparseInfoKHX = VK_STRUCTURE_TYPE_DEVICE_GROUP_BIND_SPARSE_INFO_KHX,
     eAcquireNextImageInfoKHX = VK_STRUCTURE_TYPE_ACQUIRE_NEXT_IMAGE_INFO_KHX,
+    eBindBufferMemoryDeviceGroupInfoKHX = VK_STRUCTURE_TYPE_BIND_BUFFER_MEMORY_DEVICE_GROUP_INFO_KHX,
+    eBindImageMemoryDeviceGroupInfoKHX = VK_STRUCTURE_TYPE_BIND_IMAGE_MEMORY_DEVICE_GROUP_INFO_KHX,
     eDeviceGroupPresentCapabilitiesKHX = VK_STRUCTURE_TYPE_DEVICE_GROUP_PRESENT_CAPABILITIES_KHX,
     eImageSwapchainCreateInfoKHX = VK_STRUCTURE_TYPE_IMAGE_SWAPCHAIN_CREATE_INFO_KHX,
     eBindImageMemorySwapchainInfoKHX = VK_STRUCTURE_TYPE_BIND_IMAGE_MEMORY_SWAPCHAIN_INFO_KHX,
@@ -6725,6 +6828,10 @@ namespace vk
     eFenceGetWin32HandleInfoKHR = VK_STRUCTURE_TYPE_FENCE_GET_WIN32_HANDLE_INFO_KHR,
     eImportFenceFdInfoKHR = VK_STRUCTURE_TYPE_IMPORT_FENCE_FD_INFO_KHR,
     eFenceGetFdInfoKHR = VK_STRUCTURE_TYPE_FENCE_GET_FD_INFO_KHR,
+    ePhysicalDevicePointClippingPropertiesKHR = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_POINT_CLIPPING_PROPERTIES_KHR,
+    eRenderPassInputAttachmentAspectCreateInfoKHR = VK_STRUCTURE_TYPE_RENDER_PASS_INPUT_ATTACHMENT_ASPECT_CREATE_INFO_KHR,
+    eImageViewUsageCreateInfoKHR = VK_STRUCTURE_TYPE_IMAGE_VIEW_USAGE_CREATE_INFO_KHR,
+    ePipelineTessellationDomainOriginStateCreateInfoKHR = VK_STRUCTURE_TYPE_PIPELINE_TESSELLATION_DOMAIN_ORIGIN_STATE_CREATE_INFO_KHR,
     ePhysicalDeviceSurfaceInfo2KHR = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SURFACE_INFO_2_KHR,
     eSurfaceCapabilities2KHR = VK_STRUCTURE_TYPE_SURFACE_CAPABILITIES_2_KHR,
     eSurfaceFormat2KHR = VK_STRUCTURE_TYPE_SURFACE_FORMAT_2_KHR,
@@ -6745,11 +6852,20 @@ namespace vk
     eImageSparseMemoryRequirementsInfo2KHR = VK_STRUCTURE_TYPE_IMAGE_SPARSE_MEMORY_REQUIREMENTS_INFO_2_KHR,
     eMemoryRequirements2KHR = VK_STRUCTURE_TYPE_MEMORY_REQUIREMENTS_2_KHR,
     eSparseImageMemoryRequirements2KHR = VK_STRUCTURE_TYPE_SPARSE_IMAGE_MEMORY_REQUIREMENTS_2_KHR,
+    eImageFormatListCreateInfoKHR = VK_STRUCTURE_TYPE_IMAGE_FORMAT_LIST_CREATE_INFO_KHR,
     ePhysicalDeviceBlendOperationAdvancedFeaturesEXT = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_BLEND_OPERATION_ADVANCED_FEATURES_EXT,
     ePhysicalDeviceBlendOperationAdvancedPropertiesEXT = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_BLEND_OPERATION_ADVANCED_PROPERTIES_EXT,
     ePipelineColorBlendAdvancedStateCreateInfoEXT = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_ADVANCED_STATE_CREATE_INFO_EXT,
     ePipelineCoverageToColorStateCreateInfoNV = VK_STRUCTURE_TYPE_PIPELINE_COVERAGE_TO_COLOR_STATE_CREATE_INFO_NV,
     ePipelineCoverageModulationStateCreateInfoNV = VK_STRUCTURE_TYPE_PIPELINE_COVERAGE_MODULATION_STATE_CREATE_INFO_NV,
+    eSamplerYcbcrConversionCreateInfoKHR = VK_STRUCTURE_TYPE_SAMPLER_YCBCR_CONVERSION_CREATE_INFO_KHR,
+    eSamplerYcbcrConversionInfoKHR = VK_STRUCTURE_TYPE_SAMPLER_YCBCR_CONVERSION_INFO_KHR,
+    eBindImagePlaneMemoryInfoKHR = VK_STRUCTURE_TYPE_BIND_IMAGE_PLANE_MEMORY_INFO_KHR,
+    eImagePlaneMemoryRequirementsInfoKHR = VK_STRUCTURE_TYPE_IMAGE_PLANE_MEMORY_REQUIREMENTS_INFO_KHR,
+    ePhysicalDeviceSamplerYcbcrConversionFeaturesKHR = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SAMPLER_YCBCR_CONVERSION_FEATURES_KHR,
+    eSamplerYcbcrConversionImageFormatPropertiesKHR = VK_STRUCTURE_TYPE_SAMPLER_YCBCR_CONVERSION_IMAGE_FORMAT_PROPERTIES_KHR,
+    eBindBufferMemoryInfoKHR = VK_STRUCTURE_TYPE_BIND_BUFFER_MEMORY_INFO_KHR,
+    eBindImageMemoryInfoKHR = VK_STRUCTURE_TYPE_BIND_IMAGE_MEMORY_INFO_KHR,
     eValidationCacheCreateInfoEXT = VK_STRUCTURE_TYPE_VALIDATION_CACHE_CREATE_INFO_EXT,
     eShaderModuleValidationCacheCreateInfoEXT = VK_STRUCTURE_TYPE_SHADER_MODULE_VALIDATION_CACHE_CREATE_INFO_EXT
   };
@@ -11331,82 +11447,66 @@ namespace vk
   };
   static_assert( sizeof( RenderPassMultiviewCreateInfoKHX ) == sizeof( VkRenderPassMultiviewCreateInfoKHX ), "struct and wrapper have different size!" );
 
-  struct BindBufferMemoryInfoKHX
+  struct BindBufferMemoryInfoKHR
   {
-    BindBufferMemoryInfoKHX( Buffer buffer_ = Buffer(), DeviceMemory memory_ = DeviceMemory(), DeviceSize memoryOffset_ = 0, uint32_t deviceIndexCount_ = 0, const uint32_t* pDeviceIndices_ = nullptr )
-      : sType( StructureType::eBindBufferMemoryInfoKHX )
+    BindBufferMemoryInfoKHR( Buffer buffer_ = Buffer(), DeviceMemory memory_ = DeviceMemory(), DeviceSize memoryOffset_ = 0 )
+      : sType( StructureType::eBindBufferMemoryInfoKHR )
       , pNext( nullptr )
       , buffer( buffer_ )
       , memory( memory_ )
       , memoryOffset( memoryOffset_ )
-      , deviceIndexCount( deviceIndexCount_ )
-      , pDeviceIndices( pDeviceIndices_ )
     {
     }
 
-    BindBufferMemoryInfoKHX( VkBindBufferMemoryInfoKHX const & rhs )
+    BindBufferMemoryInfoKHR( VkBindBufferMemoryInfoKHR const & rhs )
     {
-      memcpy( this, &rhs, sizeof( BindBufferMemoryInfoKHX ) );
+      memcpy( this, &rhs, sizeof( BindBufferMemoryInfoKHR ) );
     }
 
-    BindBufferMemoryInfoKHX& operator=( VkBindBufferMemoryInfoKHX const & rhs )
+    BindBufferMemoryInfoKHR& operator=( VkBindBufferMemoryInfoKHR const & rhs )
     {
-      memcpy( this, &rhs, sizeof( BindBufferMemoryInfoKHX ) );
+      memcpy( this, &rhs, sizeof( BindBufferMemoryInfoKHR ) );
       return *this;
     }
-    BindBufferMemoryInfoKHX& setPNext( const void* pNext_ )
+    BindBufferMemoryInfoKHR& setPNext( const void* pNext_ )
     {
       pNext = pNext_;
       return *this;
     }
 
-    BindBufferMemoryInfoKHX& setBuffer( Buffer buffer_ )
+    BindBufferMemoryInfoKHR& setBuffer( Buffer buffer_ )
     {
       buffer = buffer_;
       return *this;
     }
 
-    BindBufferMemoryInfoKHX& setMemory( DeviceMemory memory_ )
+    BindBufferMemoryInfoKHR& setMemory( DeviceMemory memory_ )
     {
       memory = memory_;
       return *this;
     }
 
-    BindBufferMemoryInfoKHX& setMemoryOffset( DeviceSize memoryOffset_ )
+    BindBufferMemoryInfoKHR& setMemoryOffset( DeviceSize memoryOffset_ )
     {
       memoryOffset = memoryOffset_;
       return *this;
     }
 
-    BindBufferMemoryInfoKHX& setDeviceIndexCount( uint32_t deviceIndexCount_ )
+    operator const VkBindBufferMemoryInfoKHR&() const
     {
-      deviceIndexCount = deviceIndexCount_;
-      return *this;
+      return *reinterpret_cast<const VkBindBufferMemoryInfoKHR*>(this);
     }
 
-    BindBufferMemoryInfoKHX& setPDeviceIndices( const uint32_t* pDeviceIndices_ )
-    {
-      pDeviceIndices = pDeviceIndices_;
-      return *this;
-    }
-
-    operator const VkBindBufferMemoryInfoKHX&() const
-    {
-      return *reinterpret_cast<const VkBindBufferMemoryInfoKHX*>(this);
-    }
-
-    bool operator==( BindBufferMemoryInfoKHX const& rhs ) const
+    bool operator==( BindBufferMemoryInfoKHR const& rhs ) const
     {
       return ( sType == rhs.sType )
           && ( pNext == rhs.pNext )
           && ( buffer == rhs.buffer )
           && ( memory == rhs.memory )
-          && ( memoryOffset == rhs.memoryOffset )
-          && ( deviceIndexCount == rhs.deviceIndexCount )
-          && ( pDeviceIndices == rhs.pDeviceIndices );
+          && ( memoryOffset == rhs.memoryOffset );
     }
 
-    bool operator!=( BindBufferMemoryInfoKHX const& rhs ) const
+    bool operator!=( BindBufferMemoryInfoKHR const& rhs ) const
     {
       return !operator==( rhs );
     }
@@ -11419,103 +11519,135 @@ namespace vk
     Buffer buffer;
     DeviceMemory memory;
     DeviceSize memoryOffset;
-    uint32_t deviceIndexCount;
-    const uint32_t* pDeviceIndices;
   };
-  static_assert( sizeof( BindBufferMemoryInfoKHX ) == sizeof( VkBindBufferMemoryInfoKHX ), "struct and wrapper have different size!" );
+  static_assert( sizeof( BindBufferMemoryInfoKHR ) == sizeof( VkBindBufferMemoryInfoKHR ), "struct and wrapper have different size!" );
 
-  struct BindImageMemoryInfoKHX
+  struct BindBufferMemoryDeviceGroupInfoKHX
   {
-    BindImageMemoryInfoKHX( Image image_ = Image(), DeviceMemory memory_ = DeviceMemory(), DeviceSize memoryOffset_ = 0, uint32_t deviceIndexCount_ = 0, const uint32_t* pDeviceIndices_ = nullptr, uint32_t SFRRectCount_ = 0, const Rect2D* pSFRRects_ = nullptr )
-      : sType( StructureType::eBindImageMemoryInfoKHX )
+    BindBufferMemoryDeviceGroupInfoKHX( uint32_t deviceIndexCount_ = 0, const uint32_t* pDeviceIndices_ = nullptr )
+      : sType( StructureType::eBindBufferMemoryDeviceGroupInfoKHX )
       , pNext( nullptr )
-      , image( image_ )
-      , memory( memory_ )
-      , memoryOffset( memoryOffset_ )
       , deviceIndexCount( deviceIndexCount_ )
       , pDeviceIndices( pDeviceIndices_ )
-      , SFRRectCount( SFRRectCount_ )
-      , pSFRRects( pSFRRects_ )
     {
     }
 
-    BindImageMemoryInfoKHX( VkBindImageMemoryInfoKHX const & rhs )
+    BindBufferMemoryDeviceGroupInfoKHX( VkBindBufferMemoryDeviceGroupInfoKHX const & rhs )
     {
-      memcpy( this, &rhs, sizeof( BindImageMemoryInfoKHX ) );
+      memcpy( this, &rhs, sizeof( BindBufferMemoryDeviceGroupInfoKHX ) );
     }
 
-    BindImageMemoryInfoKHX& operator=( VkBindImageMemoryInfoKHX const & rhs )
+    BindBufferMemoryDeviceGroupInfoKHX& operator=( VkBindBufferMemoryDeviceGroupInfoKHX const & rhs )
     {
-      memcpy( this, &rhs, sizeof( BindImageMemoryInfoKHX ) );
+      memcpy( this, &rhs, sizeof( BindBufferMemoryDeviceGroupInfoKHX ) );
       return *this;
     }
-    BindImageMemoryInfoKHX& setPNext( const void* pNext_ )
+    BindBufferMemoryDeviceGroupInfoKHX& setPNext( const void* pNext_ )
     {
       pNext = pNext_;
       return *this;
     }
 
-    BindImageMemoryInfoKHX& setImage( Image image_ )
-    {
-      image = image_;
-      return *this;
-    }
-
-    BindImageMemoryInfoKHX& setMemory( DeviceMemory memory_ )
-    {
-      memory = memory_;
-      return *this;
-    }
-
-    BindImageMemoryInfoKHX& setMemoryOffset( DeviceSize memoryOffset_ )
-    {
-      memoryOffset = memoryOffset_;
-      return *this;
-    }
-
-    BindImageMemoryInfoKHX& setDeviceIndexCount( uint32_t deviceIndexCount_ )
+    BindBufferMemoryDeviceGroupInfoKHX& setDeviceIndexCount( uint32_t deviceIndexCount_ )
     {
       deviceIndexCount = deviceIndexCount_;
       return *this;
     }
 
-    BindImageMemoryInfoKHX& setPDeviceIndices( const uint32_t* pDeviceIndices_ )
+    BindBufferMemoryDeviceGroupInfoKHX& setPDeviceIndices( const uint32_t* pDeviceIndices_ )
     {
       pDeviceIndices = pDeviceIndices_;
       return *this;
     }
 
-    BindImageMemoryInfoKHX& setSFRRectCount( uint32_t SFRRectCount_ )
+    operator const VkBindBufferMemoryDeviceGroupInfoKHX&() const
     {
-      SFRRectCount = SFRRectCount_;
+      return *reinterpret_cast<const VkBindBufferMemoryDeviceGroupInfoKHX*>(this);
+    }
+
+    bool operator==( BindBufferMemoryDeviceGroupInfoKHX const& rhs ) const
+    {
+      return ( sType == rhs.sType )
+          && ( pNext == rhs.pNext )
+          && ( deviceIndexCount == rhs.deviceIndexCount )
+          && ( pDeviceIndices == rhs.pDeviceIndices );
+    }
+
+    bool operator!=( BindBufferMemoryDeviceGroupInfoKHX const& rhs ) const
+    {
+      return !operator==( rhs );
+    }
+
+  private:
+    StructureType sType;
+
+  public:
+    const void* pNext;
+    uint32_t deviceIndexCount;
+    const uint32_t* pDeviceIndices;
+  };
+  static_assert( sizeof( BindBufferMemoryDeviceGroupInfoKHX ) == sizeof( VkBindBufferMemoryDeviceGroupInfoKHX ), "struct and wrapper have different size!" );
+
+  struct BindImageMemoryInfoKHR
+  {
+    BindImageMemoryInfoKHR( Image image_ = Image(), DeviceMemory memory_ = DeviceMemory(), DeviceSize memoryOffset_ = 0 )
+      : sType( StructureType::eBindImageMemoryInfoKHR )
+      , pNext( nullptr )
+      , image( image_ )
+      , memory( memory_ )
+      , memoryOffset( memoryOffset_ )
+    {
+    }
+
+    BindImageMemoryInfoKHR( VkBindImageMemoryInfoKHR const & rhs )
+    {
+      memcpy( this, &rhs, sizeof( BindImageMemoryInfoKHR ) );
+    }
+
+    BindImageMemoryInfoKHR& operator=( VkBindImageMemoryInfoKHR const & rhs )
+    {
+      memcpy( this, &rhs, sizeof( BindImageMemoryInfoKHR ) );
+      return *this;
+    }
+    BindImageMemoryInfoKHR& setPNext( const void* pNext_ )
+    {
+      pNext = pNext_;
       return *this;
     }
 
-    BindImageMemoryInfoKHX& setPSFRRects( const Rect2D* pSFRRects_ )
+    BindImageMemoryInfoKHR& setImage( Image image_ )
     {
-      pSFRRects = pSFRRects_;
+      image = image_;
       return *this;
     }
 
-    operator const VkBindImageMemoryInfoKHX&() const
+    BindImageMemoryInfoKHR& setMemory( DeviceMemory memory_ )
     {
-      return *reinterpret_cast<const VkBindImageMemoryInfoKHX*>(this);
+      memory = memory_;
+      return *this;
     }
 
-    bool operator==( BindImageMemoryInfoKHX const& rhs ) const
+    BindImageMemoryInfoKHR& setMemoryOffset( DeviceSize memoryOffset_ )
+    {
+      memoryOffset = memoryOffset_;
+      return *this;
+    }
+
+    operator const VkBindImageMemoryInfoKHR&() const
+    {
+      return *reinterpret_cast<const VkBindImageMemoryInfoKHR*>(this);
+    }
+
+    bool operator==( BindImageMemoryInfoKHR const& rhs ) const
     {
       return ( sType == rhs.sType )
           && ( pNext == rhs.pNext )
           && ( image == rhs.image )
           && ( memory == rhs.memory )
-          && ( memoryOffset == rhs.memoryOffset )
-          && ( deviceIndexCount == rhs.deviceIndexCount )
-          && ( pDeviceIndices == rhs.pDeviceIndices )
-          && ( SFRRectCount == rhs.SFRRectCount )
-          && ( pSFRRects == rhs.pSFRRects );
+          && ( memoryOffset == rhs.memoryOffset );
     }
 
-    bool operator!=( BindImageMemoryInfoKHX const& rhs ) const
+    bool operator!=( BindImageMemoryInfoKHR const& rhs ) const
     {
       return !operator==( rhs );
     }
@@ -11528,12 +11660,92 @@ namespace vk
     Image image;
     DeviceMemory memory;
     DeviceSize memoryOffset;
+  };
+  static_assert( sizeof( BindImageMemoryInfoKHR ) == sizeof( VkBindImageMemoryInfoKHR ), "struct and wrapper have different size!" );
+
+  struct BindImageMemoryDeviceGroupInfoKHX
+  {
+    BindImageMemoryDeviceGroupInfoKHX( uint32_t deviceIndexCount_ = 0, const uint32_t* pDeviceIndices_ = nullptr, uint32_t SFRRectCount_ = 0, const Rect2D* pSFRRects_ = nullptr )
+      : sType( StructureType::eBindImageMemoryDeviceGroupInfoKHX )
+      , pNext( nullptr )
+      , deviceIndexCount( deviceIndexCount_ )
+      , pDeviceIndices( pDeviceIndices_ )
+      , SFRRectCount( SFRRectCount_ )
+      , pSFRRects( pSFRRects_ )
+    {
+    }
+
+    BindImageMemoryDeviceGroupInfoKHX( VkBindImageMemoryDeviceGroupInfoKHX const & rhs )
+    {
+      memcpy( this, &rhs, sizeof( BindImageMemoryDeviceGroupInfoKHX ) );
+    }
+
+    BindImageMemoryDeviceGroupInfoKHX& operator=( VkBindImageMemoryDeviceGroupInfoKHX const & rhs )
+    {
+      memcpy( this, &rhs, sizeof( BindImageMemoryDeviceGroupInfoKHX ) );
+      return *this;
+    }
+    BindImageMemoryDeviceGroupInfoKHX& setPNext( const void* pNext_ )
+    {
+      pNext = pNext_;
+      return *this;
+    }
+
+    BindImageMemoryDeviceGroupInfoKHX& setDeviceIndexCount( uint32_t deviceIndexCount_ )
+    {
+      deviceIndexCount = deviceIndexCount_;
+      return *this;
+    }
+
+    BindImageMemoryDeviceGroupInfoKHX& setPDeviceIndices( const uint32_t* pDeviceIndices_ )
+    {
+      pDeviceIndices = pDeviceIndices_;
+      return *this;
+    }
+
+    BindImageMemoryDeviceGroupInfoKHX& setSFRRectCount( uint32_t SFRRectCount_ )
+    {
+      SFRRectCount = SFRRectCount_;
+      return *this;
+    }
+
+    BindImageMemoryDeviceGroupInfoKHX& setPSFRRects( const Rect2D* pSFRRects_ )
+    {
+      pSFRRects = pSFRRects_;
+      return *this;
+    }
+
+    operator const VkBindImageMemoryDeviceGroupInfoKHX&() const
+    {
+      return *reinterpret_cast<const VkBindImageMemoryDeviceGroupInfoKHX*>(this);
+    }
+
+    bool operator==( BindImageMemoryDeviceGroupInfoKHX const& rhs ) const
+    {
+      return ( sType == rhs.sType )
+          && ( pNext == rhs.pNext )
+          && ( deviceIndexCount == rhs.deviceIndexCount )
+          && ( pDeviceIndices == rhs.pDeviceIndices )
+          && ( SFRRectCount == rhs.SFRRectCount )
+          && ( pSFRRects == rhs.pSFRRects );
+    }
+
+    bool operator!=( BindImageMemoryDeviceGroupInfoKHX const& rhs ) const
+    {
+      return !operator==( rhs );
+    }
+
+  private:
+    StructureType sType;
+
+  public:
+    const void* pNext;
     uint32_t deviceIndexCount;
     const uint32_t* pDeviceIndices;
     uint32_t SFRRectCount;
     const Rect2D* pSFRRects;
   };
-  static_assert( sizeof( BindImageMemoryInfoKHX ) == sizeof( VkBindImageMemoryInfoKHX ), "struct and wrapper have different size!" );
+  static_assert( sizeof( BindImageMemoryDeviceGroupInfoKHX ) == sizeof( VkBindImageMemoryDeviceGroupInfoKHX ), "struct and wrapper have different size!" );
 
   struct DeviceGroupRenderPassBeginInfoKHX
   {
@@ -12969,6 +13181,148 @@ namespace vk
   };
   static_assert( sizeof( MemoryDedicatedAllocateInfoKHR ) == sizeof( VkMemoryDedicatedAllocateInfoKHR ), "struct and wrapper have different size!" );
 
+  struct SamplerYcbcrConversionInfoKHR
+  {
+    SamplerYcbcrConversionInfoKHR( SamplerYcbcrConversionKHR conversion_ = SamplerYcbcrConversionKHR() )
+      : sType( StructureType::eSamplerYcbcrConversionInfoKHR )
+      , pNext( nullptr )
+      , conversion( conversion_ )
+    {
+    }
+
+    SamplerYcbcrConversionInfoKHR( VkSamplerYcbcrConversionInfoKHR const & rhs )
+    {
+      memcpy( this, &rhs, sizeof( SamplerYcbcrConversionInfoKHR ) );
+    }
+
+    SamplerYcbcrConversionInfoKHR& operator=( VkSamplerYcbcrConversionInfoKHR const & rhs )
+    {
+      memcpy( this, &rhs, sizeof( SamplerYcbcrConversionInfoKHR ) );
+      return *this;
+    }
+    SamplerYcbcrConversionInfoKHR& setPNext( const void* pNext_ )
+    {
+      pNext = pNext_;
+      return *this;
+    }
+
+    SamplerYcbcrConversionInfoKHR& setConversion( SamplerYcbcrConversionKHR conversion_ )
+    {
+      conversion = conversion_;
+      return *this;
+    }
+
+    operator const VkSamplerYcbcrConversionInfoKHR&() const
+    {
+      return *reinterpret_cast<const VkSamplerYcbcrConversionInfoKHR*>(this);
+    }
+
+    bool operator==( SamplerYcbcrConversionInfoKHR const& rhs ) const
+    {
+      return ( sType == rhs.sType )
+          && ( pNext == rhs.pNext )
+          && ( conversion == rhs.conversion );
+    }
+
+    bool operator!=( SamplerYcbcrConversionInfoKHR const& rhs ) const
+    {
+      return !operator==( rhs );
+    }
+
+  private:
+    StructureType sType;
+
+  public:
+    const void* pNext;
+    SamplerYcbcrConversionKHR conversion;
+  };
+  static_assert( sizeof( SamplerYcbcrConversionInfoKHR ) == sizeof( VkSamplerYcbcrConversionInfoKHR ), "struct and wrapper have different size!" );
+
+  struct PhysicalDeviceSamplerYcbcrConversionFeaturesKHR
+  {
+    PhysicalDeviceSamplerYcbcrConversionFeaturesKHR( Bool32 samplerYcbcrConversion_ = 0 )
+      : sType( StructureType::ePhysicalDeviceSamplerYcbcrConversionFeaturesKHR )
+      , pNext( nullptr )
+      , samplerYcbcrConversion( samplerYcbcrConversion_ )
+    {
+    }
+
+    PhysicalDeviceSamplerYcbcrConversionFeaturesKHR( VkPhysicalDeviceSamplerYcbcrConversionFeaturesKHR const & rhs )
+    {
+      memcpy( this, &rhs, sizeof( PhysicalDeviceSamplerYcbcrConversionFeaturesKHR ) );
+    }
+
+    PhysicalDeviceSamplerYcbcrConversionFeaturesKHR& operator=( VkPhysicalDeviceSamplerYcbcrConversionFeaturesKHR const & rhs )
+    {
+      memcpy( this, &rhs, sizeof( PhysicalDeviceSamplerYcbcrConversionFeaturesKHR ) );
+      return *this;
+    }
+    PhysicalDeviceSamplerYcbcrConversionFeaturesKHR& setPNext( void* pNext_ )
+    {
+      pNext = pNext_;
+      return *this;
+    }
+
+    PhysicalDeviceSamplerYcbcrConversionFeaturesKHR& setSamplerYcbcrConversion( Bool32 samplerYcbcrConversion_ )
+    {
+      samplerYcbcrConversion = samplerYcbcrConversion_;
+      return *this;
+    }
+
+    operator const VkPhysicalDeviceSamplerYcbcrConversionFeaturesKHR&() const
+    {
+      return *reinterpret_cast<const VkPhysicalDeviceSamplerYcbcrConversionFeaturesKHR*>(this);
+    }
+
+    bool operator==( PhysicalDeviceSamplerYcbcrConversionFeaturesKHR const& rhs ) const
+    {
+      return ( sType == rhs.sType )
+          && ( pNext == rhs.pNext )
+          && ( samplerYcbcrConversion == rhs.samplerYcbcrConversion );
+    }
+
+    bool operator!=( PhysicalDeviceSamplerYcbcrConversionFeaturesKHR const& rhs ) const
+    {
+      return !operator==( rhs );
+    }
+
+  private:
+    StructureType sType;
+
+  public:
+    void* pNext;
+    Bool32 samplerYcbcrConversion;
+  };
+  static_assert( sizeof( PhysicalDeviceSamplerYcbcrConversionFeaturesKHR ) == sizeof( VkPhysicalDeviceSamplerYcbcrConversionFeaturesKHR ), "struct and wrapper have different size!" );
+
+  struct SamplerYcbcrConversionImageFormatPropertiesKHR
+  {
+    operator const VkSamplerYcbcrConversionImageFormatPropertiesKHR&() const
+    {
+      return *reinterpret_cast<const VkSamplerYcbcrConversionImageFormatPropertiesKHR*>(this);
+    }
+
+    bool operator==( SamplerYcbcrConversionImageFormatPropertiesKHR const& rhs ) const
+    {
+      return ( sType == rhs.sType )
+          && ( pNext == rhs.pNext )
+          && ( combinedImageSamplerDescriptorCount == rhs.combinedImageSamplerDescriptorCount );
+    }
+
+    bool operator!=( SamplerYcbcrConversionImageFormatPropertiesKHR const& rhs ) const
+    {
+      return !operator==( rhs );
+    }
+
+  private:
+    StructureType sType;
+
+  public:
+    void* pNext;
+    uint32_t combinedImageSamplerDescriptorCount;
+  };
+  static_assert( sizeof( SamplerYcbcrConversionImageFormatPropertiesKHR ) == sizeof( VkSamplerYcbcrConversionImageFormatPropertiesKHR ), "struct and wrapper have different size!" );
+
   struct TextureLODGatherFormatPropertiesAMD
   {
     operator const VkTextureLODGatherFormatPropertiesAMD&() const
@@ -13224,6 +13578,72 @@ namespace vk
     Bool32 advancedBlendAllOperations;
   };
   static_assert( sizeof( PhysicalDeviceBlendOperationAdvancedPropertiesEXT ) == sizeof( VkPhysicalDeviceBlendOperationAdvancedPropertiesEXT ), "struct and wrapper have different size!" );
+
+  struct ImageFormatListCreateInfoKHR
+  {
+    ImageFormatListCreateInfoKHR( uint32_t viewFormatCount_ = 0, const Format* pViewFormats_ = nullptr )
+      : sType( StructureType::eImageFormatListCreateInfoKHR )
+      , pNext( nullptr )
+      , viewFormatCount( viewFormatCount_ )
+      , pViewFormats( pViewFormats_ )
+    {
+    }
+
+    ImageFormatListCreateInfoKHR( VkImageFormatListCreateInfoKHR const & rhs )
+    {
+      memcpy( this, &rhs, sizeof( ImageFormatListCreateInfoKHR ) );
+    }
+
+    ImageFormatListCreateInfoKHR& operator=( VkImageFormatListCreateInfoKHR const & rhs )
+    {
+      memcpy( this, &rhs, sizeof( ImageFormatListCreateInfoKHR ) );
+      return *this;
+    }
+    ImageFormatListCreateInfoKHR& setPNext( const void* pNext_ )
+    {
+      pNext = pNext_;
+      return *this;
+    }
+
+    ImageFormatListCreateInfoKHR& setViewFormatCount( uint32_t viewFormatCount_ )
+    {
+      viewFormatCount = viewFormatCount_;
+      return *this;
+    }
+
+    ImageFormatListCreateInfoKHR& setPViewFormats( const Format* pViewFormats_ )
+    {
+      pViewFormats = pViewFormats_;
+      return *this;
+    }
+
+    operator const VkImageFormatListCreateInfoKHR&() const
+    {
+      return *reinterpret_cast<const VkImageFormatListCreateInfoKHR*>(this);
+    }
+
+    bool operator==( ImageFormatListCreateInfoKHR const& rhs ) const
+    {
+      return ( sType == rhs.sType )
+          && ( pNext == rhs.pNext )
+          && ( viewFormatCount == rhs.viewFormatCount )
+          && ( pViewFormats == rhs.pViewFormats );
+    }
+
+    bool operator!=( ImageFormatListCreateInfoKHR const& rhs ) const
+    {
+      return !operator==( rhs );
+    }
+
+  private:
+    StructureType sType;
+
+  public:
+    const void* pNext;
+    uint32_t viewFormatCount;
+    const Format* pViewFormats;
+  };
+  static_assert( sizeof( ImageFormatListCreateInfoKHR ) == sizeof( VkImageFormatListCreateInfoKHR ), "struct and wrapper have different size!" );
 
   struct ValidationCacheCreateInfoEXT
   {
@@ -13718,6 +14138,7 @@ namespace vk
     eDescriptorUpdateTemplateKHR = VK_OBJECT_TYPE_DESCRIPTOR_UPDATE_TEMPLATE_KHR,
     eObjectTableNVX = VK_OBJECT_TYPE_OBJECT_TABLE_NVX,
     eIndirectCommandsLayoutNVX = VK_OBJECT_TYPE_INDIRECT_COMMANDS_LAYOUT_NVX,
+    eSamplerYcbcrConversionKHR = VK_OBJECT_TYPE_SAMPLER_YCBCR_CONVERSION_KHR,
     eValidationCacheEXT = VK_OBJECT_TYPE_VALIDATION_CACHE_EXT
   };
 
@@ -14759,6 +15180,63 @@ namespace vk
   };
   static_assert( sizeof( SharedPresentSurfaceCapabilitiesKHR ) == sizeof( VkSharedPresentSurfaceCapabilitiesKHR ), "struct and wrapper have different size!" );
 
+  struct ImageViewUsageCreateInfoKHR
+  {
+    ImageViewUsageCreateInfoKHR( ImageUsageFlags usage_ = ImageUsageFlags() )
+      : sType( StructureType::eImageViewUsageCreateInfoKHR )
+      , pNext( nullptr )
+      , usage( usage_ )
+    {
+    }
+
+    ImageViewUsageCreateInfoKHR( VkImageViewUsageCreateInfoKHR const & rhs )
+    {
+      memcpy( this, &rhs, sizeof( ImageViewUsageCreateInfoKHR ) );
+    }
+
+    ImageViewUsageCreateInfoKHR& operator=( VkImageViewUsageCreateInfoKHR const & rhs )
+    {
+      memcpy( this, &rhs, sizeof( ImageViewUsageCreateInfoKHR ) );
+      return *this;
+    }
+    ImageViewUsageCreateInfoKHR& setPNext( const void* pNext_ )
+    {
+      pNext = pNext_;
+      return *this;
+    }
+
+    ImageViewUsageCreateInfoKHR& setUsage( ImageUsageFlags usage_ )
+    {
+      usage = usage_;
+      return *this;
+    }
+
+    operator const VkImageViewUsageCreateInfoKHR&() const
+    {
+      return *reinterpret_cast<const VkImageViewUsageCreateInfoKHR*>(this);
+    }
+
+    bool operator==( ImageViewUsageCreateInfoKHR const& rhs ) const
+    {
+      return ( sType == rhs.sType )
+          && ( pNext == rhs.pNext )
+          && ( usage == rhs.usage );
+    }
+
+    bool operator!=( ImageViewUsageCreateInfoKHR const& rhs ) const
+    {
+      return !operator==( rhs );
+    }
+
+  private:
+    StructureType sType;
+
+  public:
+    const void* pNext;
+    ImageUsageFlags usage;
+  };
+  static_assert( sizeof( ImageViewUsageCreateInfoKHR ) == sizeof( VkImageViewUsageCreateInfoKHR ), "struct and wrapper have different size!" );
+
   enum class ImageCreateFlagBits
   {
     eSparseBinding = VK_IMAGE_CREATE_SPARSE_BINDING_BIT,
@@ -14768,7 +15246,11 @@ namespace vk
     eCubeCompatible = VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT,
     eBindSfrKHX = VK_IMAGE_CREATE_BIND_SFR_BIT_KHX,
     e2DArrayCompatibleKHR = VK_IMAGE_CREATE_2D_ARRAY_COMPATIBLE_BIT_KHR,
-    eSampleLocationsCompatibleDepthEXT = VK_IMAGE_CREATE_SAMPLE_LOCATIONS_COMPATIBLE_DEPTH_BIT_EXT
+    eBlockTexelViewCompatibleKHR = VK_IMAGE_CREATE_BLOCK_TEXEL_VIEW_COMPATIBLE_BIT_KHR,
+    eExtendedUsageKHR = VK_IMAGE_CREATE_EXTENDED_USAGE_BIT_KHR,
+    eSampleLocationsCompatibleDepthEXT = VK_IMAGE_CREATE_SAMPLE_LOCATIONS_COMPATIBLE_DEPTH_BIT_EXT,
+    eDisjointKHR = VK_IMAGE_CREATE_DISJOINT_BIT_KHR,
+    eAliasKHR = VK_IMAGE_CREATE_ALIAS_BIT_KHR
   };
 
   using ImageCreateFlags = Flags<ImageCreateFlagBits, VkImageCreateFlags>;
@@ -14787,7 +15269,7 @@ namespace vk
   {
     enum
     {
-      allFlags = VkFlags(ImageCreateFlagBits::eSparseBinding) | VkFlags(ImageCreateFlagBits::eSparseResidency) | VkFlags(ImageCreateFlagBits::eSparseAliased) | VkFlags(ImageCreateFlagBits::eMutableFormat) | VkFlags(ImageCreateFlagBits::eCubeCompatible) | VkFlags(ImageCreateFlagBits::eBindSfrKHX) | VkFlags(ImageCreateFlagBits::e2DArrayCompatibleKHR) | VkFlags(ImageCreateFlagBits::eSampleLocationsCompatibleDepthEXT)
+      allFlags = VkFlags(ImageCreateFlagBits::eSparseBinding) | VkFlags(ImageCreateFlagBits::eSparseResidency) | VkFlags(ImageCreateFlagBits::eSparseAliased) | VkFlags(ImageCreateFlagBits::eMutableFormat) | VkFlags(ImageCreateFlagBits::eCubeCompatible) | VkFlags(ImageCreateFlagBits::eBindSfrKHX) | VkFlags(ImageCreateFlagBits::e2DArrayCompatibleKHR) | VkFlags(ImageCreateFlagBits::eBlockTexelViewCompatibleKHR) | VkFlags(ImageCreateFlagBits::eExtendedUsageKHR) | VkFlags(ImageCreateFlagBits::eSampleLocationsCompatibleDepthEXT) | VkFlags(ImageCreateFlagBits::eDisjointKHR) | VkFlags(ImageCreateFlagBits::eAliasKHR)
     };
   };
 
@@ -15341,7 +15823,14 @@ namespace vk
     eSampledImageFilterCubicIMG = VK_FORMAT_FEATURE_SAMPLED_IMAGE_FILTER_CUBIC_BIT_IMG,
     eTransferSrcKHR = VK_FORMAT_FEATURE_TRANSFER_SRC_BIT_KHR,
     eTransferDstKHR = VK_FORMAT_FEATURE_TRANSFER_DST_BIT_KHR,
-    eSampledImageFilterMinmaxEXT = VK_FORMAT_FEATURE_SAMPLED_IMAGE_FILTER_MINMAX_BIT_EXT
+    eSampledImageFilterMinmaxEXT = VK_FORMAT_FEATURE_SAMPLED_IMAGE_FILTER_MINMAX_BIT_EXT,
+    eMidpointChromaSamplesKHR = VK_FORMAT_FEATURE_MIDPOINT_CHROMA_SAMPLES_BIT_KHR,
+    eSampledImageYcbcrConversionLinearFilterKHR = VK_FORMAT_FEATURE_SAMPLED_IMAGE_YCBCR_CONVERSION_LINEAR_FILTER_BIT_KHR,
+    eSampledImageYcbcrConversionSeparateReconstructionFilterKHR = VK_FORMAT_FEATURE_SAMPLED_IMAGE_YCBCR_CONVERSION_SEPARATE_RECONSTRUCTION_FILTER_BIT_KHR,
+    eSampledImageYcbcrConversionChromaReconstructionExplicitKHR = VK_FORMAT_FEATURE_SAMPLED_IMAGE_YCBCR_CONVERSION_CHROMA_RECONSTRUCTION_EXPLICIT_BIT_KHR,
+    eSampledImageYcbcrConversionChromaReconstructionExplicitForceableKHR = VK_FORMAT_FEATURE_SAMPLED_IMAGE_YCBCR_CONVERSION_CHROMA_RECONSTRUCTION_EXPLICIT_FORCEABLE_BIT_KHR,
+    eDisjointKHR = VK_FORMAT_FEATURE_DISJOINT_BIT_KHR,
+    eCositedChromaSamplesKHR = VK_FORMAT_FEATURE_COSITED_CHROMA_SAMPLES_BIT_KHR
   };
 
   using FormatFeatureFlags = Flags<FormatFeatureFlagBits, VkFormatFeatureFlags>;
@@ -15360,7 +15849,7 @@ namespace vk
   {
     enum
     {
-      allFlags = VkFlags(FormatFeatureFlagBits::eSampledImage) | VkFlags(FormatFeatureFlagBits::eStorageImage) | VkFlags(FormatFeatureFlagBits::eStorageImageAtomic) | VkFlags(FormatFeatureFlagBits::eUniformTexelBuffer) | VkFlags(FormatFeatureFlagBits::eStorageTexelBuffer) | VkFlags(FormatFeatureFlagBits::eStorageTexelBufferAtomic) | VkFlags(FormatFeatureFlagBits::eVertexBuffer) | VkFlags(FormatFeatureFlagBits::eColorAttachment) | VkFlags(FormatFeatureFlagBits::eColorAttachmentBlend) | VkFlags(FormatFeatureFlagBits::eDepthStencilAttachment) | VkFlags(FormatFeatureFlagBits::eBlitSrc) | VkFlags(FormatFeatureFlagBits::eBlitDst) | VkFlags(FormatFeatureFlagBits::eSampledImageFilterLinear) | VkFlags(FormatFeatureFlagBits::eSampledImageFilterCubicIMG) | VkFlags(FormatFeatureFlagBits::eTransferSrcKHR) | VkFlags(FormatFeatureFlagBits::eTransferDstKHR) | VkFlags(FormatFeatureFlagBits::eSampledImageFilterMinmaxEXT)
+      allFlags = VkFlags(FormatFeatureFlagBits::eSampledImage) | VkFlags(FormatFeatureFlagBits::eStorageImage) | VkFlags(FormatFeatureFlagBits::eStorageImageAtomic) | VkFlags(FormatFeatureFlagBits::eUniformTexelBuffer) | VkFlags(FormatFeatureFlagBits::eStorageTexelBuffer) | VkFlags(FormatFeatureFlagBits::eStorageTexelBufferAtomic) | VkFlags(FormatFeatureFlagBits::eVertexBuffer) | VkFlags(FormatFeatureFlagBits::eColorAttachment) | VkFlags(FormatFeatureFlagBits::eColorAttachmentBlend) | VkFlags(FormatFeatureFlagBits::eDepthStencilAttachment) | VkFlags(FormatFeatureFlagBits::eBlitSrc) | VkFlags(FormatFeatureFlagBits::eBlitDst) | VkFlags(FormatFeatureFlagBits::eSampledImageFilterLinear) | VkFlags(FormatFeatureFlagBits::eSampledImageFilterCubicIMG) | VkFlags(FormatFeatureFlagBits::eTransferSrcKHR) | VkFlags(FormatFeatureFlagBits::eTransferDstKHR) | VkFlags(FormatFeatureFlagBits::eSampledImageFilterMinmaxEXT) | VkFlags(FormatFeatureFlagBits::eMidpointChromaSamplesKHR) | VkFlags(FormatFeatureFlagBits::eSampledImageYcbcrConversionLinearFilterKHR) | VkFlags(FormatFeatureFlagBits::eSampledImageYcbcrConversionSeparateReconstructionFilterKHR) | VkFlags(FormatFeatureFlagBits::eSampledImageYcbcrConversionChromaReconstructionExplicitKHR) | VkFlags(FormatFeatureFlagBits::eSampledImageYcbcrConversionChromaReconstructionExplicitForceableKHR) | VkFlags(FormatFeatureFlagBits::eDisjointKHR) | VkFlags(FormatFeatureFlagBits::eCositedChromaSamplesKHR)
     };
   };
 
@@ -15789,7 +16278,10 @@ namespace vk
     eColor = VK_IMAGE_ASPECT_COLOR_BIT,
     eDepth = VK_IMAGE_ASPECT_DEPTH_BIT,
     eStencil = VK_IMAGE_ASPECT_STENCIL_BIT,
-    eMetadata = VK_IMAGE_ASPECT_METADATA_BIT
+    eMetadata = VK_IMAGE_ASPECT_METADATA_BIT,
+    ePlane0KHR = VK_IMAGE_ASPECT_PLANE_0_BIT_KHR,
+    ePlane1KHR = VK_IMAGE_ASPECT_PLANE_1_BIT_KHR,
+    ePlane2KHR = VK_IMAGE_ASPECT_PLANE_2_BIT_KHR
   };
 
   using ImageAspectFlags = Flags<ImageAspectFlagBits, VkImageAspectFlags>;
@@ -15808,7 +16300,7 @@ namespace vk
   {
     enum
     {
-      allFlags = VkFlags(ImageAspectFlagBits::eColor) | VkFlags(ImageAspectFlagBits::eDepth) | VkFlags(ImageAspectFlagBits::eStencil) | VkFlags(ImageAspectFlagBits::eMetadata)
+      allFlags = VkFlags(ImageAspectFlagBits::eColor) | VkFlags(ImageAspectFlagBits::eDepth) | VkFlags(ImageAspectFlagBits::eStencil) | VkFlags(ImageAspectFlagBits::eMetadata) | VkFlags(ImageAspectFlagBits::ePlane0KHR) | VkFlags(ImageAspectFlagBits::ePlane1KHR) | VkFlags(ImageAspectFlagBits::ePlane2KHR)
     };
   };
 
@@ -16600,6 +17092,246 @@ namespace vk
     ClearValue clearValue;
   };
   static_assert( sizeof( ClearAttachment ) == sizeof( VkClearAttachment ), "struct and wrapper have different size!" );
+
+  struct InputAttachmentAspectReferenceKHR
+  {
+    InputAttachmentAspectReferenceKHR( uint32_t subpass_ = 0, uint32_t inputAttachmentIndex_ = 0, ImageAspectFlags aspectMask_ = ImageAspectFlags() )
+      : subpass( subpass_ )
+      , inputAttachmentIndex( inputAttachmentIndex_ )
+      , aspectMask( aspectMask_ )
+    {
+    }
+
+    InputAttachmentAspectReferenceKHR( VkInputAttachmentAspectReferenceKHR const & rhs )
+    {
+      memcpy( this, &rhs, sizeof( InputAttachmentAspectReferenceKHR ) );
+    }
+
+    InputAttachmentAspectReferenceKHR& operator=( VkInputAttachmentAspectReferenceKHR const & rhs )
+    {
+      memcpy( this, &rhs, sizeof( InputAttachmentAspectReferenceKHR ) );
+      return *this;
+    }
+    InputAttachmentAspectReferenceKHR& setSubpass( uint32_t subpass_ )
+    {
+      subpass = subpass_;
+      return *this;
+    }
+
+    InputAttachmentAspectReferenceKHR& setInputAttachmentIndex( uint32_t inputAttachmentIndex_ )
+    {
+      inputAttachmentIndex = inputAttachmentIndex_;
+      return *this;
+    }
+
+    InputAttachmentAspectReferenceKHR& setAspectMask( ImageAspectFlags aspectMask_ )
+    {
+      aspectMask = aspectMask_;
+      return *this;
+    }
+
+    operator const VkInputAttachmentAspectReferenceKHR&() const
+    {
+      return *reinterpret_cast<const VkInputAttachmentAspectReferenceKHR*>(this);
+    }
+
+    bool operator==( InputAttachmentAspectReferenceKHR const& rhs ) const
+    {
+      return ( subpass == rhs.subpass )
+          && ( inputAttachmentIndex == rhs.inputAttachmentIndex )
+          && ( aspectMask == rhs.aspectMask );
+    }
+
+    bool operator!=( InputAttachmentAspectReferenceKHR const& rhs ) const
+    {
+      return !operator==( rhs );
+    }
+
+    uint32_t subpass;
+    uint32_t inputAttachmentIndex;
+    ImageAspectFlags aspectMask;
+  };
+  static_assert( sizeof( InputAttachmentAspectReferenceKHR ) == sizeof( VkInputAttachmentAspectReferenceKHR ), "struct and wrapper have different size!" );
+
+  struct RenderPassInputAttachmentAspectCreateInfoKHR
+  {
+    RenderPassInputAttachmentAspectCreateInfoKHR( uint32_t aspectReferenceCount_ = 0, const InputAttachmentAspectReferenceKHR* pAspectReferences_ = nullptr )
+      : sType( StructureType::eRenderPassInputAttachmentAspectCreateInfoKHR )
+      , pNext( nullptr )
+      , aspectReferenceCount( aspectReferenceCount_ )
+      , pAspectReferences( pAspectReferences_ )
+    {
+    }
+
+    RenderPassInputAttachmentAspectCreateInfoKHR( VkRenderPassInputAttachmentAspectCreateInfoKHR const & rhs )
+    {
+      memcpy( this, &rhs, sizeof( RenderPassInputAttachmentAspectCreateInfoKHR ) );
+    }
+
+    RenderPassInputAttachmentAspectCreateInfoKHR& operator=( VkRenderPassInputAttachmentAspectCreateInfoKHR const & rhs )
+    {
+      memcpy( this, &rhs, sizeof( RenderPassInputAttachmentAspectCreateInfoKHR ) );
+      return *this;
+    }
+    RenderPassInputAttachmentAspectCreateInfoKHR& setPNext( const void* pNext_ )
+    {
+      pNext = pNext_;
+      return *this;
+    }
+
+    RenderPassInputAttachmentAspectCreateInfoKHR& setAspectReferenceCount( uint32_t aspectReferenceCount_ )
+    {
+      aspectReferenceCount = aspectReferenceCount_;
+      return *this;
+    }
+
+    RenderPassInputAttachmentAspectCreateInfoKHR& setPAspectReferences( const InputAttachmentAspectReferenceKHR* pAspectReferences_ )
+    {
+      pAspectReferences = pAspectReferences_;
+      return *this;
+    }
+
+    operator const VkRenderPassInputAttachmentAspectCreateInfoKHR&() const
+    {
+      return *reinterpret_cast<const VkRenderPassInputAttachmentAspectCreateInfoKHR*>(this);
+    }
+
+    bool operator==( RenderPassInputAttachmentAspectCreateInfoKHR const& rhs ) const
+    {
+      return ( sType == rhs.sType )
+          && ( pNext == rhs.pNext )
+          && ( aspectReferenceCount == rhs.aspectReferenceCount )
+          && ( pAspectReferences == rhs.pAspectReferences );
+    }
+
+    bool operator!=( RenderPassInputAttachmentAspectCreateInfoKHR const& rhs ) const
+    {
+      return !operator==( rhs );
+    }
+
+  private:
+    StructureType sType;
+
+  public:
+    const void* pNext;
+    uint32_t aspectReferenceCount;
+    const InputAttachmentAspectReferenceKHR* pAspectReferences;
+  };
+  static_assert( sizeof( RenderPassInputAttachmentAspectCreateInfoKHR ) == sizeof( VkRenderPassInputAttachmentAspectCreateInfoKHR ), "struct and wrapper have different size!" );
+
+  struct BindImagePlaneMemoryInfoKHR
+  {
+    BindImagePlaneMemoryInfoKHR( ImageAspectFlagBits planeAspect_ = ImageAspectFlagBits::eColor )
+      : sType( StructureType::eBindImagePlaneMemoryInfoKHR )
+      , pNext( nullptr )
+      , planeAspect( planeAspect_ )
+    {
+    }
+
+    BindImagePlaneMemoryInfoKHR( VkBindImagePlaneMemoryInfoKHR const & rhs )
+    {
+      memcpy( this, &rhs, sizeof( BindImagePlaneMemoryInfoKHR ) );
+    }
+
+    BindImagePlaneMemoryInfoKHR& operator=( VkBindImagePlaneMemoryInfoKHR const & rhs )
+    {
+      memcpy( this, &rhs, sizeof( BindImagePlaneMemoryInfoKHR ) );
+      return *this;
+    }
+    BindImagePlaneMemoryInfoKHR& setPNext( const void* pNext_ )
+    {
+      pNext = pNext_;
+      return *this;
+    }
+
+    BindImagePlaneMemoryInfoKHR& setPlaneAspect( ImageAspectFlagBits planeAspect_ )
+    {
+      planeAspect = planeAspect_;
+      return *this;
+    }
+
+    operator const VkBindImagePlaneMemoryInfoKHR&() const
+    {
+      return *reinterpret_cast<const VkBindImagePlaneMemoryInfoKHR*>(this);
+    }
+
+    bool operator==( BindImagePlaneMemoryInfoKHR const& rhs ) const
+    {
+      return ( sType == rhs.sType )
+          && ( pNext == rhs.pNext )
+          && ( planeAspect == rhs.planeAspect );
+    }
+
+    bool operator!=( BindImagePlaneMemoryInfoKHR const& rhs ) const
+    {
+      return !operator==( rhs );
+    }
+
+  private:
+    StructureType sType;
+
+  public:
+    const void* pNext;
+    ImageAspectFlagBits planeAspect;
+  };
+  static_assert( sizeof( BindImagePlaneMemoryInfoKHR ) == sizeof( VkBindImagePlaneMemoryInfoKHR ), "struct and wrapper have different size!" );
+
+  struct ImagePlaneMemoryRequirementsInfoKHR
+  {
+    ImagePlaneMemoryRequirementsInfoKHR( ImageAspectFlagBits planeAspect_ = ImageAspectFlagBits::eColor )
+      : sType( StructureType::eImagePlaneMemoryRequirementsInfoKHR )
+      , pNext( nullptr )
+      , planeAspect( planeAspect_ )
+    {
+    }
+
+    ImagePlaneMemoryRequirementsInfoKHR( VkImagePlaneMemoryRequirementsInfoKHR const & rhs )
+    {
+      memcpy( this, &rhs, sizeof( ImagePlaneMemoryRequirementsInfoKHR ) );
+    }
+
+    ImagePlaneMemoryRequirementsInfoKHR& operator=( VkImagePlaneMemoryRequirementsInfoKHR const & rhs )
+    {
+      memcpy( this, &rhs, sizeof( ImagePlaneMemoryRequirementsInfoKHR ) );
+      return *this;
+    }
+    ImagePlaneMemoryRequirementsInfoKHR& setPNext( const void* pNext_ )
+    {
+      pNext = pNext_;
+      return *this;
+    }
+
+    ImagePlaneMemoryRequirementsInfoKHR& setPlaneAspect( ImageAspectFlagBits planeAspect_ )
+    {
+      planeAspect = planeAspect_;
+      return *this;
+    }
+
+    operator const VkImagePlaneMemoryRequirementsInfoKHR&() const
+    {
+      return *reinterpret_cast<const VkImagePlaneMemoryRequirementsInfoKHR*>(this);
+    }
+
+    bool operator==( ImagePlaneMemoryRequirementsInfoKHR const& rhs ) const
+    {
+      return ( sType == rhs.sType )
+          && ( pNext == rhs.pNext )
+          && ( planeAspect == rhs.planeAspect );
+    }
+
+    bool operator!=( ImagePlaneMemoryRequirementsInfoKHR const& rhs ) const
+    {
+      return !operator==( rhs );
+    }
+
+  private:
+    StructureType sType;
+
+  public:
+    const void* pNext;
+    ImageAspectFlagBits planeAspect;
+  };
+  static_assert( sizeof( ImagePlaneMemoryRequirementsInfoKHR ) == sizeof( VkImagePlaneMemoryRequirementsInfoKHR ), "struct and wrapper have different size!" );
 
   enum class SparseImageFormatFlagBits
   {
@@ -19720,7 +20452,8 @@ namespace vk
     eObjectTableNvx = VK_DEBUG_REPORT_OBJECT_TYPE_OBJECT_TABLE_NVX_EXT,
     eIndirectCommandsLayoutNvx = VK_DEBUG_REPORT_OBJECT_TYPE_INDIRECT_COMMANDS_LAYOUT_NVX_EXT,
     eValidationCache = VK_DEBUG_REPORT_OBJECT_TYPE_VALIDATION_CACHE_EXT,
-    eDescriptorUpdateTemplateKHR = VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_UPDATE_TEMPLATE_KHR_EXT
+    eDescriptorUpdateTemplateKHR = VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_UPDATE_TEMPLATE_KHR_EXT,
+    eSamplerYcbcrConversionKHR = VK_DEBUG_REPORT_OBJECT_TYPE_SAMPLER_YCBCR_CONVERSION_KHR_EXT
   };
 
   struct DebugMarkerObjectNameInfoEXT
@@ -24331,6 +25064,40 @@ namespace vk
   };
   static_assert( sizeof( RenderPassCreateInfo ) == sizeof( VkRenderPassCreateInfo ), "struct and wrapper have different size!" );
 
+  enum class PointClippingBehaviorKHR
+  {
+    eAllClipPlanes = VK_POINT_CLIPPING_BEHAVIOR_ALL_CLIP_PLANES_KHR,
+    eUserClipPlanesOnly = VK_POINT_CLIPPING_BEHAVIOR_USER_CLIP_PLANES_ONLY_KHR
+  };
+
+  struct PhysicalDevicePointClippingPropertiesKHR
+  {
+    operator const VkPhysicalDevicePointClippingPropertiesKHR&() const
+    {
+      return *reinterpret_cast<const VkPhysicalDevicePointClippingPropertiesKHR*>(this);
+    }
+
+    bool operator==( PhysicalDevicePointClippingPropertiesKHR const& rhs ) const
+    {
+      return ( sType == rhs.sType )
+          && ( pNext == rhs.pNext )
+          && ( pointClippingBehavior == rhs.pointClippingBehavior );
+    }
+
+    bool operator!=( PhysicalDevicePointClippingPropertiesKHR const& rhs ) const
+    {
+      return !operator==( rhs );
+    }
+
+  private:
+    StructureType sType;
+
+  public:
+    void* pNext;
+    PointClippingBehaviorKHR pointClippingBehavior;
+  };
+  static_assert( sizeof( PhysicalDevicePointClippingPropertiesKHR ) == sizeof( VkPhysicalDevicePointClippingPropertiesKHR ), "struct and wrapper have different size!" );
+
   enum class SamplerReductionModeEXT
   {
     eWeightedAverage = VK_SAMPLER_REDUCTION_MODE_WEIGHTED_AVERAGE_EXT,
@@ -24394,6 +25161,210 @@ namespace vk
     SamplerReductionModeEXT reductionMode;
   };
   static_assert( sizeof( SamplerReductionModeCreateInfoEXT ) == sizeof( VkSamplerReductionModeCreateInfoEXT ), "struct and wrapper have different size!" );
+
+  enum class TessellationDomainOriginKHR
+  {
+    eUpperLeft = VK_TESSELLATION_DOMAIN_ORIGIN_UPPER_LEFT_KHR,
+    eLowerLeft = VK_TESSELLATION_DOMAIN_ORIGIN_LOWER_LEFT_KHR
+  };
+
+  struct PipelineTessellationDomainOriginStateCreateInfoKHR
+  {
+    PipelineTessellationDomainOriginStateCreateInfoKHR( TessellationDomainOriginKHR domainOrigin_ = TessellationDomainOriginKHR::eUpperLeft )
+      : sType( StructureType::ePipelineTessellationDomainOriginStateCreateInfoKHR )
+      , pNext( nullptr )
+      , domainOrigin( domainOrigin_ )
+    {
+    }
+
+    PipelineTessellationDomainOriginStateCreateInfoKHR( VkPipelineTessellationDomainOriginStateCreateInfoKHR const & rhs )
+    {
+      memcpy( this, &rhs, sizeof( PipelineTessellationDomainOriginStateCreateInfoKHR ) );
+    }
+
+    PipelineTessellationDomainOriginStateCreateInfoKHR& operator=( VkPipelineTessellationDomainOriginStateCreateInfoKHR const & rhs )
+    {
+      memcpy( this, &rhs, sizeof( PipelineTessellationDomainOriginStateCreateInfoKHR ) );
+      return *this;
+    }
+    PipelineTessellationDomainOriginStateCreateInfoKHR& setPNext( const void* pNext_ )
+    {
+      pNext = pNext_;
+      return *this;
+    }
+
+    PipelineTessellationDomainOriginStateCreateInfoKHR& setDomainOrigin( TessellationDomainOriginKHR domainOrigin_ )
+    {
+      domainOrigin = domainOrigin_;
+      return *this;
+    }
+
+    operator const VkPipelineTessellationDomainOriginStateCreateInfoKHR&() const
+    {
+      return *reinterpret_cast<const VkPipelineTessellationDomainOriginStateCreateInfoKHR*>(this);
+    }
+
+    bool operator==( PipelineTessellationDomainOriginStateCreateInfoKHR const& rhs ) const
+    {
+      return ( sType == rhs.sType )
+          && ( pNext == rhs.pNext )
+          && ( domainOrigin == rhs.domainOrigin );
+    }
+
+    bool operator!=( PipelineTessellationDomainOriginStateCreateInfoKHR const& rhs ) const
+    {
+      return !operator==( rhs );
+    }
+
+  private:
+    StructureType sType;
+
+  public:
+    const void* pNext;
+    TessellationDomainOriginKHR domainOrigin;
+  };
+  static_assert( sizeof( PipelineTessellationDomainOriginStateCreateInfoKHR ) == sizeof( VkPipelineTessellationDomainOriginStateCreateInfoKHR ), "struct and wrapper have different size!" );
+
+  enum class SamplerYcbcrModelConversionKHR
+  {
+    eRgbIdentity = VK_SAMPLER_YCBCR_MODEL_CONVERSION_RGB_IDENTITY_KHR,
+    eYcbcrIdentity = VK_SAMPLER_YCBCR_MODEL_CONVERSION_YCBCR_IDENTITY_KHR,
+    eYcbcr709 = VK_SAMPLER_YCBCR_MODEL_CONVERSION_YCBCR_709_KHR,
+    eYcbcr601 = VK_SAMPLER_YCBCR_MODEL_CONVERSION_YCBCR_601_KHR,
+    eYcbcr2020 = VK_SAMPLER_YCBCR_MODEL_CONVERSION_YCBCR_2020_KHR
+  };
+
+  enum class SamplerYcbcrRangeKHR
+  {
+    eItuFull = VK_SAMPLER_YCBCR_RANGE_ITU_FULL_KHR,
+    eItuNarrow = VK_SAMPLER_YCBCR_RANGE_ITU_NARROW_KHR
+  };
+
+  enum class ChromaLocationKHR
+  {
+    eCositedEven = VK_CHROMA_LOCATION_COSITED_EVEN_KHR,
+    eMidpoint = VK_CHROMA_LOCATION_MIDPOINT_KHR
+  };
+
+  struct SamplerYcbcrConversionCreateInfoKHR
+  {
+    SamplerYcbcrConversionCreateInfoKHR( Format format_ = Format::eUndefined, SamplerYcbcrModelConversionKHR ycbcrModel_ = SamplerYcbcrModelConversionKHR::eRgbIdentity, SamplerYcbcrRangeKHR ycbcrRange_ = SamplerYcbcrRangeKHR::eItuFull, ComponentMapping components_ = ComponentMapping(), ChromaLocationKHR xChromaOffset_ = ChromaLocationKHR::eCositedEven, ChromaLocationKHR yChromaOffset_ = ChromaLocationKHR::eCositedEven, Filter chromaFilter_ = Filter::eNearest, Bool32 forceExplicitReconstruction_ = 0 )
+      : sType( StructureType::eSamplerYcbcrConversionCreateInfoKHR )
+      , pNext( nullptr )
+      , format( format_ )
+      , ycbcrModel( ycbcrModel_ )
+      , ycbcrRange( ycbcrRange_ )
+      , components( components_ )
+      , xChromaOffset( xChromaOffset_ )
+      , yChromaOffset( yChromaOffset_ )
+      , chromaFilter( chromaFilter_ )
+      , forceExplicitReconstruction( forceExplicitReconstruction_ )
+    {
+    }
+
+    SamplerYcbcrConversionCreateInfoKHR( VkSamplerYcbcrConversionCreateInfoKHR const & rhs )
+    {
+      memcpy( this, &rhs, sizeof( SamplerYcbcrConversionCreateInfoKHR ) );
+    }
+
+    SamplerYcbcrConversionCreateInfoKHR& operator=( VkSamplerYcbcrConversionCreateInfoKHR const & rhs )
+    {
+      memcpy( this, &rhs, sizeof( SamplerYcbcrConversionCreateInfoKHR ) );
+      return *this;
+    }
+    SamplerYcbcrConversionCreateInfoKHR& setPNext( const void* pNext_ )
+    {
+      pNext = pNext_;
+      return *this;
+    }
+
+    SamplerYcbcrConversionCreateInfoKHR& setFormat( Format format_ )
+    {
+      format = format_;
+      return *this;
+    }
+
+    SamplerYcbcrConversionCreateInfoKHR& setYcbcrModel( SamplerYcbcrModelConversionKHR ycbcrModel_ )
+    {
+      ycbcrModel = ycbcrModel_;
+      return *this;
+    }
+
+    SamplerYcbcrConversionCreateInfoKHR& setYcbcrRange( SamplerYcbcrRangeKHR ycbcrRange_ )
+    {
+      ycbcrRange = ycbcrRange_;
+      return *this;
+    }
+
+    SamplerYcbcrConversionCreateInfoKHR& setComponents( ComponentMapping components_ )
+    {
+      components = components_;
+      return *this;
+    }
+
+    SamplerYcbcrConversionCreateInfoKHR& setXChromaOffset( ChromaLocationKHR xChromaOffset_ )
+    {
+      xChromaOffset = xChromaOffset_;
+      return *this;
+    }
+
+    SamplerYcbcrConversionCreateInfoKHR& setYChromaOffset( ChromaLocationKHR yChromaOffset_ )
+    {
+      yChromaOffset = yChromaOffset_;
+      return *this;
+    }
+
+    SamplerYcbcrConversionCreateInfoKHR& setChromaFilter( Filter chromaFilter_ )
+    {
+      chromaFilter = chromaFilter_;
+      return *this;
+    }
+
+    SamplerYcbcrConversionCreateInfoKHR& setForceExplicitReconstruction( Bool32 forceExplicitReconstruction_ )
+    {
+      forceExplicitReconstruction = forceExplicitReconstruction_;
+      return *this;
+    }
+
+    operator const VkSamplerYcbcrConversionCreateInfoKHR&() const
+    {
+      return *reinterpret_cast<const VkSamplerYcbcrConversionCreateInfoKHR*>(this);
+    }
+
+    bool operator==( SamplerYcbcrConversionCreateInfoKHR const& rhs ) const
+    {
+      return ( sType == rhs.sType )
+          && ( pNext == rhs.pNext )
+          && ( format == rhs.format )
+          && ( ycbcrModel == rhs.ycbcrModel )
+          && ( ycbcrRange == rhs.ycbcrRange )
+          && ( components == rhs.components )
+          && ( xChromaOffset == rhs.xChromaOffset )
+          && ( yChromaOffset == rhs.yChromaOffset )
+          && ( chromaFilter == rhs.chromaFilter )
+          && ( forceExplicitReconstruction == rhs.forceExplicitReconstruction );
+    }
+
+    bool operator!=( SamplerYcbcrConversionCreateInfoKHR const& rhs ) const
+    {
+      return !operator==( rhs );
+    }
+
+  private:
+    StructureType sType;
+
+  public:
+    const void* pNext;
+    Format format;
+    SamplerYcbcrModelConversionKHR ycbcrModel;
+    SamplerYcbcrRangeKHR ycbcrRange;
+    ComponentMapping components;
+    ChromaLocationKHR xChromaOffset;
+    ChromaLocationKHR yChromaOffset;
+    Filter chromaFilter;
+    Bool32 forceExplicitReconstruction;
+  };
+  static_assert( sizeof( SamplerYcbcrConversionCreateInfoKHR ) == sizeof( VkSamplerYcbcrConversionCreateInfoKHR ), "struct and wrapper have different size!" );
 
   enum class BlendOverlapEXT
   {
@@ -25728,6 +26699,8 @@ namespace vk
   using UniqueRenderPass = UniqueHandle<RenderPass, RenderPassDeleter>;
   class SamplerDeleter;
   using UniqueSampler = UniqueHandle<Sampler, SamplerDeleter>;
+  class SamplerYcbcrConversionKHRDeleter;
+  using UniqueSamplerYcbcrConversionKHR = UniqueHandle<SamplerYcbcrConversionKHR, SamplerYcbcrConversionKHRDeleter>;
   class SemaphoreDeleter;
   using UniqueSemaphore = UniqueHandle<Semaphore, SemaphoreDeleter>;
   class ShaderModuleDeleter;
@@ -26408,14 +27381,14 @@ namespace vk
     PeerMemoryFeatureFlagsKHX getGroupPeerMemoryFeaturesKHX( uint32_t heapIndex, uint32_t localDeviceIndex, uint32_t remoteDeviceIndex ) const;
 #endif /*VULKAN_HPP_DISABLE_ENHANCED_MODE*/
 
-    Result bindBufferMemory2KHX( uint32_t bindInfoCount, const BindBufferMemoryInfoKHX* pBindInfos ) const;
+    Result bindBufferMemory2KHR( uint32_t bindInfoCount, const BindBufferMemoryInfoKHR* pBindInfos ) const;
 #ifndef VULKAN_HPP_DISABLE_ENHANCED_MODE
-    ResultValueType<void>::type bindBufferMemory2KHX( ArrayProxy<const BindBufferMemoryInfoKHX> bindInfos ) const;
+    ResultValueType<void>::type bindBufferMemory2KHR( ArrayProxy<const BindBufferMemoryInfoKHR> bindInfos ) const;
 #endif /*VULKAN_HPP_DISABLE_ENHANCED_MODE*/
 
-    Result bindImageMemory2KHX( uint32_t bindInfoCount, const BindImageMemoryInfoKHX* pBindInfos ) const;
+    Result bindImageMemory2KHR( uint32_t bindInfoCount, const BindImageMemoryInfoKHR* pBindInfos ) const;
 #ifndef VULKAN_HPP_DISABLE_ENHANCED_MODE
-    ResultValueType<void>::type bindImageMemory2KHX( ArrayProxy<const BindImageMemoryInfoKHX> bindInfos ) const;
+    ResultValueType<void>::type bindImageMemory2KHR( ArrayProxy<const BindImageMemoryInfoKHR> bindInfos ) const;
 #endif /*VULKAN_HPP_DISABLE_ENHANCED_MODE*/
 
     Result getGroupPresentCapabilitiesKHX( DeviceGroupPresentCapabilitiesKHX* pDeviceGroupPresentCapabilities ) const;
@@ -26484,6 +27457,19 @@ namespace vk
 #ifndef VULKAN_HPP_DISABLE_ENHANCED_MODE
     template <typename Allocator = std::allocator<SparseImageMemoryRequirements2KHR>> 
     std::vector<SparseImageMemoryRequirements2KHR,Allocator> getImageSparseMemoryRequirements2KHR( const ImageSparseMemoryRequirementsInfo2KHR & info ) const;
+#endif /*VULKAN_HPP_DISABLE_ENHANCED_MODE*/
+
+    Result createSamplerYcbcrConversionKHR( const SamplerYcbcrConversionCreateInfoKHR* pCreateInfo, const AllocationCallbacks* pAllocator, SamplerYcbcrConversionKHR* pYcbcrConversion ) const;
+#ifndef VULKAN_HPP_DISABLE_ENHANCED_MODE
+    ResultValueType<SamplerYcbcrConversionKHR>::type createSamplerYcbcrConversionKHR( const SamplerYcbcrConversionCreateInfoKHR & createInfo, Optional<const AllocationCallbacks> allocator = nullptr ) const;
+#ifndef VULKAN_HPP_NO_SMART_HANDLE
+    UniqueSamplerYcbcrConversionKHR createSamplerYcbcrConversionKHRUnique( const SamplerYcbcrConversionCreateInfoKHR & createInfo, Optional<const AllocationCallbacks> allocator = nullptr ) const;
+#endif /*VULKAN_HPP_NO_SMART_HANDLE*/
+#endif /*VULKAN_HPP_DISABLE_ENHANCED_MODE*/
+
+    void destroySamplerYcbcrConversionKHR( SamplerYcbcrConversionKHR ycbcrConversion, const AllocationCallbacks* pAllocator ) const;
+#ifndef VULKAN_HPP_DISABLE_ENHANCED_MODE
+    void destroySamplerYcbcrConversionKHR( SamplerYcbcrConversionKHR ycbcrConversion, Optional<const AllocationCallbacks> allocator = nullptr ) const;
 #endif /*VULKAN_HPP_DISABLE_ENHANCED_MODE*/
 
     Result createValidationCacheEXT( const ValidationCacheCreateInfoEXT* pCreateInfo, const AllocationCallbacks* pAllocator, ValidationCacheEXT* pValidationCache ) const;
@@ -26923,6 +27909,24 @@ namespace vk
     void operator()( Sampler sampler )
     {
       m_device.destroySampler( sampler, m_allocator );
+    }
+
+  private:
+    Device m_device;
+    Optional<const AllocationCallbacks> m_allocator;
+  };
+
+  class SamplerYcbcrConversionKHRDeleter
+  {
+  public:
+    SamplerYcbcrConversionKHRDeleter( Device device = Device(), Optional<const AllocationCallbacks> allocator = nullptr )
+      : m_device( device )
+      , m_allocator( allocator )
+    {}
+
+    void operator()( SamplerYcbcrConversionKHR samplerYcbcrConversionKHR )
+    {
+      m_device.destroySamplerYcbcrConversionKHR( samplerYcbcrConversionKHR, m_allocator );
     }
 
   private:
@@ -28579,27 +29583,27 @@ namespace vk
   }
 #endif /*VULKAN_HPP_DISABLE_ENHANCED_MODE*/
 
-  VULKAN_HPP_INLINE Result Device::bindBufferMemory2KHX( uint32_t bindInfoCount, const BindBufferMemoryInfoKHX* pBindInfos ) const
+  VULKAN_HPP_INLINE Result Device::bindBufferMemory2KHR( uint32_t bindInfoCount, const BindBufferMemoryInfoKHR* pBindInfos ) const
   {
-    return static_cast<Result>( vkBindBufferMemory2KHX( m_device, bindInfoCount, reinterpret_cast<const VkBindBufferMemoryInfoKHX*>( pBindInfos ) ) );
+    return static_cast<Result>( vkBindBufferMemory2KHR( m_device, bindInfoCount, reinterpret_cast<const VkBindBufferMemoryInfoKHR*>( pBindInfos ) ) );
   }
 #ifndef VULKAN_HPP_DISABLE_ENHANCED_MODE
-  VULKAN_HPP_INLINE ResultValueType<void>::type Device::bindBufferMemory2KHX( ArrayProxy<const BindBufferMemoryInfoKHX> bindInfos ) const
+  VULKAN_HPP_INLINE ResultValueType<void>::type Device::bindBufferMemory2KHR( ArrayProxy<const BindBufferMemoryInfoKHR> bindInfos ) const
   {
-    Result result = static_cast<Result>( vkBindBufferMemory2KHX( m_device, bindInfos.size() , reinterpret_cast<const VkBindBufferMemoryInfoKHX*>( bindInfos.data() ) ) );
-    return createResultValue( result, "vk::Device::bindBufferMemory2KHX" );
+    Result result = static_cast<Result>( vkBindBufferMemory2KHR( m_device, bindInfos.size() , reinterpret_cast<const VkBindBufferMemoryInfoKHR*>( bindInfos.data() ) ) );
+    return createResultValue( result, "vk::Device::bindBufferMemory2KHR" );
   }
 #endif /*VULKAN_HPP_DISABLE_ENHANCED_MODE*/
 
-  VULKAN_HPP_INLINE Result Device::bindImageMemory2KHX( uint32_t bindInfoCount, const BindImageMemoryInfoKHX* pBindInfos ) const
+  VULKAN_HPP_INLINE Result Device::bindImageMemory2KHR( uint32_t bindInfoCount, const BindImageMemoryInfoKHR* pBindInfos ) const
   {
-    return static_cast<Result>( vkBindImageMemory2KHX( m_device, bindInfoCount, reinterpret_cast<const VkBindImageMemoryInfoKHX*>( pBindInfos ) ) );
+    return static_cast<Result>( vkBindImageMemory2KHR( m_device, bindInfoCount, reinterpret_cast<const VkBindImageMemoryInfoKHR*>( pBindInfos ) ) );
   }
 #ifndef VULKAN_HPP_DISABLE_ENHANCED_MODE
-  VULKAN_HPP_INLINE ResultValueType<void>::type Device::bindImageMemory2KHX( ArrayProxy<const BindImageMemoryInfoKHX> bindInfos ) const
+  VULKAN_HPP_INLINE ResultValueType<void>::type Device::bindImageMemory2KHR( ArrayProxy<const BindImageMemoryInfoKHR> bindInfos ) const
   {
-    Result result = static_cast<Result>( vkBindImageMemory2KHX( m_device, bindInfos.size() , reinterpret_cast<const VkBindImageMemoryInfoKHX*>( bindInfos.data() ) ) );
-    return createResultValue( result, "vk::Device::bindImageMemory2KHX" );
+    Result result = static_cast<Result>( vkBindImageMemory2KHR( m_device, bindInfos.size() , reinterpret_cast<const VkBindImageMemoryInfoKHR*>( bindInfos.data() ) ) );
+    return createResultValue( result, "vk::Device::bindImageMemory2KHR" );
   }
 #endif /*VULKAN_HPP_DISABLE_ENHANCED_MODE*/
 
@@ -28799,6 +29803,37 @@ namespace vk
     sparseMemoryRequirements.resize( sparseMemoryRequirementCount );
     vkGetImageSparseMemoryRequirements2KHR( m_device, reinterpret_cast<const VkImageSparseMemoryRequirementsInfo2KHR*>( &info ), &sparseMemoryRequirementCount, reinterpret_cast<VkSparseImageMemoryRequirements2KHR*>( sparseMemoryRequirements.data() ) );
     return sparseMemoryRequirements;
+  }
+#endif /*VULKAN_HPP_DISABLE_ENHANCED_MODE*/
+
+  VULKAN_HPP_INLINE Result Device::createSamplerYcbcrConversionKHR( const SamplerYcbcrConversionCreateInfoKHR* pCreateInfo, const AllocationCallbacks* pAllocator, SamplerYcbcrConversionKHR* pYcbcrConversion ) const
+  {
+    return static_cast<Result>( vkCreateSamplerYcbcrConversionKHR( m_device, reinterpret_cast<const VkSamplerYcbcrConversionCreateInfoKHR*>( pCreateInfo ), reinterpret_cast<const VkAllocationCallbacks*>( pAllocator ), reinterpret_cast<VkSamplerYcbcrConversionKHR*>( pYcbcrConversion ) ) );
+  }
+#ifndef VULKAN_HPP_DISABLE_ENHANCED_MODE
+  VULKAN_HPP_INLINE ResultValueType<SamplerYcbcrConversionKHR>::type Device::createSamplerYcbcrConversionKHR( const SamplerYcbcrConversionCreateInfoKHR & createInfo, Optional<const AllocationCallbacks> allocator ) const
+  {
+    SamplerYcbcrConversionKHR ycbcrConversion;
+    Result result = static_cast<Result>( vkCreateSamplerYcbcrConversionKHR( m_device, reinterpret_cast<const VkSamplerYcbcrConversionCreateInfoKHR*>( &createInfo ), reinterpret_cast<const VkAllocationCallbacks*>( static_cast<const AllocationCallbacks*>( allocator ) ), reinterpret_cast<VkSamplerYcbcrConversionKHR*>( &ycbcrConversion ) ) );
+    return createResultValue( result, ycbcrConversion, "vk::Device::createSamplerYcbcrConversionKHR" );
+  }
+#ifndef VULKAN_HPP_NO_SMART_HANDLE
+  VULKAN_HPP_INLINE UniqueSamplerYcbcrConversionKHR Device::createSamplerYcbcrConversionKHRUnique( const SamplerYcbcrConversionCreateInfoKHR & createInfo, Optional<const AllocationCallbacks> allocator ) const
+  {
+    SamplerYcbcrConversionKHRDeleter deleter( *this, allocator );
+    return UniqueSamplerYcbcrConversionKHR( createSamplerYcbcrConversionKHR( createInfo, allocator ), deleter );
+  }
+#endif /*VULKAN_HPP_NO_SMART_HANDLE*/
+#endif /*VULKAN_HPP_DISABLE_ENHANCED_MODE*/
+
+  VULKAN_HPP_INLINE void Device::destroySamplerYcbcrConversionKHR( SamplerYcbcrConversionKHR ycbcrConversion, const AllocationCallbacks* pAllocator ) const
+  {
+    vkDestroySamplerYcbcrConversionKHR( m_device, static_cast<VkSamplerYcbcrConversionKHR>( ycbcrConversion ), reinterpret_cast<const VkAllocationCallbacks*>( pAllocator ) );
+  }
+#ifndef VULKAN_HPP_DISABLE_ENHANCED_MODE
+  VULKAN_HPP_INLINE void Device::destroySamplerYcbcrConversionKHR( SamplerYcbcrConversionKHR ycbcrConversion, Optional<const AllocationCallbacks> allocator ) const
+  {
+    vkDestroySamplerYcbcrConversionKHR( m_device, static_cast<VkSamplerYcbcrConversionKHR>( ycbcrConversion ), reinterpret_cast<const VkAllocationCallbacks*>( static_cast<const AllocationCallbacks*>( allocator ) ) );
   }
 #endif /*VULKAN_HPP_DISABLE_ENHANCED_MODE*/
 
@@ -30922,12 +31957,14 @@ namespace vk
   template <> bool isStructureChainValid<DeviceCreateInfo, PhysicalDeviceMultiviewFeaturesKHX>() { return true; }
   template <> bool isStructureChainValid<PhysicalDeviceProperties2KHR, PhysicalDeviceMultiviewPropertiesKHX>() { return true; }
   template <> bool isStructureChainValid<RenderPassCreateInfo, RenderPassMultiviewCreateInfoKHX>() { return true; }
+  template <> bool isStructureChainValid<BindBufferMemoryInfoKHR, BindBufferMemoryDeviceGroupInfoKHX>() { return true; }
+  template <> bool isStructureChainValid<BindImageMemoryInfoKHR, BindImageMemoryDeviceGroupInfoKHX>() { return true; }
   template <> bool isStructureChainValid<RenderPassBeginInfo, DeviceGroupRenderPassBeginInfoKHX>() { return true; }
   template <> bool isStructureChainValid<CommandBufferBeginInfo, DeviceGroupCommandBufferBeginInfoKHX>() { return true; }
   template <> bool isStructureChainValid<SubmitInfo, DeviceGroupSubmitInfoKHX>() { return true; }
   template <> bool isStructureChainValid<BindSparseInfo, DeviceGroupBindSparseInfoKHX>() { return true; }
   template <> bool isStructureChainValid<ImageCreateInfo, ImageSwapchainCreateInfoKHX>() { return true; }
-  template <> bool isStructureChainValid<BindImageMemoryInfoKHX, BindImageMemorySwapchainInfoKHX>() { return true; }
+  template <> bool isStructureChainValid<BindImageMemoryInfoKHR, BindImageMemorySwapchainInfoKHX>() { return true; }
   template <> bool isStructureChainValid<PresentInfoKHR, PresentTimesInfoGOOGLE>() { return true; }
   template <> bool isStructureChainValid<PipelineViewportStateCreateInfo, PipelineViewportWScalingStateCreateInfoNV>() { return true; }
   template <> bool isStructureChainValid<PhysicalDeviceProperties2KHR, PhysicalDeviceDiscardRectanglePropertiesEXT>() { return true; }
@@ -30936,13 +31973,23 @@ namespace vk
   template <> bool isStructureChainValid<DeviceCreateInfo, PhysicalDevice16BitStorageFeaturesKHR>() { return true; }
   template <> bool isStructureChainValid<MemoryRequirements2KHR, MemoryDedicatedRequirementsKHR>() { return true; }
   template <> bool isStructureChainValid<MemoryAllocateInfo, MemoryDedicatedAllocateInfoKHR>() { return true; }
+  template <> bool isStructureChainValid<SamplerCreateInfo, SamplerYcbcrConversionInfoKHR>() { return true; }
+  template <> bool isStructureChainValid<ImageViewCreateInfo, SamplerYcbcrConversionInfoKHR>() { return true; }
+  template <> bool isStructureChainValid<PhysicalDeviceFeatures2KHR, PhysicalDeviceSamplerYcbcrConversionFeaturesKHR>() { return true; }
+  template <> bool isStructureChainValid<DeviceCreateInfo, PhysicalDeviceSamplerYcbcrConversionFeaturesKHR>() { return true; }
+  template <> bool isStructureChainValid<ImageFormatProperties2KHR, SamplerYcbcrConversionImageFormatPropertiesKHR>() { return true; }
   template <> bool isStructureChainValid<ImageFormatProperties2KHR, TextureLODGatherFormatPropertiesAMD>() { return true; }
   template <> bool isStructureChainValid<PipelineMultisampleStateCreateInfo, PipelineCoverageToColorStateCreateInfoNV>() { return true; }
   template <> bool isStructureChainValid<PhysicalDeviceProperties2KHR, PhysicalDeviceSamplerFilterMinmaxPropertiesEXT>() { return true; }
   template <> bool isStructureChainValid<PhysicalDeviceFeatures2KHR, PhysicalDeviceBlendOperationAdvancedFeaturesEXT>() { return true; }
   template <> bool isStructureChainValid<PhysicalDeviceProperties2KHR, PhysicalDeviceBlendOperationAdvancedPropertiesEXT>() { return true; }
+  template <> bool isStructureChainValid<ImageCreateInfo, ImageFormatListCreateInfoKHR>() { return true; }
   template <> bool isStructureChainValid<ShaderModuleCreateInfo, ShaderModuleValidationCacheCreateInfoEXT>() { return true; }
   template <> bool isStructureChainValid<SurfaceCapabilities2KHR, SharedPresentSurfaceCapabilitiesKHR>() { return true; }
+  template <> bool isStructureChainValid<ImageViewCreateInfo, ImageViewUsageCreateInfoKHR>() { return true; }
+  template <> bool isStructureChainValid<RenderPassCreateInfo, RenderPassInputAttachmentAspectCreateInfoKHR>() { return true; }
+  template <> bool isStructureChainValid<BindImageMemoryInfoKHR, BindImagePlaneMemoryInfoKHR>() { return true; }
+  template <> bool isStructureChainValid<ImageMemoryRequirementsInfo2KHR, ImagePlaneMemoryRequirementsInfoKHR>() { return true; }
   template <> bool isStructureChainValid<ImageMemoryBarrier, SampleLocationsInfoEXT>() { return true; }
   template <> bool isStructureChainValid<RenderPassBeginInfo, RenderPassSampleLocationsBeginInfoEXT>() { return true; }
   template <> bool isStructureChainValid<PipelineMultisampleStateCreateInfo, PipelineSampleLocationsStateCreateInfoEXT>() { return true; }
@@ -30972,7 +32019,9 @@ namespace vk
   template <> bool isStructureChainValid<SwapchainCreateInfoKHR, DeviceGroupSwapchainCreateInfoKHX>() { return true; }
   template <> bool isStructureChainValid<PipelineViewportStateCreateInfo, PipelineViewportSwizzleStateCreateInfoNV>() { return true; }
   template <> bool isStructureChainValid<GraphicsPipelineCreateInfo, PipelineDiscardRectangleStateCreateInfoEXT>() { return true; }
+  template <> bool isStructureChainValid<PhysicalDeviceProperties2KHR, PhysicalDevicePointClippingPropertiesKHR>() { return true; }
   template <> bool isStructureChainValid<SamplerCreateInfo, SamplerReductionModeCreateInfoEXT>() { return true; }
+  template <> bool isStructureChainValid<PipelineTessellationStateCreateInfo, PipelineTessellationDomainOriginStateCreateInfoKHR>() { return true; }
   template <> bool isStructureChainValid<PipelineColorBlendStateCreateInfo, PipelineColorBlendAdvancedStateCreateInfoEXT>() { return true; }
   template <> bool isStructureChainValid<PipelineMultisampleStateCreateInfo, PipelineCoverageModulationStateCreateInfoNV>() { return true; }
   template <> bool isStructureChainValid<DeviceCreateInfo, DeviceGroupDeviceCreateInfoKHX>() { return true; }
@@ -31467,6 +32516,8 @@ namespace vk
     case ImageLayout::ePreinitialized: return "Preinitialized";
     case ImageLayout::ePresentSrcKHR: return "PresentSrcKHR";
     case ImageLayout::eSharedPresentKHR: return "SharedPresentKHR";
+    case ImageLayout::eDepthReadOnlyStencilAttachmentOptimalKHR: return "DepthReadOnlyStencilAttachmentOptimalKHR";
+    case ImageLayout::eDepthAttachmentStencilReadOnlyOptimalKHR: return "DepthAttachmentStencilReadOnlyOptimalKHR";
     default: return "invalid";
     }
   }
@@ -32118,6 +33169,40 @@ namespace vk
     case Format::ePvrtc14BppSrgbBlockIMG: return "Pvrtc14BppSrgbBlockIMG";
     case Format::ePvrtc22BppSrgbBlockIMG: return "Pvrtc22BppSrgbBlockIMG";
     case Format::ePvrtc24BppSrgbBlockIMG: return "Pvrtc24BppSrgbBlockIMG";
+    case Format::eG8B8G8R8422UnormKHR: return "G8B8G8R8422UnormKHR";
+    case Format::eB8G8R8G8422UnormKHR: return "B8G8R8G8422UnormKHR";
+    case Format::eG8B8R83Plane420UnormKHR: return "G8B8R83Plane420UnormKHR";
+    case Format::eG8B8R82Plane420UnormKHR: return "G8B8R82Plane420UnormKHR";
+    case Format::eG8B8R83Plane422UnormKHR: return "G8B8R83Plane422UnormKHR";
+    case Format::eG8B8R82Plane422UnormKHR: return "G8B8R82Plane422UnormKHR";
+    case Format::eG8B8R83Plane444UnormKHR: return "G8B8R83Plane444UnormKHR";
+    case Format::eR10X6UnormPack16KHR: return "R10X6UnormPack16KHR";
+    case Format::eR10X6G10X6Unorm2Pack16KHR: return "R10X6G10X6Unorm2Pack16KHR";
+    case Format::eR10X6G10X6B10X6A10X6Unorm4Pack16KHR: return "R10X6G10X6B10X6A10X6Unorm4Pack16KHR";
+    case Format::eG10X6B10X6G10X6R10X6422Unorm4Pack16KHR: return "G10X6B10X6G10X6R10X6422Unorm4Pack16KHR";
+    case Format::eB10X6G10X6R10X6G10X6422Unorm4Pack16KHR: return "B10X6G10X6R10X6G10X6422Unorm4Pack16KHR";
+    case Format::eG10X6B10X6R10X63Plane420Unorm3Pack16KHR: return "G10X6B10X6R10X63Plane420Unorm3Pack16KHR";
+    case Format::eG10X6B10X6R10X62Plane420Unorm3Pack16KHR: return "G10X6B10X6R10X62Plane420Unorm3Pack16KHR";
+    case Format::eG10X6B10X6R10X63Plane422Unorm3Pack16KHR: return "G10X6B10X6R10X63Plane422Unorm3Pack16KHR";
+    case Format::eG10X6B10X6R10X62Plane422Unorm3Pack16KHR: return "G10X6B10X6R10X62Plane422Unorm3Pack16KHR";
+    case Format::eG10X6B10X6R10X63Plane444Unorm3Pack16KHR: return "G10X6B10X6R10X63Plane444Unorm3Pack16KHR";
+    case Format::eR12X4UnormPack16KHR: return "R12X4UnormPack16KHR";
+    case Format::eR12X4G12X4Unorm2Pack16KHR: return "R12X4G12X4Unorm2Pack16KHR";
+    case Format::eR12X4G12X4B12X4A12X4Unorm4Pack16KHR: return "R12X4G12X4B12X4A12X4Unorm4Pack16KHR";
+    case Format::eG12X4B12X4G12X4R12X4422Unorm4Pack16KHR: return "G12X4B12X4G12X4R12X4422Unorm4Pack16KHR";
+    case Format::eB12X4G12X4R12X4G12X4422Unorm4Pack16KHR: return "B12X4G12X4R12X4G12X4422Unorm4Pack16KHR";
+    case Format::eG12X4B12X4R12X43Plane420Unorm3Pack16KHR: return "G12X4B12X4R12X43Plane420Unorm3Pack16KHR";
+    case Format::eG12X4B12X4R12X42Plane420Unorm3Pack16KHR: return "G12X4B12X4R12X42Plane420Unorm3Pack16KHR";
+    case Format::eG12X4B12X4R12X43Plane422Unorm3Pack16KHR: return "G12X4B12X4R12X43Plane422Unorm3Pack16KHR";
+    case Format::eG12X4B12X4R12X42Plane422Unorm3Pack16KHR: return "G12X4B12X4R12X42Plane422Unorm3Pack16KHR";
+    case Format::eG12X4B12X4R12X43Plane444Unorm3Pack16KHR: return "G12X4B12X4R12X43Plane444Unorm3Pack16KHR";
+    case Format::eG16B16G16R16422UnormKHR: return "G16B16G16R16422UnormKHR";
+    case Format::eB16G16R16G16422UnormKHR: return "B16G16R16G16422UnormKHR";
+    case Format::eG16B16R163Plane420UnormKHR: return "G16B16R163Plane420UnormKHR";
+    case Format::eG16B16R162Plane420UnormKHR: return "G16B16R162Plane420UnormKHR";
+    case Format::eG16B16R163Plane422UnormKHR: return "G16B16R163Plane422UnormKHR";
+    case Format::eG16B16R162Plane422UnormKHR: return "G16B16R162Plane422UnormKHR";
+    case Format::eG16B16R163Plane444UnormKHR: return "G16B16R163Plane444UnormKHR";
     default: return "invalid";
     }
   }
@@ -32213,13 +33298,13 @@ namespace vk
     case StructureType::eSparseImageFormatProperties2KHR: return "SparseImageFormatProperties2KHR";
     case StructureType::ePhysicalDeviceSparseImageFormatInfo2KHR: return "PhysicalDeviceSparseImageFormatInfo2KHR";
     case StructureType::eMemoryAllocateFlagsInfoKHX: return "MemoryAllocateFlagsInfoKHX";
-    case StructureType::eBindBufferMemoryInfoKHX: return "BindBufferMemoryInfoKHX";
-    case StructureType::eBindImageMemoryInfoKHX: return "BindImageMemoryInfoKHX";
     case StructureType::eDeviceGroupRenderPassBeginInfoKHX: return "DeviceGroupRenderPassBeginInfoKHX";
     case StructureType::eDeviceGroupCommandBufferBeginInfoKHX: return "DeviceGroupCommandBufferBeginInfoKHX";
     case StructureType::eDeviceGroupSubmitInfoKHX: return "DeviceGroupSubmitInfoKHX";
     case StructureType::eDeviceGroupBindSparseInfoKHX: return "DeviceGroupBindSparseInfoKHX";
     case StructureType::eAcquireNextImageInfoKHX: return "AcquireNextImageInfoKHX";
+    case StructureType::eBindBufferMemoryDeviceGroupInfoKHX: return "BindBufferMemoryDeviceGroupInfoKHX";
+    case StructureType::eBindImageMemoryDeviceGroupInfoKHX: return "BindImageMemoryDeviceGroupInfoKHX";
     case StructureType::eDeviceGroupPresentCapabilitiesKHX: return "DeviceGroupPresentCapabilitiesKHX";
     case StructureType::eImageSwapchainCreateInfoKHX: return "ImageSwapchainCreateInfoKHX";
     case StructureType::eBindImageMemorySwapchainInfoKHX: return "BindImageMemorySwapchainInfoKHX";
@@ -32285,6 +33370,10 @@ namespace vk
     case StructureType::eFenceGetWin32HandleInfoKHR: return "FenceGetWin32HandleInfoKHR";
     case StructureType::eImportFenceFdInfoKHR: return "ImportFenceFdInfoKHR";
     case StructureType::eFenceGetFdInfoKHR: return "FenceGetFdInfoKHR";
+    case StructureType::ePhysicalDevicePointClippingPropertiesKHR: return "PhysicalDevicePointClippingPropertiesKHR";
+    case StructureType::eRenderPassInputAttachmentAspectCreateInfoKHR: return "RenderPassInputAttachmentAspectCreateInfoKHR";
+    case StructureType::eImageViewUsageCreateInfoKHR: return "ImageViewUsageCreateInfoKHR";
+    case StructureType::ePipelineTessellationDomainOriginStateCreateInfoKHR: return "PipelineTessellationDomainOriginStateCreateInfoKHR";
     case StructureType::ePhysicalDeviceSurfaceInfo2KHR: return "PhysicalDeviceSurfaceInfo2KHR";
     case StructureType::eSurfaceCapabilities2KHR: return "SurfaceCapabilities2KHR";
     case StructureType::eSurfaceFormat2KHR: return "SurfaceFormat2KHR";
@@ -32305,11 +33394,20 @@ namespace vk
     case StructureType::eImageSparseMemoryRequirementsInfo2KHR: return "ImageSparseMemoryRequirementsInfo2KHR";
     case StructureType::eMemoryRequirements2KHR: return "MemoryRequirements2KHR";
     case StructureType::eSparseImageMemoryRequirements2KHR: return "SparseImageMemoryRequirements2KHR";
+    case StructureType::eImageFormatListCreateInfoKHR: return "ImageFormatListCreateInfoKHR";
     case StructureType::ePhysicalDeviceBlendOperationAdvancedFeaturesEXT: return "PhysicalDeviceBlendOperationAdvancedFeaturesEXT";
     case StructureType::ePhysicalDeviceBlendOperationAdvancedPropertiesEXT: return "PhysicalDeviceBlendOperationAdvancedPropertiesEXT";
     case StructureType::ePipelineColorBlendAdvancedStateCreateInfoEXT: return "PipelineColorBlendAdvancedStateCreateInfoEXT";
     case StructureType::ePipelineCoverageToColorStateCreateInfoNV: return "PipelineCoverageToColorStateCreateInfoNV";
     case StructureType::ePipelineCoverageModulationStateCreateInfoNV: return "PipelineCoverageModulationStateCreateInfoNV";
+    case StructureType::eSamplerYcbcrConversionCreateInfoKHR: return "SamplerYcbcrConversionCreateInfoKHR";
+    case StructureType::eSamplerYcbcrConversionInfoKHR: return "SamplerYcbcrConversionInfoKHR";
+    case StructureType::eBindImagePlaneMemoryInfoKHR: return "BindImagePlaneMemoryInfoKHR";
+    case StructureType::eImagePlaneMemoryRequirementsInfoKHR: return "ImagePlaneMemoryRequirementsInfoKHR";
+    case StructureType::ePhysicalDeviceSamplerYcbcrConversionFeaturesKHR: return "PhysicalDeviceSamplerYcbcrConversionFeaturesKHR";
+    case StructureType::eSamplerYcbcrConversionImageFormatPropertiesKHR: return "SamplerYcbcrConversionImageFormatPropertiesKHR";
+    case StructureType::eBindBufferMemoryInfoKHR: return "BindBufferMemoryInfoKHR";
+    case StructureType::eBindImageMemoryInfoKHR: return "BindImageMemoryInfoKHR";
     case StructureType::eValidationCacheCreateInfoEXT: return "ValidationCacheCreateInfoEXT";
     case StructureType::eShaderModuleValidationCacheCreateInfoEXT: return "ShaderModuleValidationCacheCreateInfoEXT";
     default: return "invalid";
@@ -32394,6 +33492,7 @@ namespace vk
     case ObjectType::eDescriptorUpdateTemplateKHR: return "DescriptorUpdateTemplateKHR";
     case ObjectType::eObjectTableNVX: return "ObjectTableNVX";
     case ObjectType::eIndirectCommandsLayoutNVX: return "IndirectCommandsLayoutNVX";
+    case ObjectType::eSamplerYcbcrConversionKHR: return "SamplerYcbcrConversionKHR";
     case ObjectType::eValidationCacheEXT: return "ValidationCacheEXT";
     default: return "invalid";
     }
@@ -32648,7 +33747,11 @@ namespace vk
     case ImageCreateFlagBits::eCubeCompatible: return "CubeCompatible";
     case ImageCreateFlagBits::eBindSfrKHX: return "BindSfrKHX";
     case ImageCreateFlagBits::e2DArrayCompatibleKHR: return "2DArrayCompatibleKHR";
+    case ImageCreateFlagBits::eBlockTexelViewCompatibleKHR: return "BlockTexelViewCompatibleKHR";
+    case ImageCreateFlagBits::eExtendedUsageKHR: return "ExtendedUsageKHR";
     case ImageCreateFlagBits::eSampleLocationsCompatibleDepthEXT: return "SampleLocationsCompatibleDepthEXT";
+    case ImageCreateFlagBits::eDisjointKHR: return "DisjointKHR";
+    case ImageCreateFlagBits::eAliasKHR: return "AliasKHR";
     default: return "invalid";
     }
   }
@@ -32664,7 +33767,11 @@ namespace vk
     if (value & ImageCreateFlagBits::eCubeCompatible) result += "CubeCompatible | ";
     if (value & ImageCreateFlagBits::eBindSfrKHX) result += "BindSfrKHX | ";
     if (value & ImageCreateFlagBits::e2DArrayCompatibleKHR) result += "2DArrayCompatibleKHR | ";
+    if (value & ImageCreateFlagBits::eBlockTexelViewCompatibleKHR) result += "BlockTexelViewCompatibleKHR | ";
+    if (value & ImageCreateFlagBits::eExtendedUsageKHR) result += "ExtendedUsageKHR | ";
     if (value & ImageCreateFlagBits::eSampleLocationsCompatibleDepthEXT) result += "SampleLocationsCompatibleDepthEXT | ";
+    if (value & ImageCreateFlagBits::eDisjointKHR) result += "DisjointKHR | ";
+    if (value & ImageCreateFlagBits::eAliasKHR) result += "AliasKHR | ";
     return "{" + result.substr(0, result.size() - 3) + "}";
   }
 
@@ -32754,6 +33861,13 @@ namespace vk
     case FormatFeatureFlagBits::eTransferSrcKHR: return "TransferSrcKHR";
     case FormatFeatureFlagBits::eTransferDstKHR: return "TransferDstKHR";
     case FormatFeatureFlagBits::eSampledImageFilterMinmaxEXT: return "SampledImageFilterMinmaxEXT";
+    case FormatFeatureFlagBits::eMidpointChromaSamplesKHR: return "MidpointChromaSamplesKHR";
+    case FormatFeatureFlagBits::eSampledImageYcbcrConversionLinearFilterKHR: return "SampledImageYcbcrConversionLinearFilterKHR";
+    case FormatFeatureFlagBits::eSampledImageYcbcrConversionSeparateReconstructionFilterKHR: return "SampledImageYcbcrConversionSeparateReconstructionFilterKHR";
+    case FormatFeatureFlagBits::eSampledImageYcbcrConversionChromaReconstructionExplicitKHR: return "SampledImageYcbcrConversionChromaReconstructionExplicitKHR";
+    case FormatFeatureFlagBits::eSampledImageYcbcrConversionChromaReconstructionExplicitForceableKHR: return "SampledImageYcbcrConversionChromaReconstructionExplicitForceableKHR";
+    case FormatFeatureFlagBits::eDisjointKHR: return "DisjointKHR";
+    case FormatFeatureFlagBits::eCositedChromaSamplesKHR: return "CositedChromaSamplesKHR";
     default: return "invalid";
     }
   }
@@ -32779,6 +33893,13 @@ namespace vk
     if (value & FormatFeatureFlagBits::eTransferSrcKHR) result += "TransferSrcKHR | ";
     if (value & FormatFeatureFlagBits::eTransferDstKHR) result += "TransferDstKHR | ";
     if (value & FormatFeatureFlagBits::eSampledImageFilterMinmaxEXT) result += "SampledImageFilterMinmaxEXT | ";
+    if (value & FormatFeatureFlagBits::eMidpointChromaSamplesKHR) result += "MidpointChromaSamplesKHR | ";
+    if (value & FormatFeatureFlagBits::eSampledImageYcbcrConversionLinearFilterKHR) result += "SampledImageYcbcrConversionLinearFilterKHR | ";
+    if (value & FormatFeatureFlagBits::eSampledImageYcbcrConversionSeparateReconstructionFilterKHR) result += "SampledImageYcbcrConversionSeparateReconstructionFilterKHR | ";
+    if (value & FormatFeatureFlagBits::eSampledImageYcbcrConversionChromaReconstructionExplicitKHR) result += "SampledImageYcbcrConversionChromaReconstructionExplicitKHR | ";
+    if (value & FormatFeatureFlagBits::eSampledImageYcbcrConversionChromaReconstructionExplicitForceableKHR) result += "SampledImageYcbcrConversionChromaReconstructionExplicitForceableKHR | ";
+    if (value & FormatFeatureFlagBits::eDisjointKHR) result += "DisjointKHR | ";
+    if (value & FormatFeatureFlagBits::eCositedChromaSamplesKHR) result += "CositedChromaSamplesKHR | ";
     return "{" + result.substr(0, result.size() - 3) + "}";
   }
 
@@ -32888,6 +34009,9 @@ namespace vk
     case ImageAspectFlagBits::eDepth: return "Depth";
     case ImageAspectFlagBits::eStencil: return "Stencil";
     case ImageAspectFlagBits::eMetadata: return "Metadata";
+    case ImageAspectFlagBits::ePlane0KHR: return "Plane0KHR";
+    case ImageAspectFlagBits::ePlane1KHR: return "Plane1KHR";
+    case ImageAspectFlagBits::ePlane2KHR: return "Plane2KHR";
     default: return "invalid";
     }
   }
@@ -32900,6 +34024,9 @@ namespace vk
     if (value & ImageAspectFlagBits::eDepth) result += "Depth | ";
     if (value & ImageAspectFlagBits::eStencil) result += "Stencil | ";
     if (value & ImageAspectFlagBits::eMetadata) result += "Metadata | ";
+    if (value & ImageAspectFlagBits::ePlane0KHR) result += "Plane0KHR | ";
+    if (value & ImageAspectFlagBits::ePlane1KHR) result += "Plane1KHR | ";
+    if (value & ImageAspectFlagBits::ePlane2KHR) result += "Plane2KHR | ";
     return "{" + result.substr(0, result.size() - 3) + "}";
   }
 
@@ -33330,6 +34457,7 @@ namespace vk
     case DebugReportObjectTypeEXT::eIndirectCommandsLayoutNvx: return "IndirectCommandsLayoutNvx";
     case DebugReportObjectTypeEXT::eValidationCache: return "ValidationCache";
     case DebugReportObjectTypeEXT::eDescriptorUpdateTemplateKHR: return "DescriptorUpdateTemplateKHR";
+    case DebugReportObjectTypeEXT::eSamplerYcbcrConversionKHR: return "SamplerYcbcrConversionKHR";
     default: return "invalid";
     }
   }
@@ -33827,6 +34955,16 @@ namespace vk
     return "{" + result.substr(0, result.size() - 3) + "}";
   }
 
+  VULKAN_HPP_INLINE std::string to_string(PointClippingBehaviorKHR value)
+  {
+    switch (value)
+    {
+    case PointClippingBehaviorKHR::eAllClipPlanes: return "AllClipPlanes";
+    case PointClippingBehaviorKHR::eUserClipPlanesOnly: return "UserClipPlanesOnly";
+    default: return "invalid";
+    }
+  }
+
   VULKAN_HPP_INLINE std::string to_string(SamplerReductionModeEXT value)
   {
     switch (value)
@@ -33834,6 +34972,49 @@ namespace vk
     case SamplerReductionModeEXT::eWeightedAverage: return "WeightedAverage";
     case SamplerReductionModeEXT::eMin: return "Min";
     case SamplerReductionModeEXT::eMax: return "Max";
+    default: return "invalid";
+    }
+  }
+
+  VULKAN_HPP_INLINE std::string to_string(TessellationDomainOriginKHR value)
+  {
+    switch (value)
+    {
+    case TessellationDomainOriginKHR::eUpperLeft: return "UpperLeft";
+    case TessellationDomainOriginKHR::eLowerLeft: return "LowerLeft";
+    default: return "invalid";
+    }
+  }
+
+  VULKAN_HPP_INLINE std::string to_string(SamplerYcbcrModelConversionKHR value)
+  {
+    switch (value)
+    {
+    case SamplerYcbcrModelConversionKHR::eRgbIdentity: return "RgbIdentity";
+    case SamplerYcbcrModelConversionKHR::eYcbcrIdentity: return "YcbcrIdentity";
+    case SamplerYcbcrModelConversionKHR::eYcbcr709: return "Ycbcr709";
+    case SamplerYcbcrModelConversionKHR::eYcbcr601: return "Ycbcr601";
+    case SamplerYcbcrModelConversionKHR::eYcbcr2020: return "Ycbcr2020";
+    default: return "invalid";
+    }
+  }
+
+  VULKAN_HPP_INLINE std::string to_string(SamplerYcbcrRangeKHR value)
+  {
+    switch (value)
+    {
+    case SamplerYcbcrRangeKHR::eItuFull: return "ItuFull";
+    case SamplerYcbcrRangeKHR::eItuNarrow: return "ItuNarrow";
+    default: return "invalid";
+    }
+  }
+
+  VULKAN_HPP_INLINE std::string to_string(ChromaLocationKHR value)
+  {
+    switch (value)
+    {
+    case ChromaLocationKHR::eCositedEven: return "CositedEven";
+    case ChromaLocationKHR::eMidpoint: return "Midpoint";
     default: return "invalid";
     }
   }

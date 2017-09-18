@@ -670,47 +670,51 @@ bool PreCallValidateCreateImage(layer_data *device_data, const VkImageCreateInfo
         return skip;
     }
 
-    // Validate that format supports usage as color attachment
-    if (pCreateInfo->usage & VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT) {
-        if ((pCreateInfo->tiling == VK_IMAGE_TILING_OPTIMAL) &&
-            ((properties.optimalTilingFeatures & VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT) == 0)) {
-            std::stringstream ss;
-            ss << "vkCreateImage: VkFormat for TILING_OPTIMAL image (" << string_VkFormat(pCreateInfo->format)
-               << ") does not support requested Image usage type VK_IMAGE_USAGE_COLOR_ATTACHMENT";
-            skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
-                            VALIDATION_ERROR_09e007b2, "IMAGE", "%s. %s", ss.str().c_str(),
-                            validation_error_map[VALIDATION_ERROR_09e007b2]);
+    // TODO: Add checks for EXTENDED_USAGE images to validate images are compatible
+    // For EXTENDED_USAGE images, format can match any image COMPATIBLE with original image
+    if (!GetDeviceExtensions(device_data)->vk_khr_maintenance2 || !(pCreateInfo->flags & VK_IMAGE_CREATE_EXTENDED_USAGE_BIT_KHR)) {
+        // Validate that format supports usage as color attachment
+        if (pCreateInfo->usage & VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT) {
+            if ((pCreateInfo->tiling == VK_IMAGE_TILING_OPTIMAL) &&
+                ((properties.optimalTilingFeatures & VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT) == 0)) {
+                std::stringstream ss;
+                ss << "vkCreateImage: VkFormat for TILING_OPTIMAL image (" << string_VkFormat(pCreateInfo->format)
+                    << ") does not support requested Image usage type VK_IMAGE_USAGE_COLOR_ATTACHMENT";
+                skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
+                    VALIDATION_ERROR_09e007b2, "IMAGE", "%s. %s", ss.str().c_str(),
+                    validation_error_map[VALIDATION_ERROR_09e007b2]);
+            }
+            if ((pCreateInfo->tiling == VK_IMAGE_TILING_LINEAR) &&
+                ((properties.linearTilingFeatures & VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT) == 0)) {
+                std::stringstream ss;
+                ss << "vkCreateImage: VkFormat for TILING_LINEAR image (" << string_VkFormat(pCreateInfo->format)
+                    << ") does not support requested Image usage type VK_IMAGE_USAGE_COLOR_ATTACHMENT";
+                skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
+                    VALIDATION_ERROR_09e007a8, "IMAGE", "%s. %s", ss.str().c_str(),
+                    validation_error_map[VALIDATION_ERROR_09e007a8]);
+            }
         }
-        if ((pCreateInfo->tiling == VK_IMAGE_TILING_LINEAR) &&
-            ((properties.linearTilingFeatures & VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT) == 0)) {
-            std::stringstream ss;
-            ss << "vkCreateImage: VkFormat for TILING_LINEAR image (" << string_VkFormat(pCreateInfo->format)
-               << ") does not support requested Image usage type VK_IMAGE_USAGE_COLOR_ATTACHMENT";
-            skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
-                            VALIDATION_ERROR_09e007a8, "IMAGE", "%s. %s", ss.str().c_str(),
-                            validation_error_map[VALIDATION_ERROR_09e007a8]);
-        }
-    }
 
-    // Validate that format supports usage as depth/stencil attachment
-    if (pCreateInfo->usage & VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT) {
-        if ((pCreateInfo->tiling == VK_IMAGE_TILING_OPTIMAL) &&
-            ((properties.optimalTilingFeatures & VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT) == 0)) {
-            std::stringstream ss;
-            ss << "vkCreateImage: VkFormat for TILING_OPTIMAL image (" << string_VkFormat(pCreateInfo->format)
-               << ") does not support requested Image usage type VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT";
-            skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
-                            VALIDATION_ERROR_09e007b4, "IMAGE", "%s. %s", ss.str().c_str(),
-                            validation_error_map[VALIDATION_ERROR_09e007b4]);
-        }
-        if ((pCreateInfo->tiling == VK_IMAGE_TILING_LINEAR) &&
-            ((properties.linearTilingFeatures & VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT) == 0)) {
-            std::stringstream ss;
-            ss << "vkCreateImage: VkFormat for TILING_LINEAR image (" << string_VkFormat(pCreateInfo->format)
-               << ") does not support requested Image usage type VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT";
-            skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
-                            VALIDATION_ERROR_09e007aa, "IMAGE", "%s. %s", ss.str().c_str(),
-                            validation_error_map[VALIDATION_ERROR_09e007aa]);
+        // Validate that format supports usage as depth/stencil attachment
+        if (pCreateInfo->usage & VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT) {
+            if ((pCreateInfo->tiling == VK_IMAGE_TILING_OPTIMAL) &&
+                ((properties.optimalTilingFeatures & VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT) == 0)) {
+                std::stringstream ss;
+                ss << "vkCreateImage: VkFormat for TILING_OPTIMAL image (" << string_VkFormat(pCreateInfo->format)
+                    << ") does not support requested Image usage type VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT";
+                skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
+                    VALIDATION_ERROR_09e007b4, "IMAGE", "%s. %s", ss.str().c_str(),
+                    validation_error_map[VALIDATION_ERROR_09e007b4]);
+            }
+            if ((pCreateInfo->tiling == VK_IMAGE_TILING_LINEAR) &&
+                ((properties.linearTilingFeatures & VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT) == 0)) {
+                std::stringstream ss;
+                ss << "vkCreateImage: VkFormat for TILING_LINEAR image (" << string_VkFormat(pCreateInfo->format)
+                    << ") does not support requested Image usage type VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT";
+                skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
+                    VALIDATION_ERROR_09e007aa, "IMAGE", "%s. %s", ss.str().c_str(),
+                    validation_error_map[VALIDATION_ERROR_09e007aa]);
+            }
         }
     }
 
@@ -801,6 +805,29 @@ bool PreCallValidateCreateImage(layer_data *device_data, const VkImageCreateInfo
                         DRAWSTATE_INVALID_FEATURE, "DS",
                         "vkCreateImage(): the sparseResidencyAliased device feature is disabled: Images cannot be created with the "
                         "VK_IMAGE_CREATE_SPARSE_ALIASED_BIT set.");
+    }
+
+    if (GetDeviceExtensions(device_data)->vk_khr_maintenance2) {
+        if (pCreateInfo->flags & VK_IMAGE_CREATE_BLOCK_TEXEL_VIEW_COMPATIBLE_BIT_KHR) {
+            if (!(FormatIsCompressed_BC(pCreateInfo->format) || FormatIsCompressed_ASTC_LDR(pCreateInfo->format) ||
+                  FormatIsCompressed_ETC2_EAC(pCreateInfo->format))) {
+                // TODO: Add Maintenance2 VUID
+                skip |=
+                    log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
+                            VALIDATION_ERROR_UNDEFINED, "DS",
+                            "vkCreateImage(): If pCreateInfo->flags contains VK_IMAGE_CREATE_BLOCK_TEXEL_VIEW_COMPATIBLE_BIT_KHR, "
+                            "format must be block, ETC or ASTC compressed, but is %s",
+                            string_VkFormat(pCreateInfo->format));
+            }
+            if (!(pCreateInfo->flags & VK_IMAGE_CREATE_MUTABLE_FORMAT_BIT)) {
+                // TODO: Add Maintenance2 VUID
+                skip |=
+                    log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
+                            VALIDATION_ERROR_UNDEFINED, "DS",
+                            "vkCreateImage(): If pCreateInfo->flags contains VK_IMAGE_CREATE_BLOCK_TEXEL_VIEW_COMPATIBLE_BIT_KHR, "
+                            "flags must also contain VK_IMAGE_CREATE_MUTABLE_FORMAT_BIT.");
+            }
+        }
     }
 
     return skip;
@@ -2880,28 +2907,37 @@ bool ValidateLayouts(core_validation::layer_data *device_data, VkDevice device, 
             }
             attach_first_use[attach_index] = false;
         }
+
         if (subpass.pDepthStencilAttachment && subpass.pDepthStencilAttachment->attachment != VK_ATTACHMENT_UNUSED) {
             switch (subpass.pDepthStencilAttachment->layout) {
-                case VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL:
-                case VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL:
-                    // These are ideal.
-                    break;
+            case VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL:
+            case VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL:
+                // These are ideal.
+                break;
 
-                case VK_IMAGE_LAYOUT_GENERAL:
-                    // May not be optimal; TODO: reconsider this warning based on other constraints? GENERAL can be better than
-                    // doing a bunch of transitions.
-                    skip |= log_msg(report_data, VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT,
-                                    VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__, DRAWSTATE_INVALID_IMAGE_LAYOUT, "DS",
-                                    "GENERAL layout for depth attachment may not give optimal performance.");
-                    break;
+            case VK_IMAGE_LAYOUT_GENERAL:
+                // May not be optimal; TODO: reconsider this warning based on other constraints? GENERAL can be better than
+                // doing a bunch of transitions.
+                skip |= log_msg(report_data, VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT,
+                    VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__, DRAWSTATE_INVALID_IMAGE_LAYOUT, "DS",
+                    "GENERAL layout for depth attachment may not give optimal performance.");
+                break;
 
-                default:
-                    // No other layouts are acceptable
-                    skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0,
-                                    __LINE__, DRAWSTATE_INVALID_IMAGE_LAYOUT, "DS",
-                                    "Layout for depth attachment is %s but can only be DEPTH_STENCIL_ATTACHMENT_OPTIMAL, "
-                                    "DEPTH_STENCIL_READ_ONLY_OPTIMAL or GENERAL.",
-                                    string_VkImageLayout(subpass.pDepthStencilAttachment->layout));
+            case VK_IMAGE_LAYOUT_DEPTH_READ_ONLY_STENCIL_ATTACHMENT_OPTIMAL_KHR:
+            case VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_STENCIL_READ_ONLY_OPTIMAL_KHR:
+                if (GetDeviceExtensions(device_data)->vk_khr_maintenance2) {
+                    break;
+                } else {
+                    // Intentionally fall through to generic error message
+                }
+
+            default:
+                // No other layouts are acceptable
+                skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0,
+                    __LINE__, DRAWSTATE_INVALID_IMAGE_LAYOUT, "DS",
+                    "Layout for depth attachment is %s but can only be DEPTH_STENCIL_ATTACHMENT_OPTIMAL, "
+                    "DEPTH_STENCIL_READ_ONLY_OPTIMAL or GENERAL.",
+                    string_VkImageLayout(subpass.pDepthStencilAttachment->layout));
             }
 
             auto attach_index = subpass.pDepthStencilAttachment->attachment;
@@ -3282,17 +3318,20 @@ bool PreCallValidateCreateImageView(layer_data *device_data, const VkImageViewCr
 
         // Validate VK_IMAGE_CREATE_MUTABLE_FORMAT_BIT state
         if (image_flags & VK_IMAGE_CREATE_MUTABLE_FORMAT_BIT) {
-            // Format MUST be compatible (in the same format compatibility class) as the format the image was created with
-            if (FormatCompatibilityClass(image_format) != FormatCompatibilityClass(view_format)) {
-                std::stringstream ss;
-                ss << "vkCreateImageView(): ImageView format " << string_VkFormat(view_format)
-                   << " is not in the same format compatibility class as image (" << HandleToUint64(create_info->image)
-                   << ")  format " << string_VkFormat(image_format)
-                   << ".  Images created with the VK_IMAGE_CREATE_MUTABLE_FORMAT BIT "
-                   << "can support ImageViews with differing formats but they must be in the same compatibility class.";
-                skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
-                                VALIDATION_ERROR_0ac007f4, "IMAGE", "%s %s", ss.str().c_str(),
-                                validation_error_map[VALIDATION_ERROR_0ac007f4]);
+            if ((!GetDeviceExtensions(device_data)->vk_khr_maintenance2 ||
+                 !(image_flags & VK_IMAGE_CREATE_BLOCK_TEXEL_VIEW_COMPATIBLE_BIT_KHR))) {
+                // Format MUST be compatible (in the same format compatibility class) as the format the image was created with
+                if (FormatCompatibilityClass(image_format) != FormatCompatibilityClass(view_format)) {
+                    std::stringstream ss;
+                    ss << "vkCreateImageView(): ImageView format " << string_VkFormat(view_format)
+                       << " is not in the same format compatibility class as image (" << HandleToUint64(create_info->image)
+                       << ")  format " << string_VkFormat(image_format)
+                       << ".  Images created with the VK_IMAGE_CREATE_MUTABLE_FORMAT BIT "
+                       << "can support ImageViews with differing formats but they must be in the same compatibility class.";
+                    skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0,
+                                    __LINE__, VALIDATION_ERROR_0ac007f4, "IMAGE", "%s %s", ss.str().c_str(),
+                                    validation_error_map[VALIDATION_ERROR_0ac007f4]);
+                }
             }
         } else {
             // Format MUST be IDENTICAL to the format the image was created with
