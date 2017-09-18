@@ -547,6 +547,8 @@ class PIPELINE_STATE : public BASE_NODE {
    public:
     VkPipeline pipeline;
     safe_VkGraphicsPipelineCreateInfo graphicsPipelineCI;
+    // Hold shared ptr to RP in case RP itself is destroyed
+    std::shared_ptr<RENDER_PASS_STATE> rp_state;
     safe_VkComputePipelineCreateInfo computePipelineCI;
     // Flag of which shader stages are active for this pipeline
     uint32_t active_shaders;
@@ -565,6 +567,7 @@ class PIPELINE_STATE : public BASE_NODE {
     PIPELINE_STATE()
         : pipeline{},
           graphicsPipelineCI{},
+          rp_state(nullptr),
           computePipelineCI{},
           active_shaders(0),
           duplicate_shaders(0),
@@ -575,7 +578,7 @@ class PIPELINE_STATE : public BASE_NODE {
           render_pass_ci(),
           pipeline_layout() {}
 
-    void initGraphicsPipeline(const VkGraphicsPipelineCreateInfo *pCreateInfo) {
+    void initGraphicsPipeline(const VkGraphicsPipelineCreateInfo *pCreateInfo, std::shared_ptr<RENDER_PASS_STATE> &&rpstate) {
         graphicsPipelineCI.initialize(pCreateInfo);
         // Make sure compute pipeline is null
         VkComputePipelineCreateInfo emptyComputeCI = {};
@@ -599,6 +602,7 @@ class PIPELINE_STATE : public BASE_NODE {
                                                                                      pCBCI->pAttachments + pCBCI->attachmentCount);
             }
         }
+        rp_state = rpstate;
     }
 
     void initComputePipeline(const VkComputePipelineCreateInfo *pCreateInfo) {
