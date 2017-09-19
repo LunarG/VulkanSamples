@@ -1047,7 +1047,8 @@ static bool ValidatePipelineDrawtimeState(layer_data const *dev_data, LAST_BOUND
                 subpass_num_samples |= (unsigned)render_pass_info->pAttachments[attachment].samples;
             }
 
-            if (subpass_num_samples && static_cast<unsigned>(pso_num_samples) != subpass_num_samples) {
+            if (!dev_data->extensions.vk_amd_mixed_attachment_samples &&
+                ((subpass_num_samples & static_cast<unsigned>(pso_num_samples)) != subpass_num_samples)) {
                 skip |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_PIPELINE_EXT,
                                 HandleToUint64(pPipeline->pipeline), __LINE__, DRAWSTATE_NUM_SAMPLES_MISMATCH, "DS",
                                 "Num samples mismatch! At draw-time in Pipeline (0x%" PRIxLEAST64
@@ -1094,11 +1095,10 @@ static bool ValidatePipelineDrawtimeState(layer_data const *dev_data, LAST_BOUND
                 break;
         }
         std::string err_string;
-        if (pCB->activeRenderPass->renderPass != pPipeline->graphicsPipelineCI.renderPass) {
+        if (pCB->activeRenderPass->renderPass != pPipeline->rp_state->renderPass) {
             // renderPass that PSO was created with must be compatible with active renderPass that PSO is being used with
             skip |= validateRenderPassCompatibility(dev_data, "active render pass", pCB->activeRenderPass, "pipeline state object",
-                                                    GetRenderPassState(dev_data, pPipeline->graphicsPipelineCI.renderPass), caller,
-                                                    rp_error);
+                                                    pPipeline->rp_state.get(), caller, rp_error);
         }
         if (pPipeline->graphicsPipelineCI.subpass != pCB->activeSubpass) {
             skip |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_PIPELINE_EXT,
@@ -1316,7 +1316,7 @@ static bool ValidatePipelineUnlocked(layer_data *dev_data, std::vector<std::uniq
                 HandleToUint64(pPipeline->pipeline), __LINE__, VALIDATION_ERROR_096005d4, "DS",
                 "vkCreateGraphicsPipelines(): Render pass (0x%" PRIxLEAST64
                 ") subpass %u has colorAttachmentCount of %u which doesn't match the pColorBlendState->attachmentCount of %u. %s",
-                HandleToUint64(pPipeline->graphicsPipelineCI.renderPass), pPipeline->graphicsPipelineCI.subpass,
+                HandleToUint64(pPipeline->rp_state->renderPass), pPipeline->graphicsPipelineCI.subpass,
                 subpass_desc->colorAttachmentCount, color_blend_state->attachmentCount,
                 validation_error_map[VALIDATION_ERROR_096005d4]);
         }
@@ -1509,6 +1509,28 @@ static bool ValidatePipelineUnlocked(layer_data *dev_data, std::vector<std::uniq
                         "(%s) is not a supported vertex buffer format. %s",
                     pipelineIndex, j, string_VkFormat(format), validation_error_map[VALIDATION_ERROR_14a004de]);
             }
+        }
+    }
+
+    if (dev_data->extensions.vk_amd_mixed_attachment_samples) {
+        VkSampleCountFlagBits max_sample_count = static_cast<VkSampleCountFlagBits>(0);
+        for (uint32_t i = 0; i < subpass_desc->colorAttachmentCount; ++i) {
+            if (subpass_desc->pColorAttachments[i].attachment != VK_ATTACHMENT_UNUSED) {
+                max_sample_count = std::max(max_sample_count, pPipeline->render_pass_ci.pAttachments[subpass_desc->pColorAttachments[i].attachment].samples);
+            }
+        }
+        if (subpass_desc->pDepthStencilAttachment && subpass_desc->pDepthStencilAttachment->attachment != VK_ATTACHMENT_UNUSED) {
+            max_sample_count = std::max(max_sample_count, pPipeline->render_pass_ci.pAttachments[subpass_desc->pDepthStencilAttachment->attachment].samples);
+        }
+        if (pPipeline->graphicsPipelineCI.pMultisampleState->rasterizationSamples != max_sample_count) {
+            skip |=
+                log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_PIPELINE_EXT,
+                        HandleToUint64(pPipeline->pipeline), __LINE__, VALIDATION_ERROR_09600bc2, "DS",
+                        "vkCreateGraphicsPipelines: pCreateInfo[%d].pMultisampleState->rasterizationSamples (%s) != max attachment samples (%s) "
+                        "used in subpass %u. %s",
+                        pipelineIndex, string_VkSampleCountFlagBits(pPipeline->graphicsPipelineCI.pMultisampleState->rasterizationSamples),
+                        string_VkSampleCountFlagBits(max_sample_count), pPipeline->graphicsPipelineCI.subpass,
+                        validation_error_map[VALIDATION_ERROR_09600bc2]);
         }
     }
 
@@ -4491,7 +4513,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateGraphicsPipelines(VkDevice device, VkPipeli
 
     for (i = 0; i < count; i++) {
         pipe_state.push_back(std::unique_ptr<PIPELINE_STATE>(new PIPELINE_STATE));
-        pipe_state[i]->initGraphicsPipeline(&pCreateInfos[i]);
+        pipe_state[i]->initGraphicsPipeline(&pCreateInfos[i], GetRenderPassStateSharedPtr(dev_data, pCreateInfos[i].renderPass));
         pipe_state[i]->render_pass_ci.initialize(GetRenderPassState(dev_data, pCreateInfos[i].renderPass)->createInfo.ptr());
         pipe_state[i]->pipeline_layout = *getPipelineLayout(dev_data, pCreateInfos[i].layout);
     }
@@ -5178,7 +5200,7 @@ VKAPI_ATTR void VKAPI_CALL CmdBindPipeline(VkCommandBuffer commandBuffer, VkPipe
         addCommandBufferBinding(&pipe_state->cb_bindings, {HandleToUint64(pipeline), kVulkanObjectTypePipeline}, cb_state);
         if (VK_PIPELINE_BIND_POINT_GRAPHICS == pipelineBindPoint) {
             // Add binding for child renderpass
-            auto rp_state = GetRenderPassState(dev_data, pipe_state->graphicsPipelineCI.renderPass);
+            auto rp_state = GetRenderPassState(dev_data, pipe_state->rp_state->renderPass);
             if (rp_state) {
                 addCommandBufferBinding(&rp_state->cb_bindings, {HandleToUint64(rp_state->renderPass), kVulkanObjectTypeRenderPass},
                                         cb_state);
@@ -5608,32 +5630,13 @@ static void PreCallRecordCmdPushDescriptorSetKHR(layer_data *device_data, VkComm
         cb_state->lastBound[pipelineBindPoint].boundDescriptorSets.resize(set + 1);
         cb_state->lastBound[pipelineBindPoint].dynamicOffsets.resize(set + 1);
     } else {
-        log_msg(device_data->report_data, VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0,
-                __LINE__, DRAWSTATE_NONE, "DS",
-                "vkCmdPushDescriptorSet called multiple times for set %d in pipeline layout 0x%" PRIxLEAST64 ".", set,
-                HandleToUint64(layout));
         if (cb_state->lastBound[pipelineBindPoint].boundDescriptorSets[set]->IsPushDescriptor()) {
             cb_state->lastBound[pipelineBindPoint].push_descriptors[set] = nullptr;
         }
     }
-    VkDescriptorSetLayoutCreateInfo layout_create_info{};
-    VkDescriptorSetLayoutBinding *bindings = new VkDescriptorSetLayoutBinding[descriptorWriteCount];
-    layout_create_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-    layout_create_info.flags = VK_DESCRIPTOR_SET_LAYOUT_CREATE_PUSH_DESCRIPTOR_BIT_KHR;
-    layout_create_info.bindingCount = descriptorWriteCount;
-    layout_create_info.pBindings = bindings;
-    for (uint32_t i = 0; i < descriptorWriteCount; i++) {
-        bindings[i].binding = pDescriptorWrites[i].dstBinding;
-        bindings[i].descriptorCount = pDescriptorWrites[i].descriptorCount;
-        bindings[i].descriptorType = pDescriptorWrites[i].descriptorType;
-        bindings[i].stageFlags = 0;
-        bindings[i].pImmutableSamplers = nullptr;
-    }
-
-    const VkDescriptorSetLayout desc_set_layout = 0;
-    auto const shared_ds_layout = std::make_shared<cvdescriptorset::DescriptorSetLayout>(&layout_create_info, desc_set_layout);
-    std::unique_ptr<cvdescriptorset::DescriptorSet> new_desc{new cvdescriptorset::DescriptorSet(0, 0, shared_ds_layout, device_data)};
-    new_desc->SetPushDescriptor();
+    const auto &layout_state = getPipelineLayout(device_data, layout);
+    std::unique_ptr<cvdescriptorset::DescriptorSet> new_desc{
+        new cvdescriptorset::DescriptorSet(0, 0, layout_state->set_layouts[set], device_data)};
     cb_state->lastBound[pipelineBindPoint].boundDescriptorSets[set] = new_desc.get();
     cb_state->lastBound[pipelineBindPoint].push_descriptors[set] = std::move(new_desc);
 }
@@ -5650,48 +5653,55 @@ VKAPI_ATTR void VKAPI_CALL CmdPushDescriptorSetKHR(VkCommandBuffer commandBuffer
                                                         pDescriptorWrites);
 }
 
+static VkDeviceSize GetIndexAlignment(VkIndexType indexType) {
+    switch (indexType) {
+        case VK_INDEX_TYPE_UINT16:
+            return 2;
+        case VK_INDEX_TYPE_UINT32:
+            return 4;
+        default:
+            // Not a real index type. Express no alignment requirement here; we expect upper layer
+            // to have already picked up on the enum being nonsense.
+            return 1;
+    }
+}
+
 VKAPI_ATTR void VKAPI_CALL CmdBindIndexBuffer(VkCommandBuffer commandBuffer, VkBuffer buffer, VkDeviceSize offset,
                                               VkIndexType indexType) {
     bool skip = false;
     layer_data *dev_data = GetLayerDataPtr(get_dispatch_key(commandBuffer), layer_data_map);
-    // TODO : Somewhere need to verify that IBs have correct usage state flagged
     unique_lock_t lock(global_lock);
 
     auto buffer_state = GetBufferState(dev_data, buffer);
     auto cb_node = GetCBNode(dev_data, commandBuffer);
-    if (cb_node && buffer_state) {
-        skip |=
-            ValidateCmdQueueFlags(dev_data, cb_node, "vkCmdBindIndexBuffer()", VK_QUEUE_GRAPHICS_BIT, VALIDATION_ERROR_17e02415);
-        skip |= ValidateCmd(dev_data, cb_node, CMD_BINDINDEXBUFFER, "vkCmdBindIndexBuffer()");
-        skip |= ValidateMemoryIsBoundToBuffer(dev_data, buffer_state, "vkCmdBindIndexBuffer()", VALIDATION_ERROR_17e00364);
-        std::function<bool()> function = [=]() {
-            return ValidateBufferMemoryIsValid(dev_data, buffer_state, "vkCmdBindIndexBuffer()");
-        };
-        cb_node->queue_submit_functions.push_back(function);
-        VkDeviceSize offset_align = 0;
-        switch (indexType) {
-            case VK_INDEX_TYPE_UINT16:
-                offset_align = 2;
-                break;
-            case VK_INDEX_TYPE_UINT32:
-                offset_align = 4;
-                break;
-            default:
-                // ParamChecker should catch bad enum, we'll also throw alignment error below if offset_align stays 0
-                break;
-        }
-        if (!offset_align || (offset % offset_align)) {
-            skip |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
-                            HandleToUint64(commandBuffer), __LINE__, DRAWSTATE_VTX_INDEX_ALIGNMENT_ERROR, "DS",
-                            "vkCmdBindIndexBuffer() offset (0x%" PRIxLEAST64 ") does not fall on alignment (%s) boundary.", offset,
-                            string_VkIndexType(indexType));
-        }
-        cb_node->status |= CBSTATUS_INDEX_BUFFER_BOUND;
-    } else {
-        assert(0);
+    assert(cb_node);
+    assert(buffer_state);
+
+    skip |= ValidateBufferUsageFlags(dev_data, buffer_state, VK_BUFFER_USAGE_INDEX_BUFFER_BIT, true,
+                                     VALIDATION_ERROR_17e00362, "vkCmdBindIndexBuffer()", "VK_BUFFER_USAGE_INDEX_BUFFER_BIT");
+    skip |= ValidateCmdQueueFlags(dev_data, cb_node, "vkCmdBindIndexBuffer()", VK_QUEUE_GRAPHICS_BIT, VALIDATION_ERROR_17e02415);
+    skip |= ValidateCmd(dev_data, cb_node, CMD_BINDINDEXBUFFER, "vkCmdBindIndexBuffer()");
+    skip |= ValidateMemoryIsBoundToBuffer(dev_data, buffer_state, "vkCmdBindIndexBuffer()", VALIDATION_ERROR_17e00364);
+    auto offset_align = GetIndexAlignment(indexType);
+    if (offset % offset_align) {
+        skip |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
+                        HandleToUint64(commandBuffer), __LINE__, VALIDATION_ERROR_17e00360, "DS",
+                        "vkCmdBindIndexBuffer() offset (0x%" PRIxLEAST64 ") does not fall on alignment (%s) boundary. %s", offset,
+                        string_VkIndexType(indexType),
+                        validation_error_map[VALIDATION_ERROR_17e00360]);
     }
+
+    if (skip)
+        return;
+
+    std::function<bool()> function = [=]() {
+        return ValidateBufferMemoryIsValid(dev_data, buffer_state, "vkCmdBindIndexBuffer()");
+    };
+    cb_node->queue_submit_functions.push_back(function);
+    cb_node->status |= CBSTATUS_INDEX_BUFFER_BOUND;
+
     lock.unlock();
-    if (!skip) dev_data->dispatch_table.CmdBindIndexBuffer(commandBuffer, buffer, offset, indexType);
+    dev_data->dispatch_table.CmdBindIndexBuffer(commandBuffer, buffer, offset, indexType);
 }
 
 void updateResourceTracking(GLOBAL_CB_NODE *pCB, uint32_t firstBinding, uint32_t bindingCount, const VkBuffer *pBuffers) {
@@ -5710,35 +5720,43 @@ VKAPI_ATTR void VKAPI_CALL CmdBindVertexBuffers(VkCommandBuffer commandBuffer, u
                                                 const VkBuffer *pBuffers, const VkDeviceSize *pOffsets) {
     bool skip = false;
     layer_data *dev_data = GetLayerDataPtr(get_dispatch_key(commandBuffer), layer_data_map);
-    // TODO : Somewhere need to verify that VBs have correct usage state flagged
     unique_lock_t lock(global_lock);
 
     auto cb_node = GetCBNode(dev_data, commandBuffer);
-    if (cb_node) {
-        skip |=
-            ValidateCmdQueueFlags(dev_data, cb_node, "vkCmdBindVertexBuffers()", VK_QUEUE_GRAPHICS_BIT, VALIDATION_ERROR_18202415);
-        skip |= ValidateCmd(dev_data, cb_node, CMD_BINDVERTEXBUFFER, "vkCmdBindVertexBuffers()");
-        for (uint32_t i = 0; i < bindingCount; ++i) {
-            auto buffer_state = GetBufferState(dev_data, pBuffers[i]);
-            assert(buffer_state);
-            skip |= ValidateMemoryIsBoundToBuffer(dev_data, buffer_state, "vkCmdBindVertexBuffers()", VALIDATION_ERROR_182004e8);
-            std::function<bool()> function = [=]() {
-                return ValidateBufferMemoryIsValid(dev_data, buffer_state, "vkCmdBindVertexBuffers()");
-            };
-            cb_node->queue_submit_functions.push_back(function);
-            if (pOffsets[i] >= buffer_state->createInfo.size) {
-                skip |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT,
-                                HandleToUint64(buffer_state->buffer), __LINE__, VALIDATION_ERROR_182004e4, "DS",
-                                "vkCmdBindVertexBuffers() offset (0x%" PRIxLEAST64 ") is beyond the end of the buffer. %s",
-                                pOffsets[i], validation_error_map[VALIDATION_ERROR_182004e4]);
-            }
+    assert(cb_node);
+
+    skip |= ValidateCmdQueueFlags(dev_data, cb_node, "vkCmdBindVertexBuffers()", VK_QUEUE_GRAPHICS_BIT, VALIDATION_ERROR_18202415);
+    skip |= ValidateCmd(dev_data, cb_node, CMD_BINDVERTEXBUFFER, "vkCmdBindVertexBuffers()");
+    for (uint32_t i = 0; i < bindingCount; ++i) {
+        auto buffer_state = GetBufferState(dev_data, pBuffers[i]);
+        assert(buffer_state);
+        skip |= ValidateBufferUsageFlags(dev_data, buffer_state, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, true,
+                                         VALIDATION_ERROR_182004e6, "vkCmdBindVertexBuffers()", "VK_BUFFER_USAGE_VERTEX_BUFFER_BIT");
+        skip |= ValidateMemoryIsBoundToBuffer(dev_data, buffer_state, "vkCmdBindVertexBuffers()", VALIDATION_ERROR_182004e8);
+        if (pOffsets[i] >= buffer_state->createInfo.size) {
+            skip |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT,
+                            HandleToUint64(buffer_state->buffer), __LINE__, VALIDATION_ERROR_182004e4, "DS",
+                            "vkCmdBindVertexBuffers() offset (0x%" PRIxLEAST64 ") is beyond the end of the buffer. %s",
+                            pOffsets[i], validation_error_map[VALIDATION_ERROR_182004e4]);
         }
-        updateResourceTracking(cb_node, firstBinding, bindingCount, pBuffers);
-    } else {
-        assert(0);
     }
+
+    if (skip)
+        return;
+
+    for (uint32_t i = 0; i < bindingCount; ++i) {
+        auto buffer_state = GetBufferState(dev_data, pBuffers[i]);
+        assert(buffer_state);
+        std::function<bool()> function = [=]() {
+            return ValidateBufferMemoryIsValid(dev_data, buffer_state, "vkCmdBindVertexBuffers()");
+        };
+        cb_node->queue_submit_functions.push_back(function);
+    }
+
+    updateResourceTracking(cb_node, firstBinding, bindingCount, pBuffers);
+
     lock.unlock();
-    if (!skip) dev_data->dispatch_table.CmdBindVertexBuffers(commandBuffer, firstBinding, bindingCount, pBuffers, pOffsets);
+    dev_data->dispatch_table.CmdBindVertexBuffers(commandBuffer, firstBinding, bindingCount, pBuffers, pOffsets);
 }
 
 // Expects global_lock to be held by caller
@@ -7866,6 +7884,19 @@ static bool ValidateRenderpassAttachmentUsage(layer_data *dev_data, const VkRend
                                     i, j, color_desc.format, resolve_desc.format, validation_error_map[VALIDATION_ERROR_140006a4]);
                     }
                 }
+
+                if (dev_data->extensions.vk_amd_mixed_attachment_samples &&
+                    subpass.pDepthStencilAttachment && subpass.pDepthStencilAttachment->attachment != VK_ATTACHMENT_UNUSED) {
+                    const auto depth_stencil_sample_count = pCreateInfo->pAttachments[subpass.pDepthStencilAttachment->attachment].samples;
+                    if (pCreateInfo->pAttachments[attachment].samples > depth_stencil_sample_count) {
+                        skip |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0,
+                                        __LINE__, VALIDATION_ERROR_14000bc4, "DS",
+                                        "CreateRenderPass:  Subpass %u pColorAttachments[%u] has %s which is larger than "
+                                        "depth/stencil attachment %s. %s",
+                                        i, j, string_VkSampleCountFlagBits(pCreateInfo->pAttachments[attachment].samples),
+                                        string_VkSampleCountFlagBits(depth_stencil_sample_count), validation_error_map[VALIDATION_ERROR_14000bc4]);
+                    }
+                }
             }
         }
 
@@ -7883,7 +7914,8 @@ static bool ValidateRenderpassAttachmentUsage(layer_data *dev_data, const VkRend
             skip |= ValidateAttachmentIndex(dev_data, attachment, pCreateInfo->attachmentCount, "Input");
         }
 
-        if (sample_count && !IsPowerOfTwo(sample_count)) {
+        if (!dev_data->extensions.vk_amd_mixed_attachment_samples &&
+            sample_count && !IsPowerOfTwo(sample_count)) {
             skip |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0,
                             __LINE__, VALIDATION_ERROR_0082b401, "DS",
                             "CreateRenderPass:  Subpass %u attempts to render to "

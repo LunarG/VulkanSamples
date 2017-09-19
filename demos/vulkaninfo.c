@@ -926,18 +926,13 @@ static void AppCreateXcbWindow(struct AppInstance *inst) {
     xcb_screen_iterator_t iter;
     int scr;
 
+    // API guarantees non-null xcb_connection
     inst->xcb_connection = xcb_connect(NULL, &scr);
-    if (inst->xcb_connection == NULL) {
-        printf("XCB failed to connect to the X server.\nExiting ...\n");
-        fflush(stdout);
-        exit(1);
-    }
-
     int conn_error = xcb_connection_has_error(inst->xcb_connection);
     if (conn_error) {
-        printf("XCB failed to connect to the X server due to error:%d.\nExiting ...\n", conn_error);
-        fflush(stdout);
-        exit(1);
+        fprintf(stderr, "XCB failed to connect to the X server due to error:%d.\n", conn_error);
+        fflush(stderr);
+        inst->xcb_connection = NULL;
     }
 
     setup = xcb_get_setup(inst->xcb_connection);
@@ -961,6 +956,10 @@ static void AppCreateXcbWindow(struct AppInstance *inst) {
 }
 
 static void AppCreateXcbSurface(struct AppInstance *inst) {
+    if (!inst->xcb_connection) {
+        return;
+    }
+
     VkResult U_ASSERT_ONLY err;
     VkXcbSurfaceCreateInfoKHR xcb_createInfo;
     xcb_createInfo.sType      = VK_STRUCTURE_TYPE_XCB_SURFACE_CREATE_INFO_KHR;
@@ -973,6 +972,10 @@ static void AppCreateXcbSurface(struct AppInstance *inst) {
 }
 
 static void AppDestroyXcbWindow(struct AppInstance *inst) {
+    if (!inst->xcb_connection) {
+        return; // Nothing to destroy
+    }
+
     xcb_destroy_window(inst->xcb_connection, inst->xcb_window);
     xcb_disconnect(inst->xcb_connection);
 }

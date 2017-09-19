@@ -31,7 +31,11 @@
 // Construct DescriptorSetLayout instance from given create info
 cvdescriptorset::DescriptorSetLayout::DescriptorSetLayout(const VkDescriptorSetLayoutCreateInfo *p_create_info,
                                                           const VkDescriptorSetLayout layout)
-    : layout_(layout), binding_count_(p_create_info->bindingCount), descriptor_count_(0), dynamic_descriptor_count_(0) {
+    : layout_(layout),
+      flags_(p_create_info->flags),
+      binding_count_(p_create_info->bindingCount),
+      descriptor_count_(0),
+      dynamic_descriptor_count_(0) {
     // Dyn array indicies are ordered by binding # and array index of any array within the binding
     //  so we store up bindings w/ count in ordered map in order to create dyn array mappings below
     std::map<uint32_t, uint32_t> binding_to_dyn_count;
@@ -315,14 +319,13 @@ cvdescriptorset::AllocateDescriptorSetsData::AllocateDescriptorSetsData(uint32_t
     : required_descriptors_by_type{}, layout_nodes(count, nullptr) {}
 
 cvdescriptorset::DescriptorSet::DescriptorSet(const VkDescriptorSet set, const VkDescriptorPool pool,
-    const std::shared_ptr<DescriptorSetLayout const> &layout, const layer_data *dev_data)
+                                              const std::shared_ptr<DescriptorSetLayout const> &layout, const layer_data *dev_data)
     : some_update_(false),
       set_(set),
       pool_state_(nullptr),
       p_layout_(layout),
       device_data_(dev_data),
-      limits_(GetPhysDevProperties(dev_data)->properties.limits),
-      push_descriptor_(false) {
+      limits_(GetPhysDevProperties(dev_data)->properties.limits) {
     pool_state_ = GetDescriptorPoolState(dev_data, pool);
     // Foreach binding, create default descriptors of given type
     for (uint32_t i = 0; i < p_layout_->GetBindingCount(); ++i) {
