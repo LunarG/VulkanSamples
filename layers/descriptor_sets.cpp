@@ -702,7 +702,7 @@ bool cvdescriptorset::DescriptorSet::ValidateCopyUpdate(const debug_report_data 
     }
     // First make sure source descriptors are updated
     for (uint32_t i = 0; i < update->descriptorCount; ++i) {
-        if (!src_set->descriptors_[src_start_idx + i]) {
+        if (!src_set->descriptors_[src_start_idx + i]->updated) {
             std::stringstream error_str;
             error_str << "Attempting copy update from descriptorSet " << src_set << " binding #" << update->srcBinding
                       << " but descriptor at array offset " << update->srcArrayElement + i << " has not been updated";
