@@ -5629,10 +5629,6 @@ static void PreCallRecordCmdPushDescriptorSetKHR(layer_data *device_data, VkComm
     if (set >= cb_state->lastBound[pipelineBindPoint].boundDescriptorSets.size()) {
         cb_state->lastBound[pipelineBindPoint].boundDescriptorSets.resize(set + 1);
         cb_state->lastBound[pipelineBindPoint].dynamicOffsets.resize(set + 1);
-    } else {
-        if (cb_state->lastBound[pipelineBindPoint].boundDescriptorSets[set]->IsPushDescriptor()) {
-            cb_state->lastBound[pipelineBindPoint].push_descriptors[set] = nullptr;
-        }
     }
     const auto &layout_state = getPipelineLayout(device_data, layout);
     std::unique_ptr<cvdescriptorset::DescriptorSet> new_desc{
