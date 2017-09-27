@@ -20078,6 +20078,51 @@ TEST_F(VkLayerTest, Maintenance1AndNegativeViewport) {
     m_errorMonitor->VerifyFound();
 }
 
+TEST_F(VkLayerTest, InvalidCreateDescriptorPool) {
+    TEST_DESCRIPTION("Attempt to create descriptor pool with invalid parameters");
+
+    ASSERT_NO_FATAL_FAILURE(Init());
+
+    const uint32_t default_descriptor_count = 1;
+    const VkDescriptorPoolSize dp_size_template{VK_DESCRIPTOR_TYPE_SAMPLER, default_descriptor_count};
+
+    const VkDescriptorPoolCreateInfo dp_ci_template{VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
+                                                    nullptr,  // pNext
+                                                    0,        // flags
+                                                    1,        // maxSets
+                                                    1,        // poolSizeCount
+                                                    &dp_size_template};
+
+    // try maxSets = 0
+    {
+        VkDescriptorPoolCreateInfo invalid_dp_ci = dp_ci_template;
+        invalid_dp_ci.maxSets = 0;  // invalid maxSets value
+
+        m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_0480025a);
+        {
+            VkDescriptorPool pool;
+            vkCreateDescriptorPool(m_device->device(), &invalid_dp_ci, nullptr, &pool);
+        }
+        m_errorMonitor->VerifyFound();
+    }
+
+    // try descriptorCount = 0
+    {
+        VkDescriptorPoolSize invalid_dp_size = dp_size_template;
+        invalid_dp_size.descriptorCount = 0;  // invalid descriptorCount value
+
+        VkDescriptorPoolCreateInfo dp_ci = dp_ci_template;
+        dp_ci.pPoolSizes = &invalid_dp_size;
+
+        m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_04a0025c);
+        {
+            VkDescriptorPool pool;
+            vkCreateDescriptorPool(m_device->device(), &dp_ci, nullptr, &pool);
+        }
+        m_errorMonitor->VerifyFound();
+    }
+}
+
 //
 // POSITIVE VALIDATION TESTS
 //
