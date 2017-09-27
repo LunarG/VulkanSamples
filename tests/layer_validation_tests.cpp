@@ -7201,7 +7201,7 @@ TEST_F(VkLayerTest, DescriptorPoolInUseDestroyedSignaled) {
     submit_info.pCommandBuffers = &m_commandBuffer->handle();
     vkQueueSubmit(m_device->m_queue, 1, &submit_info, VK_NULL_HANDLE);
     // Destroy pool while in-flight, causing error
-    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, "Cannot delete DescriptorPool ");
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_2440025e);
     vkDestroyDescriptorPool(m_device->device(), ds_pool, NULL);
     m_errorMonitor->VerifyFound();
     vkQueueWaitIdle(m_device->m_queue);

@@ -2834,15 +2834,15 @@ VKAPI_ATTR VkResult VKAPI_CALL AllocateMemory(VkDevice device, const VkMemoryAll
 }
 
 // For given obj node, if it is use, flag a validation error and return callback result, else return false
-bool ValidateObjectNotInUse(const layer_data *dev_data, BASE_NODE *obj_node, VK_OBJECT obj_struct,
+bool ValidateObjectNotInUse(const layer_data *dev_data, BASE_NODE *obj_node, VK_OBJECT obj_struct, const char *caller_name,
                             UNIQUE_VALIDATION_ERROR_CODE error_code) {
     if (dev_data->instance_data->disabled.object_in_use) return false;
     bool skip = false;
     if (obj_node->in_use.load()) {
-        skip |=
-            log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, get_debug_report_enum[obj_struct.type], obj_struct.handle,
-                    __LINE__, error_code, "DS", "Cannot delete %s 0x%" PRIx64 " that is currently in use by a command buffer. %s",
-                    object_string[obj_struct.type], obj_struct.handle, validation_error_map[error_code]);
+        skip |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, get_debug_report_enum[obj_struct.type],
+                        obj_struct.handle, __LINE__, error_code, "DS",
+                        "Cannot call %s on %s 0x%" PRIx64 " that is currently in use by a command buffer. %s", caller_name,
+                        object_string[obj_struct.type], obj_struct.handle, validation_error_map[error_code]);
     }
     return skip;
 }
@@ -2853,7 +2853,7 @@ static bool PreCallValidateFreeMemory(layer_data *dev_data, VkDeviceMemory mem, 
     if (dev_data->instance_data->disabled.free_memory) return false;
     bool skip = false;
     if (*mem_info) {
-        skip |= ValidateObjectNotInUse(dev_data, *mem_info, *obj_struct, VALIDATION_ERROR_2880054a);
+        skip |= ValidateObjectNotInUse(dev_data, *mem_info, *obj_struct, "vkFreeMemory", VALIDATION_ERROR_2880054a);
     }
     return skip;
 }
@@ -3229,7 +3229,7 @@ static bool PreCallValidateDestroySemaphore(layer_data *dev_data, VkSemaphore se
     if (dev_data->instance_data->disabled.destroy_semaphore) return false;
     bool skip = false;
     if (*sema_node) {
-        skip |= ValidateObjectNotInUse(dev_data, *sema_node, *obj_struct, VALIDATION_ERROR_268008e2);
+        skip |= ValidateObjectNotInUse(dev_data, *sema_node, *obj_struct, "vkDestroySemaphore", VALIDATION_ERROR_268008e2);
     }
     return skip;
 }
@@ -3256,7 +3256,7 @@ static bool PreCallValidateDestroyEvent(layer_data *dev_data, VkEvent event, EVE
     if (dev_data->instance_data->disabled.destroy_event) return false;
     bool skip = false;
     if (*event_state) {
-        skip |= ValidateObjectNotInUse(dev_data, *event_state, *obj_struct, VALIDATION_ERROR_24c008f2);
+        skip |= ValidateObjectNotInUse(dev_data, *event_state, *obj_struct, "vkDestroyEvent", VALIDATION_ERROR_24c008f2);
     }
     return skip;
 }
@@ -3289,7 +3289,7 @@ static bool PreCallValidateDestroyQueryPool(layer_data *dev_data, VkQueryPool qu
     if (dev_data->instance_data->disabled.destroy_query_pool) return false;
     bool skip = false;
     if (*qp_state) {
-        skip |= ValidateObjectNotInUse(dev_data, *qp_state, *obj_struct, VALIDATION_ERROR_26200632);
+        skip |= ValidateObjectNotInUse(dev_data, *qp_state, *obj_struct, "vkDestroyQueryPool", VALIDATION_ERROR_26200632);
     }
     return skip;
 }
@@ -3856,7 +3856,7 @@ static bool PreCallValidateDestroyPipeline(layer_data *dev_data, VkPipeline pipe
     if (dev_data->instance_data->disabled.destroy_pipeline) return false;
     bool skip = false;
     if (*pipeline_state) {
-        skip |= ValidateObjectNotInUse(dev_data, *pipeline_state, *obj_struct, VALIDATION_ERROR_25c005fa);
+        skip |= ValidateObjectNotInUse(dev_data, *pipeline_state, *obj_struct, "vkDestroyPipeline", VALIDATION_ERROR_25c005fa);
     }
     return skip;
 }
@@ -3901,7 +3901,7 @@ static bool PreCallValidateDestroySampler(layer_data *dev_data, VkSampler sample
     if (dev_data->instance_data->disabled.destroy_sampler) return false;
     bool skip = false;
     if (*sampler_state) {
-        skip |= ValidateObjectNotInUse(dev_data, *sampler_state, *obj_struct, VALIDATION_ERROR_26600874);
+        skip |= ValidateObjectNotInUse(dev_data, *sampler_state, *obj_struct, "vkDestroySampler", VALIDATION_ERROR_26600874);
     }
     return skip;
 }
@@ -3948,7 +3948,8 @@ static bool PreCallValidateDestroyDescriptorPool(layer_data *dev_data, VkDescrip
     if (dev_data->instance_data->disabled.destroy_descriptor_pool) return false;
     bool skip = false;
     if (*desc_pool_state) {
-        skip |= ValidateObjectNotInUse(dev_data, *desc_pool_state, *obj_struct, VALIDATION_ERROR_2440025e);
+        skip |=
+            ValidateObjectNotInUse(dev_data, *desc_pool_state, *obj_struct, "vkDestroyDescriptorPool", VALIDATION_ERROR_2440025e);
     }
     return skip;
 }
@@ -4215,7 +4216,8 @@ static bool PreCallValidateDestroyFramebuffer(layer_data *dev_data, VkFramebuffe
     if (dev_data->instance_data->disabled.destroy_framebuffer) return false;
     bool skip = false;
     if (*framebuffer_state) {
-        skip |= ValidateObjectNotInUse(dev_data, *framebuffer_state, *obj_struct, VALIDATION_ERROR_250006f8);
+        skip |=
+            ValidateObjectNotInUse(dev_data, *framebuffer_state, *obj_struct, "vkDestroyFrameBuffer", VALIDATION_ERROR_250006f8);
     }
     return skip;
 }
@@ -4249,7 +4251,7 @@ static bool PreCallValidateDestroyRenderPass(layer_data *dev_data, VkRenderPass 
     if (dev_data->instance_data->disabled.destroy_renderpass) return false;
     bool skip = false;
     if (*rp_state) {
-        skip |= ValidateObjectNotInUse(dev_data, *rp_state, *obj_struct, VALIDATION_ERROR_264006d2);
+        skip |= ValidateObjectNotInUse(dev_data, *rp_state, *obj_struct, "vkDestroyRenderPass", VALIDATION_ERROR_264006d2);
     }
     return skip;
 }

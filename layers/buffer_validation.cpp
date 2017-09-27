@@ -850,7 +850,8 @@ bool PreCallValidateDestroyImage(layer_data *device_data, VkImage image, IMAGE_S
     if (disabled->destroy_image) return false;
     bool skip = false;
     if (*image_state) {
-        skip |= core_validation::ValidateObjectNotInUse(device_data, *image_state, *obj_struct, VALIDATION_ERROR_252007d0);
+        skip |= core_validation::ValidateObjectNotInUse(device_data, *image_state, *obj_struct, "vkDestroyImage",
+                                                        VALIDATION_ERROR_252007d0);
     }
     return skip;
 }
@@ -3558,7 +3559,8 @@ bool PreCallValidateDestroyImageView(layer_data *device_data, VkImageView image_
     if (GetDisables(device_data)->destroy_image_view) return false;
     bool skip = false;
     if (*image_view_state) {
-        skip |= ValidateObjectNotInUse(device_data, *image_view_state, *obj_struct, VALIDATION_ERROR_25400804);
+        skip |=
+            ValidateObjectNotInUse(device_data, *image_view_state, *obj_struct, "vkDestroyImageView", VALIDATION_ERROR_25400804);
     }
     return skip;
 }
@@ -3600,7 +3602,8 @@ bool PreCallValidateDestroyBufferView(layer_data *device_data, VkBufferView buff
     if (GetDisables(device_data)->destroy_buffer_view) return false;
     bool skip = false;
     if (*buffer_view_state) {
-        skip |= ValidateObjectNotInUse(device_data, *buffer_view_state, *obj_struct, VALIDATION_ERROR_23e00750);
+        skip |=
+            ValidateObjectNotInUse(device_data, *buffer_view_state, *obj_struct, "vkDestroyBufferView", VALIDATION_ERROR_23e00750);
     }
     return skip;
 }
