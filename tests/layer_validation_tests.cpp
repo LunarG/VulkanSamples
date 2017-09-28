@@ -5989,81 +5989,15 @@ TEST_F(VkLayerTest, RenderPassInUseDestroyedSignaled) {
     VkResult err = vkCreateRenderPass(m_device->device(), &rpci, NULL, &rp);
     ASSERT_VK_SUCCESS(err);
 
-    // Create a pipeline that uses the given renderpass
-    VkPipelineLayoutCreateInfo pipeline_layout_ci = {};
-    pipeline_layout_ci.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-
-    VkPipelineLayout pipeline_layout;
-    err = vkCreatePipelineLayout(m_device->device(), &pipeline_layout_ci, NULL, &pipeline_layout);
-    ASSERT_VK_SUCCESS(err);
-
-    VkPipelineViewportStateCreateInfo vp_state_ci = {};
-    vp_state_ci.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
-    vp_state_ci.viewportCount = 1;
-    VkViewport vp = {};  // Just need dummy vp to point to
-    vp_state_ci.pViewports = &vp;
-    vp_state_ci.scissorCount = 1;
-    VkRect2D scissors = {};  // Dummy scissors to point to
-    vp_state_ci.pScissors = &scissors;
-
-    VkPipelineShaderStageCreateInfo shaderStages[2];
-    memset(&shaderStages, 0, 2 * sizeof(VkPipelineShaderStageCreateInfo));
-
-    VkShaderObj vs(m_device, bindStateVertShaderText, VK_SHADER_STAGE_VERTEX_BIT, this);
-    VkShaderObj fs(m_device, bindStateFragShaderText, VK_SHADER_STAGE_FRAGMENT_BIT, this);  // We shouldn't need a fragment shader
-    // but add it to be able to run on more devices
-    shaderStages[0] = vs.GetStageCreateInfo();
-    shaderStages[1] = fs.GetStageCreateInfo();
-
-    VkPipelineVertexInputStateCreateInfo vi_ci = {};
-    vi_ci.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
-
-    VkPipelineInputAssemblyStateCreateInfo ia_ci = {};
-    ia_ci.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
-    ia_ci.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP;
-
-    VkPipelineRasterizationStateCreateInfo rs_ci = {};
-    rs_ci.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
-    rs_ci.rasterizerDiscardEnable = true;
-    rs_ci.lineWidth = 1.0f;
-
-    VkPipelineColorBlendAttachmentState att = {};
-    att.blendEnable = VK_FALSE;
-    att.colorWriteMask = 0xf;
-
-    VkPipelineColorBlendStateCreateInfo cb_ci = {};
-    cb_ci.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
-    cb_ci.attachmentCount = 1;
-    cb_ci.pAttachments = &att;
-
-    VkGraphicsPipelineCreateInfo gp_ci = {};
-    gp_ci.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
-    gp_ci.stageCount = 2;
-    gp_ci.pStages = shaderStages;
-    gp_ci.pVertexInputState = &vi_ci;
-    gp_ci.pInputAssemblyState = &ia_ci;
-    gp_ci.pViewportState = &vp_state_ci;
-    gp_ci.pRasterizationState = &rs_ci;
-    gp_ci.pColorBlendState = &cb_ci;
-    gp_ci.flags = VK_PIPELINE_CREATE_DISABLE_OPTIMIZATION_BIT;
-    gp_ci.layout = pipeline_layout;
-    gp_ci.renderPass = rp;
-
-    VkPipelineCacheCreateInfo pc_ci = {};
-    pc_ci.sType = VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO;
-
     m_errorMonitor->ExpectSuccess();
-    VkPipeline pipeline;
-    VkPipelineCache pipe_cache;
-    err = vkCreatePipelineCache(m_device->device(), &pc_ci, NULL, &pipe_cache);
-    ASSERT_VK_SUCCESS(err);
 
-    err = vkCreateGraphicsPipelines(m_device->device(), pipe_cache, 1, &gp_ci, NULL, &pipeline);
-    ASSERT_VK_SUCCESS(err);
-
-    // Bind pipeline to cmd buffer, will also bind renderpass
     m_commandBuffer->begin();
-    vkCmdBindPipeline(m_commandBuffer->handle(), VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
+    VkRenderPassBeginInfo rpbi = {};
+    rpbi.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+    rpbi.framebuffer = m_framebuffer;
+    rpbi.renderPass = rp;
+    m_commandBuffer->BeginRenderPass(rpbi);
+    m_commandBuffer->EndRenderPass();
     m_commandBuffer->end();
 
     VkSubmitInfo submit_info = {};
@@ -6077,14 +6011,9 @@ TEST_F(VkLayerTest, RenderPassInUseDestroyedSignaled) {
     vkDestroyRenderPass(m_device->device(), rp, nullptr);
     m_errorMonitor->VerifyFound();
 
-    // Wait for queue to complete so we can safely destroy everything
+    // Wait for queue to complete so we can safely destroy rp
     vkQueueWaitIdle(m_device->m_queue);
-    m_errorMonitor->SetUnexpectedError("If renderPass is not VK_NULL_HANDLE, renderPass must be a valid VkRenderPass handle");
-    m_errorMonitor->SetUnexpectedError("Unable to remove RenderPass obj");
     vkDestroyRenderPass(m_device->device(), rp, nullptr);
-    vkDestroyPipeline(m_device->device(), pipeline, nullptr);
-    vkDestroyPipelineCache(m_device->device(), pipe_cache, nullptr);
-    vkDestroyPipelineLayout(m_device->device(), pipeline_layout, nullptr);
 }
 
 TEST_F(VkLayerTest, ImageMemoryNotBound) {
