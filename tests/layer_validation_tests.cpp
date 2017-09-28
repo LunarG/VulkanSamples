@@ -6433,12 +6433,14 @@ TEST_F(VkPositiveLayerTest, DestroyPipelineRenderPass) {
     err = vkCreatePipelineLayout(m_device->device(), &plci, nullptr, &pl);
     ASSERT_VK_SUCCESS(err);
     pipe.CreateVKPipeline(pl, rp);
-    // Destroy renderPass before pipeline is used
-    vkDestroyRenderPass(m_device->device(), rp, nullptr);
 
     m_commandBuffer->begin();
     m_commandBuffer->BeginRenderPass(m_renderPassBeginInfo);
     vkCmdBindPipeline(m_commandBuffer->handle(), VK_PIPELINE_BIND_POINT_GRAPHICS, pipe.handle());
+    // Destroy renderPass before pipeline is used in Draw
+    //  We delay until after CmdBindPipeline to verify that invalid binding isn't
+    //  created between CB & renderPass, which we used to do.
+    vkDestroyRenderPass(m_device->device(), rp, nullptr);
     vkCmdDraw(m_commandBuffer->handle(), 3, 1, 0, 0);
     vkCmdEndRenderPass(m_commandBuffer->handle());
     m_commandBuffer->end();
