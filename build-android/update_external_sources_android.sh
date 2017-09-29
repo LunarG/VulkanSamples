@@ -48,6 +48,50 @@ elif [[ $(uname) == "Darwin" ]]; then
     cores=$(sysctl -n hw.ncpu)
 fi
 
+#
+# Parse parameters
+#
+
+function printUsage {
+   echo "Supported parameters are:"
+   echo "    --abi <abi> (optional)"
+   echo
+   echo "i.e. ${0##*/} --abi arm64-v8a \\"
+   exit 1
+}
+
+if [[ $(($# % 2)) -ne 0 ]]
+then
+    echo Parameters must be provided in pairs.
+    echo parameter count = $#
+    echo
+    printUsage
+    exit 1
+fi
+
+while [[ $# -gt 0 ]]
+do
+    case $1 in
+        --abi)
+            abi="$2"
+            shift 2
+            ;;
+        *)
+            # unknown option
+            echo Unknown option: $1
+            echo
+            printUsage
+            exit 1
+            ;;
+    esac
+done
+
+echo abi=$abi
+if [[ -z $abi ]]
+then
+    echo No abi provided, so building for all supported abis.
+fi
+
 function create_glslang () {
    rm -rf $BASEDIR/glslang
    echo "Creating local glslang repository ($BASEDIR/glslang)."
@@ -135,7 +179,11 @@ function update_shaderc () {
 function build_shaderc () {
    echo "Building $BASEDIR/shaderc"
    cd $BASEDIR/shaderc/android_test
-   ndk-build THIRD_PARTY_PATH=../.. -j $cores
+   if [[ $abi ]]; then
+      ndk-build THIRD_PARTY_PATH=../.. APP_ABI=$abi -j $cores;
+   else
+      ndk-build THIRD_PARTY_PATH=../.. -j $cores;
+   fi
 }
 
 if [ ! -d "$BASEDIR/glslang" -o ! -d "$BASEDIR/glslang/.git" -o -d "$BASEDIR/glslang/.svn" ]; then
