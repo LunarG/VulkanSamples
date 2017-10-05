@@ -103,7 +103,7 @@ class ValidationDatabase:
         """Read a database file into internal data structures, format of each line is <enum><implemented Y|N?><testname><api><errormsg><notes>"""
         #db_dict = {} # This is a simple db of just enum->errormsg, the same as is created from spec
         #max_id = 0
-        with open(self.db_file, "r") as infile:
+        with open(self.db_file, "r", encoding="utf8") as infile:
             for line in infile:
                 line = line.strip()
                 if line.startswith('#') or '' == line:
