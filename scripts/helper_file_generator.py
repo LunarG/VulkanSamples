@@ -399,6 +399,7 @@ class HelperFileOutputGenerator(OutputGenerator):
     def GenerateStructSizeHeader(self):
         outstring = ''
         outstring += 'size_t get_struct_chain_size(const void* struct_ptr);\n'
+        outstring += 'size_t get_struct_size(const void* struct_ptr);\n'
         for item in self.structMembers:
             lower_case_name = item.name.lower()
             if item.ifdef_protect != None:
@@ -435,13 +436,13 @@ class HelperFileOutputGenerator(OutputGenerator):
     #
     # Build the header of the get_struct_chain_size function
     def GenerateChainSizePreamble(self):
-        preable = '\nsize_t get_struct_chain_size(const void* struct_ptr) {\n'
-        preable += '    // Use VkApplicationInfo as struct until actual type is resolved\n'
-        preable += '    VkApplicationInfo* pNext = (VkApplicationInfo*)struct_ptr;\n'
-        preable += '    size_t struct_size = 0;\n'
-        preable += '    while (pNext) {\n'
-        preable += '        switch (pNext->sType) {\n'
-        return preable
+        preamble = '\nsize_t get_struct_chain_size(const void* struct_ptr) {\n'
+        preamble += '    // Use VkApplicationInfo as struct until actual type is resolved\n'
+        preamble += '    VkApplicationInfo* pNext = (VkApplicationInfo*)struct_ptr;\n'
+        preamble += '    size_t struct_size = 0;\n'
+        preamble += '    while (pNext) {\n'
+        preamble += '        switch (pNext->sType) {\n'
+        return preamble
     #
     # Build the footer of the get_struct_chain_size function
     def GenerateChainSizePostamble(self):
@@ -452,29 +453,49 @@ class HelperFileOutputGenerator(OutputGenerator):
         postamble += '        pNext = (VkApplicationInfo*)pNext->pNext;\n'
         postamble += '    }\n'
         postamble += '    return struct_size;\n'
+        postamble += '}\n'
+        return postamble
+    #
+    # Build the header of the get_struct_size function
+    def GenerateStructSizePreamble(self):
+        preamble = '\nsize_t get_struct_size(const void* struct_ptr) {\n'
+        preamble += '    switch (((VkApplicationInfo*)struct_ptr)->sType) {\n'
+        return preamble
+    #
+    # Build the footer of the get_struct_size function
+    def GenerateStructSizePostamble(self):
+        postamble  = '    default:\n'
+        postamble += '        assert(0);\n'
+        postamble += '        return(0);\n'
+        postamble += '    }\n'
         postamble += '}'
         return postamble
     #
     # struct_size_helper source -- create bodies of struct size helper functions
     def GenerateStructSizeSource(self):
-        # Construct the body of the routine and get_struct_chain_size() simultaneously
-        struct_size_body = ''
+        # Construct the bodies of the struct size functions, get_struct_chain_size(),
+        # and get_struct_size() simultaneously
+        struct_size_funcs = ''
         chain_size  = self.GenerateChainSizePreamble()
+        struct_size  = self.GenerateStructSizePreamble()
         for item in self.structMembers:
-            struct_size_body += '\n'
+            struct_size_funcs += '\n'
             lower_case_name = item.name.lower()
             if item.ifdef_protect != None:
-                struct_size_body += '#ifdef %s\n' % item.ifdef_protect
+                struct_size_funcs += '#ifdef %s\n' % item.ifdef_protect
+                struct_size += '#ifdef %s\n' % item.ifdef_protect
                 chain_size += '#ifdef %s\n' % item.ifdef_protect
             if item.name in self.structTypes:
                 chain_size += '            case %s: {\n' % self.structTypes[item.name].value
                 chain_size += '                struct_size += vk_size_%s((%s*)pNext);\n' % (item.name.lower(), item.name)
                 chain_size += '                break;\n'
                 chain_size += '            }\n'
-            struct_size_body += 'size_t vk_size_%s(const %s* struct_ptr) {\n' % (item.name.lower(), item.name)
-            struct_size_body += '    size_t struct_size = 0;\n'
-            struct_size_body += '    if (struct_ptr) {\n'
-            struct_size_body += '        struct_size = sizeof(%s);\n' % item.name
+                struct_size += '    case %s: \n' % self.structTypes[item.name].value
+                struct_size += '        return vk_size_%s((%s*)struct_ptr);\n' % (item.name.lower(), item.name)
+            struct_size_funcs += 'size_t vk_size_%s(const %s* struct_ptr) { \n' % (item.name.lower(), item.name)
+            struct_size_funcs += '    size_t struct_size = 0;\n'
+            struct_size_funcs += '    if (struct_ptr) {\n'
+            struct_size_funcs += '        struct_size = sizeof(%s);\n' % item.name
             counter_declared = False
             for member in item.members:
                 vulkan_type = next((i for i, v in enumerate(self.structMembers) if v[0] == member.type), None)
@@ -482,38 +503,40 @@ class HelperFileOutputGenerator(OutputGenerator):
                     if vulkan_type is not None:
                         # If this is another Vulkan structure call generated size function
                         if member.len is not None:
-                            struct_size_body, counter_declared = self.DeclareCounter(struct_size_body, counter_declared)
-                            struct_size_body += '        for (i = 0; i < struct_ptr->%s; i++) {\n' % member.len
-                            struct_size_body += '            struct_size += vk_size_%s(&struct_ptr->%s[i]);\n' % (member.type.lower(), member.name)
-                            struct_size_body += '        }\n'
+                            struct_size_funcs, counter_declared = self.DeclareCounter(struct_size_funcs, counter_declared)
+                            struct_size_funcs += '        for (i = 0; i < struct_ptr->%s; i++) {\n' % member.len
+                            struct_size_funcs += '            struct_size += vk_size_%s(&struct_ptr->%s[i]);\n' % (member.type.lower(), member.name)
+                            struct_size_funcs += '        }\n'
                         else:
-                            struct_size_body += '        struct_size += vk_size_%s(struct_ptr->%s);\n' % (member.type.lower(), member.name)
+                            struct_size_funcs += '        struct_size += vk_size_%s(struct_ptr->%s);\n' % (member.type.lower(), member.name)
                     else:
                         if member.type == 'char':
                             # Deal with sizes of character strings
                             if member.len is not None:
-                                struct_size_body, counter_declared = self.DeclareCounter(struct_size_body, counter_declared)
-                                struct_size_body += '        for (i = 0; i < struct_ptr->%s; i++) {\n' % member.len
-                                struct_size_body += '            struct_size += (sizeof(char*) + (sizeof(char) * (1 + strlen(struct_ptr->%s[i]))));\n' % (member.name)
-                                struct_size_body += '        }\n'
+                                struct_size_funcs, counter_declared = self.DeclareCounter(struct_size_funcs, counter_declared)
+                                struct_size_funcs += '        for (i = 0; i < struct_ptr->%s; i++) {\n' % member.len
+                                struct_size_funcs += '            struct_size += (sizeof(char*) + (sizeof(char) * (1 + strlen(struct_ptr->%s[i]))));\n' % (member.name)
+                                struct_size_funcs += '        }\n'
                             else:
-                                struct_size_body += '        struct_size += (struct_ptr->%s != NULL) ? sizeof(char)*(1+strlen(struct_ptr->%s)) : 0;\n' % (member.name, member.name)
+                                struct_size_funcs += '        struct_size += (struct_ptr->%s != NULL) ? sizeof(char)*(1+strlen(struct_ptr->%s)) : 0;\n' % (member.name, member.name)
                         else:
                             if member.len is not None:
                                 # Avoid using 'sizeof(void)', which generates compile-time warnings/errors
                                 checked_type = member.type
                                 if checked_type == 'void':
                                     checked_type = 'void*'
-                                struct_size_body += '        struct_size += (struct_ptr->%s ) * sizeof(%s);\n' % (member.len, checked_type)
-            struct_size_body += '    }\n'
-            struct_size_body += '    return struct_size;\n'
-            struct_size_body += '}\n'
+                                struct_size_funcs += '        struct_size += (struct_ptr->%s ) * sizeof(%s);\n' % (member.len, checked_type)
+            struct_size_funcs += '    }\n'
+            struct_size_funcs += '    return struct_size;\n'
+            struct_size_funcs += '}\n'
             if item.ifdef_protect != None:
-                struct_size_body += '#endif // %s\n' % item.ifdef_protect
+                struct_size_funcs += '#endif // %s\n' % item.ifdef_protect
+                struct_size += '#endif // %s\n' % item.ifdef_protect
                 chain_size += '#endif // %s\n' % item.ifdef_protect
         chain_size += self.GenerateChainSizePostamble()
-        struct_size_body += chain_size;
-        return struct_size_body
+        struct_size += self.GenerateStructSizePostamble()
+        return_value = struct_size_funcs + chain_size + struct_size;
+        return return_value
     #
     # Combine struct size helper source file preamble with body text and return
     def GenerateStructSizeHelperSource(self):
