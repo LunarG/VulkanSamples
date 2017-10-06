@@ -609,6 +609,9 @@ VkResult loaderGetDeviceRegistryFiles(const struct loader_instance *inst, char *
                 found = true;
                 continue;
             }
+            else if (result == VK_ERROR_OUT_OF_HOST_MEMORY) {
+                break;
+            }
 
             status = CM_Get_Child(&childID, devID, 0);
             if (status != CR_SUCCESS) {
