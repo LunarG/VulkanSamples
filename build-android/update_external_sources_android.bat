@@ -22,10 +22,10 @@ setlocal EnableDelayedExpansion
 set errorCode=0
 set ANDROID_BUILD_DIR=%~dp0
 set BUILD_DIR=%ANDROID_BUILD_DIR%
-set BASE_DIR=%BUILD_DIR%\external
-set GLSLANG_DIR=%BASE_DIR%\glslang
-set SPIRV_TOOLS_DIR=%BASE_DIR%\spirv-tools
-set SPIRV_HEADERS_DIR=%BASE_DIR%\spirv-tools\external\spirv-headers
+set BASE_DIR=%BUILD_DIR%\third_party
+set GLSLANG_DIR=%BASE_DIR%\shaderc\third_party\glslang
+set SPIRV_TOOLS_DIR=%BASE_DIR%\shaderc\third_party\spirv-tools
+set SPIRV_HEADERS_DIR=%BASE_DIR%\shaderc\third_party\spirv-tools\external\spirv-headers
 set SHADERC_DIR=%BASE_DIR%\shaderc
 
 for %%X in (where.exe) do (set FOUND=%%~$PATH:X)
@@ -111,6 +111,15 @@ set sync-spirv-headers=1
 set sync-shaderc=1
 set build-shaderc=1
 
+if %sync-shaderc% equ 1 (
+   if not exist %SHADERC_DIR% (
+      call:create_shaderc
+   )
+   if %errorCode% neq 0 (goto:error)
+   call:update_shaderc
+   if %errorCode% neq 0 (goto:error)
+)
+
 if %sync-glslang% equ 1 (
    if not exist %GLSLANG_DIR% (
       call:create_glslang
@@ -137,15 +146,6 @@ if %sync-spirv-headers% equ 1 (
    )
    if %errorCode% neq 0 (goto:error)
    call:update_spirv-headers
-   if %errorCode% neq 0 (goto:error)
-)
-
-if %sync-shaderc% equ 1 (
-   if not exist %SHADERC_DIR% (
-      call:create_shaderc
-   )
-   if %errorCode% neq 0 (goto:error)
-   call:update_shaderc
    if %errorCode% neq 0 (goto:error)
 )
 
@@ -279,7 +279,7 @@ goto:eof
    echo Building %SHADERC_DIR%
    cd %SHADERC_DIR%\android_test
    echo Building shaderc with Android NDK
-   call ndk-build THIRD_PARTY_PATH=../.. -j 4
+   call ndk-build THIRD_PARTY_PATH=../third_party -j 4
    REM Check for existence of one lib, even though we should check for all results
    if not exist %SHADERC_DIR%\android_test\obj\local\x86\libshaderc.a (
       echo.

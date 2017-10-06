@@ -16,7 +16,6 @@
 LOCAL_PATH := $(call my-dir)
 SRC_DIR := ../..
 LAYER_DIR := ../generated
-ANDROID_DIR := $(SRC_DIR)/build-android
 
 include $(CLEAR_VARS)
 LOCAL_MODULE := layer_utils
@@ -42,10 +41,8 @@ LOCAL_SRC_FILES += $(SRC_DIR)/layers/vk_layer_table.cpp
 LOCAL_C_INCLUDES += $(LOCAL_PATH)/$(SRC_DIR)/include \
                     $(LOCAL_PATH)/$(SRC_DIR)/layers \
                     $(LOCAL_PATH)/$(LAYER_DIR)/include \
-                    $(LOCAL_PATH)/$(SRC_DIR)/loader \
-                    $(LOCAL_PATH)/$(ANDROID_DIR)/external/glslang \
-                    $(LOCAL_PATH)/$(ANDROID_DIR)/external/spirv-tools/include
-LOCAL_STATIC_LIBRARIES += layer_utils SPIRV-Tools-prebuilt
+                    $(LOCAL_PATH)/$(SRC_DIR)/loader
+LOCAL_STATIC_LIBRARIES += layer_utils glslang SPIRV-Tools
 LOCAL_CPPFLAGS += -std=c++11 -Wall -Werror -Wno-unused-function -Wno-unused-const-variable -mxgot
 LOCAL_CPPFLAGS += -DVK_USE_PLATFORM_ANDROID_KHR -DVK_PROTOTYPES -fvisibility=hidden
 LOCAL_LDLIBS    := -llog
@@ -119,52 +116,6 @@ LOCAL_LDFLAGS   += -Wl,-Bsymbolic
 LOCAL_LDFLAGS   += -Wl,--exclude-libs,ALL
 include $(BUILD_SHARED_LIBRARY)
 
-# Pull in prebuilt shaderc
-include $(CLEAR_VARS)
-LOCAL_MODULE := shaderc-prebuilt
-LOCAL_SRC_FILES := $(ANDROID_DIR)/external/shaderc/android_test/obj/local/$(TARGET_ARCH_ABI)/libshaderc.a
-include $(PREBUILT_STATIC_LIBRARY)
-
-include $(CLEAR_VARS)
-LOCAL_MODULE := glslang-prebuilt
-LOCAL_SRC_FILES := $(ANDROID_DIR)/external/shaderc/android_test/obj/local/$(TARGET_ARCH_ABI)/libglslang.a
-include $(PREBUILT_STATIC_LIBRARY)
-
-include $(CLEAR_VARS)
-LOCAL_MODULE := OGLCompiler-prebuilt
-LOCAL_SRC_FILES := $(ANDROID_DIR)/external/shaderc/android_test/obj/local/$(TARGET_ARCH_ABI)/libOGLCompiler.a
-include $(PREBUILT_STATIC_LIBRARY)
-
-include $(CLEAR_VARS)
-LOCAL_MODULE := OSDependent-prebuilt
-LOCAL_SRC_FILES := $(ANDROID_DIR)/external/shaderc/android_test/obj/local/$(TARGET_ARCH_ABI)/libOSDependent.a
-include $(PREBUILT_STATIC_LIBRARY)
-
-include $(CLEAR_VARS)
-LOCAL_MODULE := HLSL-prebuilt
-LOCAL_SRC_FILES := $(ANDROID_DIR)/external/shaderc/android_test/obj/local/$(TARGET_ARCH_ABI)/libHLSL.a
-include $(PREBUILT_STATIC_LIBRARY)
-
-include $(CLEAR_VARS)
-LOCAL_MODULE := shaderc_util-prebuilt
-LOCAL_SRC_FILES := $(ANDROID_DIR)/external/shaderc/android_test/obj/local/$(TARGET_ARCH_ABI)/libshaderc_util.a
-include $(PREBUILT_STATIC_LIBRARY)
-
-include $(CLEAR_VARS)
-LOCAL_MODULE := SPIRV-prebuilt
-LOCAL_SRC_FILES := $(ANDROID_DIR)/external/shaderc/android_test/obj/local/$(TARGET_ARCH_ABI)/libSPIRV.a
-include $(PREBUILT_STATIC_LIBRARY)
-
-include $(CLEAR_VARS)
-LOCAL_MODULE := SPIRV-Tools-prebuilt
-LOCAL_SRC_FILES := $(ANDROID_DIR)/external/shaderc/android_test/obj/local/$(TARGET_ARCH_ABI)/libSPIRV-Tools.a
-include $(PREBUILT_STATIC_LIBRARY)
-
-include $(CLEAR_VARS)
-LOCAL_MODULE := SPIRV-Tools-opt-prebuilt
-LOCAL_SRC_FILES := $(ANDROID_DIR)/external/shaderc/android_test/obj/local/$(TARGET_ARCH_ABI)/libSPIRV-Tools-opt.a
-include $(PREBUILT_STATIC_LIBRARY)
-
 include $(CLEAR_VARS)
 LOCAL_MODULE := VkLayerValidationTests
 LOCAL_SRC_FILES += $(SRC_DIR)/tests/layer_validation_tests.cpp \
@@ -176,11 +127,9 @@ LOCAL_C_INCLUDES += $(LOCAL_PATH)/$(SRC_DIR)/include \
                     $(LOCAL_PATH)/$(LAYER_DIR)/include \
                     $(LOCAL_PATH)/$(SRC_DIR)/layers \
                     $(LOCAL_PATH)/$(SRC_DIR)/libs \
-                    $(LOCAL_PATH)/$(SRC_DIR)/common \
-                    $(LOCAL_PATH)/$(ANDROID_DIR)/external/shaderc/libshaderc/include
+                    $(LOCAL_PATH)/$(SRC_DIR)/common
 
-LOCAL_STATIC_LIBRARIES := googletest_main layer_utils
-LOCAL_SHARED_LIBRARIES += shaderc-prebuilt glslang-prebuilt OGLCompiler-prebuilt OSDependent-prebuilt HLSL-prebuilt shaderc_util-prebuilt SPIRV-prebuilt SPIRV-Tools-prebuilt SPIRV-Tools-opt-prebuilt
+LOCAL_STATIC_LIBRARIES := googletest_main layer_utils shaderc
 LOCAL_CPPFLAGS += -std=c++11 -DVK_PROTOTYPES -Wall -Werror -Wno-unused-function -Wno-unused-const-variable -mxgot
 LOCAL_CPPFLAGS += -DVK_USE_PLATFORM_ANDROID_KHR -fvisibility=hidden --include=$(SRC_DIR)/common/vulkan_wrapper.h
 LOCAL_LDLIBS := -llog
@@ -200,11 +149,9 @@ LOCAL_C_INCLUDES += $(LOCAL_PATH)/$(SRC_DIR)/include \
                     $(LOCAL_PATH)/$(LAYER_DIR)/include \
                     $(LOCAL_PATH)/$(SRC_DIR)/layers \
                     $(LOCAL_PATH)/$(SRC_DIR)/libs \
-                    $(LOCAL_PATH)/$(SRC_DIR)/common \
-                    $(LOCAL_PATH)/$(ANDROID_DIR)/external/shaderc/libshaderc/include
+                    $(LOCAL_PATH)/$(SRC_DIR)/common
 
-LOCAL_STATIC_LIBRARIES := googletest_main layer_utils
-LOCAL_SHARED_LIBRARIES += shaderc-prebuilt glslang-prebuilt OGLCompiler-prebuilt OSDependent-prebuilt HLSL-prebuilt shaderc_util-prebuilt SPIRV-prebuilt SPIRV-Tools-prebuilt SPIRV-Tools-opt-prebuilt
+LOCAL_STATIC_LIBRARIES := googletest_main layer_utils shaderc
 LOCAL_CPPFLAGS += -std=c++11 -DVK_PROTOTYPES -Wall -Werror -Wno-unused-function -Wno-unused-const-variable -mxgot
 LOCAL_CPPFLAGS += -DVK_USE_PLATFORM_ANDROID_KHR -fvisibility=hidden -DVALIDATION_APK --include=$(SRC_DIR)/common/vulkan_wrapper.h
 LOCAL_WHOLE_STATIC_LIBRARIES += android_native_app_glue
@@ -241,3 +188,4 @@ include $(BUILD_EXECUTABLE)
 
 $(call import-module,android/native_app_glue)
 $(call import-module,third_party/googletest)
+$(call import-module,third_party/shaderc)

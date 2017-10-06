@@ -291,7 +291,13 @@ export PATH=/usr/local/bin:$PATH
 brew install cmake python python3 git
 ```
 ### Build steps for Android
+
+There are two options for building the Android layers. One using the SPIRV tools
+provided as part of the Android NDK or build using upstream sources.
+To build with SPIRV tools from the NDK, remove the build-android/third_party directory created
+by running update_external_sources_android.sh, (or never run update_external_sources_android.sh).
 Use the following script to build everything in the repo for Android, including validation layers, tests, demos, and APK packaging:
+This script does retrieve and use the upstream SPRIV tools.
 ```
 cd build-android
 ./build_all.sh

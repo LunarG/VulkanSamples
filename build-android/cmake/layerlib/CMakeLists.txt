@@ -32,7 +32,7 @@ else ()
     #   ${SRC_DIR}
     #   ${SRC_DIR}/build-android/external (for glslang, spirv-tools & shaderc )
     get_filename_component(SRC_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../../.."  ABSOLUTE)
-    set(EXTERNAL_DIR "${SRC_DIR}/build-android/external")
+    set(EXTERNAL_DIR "${SRC_DIR}/build-android/third_party")
     set(SPIRV_LIB
         "${EXTERNAL_DIR}/shaderc/android_test/obj/local/${ANDROID_ABI}/libSPIRV-Tools.a")
 endif()
