@@ -397,6 +397,8 @@ static const char *VkFormatString(VkFormat fmt) {
         STR(D32_SFLOAT_S8_UINT);
         STR(BC1_RGB_UNORM_BLOCK);
         STR(BC1_RGB_SRGB_BLOCK);
+        STR(BC1_RGBA_UNORM_BLOCK);
+        STR(BC1_RGBA_SRGB_BLOCK);
         STR(BC2_UNORM_BLOCK);
         STR(BC2_SRGB_BLOCK);
         STR(BC3_UNORM_BLOCK);
@@ -410,8 +412,11 @@ static const char *VkFormatString(VkFormat fmt) {
         STR(BC7_UNORM_BLOCK);
         STR(BC7_SRGB_BLOCK);
         STR(ETC2_R8G8B8_UNORM_BLOCK);
+        STR(ETC2_R8G8B8_SRGB_BLOCK);
         STR(ETC2_R8G8B8A1_UNORM_BLOCK);
+        STR(ETC2_R8G8B8A1_SRGB_BLOCK);
         STR(ETC2_R8G8B8A8_UNORM_BLOCK);
+        STR(ETC2_R8G8B8A8_SRGB_BLOCK);
         STR(EAC_R11_UNORM_BLOCK);
         STR(EAC_R11_SNORM_BLOCK);
         STR(EAC_R11G11_UNORM_BLOCK);
