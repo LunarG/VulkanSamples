@@ -2945,8 +2945,8 @@ static VkResult demo_create_display_surface(struct demo *demo) {
     VkDisplayPlaneCapabilitiesKHR planeCaps;
     vkGetDisplayPlaneCapabilitiesKHR(demo->gpu, mode_props.displayMode, plane_index, &planeCaps);
     // Find a supported alpha mode
-    VkCompositeAlphaFlagBitsKHR alphaMode = VK_DISPLAY_PLANE_ALPHA_OPAQUE_BIT_KHR;
-    VkCompositeAlphaFlagBitsKHR alphaModes[4] = {
+    VkDisplayPlaneAlphaFlagBitsKHR alphaMode = VK_DISPLAY_PLANE_ALPHA_OPAQUE_BIT_KHR;
+    VkDisplayPlaneAlphaFlagBitsKHR alphaModes[4] = {
         VK_DISPLAY_PLANE_ALPHA_OPAQUE_BIT_KHR,
         VK_DISPLAY_PLANE_ALPHA_GLOBAL_BIT_KHR,
         VK_DISPLAY_PLANE_ALPHA_PER_PIXEL_BIT_KHR,
