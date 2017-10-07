@@ -2791,14 +2791,14 @@ Demo::Demo()
         free(plane_props);
 
         vk::DisplayPlaneCapabilitiesKHR planeCaps;
-        vk::getDisplayPlaneCapabilitiesKHR(gpu, mode_props.displayMode, plane_index, &planeCaps);
+        gpu.getDisplayPlaneCapabilitiesKHR(mode_props.displayMode, plane_index, &planeCaps);
         // Find a supported alpha mode
-        vk::CompositeAlphaFlagBitsKHR alphaMode = vk::CompositeAlphaFlagBitsKHR::eOpaque;
-        vk::CompositeAlphaFlagBitsKHR alphaModes[4] = {
-            vk::CompositeAlphaFlagBitsKHR::eOpaque,
-            vk::CompositeAlphaFlagBitsKHR::eGlobal,
-            vk::CompositeAlphaFlagBitsKHR::ePerPixel,
-            vk::CompositeAlphaFlagBitsKHR::ePerPixelPremultiplied,
+        vk::DisplayPlaneAlphaFlagBitsKHR alphaMode = vk::DisplayPlaneAlphaFlagBitsKHR::eOpaque;
+        vk::DisplayPlaneAlphaFlagBitsKHR alphaModes[4] = {
+            vk::DisplayPlaneAlphaFlagBitsKHR::eOpaque,
+            vk::DisplayPlaneAlphaFlagBitsKHR::eGlobal,
+            vk::DisplayPlaneAlphaFlagBitsKHR::ePerPixel,
+            vk::DisplayPlaneAlphaFlagBitsKHR::ePerPixelPremultiplied,
         };
         for (uint32_t i = 0; i < sizeof(alphaModes); i++) {
             if (planeCaps.supportedAlpha & alphaModes[i]) {
