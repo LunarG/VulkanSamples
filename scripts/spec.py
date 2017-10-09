@@ -279,7 +279,7 @@ class Specification:
             outfile.write("\n".join(db_lines))
     def readDB(self, db_file):
         """Read a db file into a dict, refer to genDB function above for format of each line"""
-        with open(db_file, "r") as infile:
+        with open(db_file, "r", encoding='utf-8') as infile:
             for line in infile:
                 line = line.strip()
                 if line.startswith('#') or '' == line:
