@@ -1075,6 +1075,7 @@ implicit_param_map = {
 'ycbcrConversion' : 497,
 'pViewFormats' : 498,
 'conversion' : 499,
+'pPostSubpassSampleLocations' : 500,
 ### ADD New implicit param mappings above this line
 }
 
