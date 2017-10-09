@@ -1269,7 +1269,7 @@ static inline bool CheckItgOffset(layer_data *device_data, const GLOBAL_CB_NODE 
 // Check elements of a VkExtent3D structure against a queue family's Image Transfer Granularity values
 static inline bool CheckItgExtent(layer_data *device_data, const GLOBAL_CB_NODE *cb_node, const VkExtent3D *extent,
                                   const VkOffset3D *offset, const VkExtent3D *granularity, const VkExtent3D *subresource_extent,
-                                  const uint32_t i, const char *function, const char *member) {
+                                  const VkImageType image_type, const uint32_t i, const char *function, const char *member) {
     const debug_report_data *report_data = core_validation::GetReportData(device_data);
     bool skip = false;
     if (IsExtentAllZeroes(granularity)) {
@@ -1291,14 +1291,26 @@ static inline bool CheckItgExtent(layer_data *device_data, const GLOBAL_CB_NODE 
         offset_extent_sum.width = static_cast<uint32_t>(abs(offset->x)) + extent->width;
         offset_extent_sum.height = static_cast<uint32_t>(abs(offset->y)) + extent->height;
         offset_extent_sum.depth = static_cast<uint32_t>(abs(offset->z)) + extent->depth;
-
-        bool x_ok =
-            ((0 == SafeModulo(extent->width, granularity->width)) || (subresource_extent->width == offset_extent_sum.width));
-        bool y_ok =
-            ((0 == SafeModulo(extent->height, granularity->height)) || (subresource_extent->height == offset_extent_sum.height));
-        bool z_ok =
-            ((0 == SafeModulo(extent->depth, granularity->depth)) || (subresource_extent->depth == offset_extent_sum.depth));
-
+        bool x_ok = true;
+        bool y_ok = true;
+        bool z_ok = true;
+        switch (image_type) {
+            case VK_IMAGE_TYPE_3D:
+                z_ok = ((0 == SafeModulo(extent->depth, granularity->depth)) ||
+                        (subresource_extent->depth == offset_extent_sum.depth));
+                // Intentionally fall through to 2D case
+            case VK_IMAGE_TYPE_2D:
+                y_ok = ((0 == SafeModulo(extent->height, granularity->height)) ||
+                        (subresource_extent->height == offset_extent_sum.height));
+                // Intentionally fall through to 1D case
+            case VK_IMAGE_TYPE_1D:
+                x_ok = ((0 == SafeModulo(extent->width, granularity->width)) ||
+                        (subresource_extent->width == offset_extent_sum.width));
+                break;
+            default:
+                // Unrecognized or new IMAGE_TYPE enums will be caught in parameter_validation
+                assert(false);
+        }
         if (!(x_ok && y_ok && z_ok)) {
             skip |=
                 log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
@@ -1372,7 +1384,7 @@ bool ValidateCopyBufferImageTransferGranularityRequirements(layer_data *device_d
         skip |= CheckItgOffset(device_data, cb_node, &region->imageOffset, &granularity, i, function, "imageOffset");
         VkExtent3D subresource_extent = GetImageSubresourceExtent(img, &region->imageSubresource);
         skip |= CheckItgExtent(device_data, cb_node, &region->imageExtent, &region->imageOffset, &granularity, &subresource_extent,
-                               i, function, "imageExtent");
+                               img->createInfo.imageType, i, function, "imageExtent");
     }
     return skip;
 }
@@ -1385,14 +1397,14 @@ bool ValidateCopyImageTransferGranularityRequirements(layer_data *device_data, c
     VkExtent3D granularity = GetScaledItg(device_data, cb_node, src_img);
     skip |= CheckItgOffset(device_data, cb_node, &region->srcOffset, &granularity, i, function, "srcOffset");
     VkExtent3D subresource_extent = GetImageSubresourceExtent(src_img, &region->srcSubresource);
-    skip |= CheckItgExtent(device_data, cb_node, &region->extent, &region->srcOffset, &granularity, &subresource_extent, i,
-                           function, "extent");
+    skip |= CheckItgExtent(device_data, cb_node, &region->extent, &region->srcOffset, &granularity, &subresource_extent,
+                           src_img->createInfo.imageType, i, function, "extent");
 
     granularity = GetScaledItg(device_data, cb_node, dst_img);
     skip |= CheckItgOffset(device_data, cb_node, &region->dstOffset, &granularity, i, function, "dstOffset");
     subresource_extent = GetImageSubresourceExtent(dst_img, &region->dstSubresource);
-    skip |= CheckItgExtent(device_data, cb_node, &region->extent, &region->dstOffset, &granularity, &subresource_extent, i,
-                           function, "extent");
+    skip |= CheckItgExtent(device_data, cb_node, &region->extent, &region->dstOffset, &granularity, &subresource_extent,
+                           dst_img->createInfo.imageType, i, function, "extent");
     return skip;
 }
 
