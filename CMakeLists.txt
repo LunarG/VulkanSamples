@@ -92,6 +92,7 @@ if(NOT WIN32)
     set (BINDATA_DIR Bin)
     set (LIBSOURCE_DIR Lib)
 else()
+    # is WIN32
     option(DISABLE_BUILD_PATH_DECORATION "Disable the decoration of the gslang and SPIRV-Tools build path with MSVC build type info" OFF)
     option(DISABLE_BUILDTGT_DIR_DECORATION "Disable the decoration of the gslang and SPIRV-Tools build path with target info" OFF)
 
@@ -119,11 +120,12 @@ option(BUILD_LAYERS "Build layers" ON)
 option(BUILD_DEMOS "Build demos" ON)
 option(BUILD_VKJSON "Build vkjson" ON)
 option(CUSTOM_GLSLANG_BIN_ROOT "Use the user defined GLSLANG_BINARY_ROOT" OFF)
-option(CUSTOM_SPIRV_TOOLS_BIN_ROOT "Use the user defined SPIRV_TOOLS_BINARY_ROOT" OFF)
+option(CUSTOM_SPIRV_TOOLS_BIN_ROOT "Use the user defined SPIRV_TOOLS*BINARY_ROOT paths" OFF)
 
 #Choose natural default paths for glslang and SPIRV-Tools binaries to support custom definition by the user on the CMake command line or in the GUI
 set(GLSLANG_BINARY_ROOT "${CMAKE_BINARY_DIR}/../glslang" CACHE STRING "User defined path to the glslang binaries for this project")
 set(SPIRV_TOOLS_BINARY_ROOT "${CMAKE_BINARY_DIR}/../SPIRV-Tools" CACHE STRING "User defined path to the SPIRV-Tools binaries for this project")
+set(SPIRV_TOOLS_OPT_BINARY_ROOT "${CMAKE_BINARY_DIR}/../SPIRV-Tools/opt" CACHE STRING "User defined path to the SPIRV-Tools-opt binaries for this project")
 
 # Define a variable for a default root location to the gslang, SPIRV-Tools and other external sources and cache it to allow the user to customize it as needed
 set(EXTERNAL_SOURCE_ROOT "${CMAKE_SOURCE_DIR}/external" CACHE STRING "Root path to external sources such as glslang and SPIRV-Tools")
@@ -160,12 +162,16 @@ if (WIN32)
     if(CUSTOM_SPIRV_TOOLS_BIN_ROOT)
         set (SPIRV_TOOLS_SEARCH_PATH "${SPIRV_TOOLS_BINARY_ROOT}/${BUILDTGT_DIR}/source/${RELEASE_DECORATION}")
         set (SPIRV_TOOLS_DEBUG_SEARCH_PATH "${SPIRV_TOOLS_BINARY_ROOT}/${BUILDTGT_DIR}/source/${DEBUG_DECORATION}")
+        set (SPIRV_TOOLS_OPT_SEARCH_PATH "${SPIRV_TOOLS_OPT_BINARY_ROOT}/${BUILDTGT_DIR}/source/opt/${RELEASE_DECORATION}")
+        set (SPIRV_TOOLS_OPT_DEBUG_SEARCH_PATH "${SPIRV_TOOLS_OPT_BINARY_ROOT}/${BUILDTGT_DIR}/source/opt/${DEBUG_DECORATION}")
     else()
         set (SPIRV_TOOLS_SEARCH_PATH "${EXTERNAL_SOURCE_ROOT}/spirv-tools/${BUILDTGT_DIR}/source/${RELEASE_DECORATION}")
         set (SPIRV_TOOLS_DEBUG_SEARCH_PATH "${EXTERNAL_SOURCE_ROOT}/spirv-tools/${BUILDTGT_DIR}/source/${DEBUG_DECORATION}")
+        set (SPIRV_TOOLS_OPT_SEARCH_PATH "${EXTERNAL_SOURCE_ROOT}/spirv-tools/${BUILDTGT_DIR}/source/opt/${RELEASE_DECORATION}")
+        set (SPIRV_TOOLS_OPT_DEBUG_SEARCH_PATH "${EXTERNAL_SOURCE_ROOT}/spirv-tools/${BUILDTGT_DIR}/source/opt/${DEBUG_DECORATION}")
     endif()
 else()
-    #non windows
+    # not WIN32
     if(CUSTOM_GLSLANG_BIN_ROOT)
         set (GLSLANG_SEARCH_PATH "${GLSLANG_BINARY_ROOT}/install/lib"
                                  "${GLSLANG_BINARY_ROOT}/glslang"
@@ -180,8 +186,10 @@ else()
 
     if(CUSTOM_SPIRV_TOOLS_BIN_ROOT)
         set (SPIRV_TOOLS_SEARCH_PATH "${SPIRV_TOOLS_BINARY_ROOT}/source" )
+        set (SPIRV_TOOLS_OPT_SEARCH_PATH "${SPIRV_TOOLS_OPT_BINARY_ROOT}/source/opt" )
     else()
         set (SPIRV_TOOLS_SEARCH_PATH "${EXTERNAL_SOURCE_ROOT}/spirv-tools/${BUILDTGT_DIR}/source" "${CMAKE_SOURCE_DIR}/../x86_64/lib/spirv-tools" )
+        set (SPIRV_TOOLS_OPT_SEARCH_PATH "${EXTERNAL_SOURCE_ROOT}/spirv-tools/${BUILDTGT_DIR}/source/opt" "${CMAKE_SOURCE_DIR}/../x86_64/lib/spirv-tools" )
     endif()
 endif()
 
@@ -222,15 +230,19 @@ find_library(SPIRV_REMAPPER_LIB NAMES SPVRemapper
 find_library(SPIRV_TOOLS_LIB NAMES SPIRV-Tools
              HINTS ${SPIRV_TOOLS_SEARCH_PATH} )
 
+find_library(SPIRV_TOOLS_OPT_LIB NAMES SPIRV-Tools-opt
+             HINTS ${SPIRV_TOOLS_OPT_SEARCH_PATH} )
+
 if (WIN32)
-    add_library(glslang     STATIC IMPORTED)
-    add_library(OGLCompiler STATIC IMPORTED)
-    add_library(OSDependent STATIC IMPORTED)
-    add_library(HLSL        STATIC IMPORTED)
-    add_library(SPIRV       STATIC IMPORTED)
-    add_library(SPVRemapper       STATIC IMPORTED)
-    add_library(Loader      STATIC IMPORTED)
-    add_library(SPIRV-Tools STATIC IMPORTED)
+    add_library(glslang         STATIC IMPORTED)
+    add_library(OGLCompiler     STATIC IMPORTED)
+    add_library(OSDependent     STATIC IMPORTED)
+    add_library(HLSL            STATIC IMPORTED)
+    add_library(SPIRV           STATIC IMPORTED)
+    add_library(SPVRemapper     STATIC IMPORTED)
+    add_library(Loader          STATIC IMPORTED)
+    add_library(SPIRV-Tools-opt STATIC IMPORTED)
+    add_library(SPIRV-Tools     STATIC IMPORTED)
 
     find_library(GLSLANG_DLIB NAMES glslangd
                  HINTS ${GLSLANG_DEBUG_SEARCH_PATH} )
@@ -246,6 +258,8 @@ if (WIN32)
                  HINTS ${GLSLANG_DEBUG_SEARCH_PATH} )
     find_library(SPIRV_TOOLS_DLIB NAMES SPIRV-Tools
                  HINTS ${SPIRV_TOOLS_DEBUG_SEARCH_PATH} )
+    find_library(SPIRV_TOOLS_OPT_DLIB NAMES SPIRV-Tools-opt
+                 HINTS ${SPIRV_TOOLS_OPT_DEBUG_SEARCH_PATH} )
 
     set_target_properties(glslang PROPERTIES
                          IMPORTED_LOCATION       "${GLSLANG_LIB}"
@@ -268,12 +282,16 @@ if (WIN32)
     set_target_properties(SPIRV-Tools PROPERTIES
                          IMPORTED_LOCATION       "${SPIRV_TOOLS_LIB}"
                          IMPORTED_LOCATION_DEBUG "${SPIRV_TOOLS_DLIB}")
+    set_target_properties(SPIRV-Tools-opt PROPERTIES
+                         IMPORTED_LOCATION       "${SPIRV_TOOLS_OPT_LIB}"
+                         IMPORTED_LOCATION_DEBUG "${SPIRV_TOOLS_OPT_DLIB}")
 
-    set (GLSLANG_LIBRARIES glslang OGLCompiler OSDependent HLSL SPIRV SPVRemapper)
-    set (SPIRV_TOOLS_LIBRARIES SPIRV-Tools)
+    set (SPIRV_TOOLS_LIBRARIES SPIRV-Tools-opt SPIRV-Tools)
+    set (GLSLANG_LIBRARIES glslang OGLCompiler OSDependent HLSL SPIRV SPVRemapper ${SPIRV_TOOLS_LIBRARIES})
 else ()
-    set (GLSLANG_LIBRARIES ${GLSLANG_LIB} ${OGLCompiler_LIB} ${OSDependent_LIB} ${HLSL_LIB} ${SPIRV_LIB} ${SPIRV_REMAPPER_LIB})
-    set (SPIRV_TOOLS_LIBRARIES ${SPIRV_TOOLS_LIB})
+    # not WIN32
+    set (SPIRV_TOOLS_LIBRARIES ${SPIRV_TOOLS_OPT_LIB} ${SPIRV_TOOLS_LIB})
+    set (GLSLANG_LIBRARIES ${GLSLANG_LIB} ${OGLCompiler_LIB} ${OSDependent_LIB} ${HLSL_LIB} ${SPIRV_LIB} ${SPIRV_REMAPPER_LIB} ${SPIRV_TOOLS_LIBRARIES})
 endif()
 
 set (PYTHON_CMD ${PYTHON_EXECUTABLE})
