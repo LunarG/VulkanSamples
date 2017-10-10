@@ -181,6 +181,7 @@ struct layer_data {
     PHYS_DEV_PROPERTIES_NODE phys_dev_properties = {};
     VkPhysicalDeviceMemoryProperties phys_dev_mem_props = {};
     VkPhysicalDeviceProperties phys_dev_props = {};
+    bool external_sync_warning = false;
 };
 
 // TODO : Do we need to guard access to layer_data_map w/ lock?
@@ -2646,6 +2647,7 @@ static bool ValidateFenceForSubmit(layer_data *dev_data, FENCE_NODE *pFence) {
 
 static void PostCallRecordQueueSubmit(layer_data *dev_data, VkQueue queue, uint32_t submitCount, const VkSubmitInfo *pSubmits,
                                       VkFence fence) {
+    uint64_t early_retire_seq = 0;
     auto pQueue = GetQueueState(dev_data, queue);
     auto pFence = GetFenceNode(dev_data, fence);
 
@@ -2692,8 +2694,17 @@ static void PostCallRecordQueueSubmit(layer_data *dev_data, VkQueue queue, uint3
                     pSemaphore->in_use.fetch_add(1);
                     semaphore_signals.push_back(semaphore);
                 } else {
-                    semaphore_externals.push_back(semaphore);
-                    pSemaphore->in_use.fetch_add(1);
+                    // Retire work up until this submit early, we will not see the wait that corresponds to this signal
+                    early_retire_seq = pQueue->seq + pQueue->submissions.size() + 1;
+                    if (!dev_data->external_sync_warning) {
+                        dev_data->external_sync_warning = true;
+                        log_msg(dev_data->report_data, VK_DEBUG_REPORT_WARNING_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_SEMAPHORE_EXT,
+                                HandleToUint64(semaphore), __LINE__, DRAWSTATE_QUEUE_FORWARD_PROGRESS, "DS",
+                                "vkQueueSubmit(): Signaling external semaphore 0x%" PRIx64 " on queue 0x%" PRIx64
+                                " will disable validation of preceding command buffer lifecycle states and the in-use status of "
+                                "associated objects.",
+                                HandleToUint64(semaphore), HandleToUint64(queue));
+                    }
                 }
             }
         }
@@ -2713,6 +2724,10 @@ static void PostCallRecordQueueSubmit(layer_data *dev_data, VkQueue queue, uint3
         }
         pQueue->submissions.emplace_back(cbs, semaphore_waits, semaphore_signals, semaphore_externals,
                                          submit_idx == submitCount - 1 ? fence : VK_NULL_HANDLE);
+    }
+
+    if (early_retire_seq) {
+        RetireWorkOnQueue(dev_data, pQueue, early_retire_seq);
     }
 
     if (pFence && !submitCount) {
@@ -8822,6 +8837,7 @@ static bool PreCallValidateQueueBindSparse(layer_data *dev_data, VkQueue queue, 
 }
 static void PostCallRecordQueueBindSparse(layer_data *dev_data, VkQueue queue, uint32_t bindInfoCount,
                                           const VkBindSparseInfo *pBindInfo, VkFence fence) {
+    uint64_t early_retire_seq = 0;
     auto pFence = GetFenceNode(dev_data, fence);
     auto pQueue = GetQueueState(dev_data, queue);
 
@@ -8890,14 +8906,27 @@ static void PostCallRecordQueueBindSparse(layer_data *dev_data, VkQueue queue, u
                     pSemaphore->in_use.fetch_add(1);
                     semaphore_signals.push_back(semaphore);
                 } else {
-                    semaphore_externals.push_back(semaphore);
-                    pSemaphore->in_use.fetch_add(1);
+                    // Retire work up until this submit early, we will not see the wait that corresponds to this signal
+                    early_retire_seq = pQueue->seq + pQueue->submissions.size() + 1;
+                    if (!dev_data->external_sync_warning) {
+                        dev_data->external_sync_warning = true;
+                        log_msg(dev_data->report_data, VK_DEBUG_REPORT_WARNING_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_SEMAPHORE_EXT,
+                                HandleToUint64(semaphore), __LINE__, DRAWSTATE_QUEUE_FORWARD_PROGRESS, "DS",
+                                "vkQueueBindSparse(): Signaling external semaphore 0x%" PRIx64 " on queue 0x%" PRIx64
+                                " will disable validation of preceding command buffer lifecycle states and the in-use status of "
+                                "associated objects.",
+                                HandleToUint64(semaphore), HandleToUint64(queue));
+                    }
                 }
             }
         }
 
         pQueue->submissions.emplace_back(std::vector<VkCommandBuffer>(), semaphore_waits, semaphore_signals, semaphore_externals,
                                          bindIdx == bindInfoCount - 1 ? fence : VK_NULL_HANDLE);
+    }
+
+    if (early_retire_seq) {
+        RetireWorkOnQueue(dev_data, pQueue, early_retire_seq);
     }
 
     if (pFence && !bindInfoCount) {
