@@ -7490,6 +7490,8 @@ TEST_F(VkLayerTest, DescriptorSetNotUpdated) {
 
 TEST_F(VkLayerTest, InvalidBufferViewObject) {
     // Create a single TEXEL_BUFFER descriptor and send it an invalid bufferView
+    // First, cause the bufferView to be invalid due to underlying buffer being destroyed
+    // Then destroy view itself and verify that same error is hit
     VkResult err;
 
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_15c00286);
@@ -7535,7 +7537,50 @@ TEST_F(VkLayerTest, InvalidBufferViewObject) {
     err = vkAllocateDescriptorSets(m_device->device(), &alloc_info, &descriptorSet);
     ASSERT_VK_SUCCESS(err);
 
-    VkBufferView view = (VkBufferView)((size_t)0xbaadbeef);  // invalid bufferView object
+    // Create a valid bufferView to start with
+    VkBuffer buffer;
+    uint32_t queue_family_index = 0;
+    VkBufferCreateInfo buffer_create_info = {};
+    buffer_create_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+    buffer_create_info.size = 1024;
+    buffer_create_info.usage = VK_BUFFER_USAGE_STORAGE_TEXEL_BUFFER_BIT;
+    buffer_create_info.queueFamilyIndexCount = 1;
+    buffer_create_info.pQueueFamilyIndices = &queue_family_index;
+
+    err = vkCreateBuffer(m_device->device(), &buffer_create_info, NULL, &buffer);
+    ASSERT_VK_SUCCESS(err);
+
+    VkMemoryRequirements memory_reqs;
+    VkDeviceMemory buffer_memory;
+
+    VkMemoryAllocateInfo memory_info = {};
+    memory_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+    memory_info.allocationSize = 0;
+    memory_info.memoryTypeIndex = 0;
+
+    vkGetBufferMemoryRequirements(m_device->device(), buffer, &memory_reqs);
+    memory_info.allocationSize = memory_reqs.size;
+    bool pass = m_device->phy().set_memory_type(memory_reqs.memoryTypeBits, &memory_info, 0);
+    ASSERT_TRUE(pass);
+
+    err = vkAllocateMemory(m_device->device(), &memory_info, NULL, &buffer_memory);
+    ASSERT_VK_SUCCESS(err);
+    err = vkBindBufferMemory(m_device->device(), buffer, buffer_memory, 0);
+    ASSERT_VK_SUCCESS(err);
+
+    VkBufferView view;
+    VkBufferViewCreateInfo bvci = {};
+    bvci.sType = VK_STRUCTURE_TYPE_BUFFER_VIEW_CREATE_INFO;
+    bvci.buffer = buffer;
+    bvci.format = VK_FORMAT_R32_SFLOAT;
+    bvci.range = VK_WHOLE_SIZE;
+
+    err = vkCreateBufferView(m_device->device(), &bvci, NULL, &view);
+    ASSERT_VK_SUCCESS(err);
+
+    // First Destroy buffer underlying view which should hit error in CV
+    vkDestroyBuffer(m_device->device(), buffer, NULL);
+
     VkWriteDescriptorSet descriptor_write;
     memset(&descriptor_write, 0, sizeof(descriptor_write));
     descriptor_write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
@@ -7546,9 +7591,15 @@ TEST_F(VkLayerTest, InvalidBufferViewObject) {
     descriptor_write.pTexelBufferView = &view;
 
     vkUpdateDescriptorSets(m_device->device(), 1, &descriptor_write, 0, NULL);
-
     m_errorMonitor->VerifyFound();
 
+    // Now destroy view itself and verify same error, which is hit in PV this time
+    vkDestroyBufferView(m_device->device(), view, NULL);
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_15c00286);
+    vkUpdateDescriptorSets(m_device->device(), 1, &descriptor_write, 0, NULL);
+    m_errorMonitor->VerifyFound();
+
+    vkFreeMemory(m_device->device(), buffer_memory, NULL);
     vkDestroyDescriptorSetLayout(m_device->device(), ds_layout, NULL);
     vkDestroyDescriptorPool(m_device->device(), ds_pool, NULL);
 }
