@@ -1510,7 +1510,16 @@ bool cvdescriptorset::DescriptorSet::VerifyWriteUpdateContents(const VkWriteDesc
                     return false;
                 }
                 auto buffer = bv_state->create_info.buffer;
-                if (!ValidateBufferUsage(GetBufferState(device_data_, buffer), update->descriptorType, error_code, error_msg)) {
+                auto buffer_state = GetBufferState(device_data_, buffer);
+                // Verify that buffer underlying the view hasn't been destroyed prematurely
+                if (!buffer_state) {
+                    *error_code = VALIDATION_ERROR_15c00286;
+                    std::stringstream error_str;
+                    error_str << "Attempted write update to texel buffer descriptor failed because underlying buffer (" << buffer
+                              << ") has been destroyed: " << error_msg->c_str();
+                    *error_msg = error_str.str();
+                    return false;
+                } else if (!ValidateBufferUsage(buffer_state, update->descriptorType, error_code, error_msg)) {
                     std::stringstream error_str;
                     error_str << "Attempted write update to texel buffer descriptor failed due to: " << error_msg->c_str();
                     *error_msg = error_str.str();
