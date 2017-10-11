@@ -1,0 +1,5 @@
+
+On Windows, must copy LVL gtest binaries to be found by test executables.
+
+copy   BUILD\tests\gtest-1.7.0\Debug\*.dll   BUILD\tests\Debug
+
