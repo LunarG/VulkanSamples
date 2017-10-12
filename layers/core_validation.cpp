@@ -7723,12 +7723,10 @@ static bool CreatePassDAG(const layer_data *dev_data, const VkRenderPassCreateIn
                             "Dependency graph must be specified such that an earlier pass cannot depend on a later pass.");
         } else if (dependency.srcSubpass == dependency.dstSubpass) {
             has_self_dependency[dependency.srcSubpass] = true;
+            subpass_to_dep_index[dependency.srcSubpass] = i;
         } else {
             subpass_to_node[dependency.dstSubpass].prev.push_back(dependency.srcSubpass);
             subpass_to_node[dependency.srcSubpass].next.push_back(dependency.dstSubpass);
-        }
-        if (dependency.srcSubpass != VK_SUBPASS_EXTERNAL) {
-            subpass_to_dep_index[dependency.srcSubpass] = i;
         }
     }
     return skip;
