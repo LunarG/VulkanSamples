@@ -12444,6 +12444,39 @@ TEST_F(VkLayerTest, CopyDescriptorUpdateErrors) {
     vkDestroySampler(m_device->device(), sampler, NULL);
 }
 
+TEST_F(VkPositiveLayerTest, CopyNonupdatedDescriptors) {
+    TEST_DESCRIPTION("Copy nonupdated descriptors");
+    unsigned int i;
+
+    ASSERT_NO_FATAL_FAILURE(Init());
+    OneOffDescriptorSet src_ds(m_device->device(), {
+        { 0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1, VK_SHADER_STAGE_ALL, nullptr },
+        { 1, VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 1, VK_SHADER_STAGE_ALL, nullptr },
+        { 2, VK_DESCRIPTOR_TYPE_SAMPLER, 1, VK_SHADER_STAGE_ALL, nullptr },
+    });
+    OneOffDescriptorSet dst_ds(m_device->device(), {
+        { 0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1, VK_SHADER_STAGE_ALL, nullptr },
+        { 1, VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 1, VK_SHADER_STAGE_ALL, nullptr },
+    });
+
+    m_errorMonitor->ExpectSuccess();
+
+    const unsigned int copy_size = 2;
+    VkCopyDescriptorSet copy_ds_update[copy_size];
+    memset(copy_ds_update, 0, sizeof(copy_ds_update));
+    for (i = 0; i < copy_size; i++) {
+        copy_ds_update[i].sType = VK_STRUCTURE_TYPE_COPY_DESCRIPTOR_SET;
+        copy_ds_update[i].srcSet = src_ds.set_;
+        copy_ds_update[i].srcBinding = i;
+        copy_ds_update[i].dstSet = dst_ds.set_;
+        copy_ds_update[i].dstBinding = i;
+        copy_ds_update[i].descriptorCount = 1;
+    }
+    vkUpdateDescriptorSets(m_device->device(), 0, NULL, copy_size, copy_ds_update);
+
+    m_errorMonitor->VerifyNotFound();
+}
+
 TEST_F(VkLayerTest, NumSamplesMismatch) {
     // Create CommandBuffer where MSAA samples doesn't match RenderPass
     // sampleCount
