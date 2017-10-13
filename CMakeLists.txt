@@ -119,6 +119,7 @@ option(BUILD_TESTS "Build tests" ON)
 option(BUILD_LAYERS "Build layers" ON)
 option(BUILD_DEMOS "Build demos" ON)
 option(BUILD_VKJSON "Build vkjson" ON)
+option(BUILD_ICD "Build icd" ON)
 option(CUSTOM_GLSLANG_BIN_ROOT "Use the user defined GLSLANG_BINARY_ROOT" OFF)
 option(CUSTOM_SPIRV_TOOLS_BIN_ROOT "Use the user defined SPIRV_TOOLS*BINARY_ROOT paths" OFF)
 
@@ -379,4 +380,8 @@ endif()
 
 if(BUILD_VKJSON)
     add_subdirectory(libs/vkjson)
+endif()
+
+if(BUILD_ICD)
+    add_subdirectory(icd)
 endif()

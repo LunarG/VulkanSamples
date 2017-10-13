@@ -17,13 +17,14 @@ how Vulkan is used often result in a crash. This project provides standard valid
 to ease development by helping developers verify their applications correctly use the Vulkan API.
 
 Vulkan supports multiple GPUs and multiple global contexts (VkInstance). The ICD loader is necessary to
-support multiple GPUs  and the VkInstance level Vulkan commands.  Additionally, the loader manages inserting
+support multiple GPUs and the VkInstance level Vulkan commands.  Additionally, the loader manages inserting
 Vulkan layer libraries, including validation layers between the application and the ICD.
 
 The following components are available in this repository:
 - Vulkan header files
 - [*ICD Loader*](loader/)
 - [*Validation Layers*](layers/)
+- [*Mock ICD*](icd/)
 - Demos and tests for the loader and validation layers
 
 ## Contributing
