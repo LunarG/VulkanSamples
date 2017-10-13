@@ -33,10 +33,7 @@ android:
     - build-tools-23.0.2
     - android-23
 
-cache:
-  directories:
-    - external
-    - build-android/external
+cache: ccache
 
 before_install:
   # Install the appropriate Linux packages.
@@ -59,9 +56,9 @@ script:
   - if [[ "$VULKAN_BUILD_TARGET" == "LINUX" ]]; then make -C dbuild; fi
   - if [[ "$VULKAN_BUILD_TARGET" == "LINUX" ]]; then LD_LIBRARY_PATH=dbuild/loader:$LD_LIBRARY_PATH VK_LAYER_PATH=dbuild/layers VK_ICD_FILENAMES=dbuild/icd/VkICD_mock_icd.json dbuild/tests/vk_layer_validation_tests; fi
   - if [[ "$VULKAN_BUILD_TARGET" == "ANDROID" ]]; then pushd build-android; fi
-  - if [[ "$VULKAN_BUILD_TARGET" == "ANDROID" ]]; then ./update_external_sources_android.sh --abi $ANDROID_ABI; fi
+  - if [[ "$VULKAN_BUILD_TARGET" == "ANDROID" ]]; then ./update_external_sources_android.sh --abi $ANDROID_ABI --no-build; fi
   - if [[ "$VULKAN_BUILD_TARGET" == "ANDROID" ]]; then ./android-generate.sh; fi
-  - if [[ "$VULKAN_BUILD_TARGET" == "ANDROID" ]]; then ndk-build APP_ABI=$ANDROID_ABI; fi
+  - if [[ "$VULKAN_BUILD_TARGET" == "ANDROID" ]]; then USE_CCACHE=1 NDK_CCACHE=/usr/lib/ccache ndk-build APP_ABI=$ANDROID_ABI; fi
   - if [[ "$VULKAN_BUILD_TARGET" == "ANDROID" ]]; then popd; fi
 
 notifications:
