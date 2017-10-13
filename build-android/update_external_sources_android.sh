@@ -55,19 +55,11 @@ fi
 function printUsage {
    echo "Supported parameters are:"
    echo "    --abi <abi> (optional)"
+   echo "    --no-build (optional)"
    echo
    echo "i.e. ${0##*/} --abi arm64-v8a \\"
    exit 1
 }
-
-if [[ $(($# % 2)) -ne 0 ]]
-then
-    echo Parameters must be provided in pairs.
-    echo parameter count = $#
-    echo
-    printUsage
-    exit 1
-fi
 
 while [[ $# -gt 0 ]]
 do
@@ -75,6 +67,10 @@ do
         --abi)
             abi="$2"
             shift 2
+            ;;
+        --no-build)
+            nobuild=1
+            shift 1
             ;;
         *)
             # unknown option
@@ -90,6 +86,12 @@ echo abi=$abi
 if [[ -z $abi ]]
 then
     echo No abi provided, so building for all supported abis.
+fi
+
+echo no-build=$nobuild
+if [[ $nobuild ]]
+then
+    echo Skipping build.
 fi
 
 function create_glslang () {
@@ -206,7 +208,10 @@ if [ ! -d "$BASEDIR/shaderc/third_party/spirv-tools/external/spirv-headers" -o !
 fi
 update_spirv-headers
 
+if [[ -z $nobuild ]]
+then
 build_shaderc
+fi
 
 echo ""
 echo "${0##*/} finished."
