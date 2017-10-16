@@ -22,7 +22,7 @@ then
    exit 1
 fi
 
-echo "$output" | grep -q "Insert device layer VK_LAYER_LUNARG_wrap_objects"
+echo "$output" | grep -q "Inserted device layer VK_LAYER_LUNARG_wrap_objects"
 ec=$?
 
 if [ $ec -eq 1 ]
@@ -49,7 +49,7 @@ then
    exit 1
 fi
 
-echo "$output" | grep -q "Insert device layer VK_LAYER_LUNARG_wrap_objects"
+echo "$output" | grep -q "Inserted device layer VK_LAYER_LUNARG_wrap_objects"
 ec=$?
 
 if [ $ec -eq 1 ]
@@ -76,7 +76,7 @@ then
    exit 1
 fi
 
-echo "$output" | grep -q "Insert device layer VK_LAYER_LUNARG_wrap_objects"
+echo "$output" | grep -q "Inserted device layer VK_LAYER_LUNARG_wrap_objects"
 ec=$?
 
 if [ $ec -eq 1 ]
@@ -103,7 +103,7 @@ then
    exit 1
 fi
 
-echo "$output" | grep -q "Insert device layer VK_LAYER_LUNARG_wrap_objects"
+echo "$output" | grep -q "Inserted device layer VK_LAYER_LUNARG_wrap_objects"
 ec=$?
 
 if [ $ec -eq 1 ]
