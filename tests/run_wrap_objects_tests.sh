@@ -127,7 +127,9 @@ then
    exit 1
 fi
 
-filter=-VkLayerTest.ExceedMemoryAllocationCount:VkLayerTest.CreateImageViewFormatFeatureMismatch:VkLayerTest.CreateImageViewFormatMismatchUnrelated:VkLayerTest.CreateImageViewNoMutableFormatBit
+# Pick a random subset of valid LVT tests to wrap -- None of these can use the device profile API extension!
+filter=VkLayerTest.ThreadCommandBufferCollision:VkLayerTest.ImageDescriptorLayoutMismatch:VkLayerTest.CreateBufferViewNoMemoryBoundToBuffer:VkLayerTest.CommandBufferResetErrors:VkLayerTest.PSOLineWidthInvalid:VkLayerTest.EndCommandBufferWithinRenderPass:VkLayerTest.DSBufferLimitErrors:VkLayerTest.InvalidImageLayout:VkLayerTest.CreatePipelineVsFsMismatchByLocation:VkLayerTest.ImageBufferCopyTests:VkLayerTest.ClearImageErrors:VkPositiveLayerTest.NonCoherentMemoryMapping:VkPositiveLayerTest.BarrierLayoutToImageUsage:VkPositiveLayerTest.TwoSubmitInfosWithSemaphoreOneQueueSubmitsOneFence
+
 # Run the layer validation tests with and without the wrap-objects layer. Diff the results.
 # Filter out the "Unexpected:" lines because they contain varying object handles.
 GTEST_PRINT_TIME=0 \
