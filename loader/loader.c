@@ -4714,7 +4714,7 @@ VkResult loader_create_device_chain(const struct loader_physical_device_tramp *p
             nextGIPA = fpGIPA;
             nextGDPA = fpGDPA;
 
-            loader_log(inst, VK_DEBUG_REPORT_INFORMATION_BIT_EXT, 0, "Insert device layer %s (%s)", layer_prop->info.layerName,
+            loader_log(inst, VK_DEBUG_REPORT_INFORMATION_BIT_EXT, 0, "Inserted device layer %s (%s)", layer_prop->info.layerName,
                        layer_prop->lib_name);
 
             activated_layers++;
