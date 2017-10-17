@@ -4230,6 +4230,126 @@ TEST_F(VkLayerTest, TemporaryExternalSemaphore) {
     vkDestroySemaphore(m_device->device(), import_semaphore, nullptr);
 }
 
+TEST_F(VkLayerTest, TemporaryExternalFence) {
+#ifdef _WIN32
+    const auto extension_name = VK_KHR_EXTERNAL_FENCE_WIN32_EXTENSION_NAME;
+    const auto handle_type = VK_EXTERNAL_FENCE_HANDLE_TYPE_OPAQUE_WIN32_BIT_KHR;
+#else
+    const auto extension_name = VK_KHR_EXTERNAL_FENCE_FD_EXTENSION_NAME;
+    const auto handle_type = VK_EXTERNAL_FENCE_HANDLE_TYPE_OPAQUE_FD_BIT_KHR;
+#endif
+    // Check for external fence instance extensions
+    if (InstanceExtensionSupported(VK_KHR_EXTERNAL_FENCE_CAPABILITIES_EXTENSION_NAME)) {
+        m_instance_extension_names.push_back(VK_KHR_EXTERNAL_FENCE_CAPABILITIES_EXTENSION_NAME);
+        m_instance_extension_names.push_back(VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME);
+    } else {
+        printf("             External fence extension not supported, skipping test\n");
+        return;
+    }
+    ASSERT_NO_FATAL_FAILURE(InitFramework(myDbgFunc, m_errorMonitor));
+
+    // Check for external fence device extensions
+    if (DeviceExtensionSupported(gpu(), nullptr, extension_name)) {
+        m_device_extension_names.push_back(extension_name);
+        m_device_extension_names.push_back(VK_KHR_EXTERNAL_FENCE_EXTENSION_NAME);
+    } else {
+        printf("             External fence extension not supported, skipping test\n");
+        return;
+    }
+    ASSERT_NO_FATAL_FAILURE(InitState());
+
+    // Check for external fence import and export capability
+    VkPhysicalDeviceExternalFenceInfoKHR efi = {VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_EXTERNAL_FENCE_INFO_KHR, nullptr, handle_type};
+    VkExternalFencePropertiesKHR efp = {VK_STRUCTURE_TYPE_EXTERNAL_FENCE_PROPERTIES_KHR, nullptr};
+    auto vkGetPhysicalDeviceExternalFencePropertiesKHR = (PFN_vkGetPhysicalDeviceExternalFencePropertiesKHR)vkGetInstanceProcAddr(
+        instance(), "vkGetPhysicalDeviceExternalFencePropertiesKHR");
+    vkGetPhysicalDeviceExternalFencePropertiesKHR(gpu(), &efi, &efp);
+
+    if (!(efp.externalFenceFeatures & VK_EXTERNAL_FENCE_FEATURE_EXPORTABLE_BIT_KHR) ||
+        !(efp.externalFenceFeatures & VK_EXTERNAL_FENCE_FEATURE_IMPORTABLE_BIT_KHR)) {
+        printf("             External fence does not support importing and exporting, skipping test\n");
+        return;
+    }
+
+    VkResult err;
+
+    // Create a fence to export payload from
+    VkFence export_fence;
+    {
+        VkExportFenceCreateInfoKHR efci = {VK_STRUCTURE_TYPE_EXPORT_FENCE_CREATE_INFO_KHR, nullptr, handle_type};
+        VkFenceCreateInfo fci = {VK_STRUCTURE_TYPE_FENCE_CREATE_INFO, &efci, 0};
+        err = vkCreateFence(m_device->device(), &fci, nullptr, &export_fence);
+        ASSERT_VK_SUCCESS(err);
+    }
+
+    // Create a fence to import payload into
+    VkFence import_fence;
+    {
+        VkFenceCreateInfo fci = {VK_STRUCTURE_TYPE_FENCE_CREATE_INFO, nullptr, 0};
+        err = vkCreateFence(m_device->device(), &fci, nullptr, &import_fence);
+        ASSERT_VK_SUCCESS(err);
+    }
+
+#ifdef _WIN32
+    // Export fence payload to an opaque handle
+    HANDLE handle = nullptr;
+    {
+        VkFenceGetWin32HandleInfoKHR ghi = {VK_STRUCTURE_TYPE_FENCE_GET_WIN32_HANDLE_INFO_KHR, nullptr, export_fence, handle_type};
+        auto vkGetFenceWin32HandleKHR =
+            (PFN_vkGetFenceWin32HandleKHR)vkGetDeviceProcAddr(m_device->device(), "vkGetFenceWin32HandleKHR");
+        err = vkGetFenceWin32HandleKHR(m_device->device(), &ghi, &handle);
+        ASSERT_VK_SUCCESS(err);
+    }
+
+    // Import opaque handle exported above
+    {
+        VkImportFenceWin32HandleInfoKHR ifi = {VK_STRUCTURE_TYPE_IMPORT_FENCE_WIN32_HANDLE_INFO_KHR,
+                                               nullptr,
+                                               import_fence,
+                                               VK_FENCE_IMPORT_TEMPORARY_BIT_KHR,
+                                               handle_type,
+                                               handle,
+                                               nullptr};
+        auto vkImportFenceWin32HandleKHR =
+            (PFN_vkImportFenceWin32HandleKHR)vkGetDeviceProcAddr(m_device->device(), "vkImportFenceWin32HandleKHR");
+        err = vkImportFenceWin32HandleKHR(m_device->device(), &ifi);
+        ASSERT_VK_SUCCESS(err);
+    }
+#else
+    // Export fence payload to an opaque handle
+    int fd = 0;
+    {
+        VkFenceGetFdInfoKHR gfi = {VK_STRUCTURE_TYPE_FENCE_GET_FD_INFO_KHR, nullptr, export_fence, handle_type};
+        auto vkGetFenceFdKHR = (PFN_vkGetFenceFdKHR)vkGetDeviceProcAddr(m_device->device(), "vkGetFenceFdKHR");
+        err = vkGetFenceFdKHR(m_device->device(), &gfi, &fd);
+        ASSERT_VK_SUCCESS(err);
+    }
+
+    // Import opaque handle exported above
+    {
+        VkImportFenceFdInfoKHR ifi = {VK_STRUCTURE_TYPE_IMPORT_FENCE_FD_INFO_KHR, nullptr,     import_fence,
+                                      VK_FENCE_IMPORT_TEMPORARY_BIT_KHR,          handle_type, fd};
+        auto vkImportFenceFdKHR = (PFN_vkImportFenceFdKHR)vkGetDeviceProcAddr(m_device->device(), "vkImportFenceFdKHR");
+        err = vkImportFenceFdKHR(m_device->device(), &ifi);
+        ASSERT_VK_SUCCESS(err);
+    }
+#endif
+
+    // Undo the temporary import
+    vkResetFences(m_device->device(), 1, &import_fence);
+
+    // Signal the previously imported fence twice, the second signal should produce a validation error
+    vkQueueSubmit(m_device->m_queue, 0, nullptr, import_fence);
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, "is already in use by another submission.");
+    vkQueueSubmit(m_device->m_queue, 0, nullptr, import_fence);
+    m_errorMonitor->VerifyFound();
+
+    // Cleanup
+    err = vkQueueWaitIdle(m_device->m_queue);
+    ASSERT_VK_SUCCESS(err);
+    vkDestroyFence(m_device->device(), export_fence, nullptr);
+    vkDestroyFence(m_device->device(), import_fence, nullptr);
+}
 
 TEST_F(VkPositiveLayerTest, SecondaryCommandBufferBarrier) {
     TEST_DESCRIPTION("Add a pipeline barrier in a secondary command buffer");
@@ -25251,6 +25371,131 @@ TEST_F(VkPositiveLayerTest, ExternalSemaphore) {
     ASSERT_VK_SUCCESS(err);
     vkDestroySemaphore(m_device->device(), export_semaphore, nullptr);
     vkDestroySemaphore(m_device->device(), import_semaphore, nullptr);
+
+    m_errorMonitor->VerifyNotFound();
+}
+
+TEST_F(VkPositiveLayerTest, ExternalFence) {
+#ifdef _WIN32
+    const auto extension_name = VK_KHR_EXTERNAL_FENCE_WIN32_EXTENSION_NAME;
+    const auto handle_type = VK_EXTERNAL_FENCE_HANDLE_TYPE_OPAQUE_WIN32_BIT_KHR;
+#else
+    const auto extension_name = VK_KHR_EXTERNAL_FENCE_FD_EXTENSION_NAME;
+    const auto handle_type = VK_EXTERNAL_FENCE_HANDLE_TYPE_OPAQUE_FD_BIT_KHR;
+#endif
+    // Check for external fence instance extensions
+    if (InstanceExtensionSupported(VK_KHR_EXTERNAL_FENCE_CAPABILITIES_EXTENSION_NAME)) {
+        m_instance_extension_names.push_back(VK_KHR_EXTERNAL_FENCE_CAPABILITIES_EXTENSION_NAME);
+        m_instance_extension_names.push_back(VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME);
+    } else {
+        printf("             External fence extension not supported, skipping test\n");
+        return;
+    }
+    ASSERT_NO_FATAL_FAILURE(InitFramework(myDbgFunc, m_errorMonitor));
+
+    // Check for external fence device extensions
+    if (DeviceExtensionSupported(gpu(), nullptr, extension_name)) {
+        m_device_extension_names.push_back(extension_name);
+        m_device_extension_names.push_back(VK_KHR_EXTERNAL_FENCE_EXTENSION_NAME);
+    } else {
+        printf("             External fence extension not supported, skipping test\n");
+        return;
+    }
+    ASSERT_NO_FATAL_FAILURE(InitState());
+
+    // Check for external fence import and export capability
+    VkPhysicalDeviceExternalFenceInfoKHR efi = {VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_EXTERNAL_FENCE_INFO_KHR, nullptr, handle_type};
+    VkExternalFencePropertiesKHR efp = {VK_STRUCTURE_TYPE_EXTERNAL_FENCE_PROPERTIES_KHR, nullptr};
+    auto vkGetPhysicalDeviceExternalFencePropertiesKHR = (PFN_vkGetPhysicalDeviceExternalFencePropertiesKHR)vkGetInstanceProcAddr(
+        instance(), "vkGetPhysicalDeviceExternalFencePropertiesKHR");
+    vkGetPhysicalDeviceExternalFencePropertiesKHR(gpu(), &efi, &efp);
+
+    if (!(efp.externalFenceFeatures & VK_EXTERNAL_FENCE_FEATURE_EXPORTABLE_BIT_KHR) ||
+        !(efp.externalFenceFeatures & VK_EXTERNAL_FENCE_FEATURE_IMPORTABLE_BIT_KHR)) {
+        printf("             External fence does not support importing and exporting, skipping test\n");
+        return;
+    }
+
+    VkResult err;
+    m_errorMonitor->ExpectSuccess();
+
+    // Create a fence to export payload from
+    VkFence export_fence;
+    {
+        VkExportFenceCreateInfoKHR efci = {VK_STRUCTURE_TYPE_EXPORT_FENCE_CREATE_INFO_KHR, nullptr, handle_type};
+        VkFenceCreateInfo fci = {VK_STRUCTURE_TYPE_FENCE_CREATE_INFO, &efci, 0};
+        err = vkCreateFence(m_device->device(), &fci, nullptr, &export_fence);
+        ASSERT_VK_SUCCESS(err);
+    }
+
+    // Create a fence to import payload into
+    VkFence import_fence;
+    {
+        VkFenceCreateInfo fci = {VK_STRUCTURE_TYPE_FENCE_CREATE_INFO, nullptr, 0};
+        err = vkCreateFence(m_device->device(), &fci, nullptr, &import_fence);
+        ASSERT_VK_SUCCESS(err);
+    }
+
+#ifdef _WIN32
+    // Export fence payload to an opaque handle
+    HANDLE handle = nullptr;
+    {
+        VkFenceGetWin32HandleInfoKHR ghi = {VK_STRUCTURE_TYPE_FENCE_GET_WIN32_HANDLE_INFO_KHR, nullptr, export_fence, handle_type};
+        auto vkGetFenceWin32HandleKHR =
+            (PFN_vkGetFenceWin32HandleKHR)vkGetDeviceProcAddr(m_device->device(), "vkGetFenceWin32HandleKHR");
+        err = vkGetFenceWin32HandleKHR(m_device->device(), &ghi, &handle);
+        ASSERT_VK_SUCCESS(err);
+    }
+
+    // Import opaque handle exported above
+    {
+        VkImportFenceWin32HandleInfoKHR ifi = {
+            VK_STRUCTURE_TYPE_IMPORT_FENCE_WIN32_HANDLE_INFO_KHR, nullptr, import_fence, 0, handle_type, handle, nullptr};
+        auto vkImportFenceWin32HandleKHR =
+            (PFN_vkImportFenceWin32HandleKHR)vkGetDeviceProcAddr(m_device->device(), "vkImportFenceWin32HandleKHR");
+        err = vkImportFenceWin32HandleKHR(m_device->device(), &ifi);
+        ASSERT_VK_SUCCESS(err);
+    }
+#else
+    // Export fence payload to an opaque handle
+    int fd = 0;
+    {
+        VkFenceGetFdInfoKHR gfi = {VK_STRUCTURE_TYPE_FENCE_GET_FD_INFO_KHR, nullptr, export_fence, handle_type};
+        auto vkGetFenceFdKHR = (PFN_vkGetFenceFdKHR)vkGetDeviceProcAddr(m_device->device(), "vkGetFenceFdKHR");
+        err = vkGetFenceFdKHR(m_device->device(), &gfi, &fd);
+        ASSERT_VK_SUCCESS(err);
+    }
+
+    // Import opaque handle exported above
+    {
+        VkImportFenceFdInfoKHR ifi = {VK_STRUCTURE_TYPE_IMPORT_FENCE_FD_INFO_KHR, nullptr, import_fence, 0, handle_type, fd};
+        auto vkImportFenceFdKHR = (PFN_vkImportFenceFdKHR)vkGetDeviceProcAddr(m_device->device(), "vkImportFenceFdKHR");
+        err = vkImportFenceFdKHR(m_device->device(), &ifi);
+        ASSERT_VK_SUCCESS(err);
+    }
+#endif
+
+    // Signal the exported fence and wait on the imported fence
+    vkQueueSubmit(m_device->m_queue, 0, nullptr, export_fence);
+    vkWaitForFences(m_device->device(), 1, &import_fence, VK_TRUE, 1000000000);
+    vkResetFences(m_device->device(), 1, &import_fence);
+    vkQueueSubmit(m_device->m_queue, 0, nullptr, export_fence);
+    vkWaitForFences(m_device->device(), 1, &import_fence, VK_TRUE, 1000000000);
+    vkResetFences(m_device->device(), 1, &import_fence);
+
+    // Signal the imported fence and wait on the exported fence
+    vkQueueSubmit(m_device->m_queue, 0, nullptr, import_fence);
+    vkWaitForFences(m_device->device(), 1, &export_fence, VK_TRUE, 1000000000);
+    vkResetFences(m_device->device(), 1, &export_fence);
+    vkQueueSubmit(m_device->m_queue, 0, nullptr, import_fence);
+    vkWaitForFences(m_device->device(), 1, &export_fence, VK_TRUE, 1000000000);
+    vkResetFences(m_device->device(), 1, &export_fence);
+
+    // Cleanup
+    err = vkQueueWaitIdle(m_device->m_queue);
+    ASSERT_VK_SUCCESS(err);
+    vkDestroyFence(m_device->device(), export_fence, nullptr);
+    vkDestroyFence(m_device->device(), import_fence, nullptr);
 
     m_errorMonitor->VerifyNotFound();
 }
