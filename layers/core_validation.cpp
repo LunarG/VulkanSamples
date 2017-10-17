@@ -9011,6 +9011,22 @@ ImportSemaphoreWin32HandleKHR(VkDevice device, const VkImportSemaphoreWin32Handl
 }
 #endif
 
+VKAPI_ATTR VkResult VKAPI_CALL ImportSemaphoreFdKHR(VkDevice device, const VkImportSemaphoreFdInfoKHR *pImportSemaphoreFdInfo) {
+    VkResult result = VK_ERROR_VALIDATION_FAILED_EXT;
+    layer_data *dev_data = GetLayerDataPtr(get_dispatch_key(device), layer_data_map);
+    bool skip = PreCallValidateImportSemaphore(dev_data, pImportSemaphoreFdInfo->semaphore, "vkImportSemaphoreFdKHR");
+
+    if (!skip) {
+        result = dev_data->dispatch_table.ImportSemaphoreFdKHR(device, pImportSemaphoreFdInfo);
+    }
+
+    if (result == VK_SUCCESS) {
+        PostCallRecordImportSemaphore(dev_data, pImportSemaphoreFdInfo->semaphore, pImportSemaphoreFdInfo->handleType,
+                                      pImportSemaphoreFdInfo->flags);
+    }
+    return result;
+}
+
 static void PostCallRecordGetSemaphore(layer_data *dev_data, VkSemaphore semaphore,
                                        VkExternalSemaphoreHandleTypeFlagBitsKHR handle_type) {
     SEMAPHORE_NODE *sema_node = GetSemaphoreNode(dev_data, semaphore);
@@ -9033,6 +9049,16 @@ VKAPI_ATTR VkResult VKAPI_CALL GetSemaphoreWin32HandleKHR(VkDevice device,
     return result;
 }
 #endif
+
+VKAPI_ATTR VkResult VKAPI_CALL GetSemaphoreFdKHR(VkDevice device, const VkSemaphoreGetFdInfoKHR *pGetFdInfo, int *pFd) {
+    layer_data *dev_data = GetLayerDataPtr(get_dispatch_key(device), layer_data_map);
+    VkResult result = dev_data->dispatch_table.GetSemaphoreFdKHR(device, pGetFdInfo, pFd);
+
+    if (result == VK_SUCCESS) {
+        PostCallRecordGetSemaphore(dev_data, pGetFdInfo->semaphore, pGetFdInfo->handleType);
+    }
+    return result;
+}
 
 VKAPI_ATTR VkResult VKAPI_CALL CreateEvent(VkDevice device, const VkEventCreateInfo *pCreateInfo,
                                            const VkAllocationCallbacks *pAllocator, VkEvent *pEvent) {
@@ -10952,6 +10978,8 @@ static const std::unordered_map<std::string, void*> name_to_funcptr_map = {
     {"vkGetPhysicalDeviceDisplayPlanePropertiesKHR", (void*)GetPhysicalDeviceDisplayPlanePropertiesKHR},
     {"GetDisplayPlaneSupportedDisplaysKHR", (void*)GetDisplayPlaneSupportedDisplaysKHR},
     {"GetDisplayPlaneCapabilitiesKHR", (void*)GetDisplayPlaneCapabilitiesKHR},
+    {"vkImportSemaphoreFdKHR", (void*)ImportSemaphoreFdKHR},
+    {"vkGetSemaphoreFdKHR", (void*)GetSemaphoreFdKHR},
 };
 
 VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL GetDeviceProcAddr(VkDevice device, const char *funcName) {
