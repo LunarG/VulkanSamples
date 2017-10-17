@@ -98,6 +98,12 @@ struct GENERIC_HEADER {
     const void *pNext;
 };
 
+enum SyncScope {
+    kSyncScopeInternal,
+    kSyncScopeExternalTemporary,
+    kSyncScopeExternalPermanent,
+};
+
 enum FENCE_STATE { FENCE_UNSIGNALED, FENCE_INFLIGHT, FENCE_RETIRED };
 
 class FENCE_NODE {
@@ -106,15 +112,10 @@ class FENCE_NODE {
     VkFenceCreateInfo createInfo;
     std::pair<VkQueue, uint64_t> signaler;
     FENCE_STATE state;
+    SyncScope scope;
 
     // Default constructor
-    FENCE_NODE() : state(FENCE_UNSIGNALED) {}
-};
-
-enum SyncScope {
-    kSyncScopeInternal,
-    kSyncScopeExternalTemporary,
-    kSyncScopeExternalPermanent,
+    FENCE_NODE() : state(FENCE_UNSIGNALED), scope(kSyncScopeInternal) {}
 };
 
 class SEMAPHORE_NODE : public BASE_NODE {

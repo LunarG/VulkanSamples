@@ -2357,7 +2357,7 @@ static bool VerifyQueueStateToSeq(layer_data *dev_data, QUEUE_STATE *initial_que
 // When the given fence is retired, verify outstanding queue operations through the point of the fence
 static bool VerifyQueueStateToFence(layer_data *dev_data, VkFence fence) {
     auto fence_state = GetFenceNode(dev_data, fence);
-    if (VK_NULL_HANDLE != fence_state->signaler.first) {
+    if (fence_state->scope == kSyncScopeInternal && VK_NULL_HANDLE != fence_state->signaler.first) {
         return VerifyQueueStateToSeq(dev_data, GetQueueState(dev_data, fence_state->signaler.first), fence_state->signaler.second);
     }
     return false;
@@ -2436,7 +2436,7 @@ static void RetireWorkOnQueue(layer_data *dev_data, QUEUE_STATE *pQueue, uint64_
         }
 
         auto pFence = GetFenceNode(dev_data, submission.fence);
-        if (pFence) {
+        if (pFence && pFence->scope == kSyncScopeInternal) {
             pFence->state = FENCE_RETIRED;
         }
 
@@ -2625,7 +2625,7 @@ static bool validatePrimaryCommandBufferState(layer_data *dev_data, GLOBAL_CB_NO
 static bool ValidateFenceForSubmit(layer_data *dev_data, FENCE_NODE *pFence) {
     bool skip = false;
 
-    if (pFence) {
+    if (pFence && pFence->scope == kSyncScopeInternal) {
         if (pFence->state == FENCE_INFLIGHT) {
             // TODO: opportunities for VALIDATION_ERROR_31a00080, VALIDATION_ERROR_316008b4, VALIDATION_ERROR_16400a0e
             skip |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_FENCE_EXT,
@@ -2652,7 +2652,7 @@ static void PostCallRecordQueueSubmit(layer_data *dev_data, VkQueue queue, uint3
     auto pFence = GetFenceNode(dev_data, fence);
 
     // Mark the fence in-use.
-    if (pFence) {
+    if (pFence && pFence->scope == kSyncScopeInternal) {
         SubmitFence(pQueue, pFence, std::max(1u, submitCount));
     }
 
@@ -3065,7 +3065,7 @@ static inline bool verifyWaitFenceState(layer_data *dev_data, VkFence fence, con
     bool skip = false;
 
     auto pFence = GetFenceNode(dev_data, fence);
-    if (pFence) {
+    if (pFence && pFence->scope == kSyncScopeInternal) {
         if (pFence->state == FENCE_UNSIGNALED) {
             skip |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_WARNING_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_FENCE_EXT,
                             HandleToUint64(fence), __LINE__, MEMTRACK_INVALID_FENCE_STATE, "MEM",
@@ -3080,13 +3080,15 @@ static inline bool verifyWaitFenceState(layer_data *dev_data, VkFence fence, con
 
 static void RetireFence(layer_data *dev_data, VkFence fence) {
     auto pFence = GetFenceNode(dev_data, fence);
-    if (pFence->signaler.first != VK_NULL_HANDLE) {
-        // Fence signaller is a queue -- use this as proof that prior operations on that queue have completed.
-        RetireWorkOnQueue(dev_data, GetQueueState(dev_data, pFence->signaler.first), pFence->signaler.second);
-    } else {
-        // Fence signaller is the WSI. We're not tracking what the WSI op actually /was/ in CV yet, but we need to mark
-        // the fence as retired.
-        pFence->state = FENCE_RETIRED;
+    if (pFence->scope == kSyncScopeInternal) {
+        if (pFence->signaler.first != VK_NULL_HANDLE) {
+            // Fence signaller is a queue -- use this as proof that prior operations on that queue have completed.
+            RetireWorkOnQueue(dev_data, GetQueueState(dev_data, pFence->signaler.first), pFence->signaler.second);
+        } else {
+            // Fence signaller is the WSI. We're not tracking what the WSI op actually /was/ in CV yet, but we need to mark
+            // the fence as retired.
+            pFence->state = FENCE_RETIRED;
+        }
     }
 }
 
@@ -3235,7 +3237,7 @@ static bool PreCallValidateDestroyFence(layer_data *dev_data, VkFence fence, FEN
     if (dev_data->instance_data->disabled.destroy_fence) return false;
     bool skip = false;
     if (*fence_node) {
-        if ((*fence_node)->state == FENCE_INFLIGHT) {
+        if ((*fence_node)->scope == kSyncScopeInternal && (*fence_node)->state == FENCE_INFLIGHT) {
             skip |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_FENCE_EXT,
                             HandleToUint64(fence), __LINE__, VALIDATION_ERROR_24e008c0, "DS", "Fence 0x%" PRIx64 " is in use. %s",
                             HandleToUint64(fence), validation_error_map[VALIDATION_ERROR_24e008c0]);
@@ -4201,7 +4203,7 @@ VKAPI_ATTR VkResult VKAPI_CALL ResetFences(VkDevice device, uint32_t fenceCount,
     unique_lock_t lock(global_lock);
     for (uint32_t i = 0; i < fenceCount; ++i) {
         auto pFence = GetFenceNode(dev_data, pFences[i]);
-        if (pFence && pFence->state == FENCE_INFLIGHT) {
+        if (pFence && pFence->scope == kSyncScopeInternal && pFence->state == FENCE_INFLIGHT) {
             skip |=
                 log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_FENCE_EXT,
                         HandleToUint64(pFences[i]), __LINE__, VALIDATION_ERROR_32e008c6, "DS", "Fence 0x%" PRIx64 " is in use. %s",
@@ -4219,7 +4221,11 @@ VKAPI_ATTR VkResult VKAPI_CALL ResetFences(VkDevice device, uint32_t fenceCount,
         for (uint32_t i = 0; i < fenceCount; ++i) {
             auto pFence = GetFenceNode(dev_data, pFences[i]);
             if (pFence) {
-                pFence->state = FENCE_UNSIGNALED;
+                if (pFence->scope == kSyncScopeInternal) {
+                    pFence->state = FENCE_UNSIGNALED;
+                } else if (pFence->scope == kSyncScopeExternalTemporary) {
+                    pFence->scope = kSyncScopeInternal;
+                }
             }
         }
         lock.unlock();
@@ -8841,7 +8847,7 @@ static void PostCallRecordQueueBindSparse(layer_data *dev_data, VkQueue queue, u
     auto pFence = GetFenceNode(dev_data, fence);
     auto pQueue = GetQueueState(dev_data, queue);
 
-    if (pFence) {
+    if (pFence && pFence->scope == kSyncScopeInternal) {
         SubmitFence(pQueue, pFence, std::max(1u, bindInfoCount));
     }
 
@@ -9056,6 +9062,100 @@ VKAPI_ATTR VkResult VKAPI_CALL GetSemaphoreFdKHR(VkDevice device, const VkSemaph
 
     if (result == VK_SUCCESS) {
         PostCallRecordGetSemaphore(dev_data, pGetFdInfo->semaphore, pGetFdInfo->handleType);
+    }
+    return result;
+}
+
+static bool PreCallValidateImportFence(layer_data *dev_data, VkFence fence, const char *caller_name) {
+    FENCE_NODE *fence_node = GetFenceNode(dev_data, fence);
+    bool skip = false;
+    if (fence_node && fence_node->scope == kSyncScopeInternal && fence_node->state == FENCE_INFLIGHT) {
+        skip |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_FENCE_EXT,
+                        HandleToUint64(fence), __LINE__, VALIDATION_ERROR_UNDEFINED, "DS",
+                        "Cannot call %s on fence 0x%" PRIx64 " that is currently in use.", caller_name, HandleToUint64(fence));
+    }
+    return skip;
+}
+
+static void PostCallRecordImportFence(layer_data *dev_data, VkFence fence, VkExternalFenceHandleTypeFlagBitsKHR handle_type,
+                                      VkFenceImportFlagsKHR flags) {
+    FENCE_NODE *fence_node = GetFenceNode(dev_data, fence);
+    if (fence_node && fence_node->scope != kSyncScopeExternalPermanent) {
+        if ((handle_type == VK_EXTERNAL_FENCE_HANDLE_TYPE_SYNC_FD_BIT_KHR || flags & VK_FENCE_IMPORT_TEMPORARY_BIT_KHR) &&
+            fence_node->scope == kSyncScopeInternal) {
+            fence_node->scope = kSyncScopeExternalTemporary;
+        } else {
+            fence_node->scope = kSyncScopeExternalPermanent;
+        }
+    }
+}
+
+#ifdef VK_USE_PLATFORM_WIN32_KHR
+VKAPI_ATTR VkResult VKAPI_CALL ImportFenceWin32HandleKHR(VkDevice device,
+                                                         const VkImportFenceWin32HandleInfoKHR *pImportFenceWin32HandleInfo) {
+    VkResult result = VK_ERROR_VALIDATION_FAILED_EXT;
+    layer_data *dev_data = GetLayerDataPtr(get_dispatch_key(device), layer_data_map);
+    bool skip = PreCallValidateImportFence(dev_data, pImportFenceWin32HandleInfo->fence, "vkImportFenceWin32HandleKHR");
+
+    if (!skip) {
+        result = dev_data->dispatch_table.ImportFenceWin32HandleKHR(device, pImportFenceWin32HandleInfo);
+    }
+
+    if (result == VK_SUCCESS) {
+        PostCallRecordImportFence(dev_data, pImportFenceWin32HandleInfo->fence, pImportFenceWin32HandleInfo->handleType,
+                                  pImportFenceWin32HandleInfo->flags);
+    }
+    return result;
+}
+#endif
+
+VKAPI_ATTR VkResult VKAPI_CALL ImportFenceFdKHR(VkDevice device, const VkImportFenceFdInfoKHR *pImportFenceFdInfo) {
+    VkResult result = VK_ERROR_VALIDATION_FAILED_EXT;
+    layer_data *dev_data = GetLayerDataPtr(get_dispatch_key(device), layer_data_map);
+    bool skip = PreCallValidateImportFence(dev_data, pImportFenceFdInfo->fence, "vkImportFenceFdKHR");
+
+    if (!skip) {
+        result = dev_data->dispatch_table.ImportFenceFdKHR(device, pImportFenceFdInfo);
+    }
+
+    if (result == VK_SUCCESS) {
+        PostCallRecordImportFence(dev_data, pImportFenceFdInfo->fence, pImportFenceFdInfo->handleType, pImportFenceFdInfo->flags);
+    }
+    return result;
+}
+
+static void PostCallRecordGetFence(layer_data *dev_data, VkFence fence, VkExternalFenceHandleTypeFlagBitsKHR handle_type) {
+    FENCE_NODE *fence_node = GetFenceNode(dev_data, fence);
+    if (fence_node) {
+        if (handle_type != VK_EXTERNAL_FENCE_HANDLE_TYPE_SYNC_FD_BIT_KHR) {
+            // Export with reference transference becomes external
+            fence_node->scope = kSyncScopeExternalPermanent;
+        } else if (fence_node->scope == kSyncScopeInternal) {
+            // Export with copy transference has a side effect of resetting the fence
+            fence_node->state = FENCE_UNSIGNALED;
+        }
+    }
+}
+
+#ifdef VK_USE_PLATFORM_WIN32_KHR
+VKAPI_ATTR VkResult VKAPI_CALL GetFenceWin32HandleKHR(VkDevice device, const VkFenceGetWin32HandleInfoKHR *pGetWin32HandleInfo,
+                                                      HANDLE *pHandle) {
+    layer_data *dev_data = GetLayerDataPtr(get_dispatch_key(device), layer_data_map);
+    VkResult result = dev_data->dispatch_table.GetFenceWin32HandleKHR(device, pGetWin32HandleInfo, pHandle);
+
+    if (result == VK_SUCCESS) {
+        PostCallRecordGetFence(dev_data, pGetWin32HandleInfo->fence, pGetWin32HandleInfo->handleType);
+    }
+    return result;
+}
+#endif
+
+VKAPI_ATTR VkResult VKAPI_CALL GetFenceFdKHR(VkDevice device, const VkFenceGetFdInfoKHR *pGetFdInfo, int *pFd) {
+    layer_data *dev_data = GetLayerDataPtr(get_dispatch_key(device), layer_data_map);
+    VkResult result = dev_data->dispatch_table.GetFenceFdKHR(device, pGetFdInfo, pFd);
+
+    if (result == VK_SUCCESS) {
+        PostCallRecordGetFence(dev_data, pGetFdInfo->fence, pGetFdInfo->handleType);
     }
     return result;
 }
@@ -9803,8 +9903,16 @@ static void PostCallRecordAcquireNextImageKHR(layer_data *dev_data, VkDevice dev
                                               VkSemaphore semaphore, VkFence fence, uint32_t *pImageIndex) {
     auto pFence = GetFenceNode(dev_data, fence);
     if (pFence) {
-        pFence->state = FENCE_INFLIGHT;
-        pFence->signaler.first = VK_NULL_HANDLE;  // ANI isn't on a queue, so this can't participate in a completion proof.
+        if (GetDeviceExtensions(dev_data)->vk_khr_external_fence) {
+            // A successful call with external fences enabled acts as a temporary import
+            if (pFence->scope == kSyncScopeInternal) {
+                pFence->scope = kSyncScopeExternalTemporary;
+            }
+        } else if (pFence->scope == kSyncScopeInternal) {
+            // A successful call without external fences acts as a signal operation
+            pFence->state = FENCE_INFLIGHT;
+            pFence->signaler.first = VK_NULL_HANDLE;  // ANI isn't on a queue, so this can't participate in a completion proof.
+        }
     }
 
     auto pSemaphore = GetSemaphoreNode(dev_data, semaphore);
@@ -9814,7 +9922,7 @@ static void PostCallRecordAcquireNextImageKHR(layer_data *dev_data, VkDevice dev
             if (pSemaphore->scope == kSyncScopeInternal) {
                 pSemaphore->scope = kSyncScopeExternalTemporary;
             }
-        } else {
+        } else if (pSemaphore->scope == kSyncScopeInternal) {
             // A successful call without external semaphores acts as a signal operation
             pSemaphore->signaled = true;
             pSemaphore->signaler.first = VK_NULL_HANDLE;
@@ -10793,7 +10901,7 @@ VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL GetPhysicalDeviceProcAddr(VkInstance in
 VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL GetInstanceProcAddr(VkInstance instance, const char *funcName);
 
 // Map of all APIs to be intercepted by this layer
-static const std::unordered_map<std::string, void*> name_to_funcptr_map = {
+static const std::unordered_map<std::string, void *> name_to_funcptr_map = {
     {"vkGetInstanceProcAddr", (void*)GetInstanceProcAddr},
     {"vk_layerGetPhysicalDeviceProcAddr", (void*)GetPhysicalDeviceProcAddr},
     {"vkGetDeviceProcAddr", (void*)GetDeviceProcAddr},
@@ -10952,6 +11060,8 @@ static const std::unordered_map<std::string, void*> name_to_funcptr_map = {
     {"vkGetPhysicalDeviceWin32PresentationSupportKHR", (void*)GetPhysicalDeviceWin32PresentationSupportKHR},
     {"vkImportSemaphoreWin32HandleKHR", (void*)ImportSemaphoreWin32HandleKHR},
     {"vkGetSemaphoreWin32HandleKHR", (void*)GetSemaphoreWin32HandleKHR},
+    {"vkImportFenceWin32HandleKHR", (void*)ImportFenceWin32HandleKHR},
+    {"vkGetFenceWin32HandleKHR", (void*)GetFenceWin32HandleKHR},
 #endif
 #ifdef VK_USE_PLATFORM_XCB_KHR
     {"vkCreateXcbSurfaceKHR", (void*)CreateXcbSurfaceKHR},
@@ -10980,6 +11090,8 @@ static const std::unordered_map<std::string, void*> name_to_funcptr_map = {
     {"vkGetDisplayPlaneCapabilitiesKHR", (void*)GetDisplayPlaneCapabilitiesKHR},
     {"vkImportSemaphoreFdKHR", (void*)ImportSemaphoreFdKHR},
     {"vkGetSemaphoreFdKHR", (void*)GetSemaphoreFdKHR},
+    {"vkImportFenceFdKHR", (void*)ImportFenceFdKHR},
+    {"vkGetFenceFdKHR", (void*)GetFenceFdKHR},
 };
 
 VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL GetDeviceProcAddr(VkDevice device, const char *funcName) {
