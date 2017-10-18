@@ -9722,11 +9722,7 @@ VKAPI_ATTR VkResult VKAPI_CALL QueuePresentKHR(VkQueue queue, const VkPresentInf
     }
     if (pPresentInfo && pPresentInfo->pNext) {
         // Verify ext struct
-        struct std_header {
-            VkStructureType sType;
-            const void *pNext;
-        };
-        std_header *pnext = (std_header *)pPresentInfo->pNext;
+        GENERIC_HEADER *pnext = (GENERIC_HEADER *)pPresentInfo->pNext;
         while (pnext) {
             if (VK_STRUCTURE_TYPE_PRESENT_REGIONS_KHR == pnext->sType) {
                 VkPresentRegionsKHR *present_regions = (VkPresentRegionsKHR *)pnext;
@@ -9782,7 +9778,7 @@ VKAPI_ATTR VkResult VKAPI_CALL QueuePresentKHR(VkQueue queue, const VkPresentInf
                                 present_times_info->swapchainCount, pPresentInfo->swapchainCount);
                 }
             }
-            pnext = (std_header *)pnext->pNext;
+            pnext = (GENERIC_HEADER *)pnext->pNext;
         }
     }
 
