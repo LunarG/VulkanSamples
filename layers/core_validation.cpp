@@ -2651,9 +2651,30 @@ static void PostCallRecordQueueSubmit(layer_data *dev_data, VkQueue queue, uint3
     auto pQueue = GetQueueState(dev_data, queue);
     auto pFence = GetFenceNode(dev_data, fence);
 
-    // Mark the fence in-use.
-    if (pFence && pFence->scope == kSyncScopeInternal) {
-        SubmitFence(pQueue, pFence, std::max(1u, submitCount));
+    if (pFence) {
+        if (pFence->scope == kSyncScopeInternal) {
+            // Mark fence in use
+            SubmitFence(pQueue, pFence, std::max(1u, submitCount));
+            if (!submitCount) {
+                // If no submissions, but just dropping a fence on the end of the queue,
+                // record an empty submission with just the fence, so we can determine
+                // its completion.
+                pQueue->submissions.emplace_back(std::vector<VkCommandBuffer>(), std::vector<SEMAPHORE_WAIT>(),
+                                                 std::vector<VkSemaphore>(), std::vector<VkSemaphore>(), fence);
+            }
+        } else {
+            // Retire work up until this fence early, we will not see the wait that corresponds to this signal
+            early_retire_seq = pQueue->seq + pQueue->submissions.size();
+            if (!dev_data->external_sync_warning) {
+                dev_data->external_sync_warning = true;
+                log_msg(dev_data->report_data, VK_DEBUG_REPORT_WARNING_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_FENCE_EXT,
+                        HandleToUint64(fence), __LINE__, DRAWSTATE_QUEUE_FORWARD_PROGRESS, "DS",
+                        "vkQueueSubmit(): Signaling external fence 0x%" PRIx64 " on queue 0x%" PRIx64
+                        " will disable validation of preceding command buffer lifecycle states and the in-use status of "
+                        "associated objects.",
+                        HandleToUint64(fence), HandleToUint64(queue));
+            }
+        }
     }
 
     // Now process each individual submit
@@ -2695,7 +2716,7 @@ static void PostCallRecordQueueSubmit(layer_data *dev_data, VkQueue queue, uint3
                     semaphore_signals.push_back(semaphore);
                 } else {
                     // Retire work up until this submit early, we will not see the wait that corresponds to this signal
-                    early_retire_seq = pQueue->seq + pQueue->submissions.size() + 1;
+                    early_retire_seq = std::max(early_retire_seq, pQueue->seq + pQueue->submissions.size() + 1);
                     if (!dev_data->external_sync_warning) {
                         dev_data->external_sync_warning = true;
                         log_msg(dev_data->report_data, VK_DEBUG_REPORT_WARNING_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_SEMAPHORE_EXT,
@@ -2728,14 +2749,6 @@ static void PostCallRecordQueueSubmit(layer_data *dev_data, VkQueue queue, uint3
 
     if (early_retire_seq) {
         RetireWorkOnQueue(dev_data, pQueue, early_retire_seq);
-    }
-
-    if (pFence && !submitCount) {
-        // If no submissions, but just dropping a fence on the end of the queue,
-        // record an empty submission with just the fence, so we can determine
-        // its completion.
-        pQueue->submissions.emplace_back(std::vector<VkCommandBuffer>(), std::vector<SEMAPHORE_WAIT>(), std::vector<VkSemaphore>(),
-                                         std::vector<VkSemaphore>(), fence);
     }
 }
 
@@ -8847,8 +8860,27 @@ static void PostCallRecordQueueBindSparse(layer_data *dev_data, VkQueue queue, u
     auto pFence = GetFenceNode(dev_data, fence);
     auto pQueue = GetQueueState(dev_data, queue);
 
-    if (pFence && pFence->scope == kSyncScopeInternal) {
-        SubmitFence(pQueue, pFence, std::max(1u, bindInfoCount));
+    if (pFence) {
+        if (pFence->scope == kSyncScopeInternal) {
+            SubmitFence(pQueue, pFence, std::max(1u, bindInfoCount));
+            if (!bindInfoCount) {
+                // No work to do, just dropping a fence in the queue by itself.
+                pQueue->submissions.emplace_back(std::vector<VkCommandBuffer>(), std::vector<SEMAPHORE_WAIT>(),
+                                                 std::vector<VkSemaphore>(), std::vector<VkSemaphore>(), fence);
+            }
+        } else {
+            // Retire work up until this fence early, we will not see the wait that corresponds to this signal
+            early_retire_seq = pQueue->seq + pQueue->submissions.size();
+            if (!dev_data->external_sync_warning) {
+                dev_data->external_sync_warning = true;
+                log_msg(dev_data->report_data, VK_DEBUG_REPORT_WARNING_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_FENCE_EXT,
+                        HandleToUint64(fence), __LINE__, DRAWSTATE_QUEUE_FORWARD_PROGRESS, "DS",
+                        "vkQueueBindSparse(): Signaling external fence 0x%" PRIx64 " on queue 0x%" PRIx64
+                        " will disable validation of preceding command buffer lifecycle states and the in-use status of "
+                        "associated objects.",
+                        HandleToUint64(fence), HandleToUint64(queue));
+            }
+        }
     }
 
     for (uint32_t bindIdx = 0; bindIdx < bindInfoCount; ++bindIdx) {
@@ -8913,7 +8945,7 @@ static void PostCallRecordQueueBindSparse(layer_data *dev_data, VkQueue queue, u
                     semaphore_signals.push_back(semaphore);
                 } else {
                     // Retire work up until this submit early, we will not see the wait that corresponds to this signal
-                    early_retire_seq = pQueue->seq + pQueue->submissions.size() + 1;
+                    early_retire_seq = std::max(early_retire_seq, pQueue->seq + pQueue->submissions.size() + 1);
                     if (!dev_data->external_sync_warning) {
                         dev_data->external_sync_warning = true;
                         log_msg(dev_data->report_data, VK_DEBUG_REPORT_WARNING_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_SEMAPHORE_EXT,
@@ -8933,12 +8965,6 @@ static void PostCallRecordQueueBindSparse(layer_data *dev_data, VkQueue queue, u
 
     if (early_retire_seq) {
         RetireWorkOnQueue(dev_data, pQueue, early_retire_seq);
-    }
-
-    if (pFence && !bindInfoCount) {
-        // No work to do, just dropping a fence in the queue by itself.
-        pQueue->submissions.emplace_back(std::vector<VkCommandBuffer>(), std::vector<SEMAPHORE_WAIT>(), std::vector<VkSemaphore>(),
-                                         std::vector<VkSemaphore>(), fence);
     }
 }
 
