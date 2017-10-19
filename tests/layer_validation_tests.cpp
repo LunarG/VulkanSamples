@@ -20339,6 +20339,54 @@ TEST_F(VkLayerTest, InvalidCreateDescriptorPool) {
 // POSITIVE VALIDATION TESTS
 //
 // These tests do not expect to encounter ANY validation errors pass only if this is true
+
+TEST_F(VkPositiveLayerTest, UncompressedToCompressedImageCopy) {
+    TEST_DESCRIPTION("Image copies between compressed and uncompressed images");
+    ASSERT_NO_FATAL_FAILURE(Init());
+
+    VkImageObj uncomp_color_image(m_device);
+    VkImageObj comp_color_image(m_device);
+
+    if (!ImageFormatIsSupported(gpu(), VK_FORMAT_R16G16B16A16_UINT, VK_IMAGE_TILING_OPTIMAL) ||
+        !ImageFormatIsSupported(gpu(), VK_FORMAT_BC1_RGBA_SRGB_BLOCK, VK_IMAGE_TILING_OPTIMAL)) {
+        printf("             Required formats not supported - UncompressedToCompressedImageCopy skipped.\n");
+        return;
+    }
+
+    uncomp_color_image.Init(3, 3, 1, VK_FORMAT_R16G16B16A16_UINT, VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT);
+    comp_color_image.Init(12, 12, 1, VK_FORMAT_BC1_RGBA_SRGB_BLOCK, VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT);
+
+    ASSERT_TRUE(uncomp_color_image.initialized());
+    ASSERT_TRUE(comp_color_image.initialized());
+
+    m_errorMonitor->ExpectSuccess();
+
+    VkImageCopy copyRegion;
+    copyRegion.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    copyRegion.srcSubresource.mipLevel = 0;
+    copyRegion.srcSubresource.baseArrayLayer = 0;
+    copyRegion.srcSubresource.layerCount = 1;
+    copyRegion.srcOffset = { 0, 0, 0 };
+    copyRegion.dstSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    copyRegion.dstSubresource.mipLevel = 0;
+    copyRegion.dstSubresource.baseArrayLayer = 0;
+    copyRegion.dstSubresource.layerCount = 1;
+    copyRegion.dstOffset = { 0, 0, 0 };
+    copyRegion.extent = { 3, 3, 1 };
+
+    m_commandBuffer->begin();
+
+    // Copy from uncompressed to compressed
+    vkCmdCopyImage(m_commandBuffer->handle(), uncomp_color_image.handle(), VK_IMAGE_LAYOUT_GENERAL, comp_color_image.handle(),
+        VK_IMAGE_LAYOUT_GENERAL, 1, &copyRegion);
+    // And from compressed to uncompressed
+    vkCmdCopyImage(m_commandBuffer->handle(), comp_color_image.handle(), VK_IMAGE_LAYOUT_GENERAL, uncomp_color_image.handle(),
+        VK_IMAGE_LAYOUT_GENERAL, 1, &copyRegion);
+
+    m_errorMonitor->VerifyNotFound();
+    m_commandBuffer->end();
+}
+
 TEST_F(VkPositiveLayerTest, DeleteDescriptorSetLayoutsBeforeDescriptorSets) {
     TEST_DESCRIPTION("Create DSLayouts and DescriptorSets and then delete the DSLayouts before the DescriptorSets.");
     ASSERT_NO_FATAL_FAILURE(Init());
