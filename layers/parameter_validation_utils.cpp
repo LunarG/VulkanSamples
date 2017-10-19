@@ -498,8 +498,22 @@ VKAPI_ATTR VkResult VKAPI_CALL vkCreateDevice(VkPhysicalDevice physicalDevice, c
             my_device_data->device = *pDevice;
 
             // Save app-enabled features in this device's layer_data structure
-            if (pCreateInfo->pEnabledFeatures) {
-                my_device_data->physical_device_features = *pCreateInfo->pEnabledFeatures;
+            // The enabled features can come from either pEnabledFeatures, or from the pNext chain
+            const VkPhysicalDeviceFeatures *enabled_features_found = pCreateInfo->pEnabledFeatures;
+            if ((nullptr == enabled_features_found) && my_device_data->extensions.vk_khr_get_physical_device_properties_2) {
+                const GenericHeader *current = reinterpret_cast<const GenericHeader *>(pCreateInfo->pNext);
+                while (current) {
+                    if (VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2_KHR == current->sType) {
+                        const VkPhysicalDeviceFeatures2KHR *features2 = reinterpret_cast<const VkPhysicalDeviceFeatures2KHR *>(current);
+                        enabled_features_found = &(features2->features);
+                        current = nullptr;
+                    } else {
+                        current = reinterpret_cast<const GenericHeader *>(current->pNext);
+                    }
+                }
+            }
+            if (enabled_features_found) {
+                    my_device_data->physical_device_features = *enabled_features_found;
             } else {
                 memset(&my_device_data->physical_device_features, 0, sizeof(VkPhysicalDeviceFeatures));
             }

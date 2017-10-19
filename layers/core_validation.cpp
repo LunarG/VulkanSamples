@@ -2139,9 +2139,25 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateDevice(VkPhysicalDevice gpu, const VkDevice
     }
 
     // Check that any requested features are available
-    if (pCreateInfo->pEnabledFeatures) {
-        skip |= ValidateRequestedFeatures(instance_data, pd_state, pCreateInfo->pEnabledFeatures);
+    // The enabled features can come from either pEnabledFeatures, or from the pNext chain
+    const VkPhysicalDeviceFeatures *enabled_features_found = pCreateInfo->pEnabledFeatures;
+    if (nullptr == enabled_features_found) {
+        GENERIC_HEADER *struct_header = (GENERIC_HEADER *)pCreateInfo->pNext;
+        while (struct_header) {
+            if (VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2_KHR == struct_header->sType) {
+                VkPhysicalDeviceFeatures2KHR *features2 = (VkPhysicalDeviceFeatures2KHR *)struct_header;
+                enabled_features_found =  &(features2->features);
+                struct_header = nullptr;
+            } else {
+                struct_header = (GENERIC_HEADER *)struct_header->pNext;
+            }
+        }
     }
+
+    if (enabled_features_found) {
+        skip |= ValidateRequestedFeatures(instance_data, pd_state, enabled_features_found);
+    }
+
     skip |=
         ValidateDeviceQueueCreateInfos(instance_data, pd_state, pCreateInfo->queueCreateInfoCount, pCreateInfo->pQueueCreateInfos);
 
@@ -2188,8 +2204,8 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateDevice(VkPhysicalDevice gpu, const VkDevice
     instance_data->dispatch_table.GetPhysicalDeviceQueueFamilyProperties(
         gpu, &count, &device_data->phys_dev_properties.queue_family_properties[0]);
     // TODO: device limits should make sure these are compatible
-    if (pCreateInfo->pEnabledFeatures) {
-        device_data->enabled_features = *pCreateInfo->pEnabledFeatures;
+    if (enabled_features_found) {
+        device_data->enabled_features = *enabled_features_found;
     } else {
         memset(&device_data->enabled_features, 0, sizeof(VkPhysicalDeviceFeatures));
     }
