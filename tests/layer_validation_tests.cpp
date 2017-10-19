@@ -25876,6 +25876,100 @@ TEST_F(VkLayerTest, AMDMixedAttachmentSamplesValidateGraphicsPipeline) {
     vkDestroyPipelineLayout(m_device->device(), pipeline_layout, NULL);
 }
 
+TEST_F(VkPositiveLayerTest, ParameterLayerFeatures2Capture) {
+    TEST_DESCRIPTION("Ensure parameter_validation_layer correctly captures physical device features");
+    if (InstanceExtensionSupported(VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME)) {
+        m_instance_extension_names.push_back(VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME);
+    } else {
+        printf("             Did not find VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME; skipped.\n");
+        return;
+    }
+
+    ASSERT_NO_FATAL_FAILURE(InitFramework(myDbgFunc, m_errorMonitor));
+
+    PFN_vkGetPhysicalDeviceFeatures2KHR vkGetPhysicalDeviceFeatures2KHR =
+        (PFN_vkGetPhysicalDeviceFeatures2KHR)vkGetInstanceProcAddr(instance(), "vkGetPhysicalDeviceFeatures2KHR");
+    ASSERT_TRUE(vkGetPhysicalDeviceFeatures2KHR != nullptr);
+
+    VkResult err;
+    m_errorMonitor->ExpectSuccess();
+
+    VkPhysicalDeviceFeatures2KHR features2;
+    features2.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2_KHR;
+    features2.pNext = nullptr;
+
+    vkGetPhysicalDeviceFeatures2KHR(gpu(), &features2);
+
+    // We're not creating a valid m_device, but the phy wrapper is useful
+    vk_testing::PhysicalDevice physical_device(gpu());
+    vk_testing::QueueCreateInfoArray queue_info(physical_device.queue_properties());
+
+    VkDeviceCreateInfo dev_info = {};
+    dev_info.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
+    dev_info.pNext = &features2;
+    dev_info.flags = 0;
+    dev_info.queueCreateInfoCount = queue_info.size();
+    dev_info.pQueueCreateInfos = queue_info.data();
+    dev_info.enabledLayerCount = 0;
+    dev_info.ppEnabledLayerNames = nullptr;
+    dev_info.enabledExtensionCount = 0;
+    dev_info.ppEnabledExtensionNames = nullptr;
+    dev_info.pEnabledFeatures = nullptr;
+
+    VkDevice device;
+    err = vkCreateDevice(gpu(), &dev_info, nullptr, &device);
+    ASSERT_VK_SUCCESS(err);
+
+    if (features2.features.samplerAnisotropy) {
+        // Test that the parameter layer is caching the features correctly using CreateSampler
+        VkSamplerCreateInfo sampler_ci = {};
+        sampler_ci.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
+        sampler_ci.pNext = nullptr;
+        sampler_ci.magFilter = VK_FILTER_NEAREST;
+        sampler_ci.minFilter = VK_FILTER_NEAREST;
+        sampler_ci.mipmapMode = VK_SAMPLER_MIPMAP_MODE_NEAREST;
+        sampler_ci.addressModeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+        sampler_ci.addressModeV = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+        sampler_ci.addressModeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+        sampler_ci.mipLodBias = 1.0;
+        // If the features were not captured correctly, this should cause an error
+        sampler_ci.anisotropyEnable = VK_TRUE;
+        sampler_ci.maxAnisotropy = physical_device.properties().limits.maxSamplerAnisotropy;
+        sampler_ci.compareEnable = VK_FALSE;
+        sampler_ci.compareOp = VK_COMPARE_OP_NEVER;
+        sampler_ci.minLod = 1.0;
+        sampler_ci.maxLod = 1.0;
+        sampler_ci.borderColor = VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE;
+        sampler_ci.unnormalizedCoordinates = VK_FALSE;
+        VkSampler sampler;
+
+        err = vkCreateSampler(device, &sampler_ci, nullptr, &sampler);
+        ASSERT_VK_SUCCESS(err);
+        vkDestroySampler(device, sampler, nullptr);
+    } else {
+        printf("             Feature samplerAnisotropy not enabled;  parameter_layer check skipped.\n");
+    }
+
+    // Verify the core validation layer has captured the physical device features by creating a a query pool.
+    if (features2.features.pipelineStatisticsQuery) {
+        VkQueryPool query_pool;
+        VkQueryPoolCreateInfo qpci{};
+        qpci.sType = VK_STRUCTURE_TYPE_QUERY_POOL_CREATE_INFO;
+        qpci.queryType = VK_QUERY_TYPE_PIPELINE_STATISTICS;
+        qpci.queryCount = 1;
+        err = vkCreateQueryPool(device, &qpci, nullptr, &query_pool);
+        ASSERT_VK_SUCCESS(err);
+
+        vkDestroyQueryPool(device, query_pool, nullptr);
+    } else {
+        printf("             Feature pipelineStatisticsQuery not enabled;  core_validation_layer check skipped.\n");
+    }
+
+    vkDestroyDevice(device, nullptr);
+
+    m_errorMonitor->VerifyNotFound();
+}
+
 #if defined(ANDROID) && defined(VALIDATION_APK)
 const char *appTag = "VulkanLayerValidationTests";
 static bool initialized = false;
