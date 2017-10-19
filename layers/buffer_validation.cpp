@@ -1394,16 +1394,31 @@ bool ValidateCopyImageTransferGranularityRequirements(layer_data *device_data, c
                                                       const IMAGE_STATE *src_img, const IMAGE_STATE *dst_img,
                                                       const VkImageCopy *region, const uint32_t i, const char *function) {
     bool skip = false;
+    // Source image checks
     VkExtent3D granularity = GetScaledItg(device_data, cb_node, src_img);
     skip |= CheckItgOffset(device_data, cb_node, &region->srcOffset, &granularity, i, function, "srcOffset");
     VkExtent3D subresource_extent = GetImageSubresourceExtent(src_img, &region->srcSubresource);
-    skip |= CheckItgExtent(device_data, cb_node, &region->extent, &region->srcOffset, &granularity, &subresource_extent,
+    VkExtent3D extent = region->extent;
+    if (FormatIsCompressed(src_img->createInfo.format) && !FormatIsCompressed(dst_img->createInfo.format)) {
+        // Src is compressed and dest is uncompressed, adjust extent:
+        VkExtent3D block_size = FormatCompressedTexelBlockExtent(src_img->createInfo.format);
+        extent.width /= block_size.width;
+        extent.height /= block_size.height;
+    }
+    skip |= CheckItgExtent(device_data, cb_node, &extent, &region->srcOffset, &granularity, &subresource_extent,
                            src_img->createInfo.imageType, i, function, "extent");
 
+    // Destination image checks
     granularity = GetScaledItg(device_data, cb_node, dst_img);
     skip |= CheckItgOffset(device_data, cb_node, &region->dstOffset, &granularity, i, function, "dstOffset");
     subresource_extent = GetImageSubresourceExtent(dst_img, &region->dstSubresource);
-    skip |= CheckItgExtent(device_data, cb_node, &region->extent, &region->dstOffset, &granularity, &subresource_extent,
+    if (!FormatIsCompressed(src_img->createInfo.format) && FormatIsCompressed(dst_img->createInfo.format)) {
+        // Src is uncompressed and dest is compressed, adjust extent:
+        VkExtent3D block_size = FormatCompressedTexelBlockExtent(dst_img->createInfo.format);
+        extent.width *= block_size.width;
+        extent.height *= block_size.height;
+    }
+    skip |= CheckItgExtent(device_data, cb_node, &extent, &region->dstOffset, &granularity, &subresource_extent,
                            dst_img->createInfo.imageType, i, function, "extent");
     return skip;
 }
@@ -1508,32 +1523,39 @@ bool ValidateImageCopyData(const layer_data *device_data, const debug_report_dat
                                 validation_error_map[VALIDATION_ERROR_09c0013a]);
             }
 
-            // extent width must be a multiple of block width, or extent+offset width must equal subresource width
+            // Extent width must be a multiple of block width, or extent+offset width must equal subresource width
+            VkExtent3D adj_extent = image_copy.extent;
+            if (!FormatIsCompressed(dst_state->createInfo.format)) {
+                // Copying from compressed source. Modify extent to be extent / texel block size
+                adj_extent.width /= block_size.width;
+                adj_extent.height /= block_size.height;
+            }
+
             VkExtent3D mip_extent = GetImageSubresourceExtent(src_state, &(image_copy.srcSubresource));
-            if ((SafeModulo(image_copy.extent.width, block_size.width) != 0) &&
-                (image_copy.extent.width + image_copy.srcOffset.x != mip_extent.width)) {
+            if ((SafeModulo(adj_extent.width, block_size.width) != 0) &&
+                (adj_extent.width + image_copy.srcOffset.x != mip_extent.width)) {
                 skip |=
                     log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT,
                             reinterpret_cast<const uint64_t &>(src_state->image), __LINE__, VALIDATION_ERROR_09c0013c, "IMAGE",
                             "vkCmdCopyImage(): pRegion[%d] extent width (%d) must be a multiple of the compressed texture block "
                             "width (%d), or when added to srcOffset.x (%d) must equal the image subresource width (%d). %s.",
-                            i, image_copy.extent.width, block_size.width, image_copy.srcOffset.x, mip_extent.width,
+                            i, adj_extent.width, block_size.width, image_copy.srcOffset.x, mip_extent.width,
                             validation_error_map[VALIDATION_ERROR_09c0013c]);
             }
 
-            // extent height must be a multiple of block height, or extent+offset height must equal subresource height
-            if ((SafeModulo(image_copy.extent.height, block_size.height) != 0) &&
-                (image_copy.extent.height + image_copy.srcOffset.y != mip_extent.height)) {
+            // Extent height must be a multiple of block height, or extent+offset height must equal subresource height
+            if ((SafeModulo(adj_extent.height, block_size.height) != 0) &&
+                (adj_extent.height + image_copy.srcOffset.y != mip_extent.height)) {
                 skip |=
                     log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT,
                             reinterpret_cast<const uint64_t &>(src_state->image), __LINE__, VALIDATION_ERROR_09c0013e, "IMAGE",
                             "vkCmdCopyImage(): pRegion[%d] extent height (%d) must be a multiple of the compressed texture block "
                             "height (%d), or when added to srcOffset.y (%d) must equal the image subresource height (%d). %s.",
-                            i, image_copy.extent.height, block_size.height, image_copy.srcOffset.y, mip_extent.height,
+                            i, adj_extent.height, block_size.height, image_copy.srcOffset.y, mip_extent.height,
                             validation_error_map[VALIDATION_ERROR_09c0013e]);
             }
 
-            // extent depth must be a multiple of block depth, or extent+offset depth must equal subresource depth
+            // Extent depth must be a multiple of block depth, or extent+offset depth must equal subresource depth
             uint32_t copy_depth = (slice_override ? depth_slices : image_copy.extent.depth);
             if ((SafeModulo(copy_depth, block_size.depth) != 0) && (copy_depth + image_copy.srcOffset.z != mip_extent.depth)) {
                 skip |=
@@ -1636,32 +1658,39 @@ bool ValidateImageCopyData(const layer_data *device_data, const debug_report_dat
                                 validation_error_map[VALIDATION_ERROR_09c00144]);
             }
 
-            // extent width must be a multiple of block width, or extent+offset width must equal subresource width
+            // Extent width must be a multiple of block width, or extent+offset width must equal subresource width
+            VkExtent3D adj_extent = image_copy.extent;
+            if (!FormatIsCompressed(src_state->createInfo.format)) {
+                // Copying from uncompressed source. Modify extent to be extent * texel block size
+                adj_extent.width *= block_size.width;
+                adj_extent.height *= block_size.height;
+            }
+
             VkExtent3D mip_extent = GetImageSubresourceExtent(dst_state, &(image_copy.dstSubresource));
-            if ((SafeModulo(image_copy.extent.width, block_size.width) != 0) &&
-                (image_copy.extent.width + image_copy.dstOffset.x != mip_extent.width)) {
+            if ((SafeModulo(adj_extent.width, block_size.width) != 0) &&
+                (adj_extent.width + image_copy.dstOffset.x != mip_extent.width)) {
                 skip |=
                     log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT,
                             reinterpret_cast<const uint64_t &>(dst_state->image), __LINE__, VALIDATION_ERROR_09c00146, "IMAGE",
                             "vkCmdCopyImage(): pRegion[%d] extent width (%d) must be a multiple of the compressed texture block "
                             "width (%d), or when added to dstOffset.x (%d) must equal the image subresource width (%d). %s.",
-                            i, image_copy.extent.width, block_size.width, image_copy.dstOffset.x, mip_extent.width,
+                            i, adj_extent.width, block_size.width, image_copy.dstOffset.x, mip_extent.width,
                             validation_error_map[VALIDATION_ERROR_09c00146]);
             }
 
-            // extent height must be a multiple of block height, or extent+offset height must equal subresource height
-            if ((SafeModulo(image_copy.extent.height, block_size.height) != 0) &&
-                (image_copy.extent.height + image_copy.dstOffset.y != mip_extent.height)) {
+            // Extent height must be a multiple of block height, or extent+offset height must equal subresource height
+            if ((SafeModulo(adj_extent.height, block_size.height) != 0) &&
+                (adj_extent.height + image_copy.dstOffset.y != mip_extent.height)) {
                 skip |=
                     log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT,
                             reinterpret_cast<const uint64_t &>(dst_state->image), __LINE__, VALIDATION_ERROR_09c00148, "IMAGE",
                             "vkCmdCopyImage(): pRegion[%d] extent height (%d) must be a multiple of the compressed texture block "
                             "height (%d), or when added to dstOffset.y (%d) must equal the image subresource height (%d). %s.",
-                            i, image_copy.extent.height, block_size.height, image_copy.dstOffset.y, mip_extent.height,
+                            i, adj_extent.height, block_size.height, image_copy.dstOffset.y, mip_extent.height,
                             validation_error_map[VALIDATION_ERROR_09c00148]);
             }
 
-            // extent depth must be a multiple of block depth, or extent+offset depth must equal subresource depth
+            // Extent depth must be a multiple of block depth, or extent+offset depth must equal subresource depth
             uint32_t copy_depth = (slice_override ? depth_slices : image_copy.extent.depth);
             if ((SafeModulo(copy_depth, block_size.depth) != 0) && (copy_depth + image_copy.dstOffset.z != mip_extent.depth)) {
                 skip |=
