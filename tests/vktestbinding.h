@@ -138,6 +138,17 @@ class PhysicalDevice : public internal::Handle<VkPhysicalDevice> {
     VkPhysicalDeviceProperties device_properties_;
 };
 
+class QueueCreateInfoArray {
+   private:
+    std::vector<VkDeviceQueueCreateInfo> queue_info_;
+    std::vector<std::vector<float>> queue_priorities_;
+
+   public:
+    QueueCreateInfoArray(const std::vector<VkQueueFamilyProperties> &queue_props);
+    size_t size() const { return queue_info_.size(); }
+    const VkDeviceQueueCreateInfo *data() const { return queue_info_.data(); }
+};
+
 class Device : public internal::Handle<VkDevice> {
    public:
     explicit Device(VkPhysicalDevice phy) : phy_(phy) {}

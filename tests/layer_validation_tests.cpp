@@ -2029,20 +2029,7 @@ TEST_F(VkLayerTest, LeakAnObject) {
 
     ASSERT_NO_FATAL_FAILURE(Init());
 
-    const std::vector<VkQueueFamilyProperties> queue_props = m_device->queue_props;
-    std::vector<VkDeviceQueueCreateInfo> queue_info;
-    queue_info.reserve(queue_props.size());
-    std::vector<std::vector<float>> queue_priorities;
-    for (uint32_t i = 0; i < (uint32_t)queue_props.size(); i++) {
-        VkDeviceQueueCreateInfo qi = {};
-        qi.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
-        qi.pNext = NULL;
-        qi.queueFamilyIndex = i;
-        qi.queueCount = queue_props[i].queueCount;
-        queue_priorities.emplace_back(qi.queueCount, 0.0f);
-        qi.pQueuePriorities = queue_priorities[i].data();
-        queue_info.push_back(qi);
-    }
+    vk_testing::QueueCreateInfoArray queue_info(m_device->queue_props);
 
     // The sacrificial device object
     VkDevice testDevice;
@@ -13106,19 +13093,7 @@ TEST_F(VkLayerTest, InvalidQueryPoolCreate) {
 
     ASSERT_NO_FATAL_FAILURE(Init());
 
-    const std::vector<VkQueueFamilyProperties> queue_props = m_device->queue_props;
-    std::vector<VkDeviceQueueCreateInfo> queue_info;
-    queue_info.reserve(queue_props.size());
-    std::vector<std::vector<float>> queue_priorities;
-    for (uint32_t i = 0; i < (uint32_t)queue_props.size(); i++) {
-        VkDeviceQueueCreateInfo qi{};
-        qi.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
-        qi.queueFamilyIndex = i;
-        qi.queueCount = queue_props[i].queueCount;
-        queue_priorities.emplace_back(qi.queueCount, 0.0f);
-        qi.pQueuePriorities = queue_priorities[i].data();
-        queue_info.push_back(qi);
-    }
+    vk_testing::QueueCreateInfoArray queue_info(m_device->queue_props);
 
     VkDevice local_device;
     VkDeviceCreateInfo device_create_info = {};
@@ -20375,20 +20350,7 @@ TEST_F(VkLayerTest, Maintenance1AndNegativeViewport) {
     }
     ASSERT_NO_FATAL_FAILURE(InitState());
 
-    const std::vector<VkQueueFamilyProperties> queue_props = m_device->queue_props;
-    std::vector<VkDeviceQueueCreateInfo> queue_info;
-    queue_info.reserve(queue_props.size());
-    std::vector<std::vector<float>> queue_priorities;
-    for (uint32_t i = 0; i < (uint32_t)queue_props.size(); i++) {
-        VkDeviceQueueCreateInfo qi = {};
-        qi.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
-        qi.pNext = NULL;
-        qi.queueFamilyIndex = i;
-        qi.queueCount = queue_props[i].queueCount;
-        queue_priorities.emplace_back(qi.queueCount, 0.0f);
-        qi.pQueuePriorities = queue_priorities[i].data();
-        queue_info.push_back(qi);
-    }
+    vk_testing::QueueCreateInfoArray queue_info(m_device->queue_props);
     const char *extension_names[2] = {"VK_KHR_maintenance1", "VK_AMD_negative_viewport_height"};
     VkDevice testDevice;
     VkDeviceCreateInfo device_create_info = {};

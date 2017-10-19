@@ -224,6 +224,21 @@ std::vector<VkLayerProperties> PhysicalDevice::layers() const {
     return layer_props;
 }
 
+QueueCreateInfoArray::QueueCreateInfoArray(const std::vector<VkQueueFamilyProperties> &queue_props) : queue_info_(), queue_priorities_() {
+    queue_info_.reserve(queue_props.size());
+
+    for (uint32_t i = 0; i < (uint32_t)queue_props.size(); i++) {
+        VkDeviceQueueCreateInfo qi = {};
+        qi.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
+        qi.pNext = NULL;
+        qi.queueFamilyIndex = i;
+        qi.queueCount = queue_props[i].queueCount;
+        queue_priorities_.emplace_back(qi.queueCount, 0.0f);
+        qi.pQueuePriorities = queue_priorities_[i].data();
+        queue_info_.push_back(qi);
+    }
+}
+
 Device::~Device() {
     if (!initialized()) return;
 
@@ -238,25 +253,11 @@ Device::~Device() {
 void Device::init(std::vector<const char *> &extensions, VkPhysicalDeviceFeatures *features) {
     // request all queues
     const std::vector<VkQueueFamilyProperties> queue_props = phy_.queue_properties();
-    std::vector<VkDeviceQueueCreateInfo> queue_info;
-    queue_info.reserve(queue_props.size());
-
-    std::vector<std::vector<float>> queue_priorities;
-
+    QueueCreateInfoArray queue_info(phy_.queue_properties());
     for (uint32_t i = 0; i < (uint32_t)queue_props.size(); i++) {
-        VkDeviceQueueCreateInfo qi = {};
-        qi.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
-        qi.pNext = NULL;
-        qi.queueFamilyIndex = i;
-        qi.queueCount = queue_props[i].queueCount;
-
-        queue_priorities.emplace_back(qi.queueCount, 0.0f);
-
-        qi.pQueuePriorities = queue_priorities[i].data();
         if (queue_props[i].queueFlags & VK_QUEUE_GRAPHICS_BIT) {
             graphics_queue_node_index_ = i;
         }
-        queue_info.push_back(qi);
     }
 
     VkDeviceCreateInfo dev_info = {};
