@@ -447,8 +447,8 @@ class HelperFileOutputGenerator(OutputGenerator):
     # Build the footer of the get_struct_chain_size function
     def GenerateChainSizePostamble(self):
         postamble  = '            default:\n'
-        postamble += '                assert(0);\n'
         postamble += '                struct_size += 0;\n'
+        postamble += '                break;'
         postamble += '        }\n'
         postamble += '        pNext = (VkApplicationInfo*)pNext->pNext;\n'
         postamble += '    }\n'
@@ -465,7 +465,6 @@ class HelperFileOutputGenerator(OutputGenerator):
     # Build the footer of the get_struct_size function
     def GenerateStructSizePostamble(self):
         postamble  = '    default:\n'
-        postamble += '        assert(0);\n'
         postamble += '        return(0);\n'
         postamble += '    }\n'
         postamble += '}'
