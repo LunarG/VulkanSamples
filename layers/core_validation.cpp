@@ -9928,31 +9928,19 @@ static bool PreCallValidateAcquireNextImageKHR(layer_data *dev_data, VkDevice de
 static void PostCallRecordAcquireNextImageKHR(layer_data *dev_data, VkDevice device, VkSwapchainKHR swapchain, uint64_t timeout,
                                               VkSemaphore semaphore, VkFence fence, uint32_t *pImageIndex) {
     auto pFence = GetFenceNode(dev_data, fence);
-    if (pFence) {
-        if (GetDeviceExtensions(dev_data)->vk_khr_external_fence) {
-            // A successful call with external fences enabled acts as a temporary import
-            if (pFence->scope == kSyncScopeInternal) {
-                pFence->scope = kSyncScopeExternalTemporary;
-            }
-        } else if (pFence->scope == kSyncScopeInternal) {
-            // A successful call without external fences acts as a signal operation
-            pFence->state = FENCE_INFLIGHT;
-            pFence->signaler.first = VK_NULL_HANDLE;  // ANI isn't on a queue, so this can't participate in a completion proof.
-        }
+    if (pFence && pFence->scope == kSyncScopeInternal) {
+        // Treat as inflight since it is valid to wait on this fence, even in cases where it is technically a temporary
+        // import
+        pFence->state = FENCE_INFLIGHT;
+        pFence->signaler.first = VK_NULL_HANDLE;  // ANI isn't on a queue, so this can't participate in a completion proof.
     }
 
     auto pSemaphore = GetSemaphoreNode(dev_data, semaphore);
-    if (pSemaphore) {
-        if (GetDeviceExtensions(dev_data)->vk_khr_external_semaphore) {
-            // A successful call with external semaphores enabled acts as a temporary import
-            if (pSemaphore->scope == kSyncScopeInternal) {
-                pSemaphore->scope = kSyncScopeExternalTemporary;
-            }
-        } else if (pSemaphore->scope == kSyncScopeInternal) {
-            // A successful call without external semaphores acts as a signal operation
-            pSemaphore->signaled = true;
-            pSemaphore->signaler.first = VK_NULL_HANDLE;
-        }
+    if (pSemaphore && pSemaphore->scope == kSyncScopeInternal) {
+        // Treat as signaled since it is valid to wait on this semaphore, even in cases where it is technically a
+        // temporary import
+        pSemaphore->signaled = true;
+        pSemaphore->signaler.first = VK_NULL_HANDLE;
     }
 
     // Mark the image as acquired.
