@@ -246,31 +246,7 @@ VKAPI_ATTR void VKAPI_CALL CmdPushDescriptorSetKHR(VkCommandBuffer commandBuffer
                                VALIDATION_ERROR_1be00009);
         if (pDescriptorWrites) {
             for (uint32_t index0 = 0; index0 < descriptorWriteCount; ++index0) {
-                if (pDescriptorWrites[index0].pImageInfo) {
-
-                    for (uint32_t index1 = 0; index1 < pDescriptorWrites[index0].descriptorCount; ++index1) {
-                        skip |=
-                            ValidateObject(commandBuffer, pDescriptorWrites[index0].pImageInfo[index1].sampler,
-                                           kVulkanObjectTypeSampler, false, VALIDATION_ERROR_UNDEFINED, VALIDATION_ERROR_04600009);
-                        skip |= ValidateObject(commandBuffer, pDescriptorWrites[index0].pImageInfo[index1].imageView,
-                                               kVulkanObjectTypeImageView, false, VALIDATION_ERROR_UNDEFINED,
-                                               VALIDATION_ERROR_04600009);
-                    }
-                }
-                if (pDescriptorWrites[index0].pBufferInfo) {
-                    for (uint32_t index1 = 0; index1 < pDescriptorWrites[index0].descriptorCount; ++index1) {
-                        skip |=
-                            ValidateObject(commandBuffer, pDescriptorWrites[index0].pBufferInfo[index1].buffer,
-                                           kVulkanObjectTypeBuffer, false, VALIDATION_ERROR_04401a01, VALIDATION_ERROR_UNDEFINED);
-                    }
-                }
-                if (pDescriptorWrites[index0].pTexelBufferView) {
-                    for (uint32_t index1 = 0; index1 < pDescriptorWrites[index0].descriptorCount; ++index1) {
-                        skip |= ValidateObject(commandBuffer, pDescriptorWrites[index0].pTexelBufferView[index1],
-                                               kVulkanObjectTypeBufferView, false, VALIDATION_ERROR_UNDEFINED,
-                                               VALIDATION_ERROR_15c00009);
-                    }
-                }
+                skip |= ValidateDescriptorWrite(commandBuffer, &pDescriptorWrites[index0], true);
             }
         }
     }
