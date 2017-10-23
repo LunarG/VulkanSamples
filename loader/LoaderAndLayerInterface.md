@@ -2401,7 +2401,7 @@ corresponding ICD only supports either interface version 0 or 1.
 
 From the other side of the interface, if an ICD sees a call to
 `vk_icdGetInstanceProcAddr` before a call to
-`vk_icdGetLoaderICDInterfaceVersion`, then it knows that loader making the calls
+`vk_icdNegotiateLoaderICDInterfaceVersion`, then it knows that loader making the calls
 is a legacy loader supporting version 0 or 1.  If the loader calls
 `vk_icdGetInstanceProcAddr` first, it supports at least version 1.  Otherwise,
 the loader only supports version 0.
