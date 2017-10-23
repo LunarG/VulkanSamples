@@ -571,6 +571,8 @@ func_struct_id_map = {
 'VkPhysicalDeviceSamplerYcbcrConversionFeaturesKHR' : 515,
 'VkSamplerYcbcrConversionImageFormatPropertiesKHR' : 516,
 'VkSamplerYcbcrConversionInfoKHR' : 517,
+'VkDeviceQueueGlobalPriorityCreateInfoEXT' : 518,
+'vkGetShaderInfoAMD' : 519,
 ### ADD New func/struct mappings above this line
 }
 # Mapping of params to unique IDs
@@ -1076,6 +1078,10 @@ implicit_param_map = {
 'pViewFormats' : 498,
 'conversion' : 499,
 'pPostSubpassSampleLocations' : 500,
+'globalPriority' : 501,
+'shaderStage' : 502,
+'infoType' : 503,
+'pInfoSize' : 504,
 ### ADD New implicit param mappings above this line
 }
 
