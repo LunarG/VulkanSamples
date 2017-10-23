@@ -5178,6 +5178,9 @@ VKAPI_ATTR VkResult VKAPI_CALL terminator_CreateDevice(VkPhysicalDevice physical
     PFN_vkCreateDevice fpCreateDevice = icd_term->dispatch.CreateDevice;
     struct loader_extension_list icd_exts;
 
+    struct VkStructureHeader *caller_dgci_container = NULL;
+    VkDeviceGroupDeviceCreateInfoKHX *caller_dgci = NULL;
+
     dev->phys_dev_term = phys_dev_term;
 
     icd_exts.list = NULL;
@@ -5271,6 +5274,10 @@ VKAPI_ATTR VkResult VKAPI_CALL terminator_CreateDevice(VkPhysicalDevice physical
                     }
                     temp_struct->pPhysicalDevices = phys_dev_array;
 
+                    // Keep track of pointers to restore pNext chain before returning
+                    caller_dgci_container = pPrev;
+                    caller_dgci = cur_struct;
+
                     // Replace the old struct in the pNext chain with this one.
                     pPrev->pNext = (const void *)temp_struct;
                     pNext = (struct VkStructureHeader *)(temp_struct);
@@ -5360,6 +5367,12 @@ VKAPI_ATTR VkResult VKAPI_CALL terminator_CreateDevice(VkPhysicalDevice physical
 out:
     if (NULL != icd_exts.list) {
         loader_destroy_generic_list(icd_term->this_instance, (struct loader_generic_list *)&icd_exts);
+    }
+
+    // Restore pNext pointer to old VkDeviceGroupDeviceCreateInfoKHX
+    // in the chain to maintain consistency for the caller.
+    if (caller_dgci_container != NULL) {
+        caller_dgci_container->pNext = caller_dgci;
     }
 
     return res;
