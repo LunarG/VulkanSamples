@@ -35,6 +35,7 @@
 #warning "Cubepp does not have code for Mir at this time"
 #endif
 
+#define VULKAN_HPP_NO_SMART_HANDLE
 #define VULKAN_HPP_NO_EXCEPTIONS
 #include <vulkan/vulkan.hpp>
 #include <vulkan/vk_sdk_platform.h>
