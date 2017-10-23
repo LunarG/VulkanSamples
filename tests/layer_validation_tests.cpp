@@ -2846,10 +2846,10 @@ TEST_F(VkLayerTest, ImageSampleCounts) {
     blit_region.dstOffsets[0] = {0, 0, 0};
     blit_region.dstOffsets[1] = {128, 128, 1};
 
-    // Create two images, the source with sampleCount = 2, and attempt to blit
+    // Create two images, the source with sampleCount = 4, and attempt to blit
     // between them
     {
-        image_create_info.samples = VK_SAMPLE_COUNT_2_BIT;
+        image_create_info.samples = VK_SAMPLE_COUNT_4_BIT;
         image_create_info.usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
         vk_testing::Image src_image;
         src_image.init(*m_device, (const VkImageCreateInfo &)image_create_info, reqs);
@@ -2902,33 +2902,33 @@ TEST_F(VkLayerTest, ImageSampleCounts) {
     {
         vk_testing::Buffer src_buffer;
         src_buffer.init_as_src(*m_device, 128 * 128 * 4, reqs);
-        image_create_info.samples = VK_SAMPLE_COUNT_8_BIT;
+        image_create_info.samples = VK_SAMPLE_COUNT_4_BIT;
         image_create_info.usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
         vk_testing::Image dst_image;
         dst_image.init(*m_device, (const VkImageCreateInfo &)image_create_info, reqs);
         m_commandBuffer->begin();
         m_errorMonitor->SetDesiredFailureMsg(
             VK_DEBUG_REPORT_ERROR_BIT_EXT,
-            "was created with a sample count of VK_SAMPLE_COUNT_8_BIT but must be VK_SAMPLE_COUNT_1_BIT");
+            "was created with a sample count of VK_SAMPLE_COUNT_4_BIT but must be VK_SAMPLE_COUNT_1_BIT");
         vkCmdCopyBufferToImage(m_commandBuffer->handle(), src_buffer.handle(), dst_image.handle(),
                                VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &copy_region);
         m_errorMonitor->VerifyFound();
         m_commandBuffer->end();
     }
 
-    // Create dst buffer and src image with sampleCount = 2 and attempt to copy
+    // Create dst buffer and src image with sampleCount = 4 and attempt to copy
     // image to buffer
     {
         vk_testing::Buffer dst_buffer;
         dst_buffer.init_as_dst(*m_device, 128 * 128 * 4, reqs);
-        image_create_info.samples = VK_SAMPLE_COUNT_2_BIT;
+        image_create_info.samples = VK_SAMPLE_COUNT_4_BIT;
         image_create_info.usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
         vk_testing::Image src_image;
         src_image.init(*m_device, (const VkImageCreateInfo &)image_create_info, reqs);
         m_commandBuffer->begin();
         m_errorMonitor->SetDesiredFailureMsg(
             VK_DEBUG_REPORT_ERROR_BIT_EXT,
-            "was created with a sample count of VK_SAMPLE_COUNT_2_BIT but must be VK_SAMPLE_COUNT_1_BIT");
+            "was created with a sample count of VK_SAMPLE_COUNT_4_BIT but must be VK_SAMPLE_COUNT_1_BIT");
         vkCmdCopyImageToBuffer(m_commandBuffer->handle(), src_image.handle(), VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
                                dst_buffer.handle(), 1, &copy_region);
         m_errorMonitor->VerifyFound();
