@@ -25413,15 +25413,17 @@ TEST_F(VkPositiveLayerTest, ExternalSemaphore) {
     err = vkQueueSubmit(m_device->m_queue, 4, si, VK_NULL_HANDLE);
     ASSERT_VK_SUCCESS(err);
 
-    // Signal the imported semaphore and wait on the exported semaphore
-    VkBindSparseInfo bi[] = {
-        {VK_STRUCTURE_TYPE_BIND_SPARSE_INFO, nullptr, 0, nullptr, 0, nullptr, 0, nullptr, 0, nullptr, 1, &import_semaphore},
-        {VK_STRUCTURE_TYPE_BIND_SPARSE_INFO, nullptr, 1, &export_semaphore, 0, nullptr, 0, nullptr, 0, nullptr, 0, nullptr},
-        {VK_STRUCTURE_TYPE_BIND_SPARSE_INFO, nullptr, 0, nullptr, 0, nullptr, 0, nullptr, 0, nullptr, 1, &import_semaphore},
-        {VK_STRUCTURE_TYPE_BIND_SPARSE_INFO, nullptr, 1, &export_semaphore, 0, nullptr, 0, nullptr, 0, nullptr, 0, nullptr},
-    };
-    err = vkQueueBindSparse(m_device->m_queue, 4, bi, VK_NULL_HANDLE);
-    ASSERT_VK_SUCCESS(err);
+    if (m_device->phy().features().sparseBinding) {
+        // Signal the imported semaphore and wait on the exported semaphore
+        VkBindSparseInfo bi[] = {
+            {VK_STRUCTURE_TYPE_BIND_SPARSE_INFO, nullptr, 0, nullptr, 0, nullptr, 0, nullptr, 0, nullptr, 1, &import_semaphore},
+            {VK_STRUCTURE_TYPE_BIND_SPARSE_INFO, nullptr, 1, &export_semaphore, 0, nullptr, 0, nullptr, 0, nullptr, 0, nullptr},
+            {VK_STRUCTURE_TYPE_BIND_SPARSE_INFO, nullptr, 0, nullptr, 0, nullptr, 0, nullptr, 0, nullptr, 1, &import_semaphore},
+            {VK_STRUCTURE_TYPE_BIND_SPARSE_INFO, nullptr, 1, &export_semaphore, 0, nullptr, 0, nullptr, 0, nullptr, 0, nullptr},
+        };
+        err = vkQueueBindSparse(m_device->m_queue, 4, bi, VK_NULL_HANDLE);
+        ASSERT_VK_SUCCESS(err);
+    }
 
     // Cleanup
     err = vkQueueWaitIdle(m_device->m_queue);
