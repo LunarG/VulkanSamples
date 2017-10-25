@@ -21156,6 +21156,63 @@ TEST_F(VkPositiveLayerTest, EmptyDescriptorUpdateTest) {
     vkDestroyBuffer(m_device->device(), buffer, NULL);
 }
 
+TEST_F(VkLayerTest, MultiplePushDescriptorSets) {
+    TEST_DESCRIPTION("Verify an error message for multiple push descriptor sets.");
+    VkResult err;
+    if (InstanceExtensionSupported(VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME)) {
+        m_instance_extension_names.push_back(VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME);
+    } else {
+        printf("             Did not find VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME; skipped.\n");
+        return;
+    }
+    ASSERT_NO_FATAL_FAILURE(InitFramework(myDbgFunc, m_errorMonitor));
+    if (DeviceExtensionSupported(gpu(), nullptr, VK_KHR_PUSH_DESCRIPTOR_EXTENSION_NAME)) {
+        m_device_extension_names.push_back(VK_KHR_PUSH_DESCRIPTOR_EXTENSION_NAME);
+    } else {
+        printf("             Push Descriptors Extension not supported, skipping tests\n");
+        return;
+    }
+    ASSERT_NO_FATAL_FAILURE(InitState());
+
+    VkDescriptorSetLayoutBinding dsl_binding = {};
+    dsl_binding.binding = 0;
+    dsl_binding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    dsl_binding.descriptorCount = 1;
+    dsl_binding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+    dsl_binding.pImmutableSamplers = NULL;
+    VkDescriptorSetLayoutCreateInfo ds_layout_ci = {};
+    ds_layout_ci.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+    ds_layout_ci.pNext = NULL;
+    ds_layout_ci.flags = VK_DESCRIPTOR_SET_LAYOUT_CREATE_PUSH_DESCRIPTOR_BIT_KHR;
+    ds_layout_ci.bindingCount = 1;
+    ds_layout_ci.pBindings = &dsl_binding;
+    const unsigned int descriptor_set_layout_count = 2;
+    VkDescriptorSetLayout ds_layouts[descriptor_set_layout_count];
+    for (unsigned int i = 0; i < descriptor_set_layout_count; ++i) {
+        dsl_binding.binding = i;
+        err = vkCreateDescriptorSetLayout(m_device->device(), &ds_layout_ci, NULL, &ds_layouts[i]);
+        ASSERT_VK_SUCCESS(err);
+    }
+
+    VkPipelineLayout pipeline_layout;
+    VkPipelineLayoutCreateInfo pipeline_layout_ci = {};
+    pipeline_layout_ci.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+    pipeline_layout_ci.pNext = NULL;
+    pipeline_layout_ci.pushConstantRangeCount = 0;
+    pipeline_layout_ci.pPushConstantRanges = NULL;
+    pipeline_layout_ci.setLayoutCount = descriptor_set_layout_count;
+    pipeline_layout_ci.pSetLayouts = ds_layouts;
+
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_0fe0024a);
+    err = vkCreatePipelineLayout(m_device->device(), &pipeline_layout_ci, NULL, &pipeline_layout);
+    m_errorMonitor->VerifyFound();
+
+    if (err == VK_SUCCESS)
+        vkDestroyPipelineLayout(m_device->device(), pipeline_layout, NULL);
+    for (unsigned int i = 0; i < descriptor_set_layout_count; ++i)
+        vkDestroyDescriptorSetLayout(m_device->device(), ds_layouts[i], NULL);
+}
+
 // This is a positive test. No failures are expected.
 TEST_F(VkPositiveLayerTest, PushDescriptorNullDstSetTest) {
     TEST_DESCRIPTION("Use null dstSet in CmdPushDescriptorSetKHR");

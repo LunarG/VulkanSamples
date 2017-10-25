@@ -4827,19 +4827,34 @@ VKAPI_ATTR VkResult VKAPI_CALL CreatePipelineLayout(VkDevice device, const VkPip
         }
     }
 
+    std::vector<std::shared_ptr<cvdescriptorset::DescriptorSetLayout const>> set_layouts(pCreateInfo->setLayoutCount, nullptr);
+    unique_lock_t lock(global_lock);
+    unsigned int push_descriptor_set_count = 0;
+    for (i = 0; i < pCreateInfo->setLayoutCount; ++i) {
+        set_layouts[i] = GetDescriptorSetLayout(dev_data, pCreateInfo->pSetLayouts[i]);
+        if (set_layouts[i]->IsPushDescriptor()) ++push_descriptor_set_count;
+    }
+    lock.unlock();
+    if (push_descriptor_set_count > 1) {
+        skip |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0,
+                        __LINE__, VALIDATION_ERROR_0fe0024a, "DS",
+                        "vkCreatePipelineLayout() Multiple push descriptor sets found. %s",
+                        validation_error_map[VALIDATION_ERROR_0fe0024a]);
+    }
+    if (skip) return VK_ERROR_VALIDATION_FAILED_EXT;
+
     VkResult result = dev_data->dispatch_table.CreatePipelineLayout(device, pCreateInfo, pAllocator, pPipelineLayout);
     if (VK_SUCCESS == result) {
-        lock_guard_t lock(global_lock);
+        lock.lock();
         PIPELINE_LAYOUT_NODE &plNode = dev_data->pipelineLayoutMap[*pPipelineLayout];
         plNode.layout = *pPipelineLayout;
         plNode.set_layouts.resize(pCreateInfo->setLayoutCount);
-        for (i = 0; i < pCreateInfo->setLayoutCount; ++i) {
-            plNode.set_layouts[i] = GetDescriptorSetLayout(dev_data, pCreateInfo->pSetLayouts[i]);
-        }
+        plNode.set_layouts.swap(set_layouts);
         plNode.push_constant_ranges.resize(pCreateInfo->pushConstantRangeCount);
         for (i = 0; i < pCreateInfo->pushConstantRangeCount; ++i) {
             plNode.push_constant_ranges[i] = pCreateInfo->pPushConstantRanges[i];
         }
+        lock.unlock();
     }
     return result;
 }
@@ -5501,7 +5516,7 @@ static void PreCallRecordCmdBindDescriptorSets(layer_data *device_data, GLOBAL_C
 
             if ((last_bound->boundDescriptorSets[set_idx + firstSet] != nullptr) &&
                 last_bound->boundDescriptorSets[set_idx + firstSet]->IsPushDescriptor()) {
-                last_bound->push_descriptors[set_idx + firstSet] = nullptr;
+                last_bound->push_descriptor_set = nullptr;
                 last_bound->boundDescriptorSets[set_idx + firstSet] = nullptr;
             }
 
@@ -5671,9 +5686,6 @@ static void PreCallRecordCmdPushDescriptorSetKHR(layer_data *device_data, VkComm
                                                  uint32_t descriptorWriteCount, const VkWriteDescriptorSet *pDescriptorWrites) {
     auto cb_state = GetCBNode(device_data, commandBuffer);
 
-    if (set >= cb_state->lastBound[pipelineBindPoint].push_descriptors.size()) {
-        cb_state->lastBound[pipelineBindPoint].push_descriptors.resize(set + 1);
-    }
     if (set >= cb_state->lastBound[pipelineBindPoint].boundDescriptorSets.size()) {
         cb_state->lastBound[pipelineBindPoint].boundDescriptorSets.resize(set + 1);
         cb_state->lastBound[pipelineBindPoint].dynamicOffsets.resize(set + 1);
@@ -5682,7 +5694,7 @@ static void PreCallRecordCmdPushDescriptorSetKHR(layer_data *device_data, VkComm
     std::unique_ptr<cvdescriptorset::DescriptorSet> new_desc{
         new cvdescriptorset::DescriptorSet(0, 0, layout_state->set_layouts[set], device_data)};
     cb_state->lastBound[pipelineBindPoint].boundDescriptorSets[set] = new_desc.get();
-    cb_state->lastBound[pipelineBindPoint].push_descriptors[set] = std::move(new_desc);
+    cb_state->lastBound[pipelineBindPoint].push_descriptor_set = std::move(new_desc);
 }
 
 VKAPI_ATTR void VKAPI_CALL CmdPushDescriptorSetKHR(VkCommandBuffer commandBuffer, VkPipelineBindPoint pipelineBindPoint,
