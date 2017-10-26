@@ -164,6 +164,24 @@ static VkSamplerCreateInfo SafeSaneSamplerCreateInfo() {
     return sampler_create_info;
 }
 
+// Valid (or needed) only for floating point numeric types
+struct NearestLessThan {
+    constexpr static int factor = -1;
+};
+struct NearestGreaterThan {
+    constexpr static int factor = 1;
+};
+template <typename T, typename Comp>
+T NearestNonEqual(const T value, const Comp &comp) {
+    T offset = value * T(Comp::factor);
+    T trial_offset = offset / T(2.);
+    while ((value + trial_offset) != value) {
+        offset = trial_offset;
+        trial_offset = trial_offset / T(2.0);
+    }
+    return value + offset;
+}
+
 // ErrorMonitor Usage:
 //
 // Call SetDesiredFailureMsg with a string to be compared against all
@@ -1207,6 +1225,77 @@ TEST_F(VkLayerTest, MirrorClampToEdgeNotEnabled) {
 
     vkCreateSampler(m_device->device(), &sampler_info, NULL, &sampler);
     m_errorMonitor->VerifyFound();
+}
+
+TEST_F(VkLayerTest, AnisotropyFeatureDisabled) {
+    TEST_DESCRIPTION("Validation should check anisotropy parameters are correct with samplerAnisotropy disabled.");
+
+    // Determine if required device features are available
+    VkPhysicalDeviceFeatures device_features = {};
+    ASSERT_NO_FATAL_FAILURE(InitFramework(myDbgFunc, m_errorMonitor));
+    ASSERT_NO_FATAL_FAILURE(GetPhysicalDeviceFeatures(&device_features));
+    device_features.samplerAnisotropy = VK_FALSE;  // force anisotropy off
+    ASSERT_NO_FATAL_FAILURE(InitState(&device_features));
+
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_1260085c);
+    VkSamplerCreateInfo sampler_info = SafeSaneSamplerCreateInfo();
+    // With the samplerAnisotropy disable, the sampler must not enable it.
+    sampler_info.anisotropyEnable = VK_TRUE;
+    VkSampler sampler = VK_NULL_HANDLE;
+
+    VkResult err;
+    err = vkCreateSampler(m_device->device(), &sampler_info, NULL, &sampler);
+    m_errorMonitor->VerifyFound();
+    if (VK_SUCCESS == err) {
+        vkDestroySampler(m_device->device(), sampler, NULL);
+    }
+    sampler = VK_NULL_HANDLE;
+}
+
+TEST_F(VkLayerTest, AnisotropyFeatureEnabled) {
+    TEST_DESCRIPTION("Validation must check several conditons that apply only when Anisotropy is enabled.");
+
+    // Determine if required device features are available
+    VkPhysicalDeviceFeatures device_features = {};
+    ASSERT_NO_FATAL_FAILURE(InitFramework(myDbgFunc, m_errorMonitor));
+    ASSERT_NO_FATAL_FAILURE(GetPhysicalDeviceFeatures(&device_features));
+
+    // These tests require that the device support sparse residency for 2D images
+    if (VK_TRUE != device_features.samplerAnisotropy) {
+        printf("             Test requires unsupported samplerAnisotropy feature. Skipped.\n");
+        return;
+    }
+
+    VkSamplerCreateInfo sampler_info_ref = SafeSaneSamplerCreateInfo();
+    sampler_info_ref.anisotropyEnable = VK_TRUE;
+    VkSamplerCreateInfo sampler_info = sampler_info_ref;
+    ASSERT_NO_FATAL_FAILURE(InitState());
+
+    auto do_test = [this](UNIQUE_VALIDATION_ERROR_CODE code, const VkSamplerCreateInfo *pCreateInfo) -> void {
+        VkResult err;
+        VkSampler sampler = VK_NULL_HANDLE;
+        m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, code);
+        err = vkCreateSampler(m_device->device(), pCreateInfo, NULL, &sampler);
+        m_errorMonitor->VerifyFound();
+        if (VK_SUCCESS == err) {
+            vkDestroySampler(m_device->device(), sampler, NULL);
+        }
+    };
+
+    // maxAnisotropy out-of-bounds low.
+    sampler_info.maxAnisotropy = NearestNonEqual(1.0F, NearestLessThan());
+    do_test(VALIDATION_ERROR_1260085e, &sampler_info);
+    sampler_info.maxAnisotropy = sampler_info_ref.maxAnisotropy;
+
+    // maxAnisotropy out-of-bounds high.
+    sampler_info.maxAnisotropy = NearestNonEqual(m_device->phy().properties().limits.maxSamplerAnisotropy, NearestGreaterThan());
+    do_test(VALIDATION_ERROR_1260085e, &sampler_info);
+    sampler_info.maxAnisotropy = sampler_info_ref.maxAnisotropy;
+
+    // Both anisotropy and unnormalized coords enabled
+    sampler_info.unnormalizedCoordinates = VK_TRUE;
+    do_test(VALIDATION_ERROR_12600868, &sampler_info);
+    sampler_info.unnormalizedCoordinates = sampler_info_ref.unnormalizedCoordinates;
 }
 
 TEST_F(VkLayerTest, UnrecognizedValueMaxEnum) {

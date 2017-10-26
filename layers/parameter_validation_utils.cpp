@@ -105,6 +105,12 @@ static const VkLayerProperties global_layer = {
 
 static const int MaxParamCheckerStringLength = 256;
 
+template <typename T>
+static inline bool in_inclusive_range(const T &value, const T &min, const T &max) {
+    // Using only < for generality and || for early abort
+    return !((value < min) || (max < value));
+}
+
 static bool validate_string(debug_report_data *report_data, const char *apiName, const ParameterName &stringName,
                             const char *validateString) {
     assert(apiName != nullptr);
@@ -1475,12 +1481,34 @@ bool pv_vkCreateSampler(VkDevice device, const VkSamplerCreateInfo *pCreateInfo,
     debug_report_data *report_data = device_data->report_data;
 
     if (pCreateInfo != nullptr) {
-        if ((device_data->physical_device_features.samplerAnisotropy == false) && (pCreateInfo->maxAnisotropy != 1.0)) {
-            skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
-                            DEVICE_FEATURE, LayerName,
-                            "vkCreateSampler(): The samplerAnisotropy feature was not enabled at device-creation time, so the "
-                            "maxAnisotropy member of the VkSamplerCreateInfo structure must be 1.0 but is %f.",
-                            pCreateInfo->maxAnisotropy);
+        const auto &features = device_data->physical_device_features;
+        const auto &limits = device_data->device_limits;
+        if (pCreateInfo->anisotropyEnable == VK_TRUE) {
+            if (!in_inclusive_range(pCreateInfo->maxAnisotropy, 1.0F, limits.maxSamplerAnisotropy)) {
+                skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
+                                VALIDATION_ERROR_1260085e, LayerName,
+                                "vkCreateSampler(): value of %s must be in range [1.0, %f] %s, but %f found. %s",
+                                "pCreateInfo->maxAnisotropy", limits.maxSamplerAnisotropy,
+                                "VkPhysicalDeviceLimits::maxSamplerAnistropy", pCreateInfo->maxAnisotropy,
+                                validation_error_map[VALIDATION_ERROR_1260085e]);
+            }
+
+            // Anistropy cannot be enabled in sampler unless enabled as a feature
+            if (features.samplerAnisotropy == VK_FALSE) {
+                skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
+                                VALIDATION_ERROR_1260085c, LayerName,
+                                "vkCreateSampler(): Anisotropic sampling feature is not enabled, %s must be VK_FALSE. %s",
+                                "pCreateInfo->anisotropyEnable", validation_error_map[VALIDATION_ERROR_1260085c]);
+            }
+
+            // Anistropy and unnormalized coordinates cannot be enabled simultaneously
+            if (pCreateInfo->unnormalizedCoordinates == VK_TRUE) {
+                skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
+                                VALIDATION_ERROR_12600868, LayerName,
+                                "vkCreateSampler(): pCreateInfo->anisotropyEnable and pCreateInfo->unnormalizedCoordinates "
+                                "must not both be VK_TRUE. %s",
+                                validation_error_map[VALIDATION_ERROR_12600868]);
+            }
         }
 
         // If compareEnable is VK_TRUE, compareOp must be a valid VkCompareOp value
