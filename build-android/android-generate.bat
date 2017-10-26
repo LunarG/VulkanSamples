@@ -33,5 +33,6 @@ py -3 ../../../scripts/lvl_genvk.py -registry ../../../scripts/vk.xml unique_obj
 py -3 ../../../scripts/lvl_genvk.py -registry ../../../scripts/vk.xml vk_layer_dispatch_table.h
 py -3 ../../../scripts/lvl_genvk.py -registry ../../../scripts/vk.xml vk_extension_helper.h
 py -3 ../../../scripts/lvl_genvk.py -registry ../../../scripts/vk.xml object_tracker.cpp
+py -3 ../../../scripts/lvl_genvk.py -registry ../../../scripts/vk.xml vk_typemap_helper.h
 cd ../..
 

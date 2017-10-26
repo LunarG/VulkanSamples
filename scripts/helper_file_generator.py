@@ -130,6 +130,7 @@ class HelperFileOutputGenerator(OutputGenerator):
         copyright += ' * Author: Courtney Goeltzenleuchter <courtneygo@google.com>\n'
         copyright += ' * Author: Tobin Ehlis <tobine@google.com>\n'
         copyright += ' * Author: Chris Forbes <chrisforbes@google.com>\n'
+        copyright += ' * Author: John Zulauf<jzulauf@lunarg.com>\n'
         copyright += ' *\n'
         copyright += ' ****************************************************************************/\n'
         write(copyright, file=self.outFile)
@@ -919,6 +920,112 @@ class HelperFileOutputGenerator(OutputGenerator):
                 safe_struct_body.append("#endif // %s\n" % item.ifdef_protect)
         return "\n".join(safe_struct_body)
     #
+    # Generate the type map
+    def GenerateTypeMapHelperHeader(self):
+        prefix = 'Lvl'
+        fprefix = 'lvl_'
+        typemap = prefix + 'TypeMap'
+        idmap = prefix + 'STypeMap'
+        name_member = 'kName'
+        type_member = 'Type'
+        id_member = 'kSType'
+        decl_prefix ='constexpr static'
+        char_decl = decl_prefix + ' const char *'
+        id_decl = decl_prefix + ' const VkStructureType '
+        generic_header = prefix + 'GenericHeader'
+        typename_func = fprefix + 'typename'
+        idname_func = fprefix + 'stype_name'
+        find_func = fprefix + 'find_in_chain'
+
+        explanatory_comment = '\n'.join((
+                '// These empty generic templates are specialized for each type with sType',
+                '// members and for each sType -- providing a two way map between structure',
+                '// types and sTypes as well as a kName stringification for convenience'))
+
+        empty_typemap = 'template <typename T> struct ' + typemap + ' {};'
+        typemap_format  = 'template <> struct {template}<{typename}> {{\n'
+        typemap_format += '    {char_decl}{name} = "{typename}";\n'
+        typemap_format += '    {id_decl}{id_member} = {id_value};\n'
+        typemap_format += '}};\n'
+
+        empty_idmap = 'template <VkStructureType id> struct ' + idmap + ' {};'
+        idmap_format = ''.join((
+            'template <> struct {template}<{id_value}> {{\n',
+            '    typedef {typename} {typedef};\n',
+            '    {char_decl}{name} = "{id_value}";\n',
+            '}};\n'))
+
+        # Define the utilities (here so any renaming stays consistent), if this grows large, refactor to a fixed .h file
+        utilities_format = '\n'.join((
+            '// Header "base class" for pNext chain traversal',
+            'struct {header} {{',
+            '   VkStructureType sType;',
+            '   const {header} *pNext;',
+            '}};',
+            '',
+            '// Find an entry of the given type in the pNext chain',
+            'template <typename T> const T *{find_func}(const void *next) {{',
+            '    const {header} *current = reinterpret_cast<const {header} *>(next);',
+            '    const T *found = nullptr;',
+            '    while (current) {{',
+            '        if ({type_map}<T>::{id_member} == current->sType) {{',
+            '            found = reinterpret_cast<const T*>(current);',
+            '            current = nullptr;',
+            '        }} else {{',
+            '            current = current->pNext;',
+            '        }}',
+            '    }}',
+            '    return found;',
+            '}}',
+            '',
+            '// Convenience functions for accessing the other mapped objects name field',
+            'template <typename T> constexpr const char *{idname_func}() {{',
+            '    return {id_map}<{type_map}<T>::{id_member}>::{name_member};',
+            '}}',
+            'template <VkStructureType s_type> constexpr const char *{typename_func}() {{',
+            '    return {type_map}<typename {id_map}<s_type>::{type_member}>::{name_member};',
+            '}}'))
+
+        code = []
+        code.append('\n'.join((
+            '#pragma once',
+            '#include <vulkan/vulkan.h>\n',
+            explanatory_comment, '',
+            empty_idmap,
+            empty_typemap, '',
+            utilities_format.format(name_member=name_member, id_member=id_member, id_map=idmap, type_map=typemap,
+                type_member=type_member, header=generic_header, typename_func=typename_func, idname_func=idname_func,
+                find_func=find_func), ''
+            )))
+
+        # Generate the specializations for each type and stype
+
+        for item in self.structMembers:
+            typename = item.name
+            info = self.structTypes.get(typename)
+            if not info:
+                continue
+
+            if item.ifdef_protect != None:
+                code.append('#ifdef %s' % item.ifdef_protect)
+
+            code.append('// Map type {} to id {}'.format(typename, info.value))
+            code.append(typemap_format.format(template=typemap, typename=typename, id_value=info.value,
+                char_decl=char_decl, id_decl=id_decl, name=name_member, id_member=id_member))
+            code.append(idmap_format.format(template=idmap, typename=typename, id_value=info.value, char_decl=char_decl, typedef=type_member, name=name_member))
+
+            if item.ifdef_protect != None:
+                code.append('#endif // %s' % item.ifdef_protect)
+
+        #for typename, info in self.structTypes.items():
+        #    code.append("// Map type {} to id {}".format(typename, info.value))
+        #    code.append(typemap_format.format(template=typemap, typename=typename, id_value=info.value,
+        #        char_decl=char_decl, id_decl=id_decl, name=name_member, id_member=id_member))
+        #    code.append(idmap_format.format(template=idmap, typename=typename, id_value=info.value, char_decl=char_decl, typedef=type_member, name=name_member))
+
+        return "\n".join(code)
+
+    #
     # Create a helper file and return it as a string
     def OutputDestFile(self):
         if self.helper_file_type == 'enum_string_header':
@@ -935,6 +1042,8 @@ class HelperFileOutputGenerator(OutputGenerator):
             return self.GenerateObjectTypesHelperHeader()
         elif self.helper_file_type == 'extension_helper_header':
             return self.GenerateExtensionHelperHeader()
+        elif self.helper_file_type == 'typemap_helper_header':
+            return self.GenerateTypeMapHelperHeader()
         else:
             return 'Bad Helper File Generator Option %s' % self.helper_file_type
 

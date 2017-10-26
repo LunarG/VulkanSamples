@@ -67,6 +67,7 @@
 #include "vk_layer_data.h"
 #include "vk_layer_extension_utils.h"
 #include "vk_layer_utils.h"
+#include "vk_typemap_helper.h"
 
 #if defined __ANDROID__
 #include <android/log.h>
@@ -1941,7 +1942,7 @@ static void init_core_validation(instance_layer_data *instance_data, const VkAll
 }
 
 // For the given ValidationCheck enum, set all relevant instance disabled flags to true
-void SetDisabledFlags(instance_layer_data *instance_data, VkValidationFlagsEXT *val_flags_struct) {
+void SetDisabledFlags(instance_layer_data *instance_data, const VkValidationFlagsEXT *val_flags_struct) {
     for (uint32_t i = 0; i < val_flags_struct->disabledValidationCheckCount; ++i) {
         switch (val_flags_struct->pDisabledValidationChecks[i]) {
             case VK_VALIDATION_CHECK_SHADERS_EXT:
@@ -1982,15 +1983,9 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateInstance(const VkInstanceCreateInfo *pCreat
 
     ValidateLayerOrdering(*pCreateInfo);
     // Parse any pNext chains
-    if (pCreateInfo->pNext) {
-        GENERIC_HEADER *struct_header = (GENERIC_HEADER *)pCreateInfo->pNext;
-        while (struct_header) {
-            // Check for VkValidationFlagsExt
-            if (VK_STRUCTURE_TYPE_VALIDATION_FLAGS_EXT == struct_header->sType) {
-                SetDisabledFlags(instance_data, (VkValidationFlagsEXT *)struct_header);
-            }
-            struct_header = (GENERIC_HEADER *)struct_header->pNext;
-        }
+    const auto *validation_flags_ext = lvl_find_in_chain<VkValidationFlagsEXT>(pCreateInfo->pNext);
+    if (validation_flags_ext) {
+        SetDisabledFlags(instance_data, validation_flags_ext);
     }
 
     return result;
@@ -2142,15 +2137,9 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateDevice(VkPhysicalDevice gpu, const VkDevice
     // The enabled features can come from either pEnabledFeatures, or from the pNext chain
     const VkPhysicalDeviceFeatures *enabled_features_found = pCreateInfo->pEnabledFeatures;
     if (nullptr == enabled_features_found) {
-        GENERIC_HEADER *struct_header = (GENERIC_HEADER *)pCreateInfo->pNext;
-        while (struct_header) {
-            if (VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2_KHR == struct_header->sType) {
-                VkPhysicalDeviceFeatures2KHR *features2 = (VkPhysicalDeviceFeatures2KHR *)struct_header;
-                enabled_features_found =  &(features2->features);
-                struct_header = nullptr;
-            } else {
-                struct_header = (GENERIC_HEADER *)struct_header->pNext;
-            }
+        const auto *features2 = lvl_find_in_chain<VkPhysicalDeviceFeatures2KHR>(pCreateInfo->pNext);
+        if (features2) {
+            enabled_features_found = &(features2->features);
         }
     }
 
@@ -9746,52 +9735,51 @@ VKAPI_ATTR VkResult VKAPI_CALL QueuePresentKHR(VkQueue queue, const VkPresentInf
     }
     if (pPresentInfo && pPresentInfo->pNext) {
         // Verify ext struct
-        GENERIC_HEADER *pnext = (GENERIC_HEADER *)pPresentInfo->pNext;
-        while (pnext) {
-            if (VK_STRUCTURE_TYPE_PRESENT_REGIONS_KHR == pnext->sType) {
-                VkPresentRegionsKHR *present_regions = (VkPresentRegionsKHR *)pnext;
-                for (uint32_t i = 0; i < present_regions->swapchainCount; ++i) {
-                    auto swapchain_data = GetSwapchainNode(dev_data, pPresentInfo->pSwapchains[i]);
-                    assert(swapchain_data);
-                    VkPresentRegionKHR region = present_regions->pRegions[i];
-                    for (uint32_t j = 0; j < region.rectangleCount; ++j) {
-                        VkRectLayerKHR rect = region.pRectangles[j];
-                        // TODO: Need to update these errors to their unique error ids when available
-                        if ((rect.offset.x + rect.extent.width) > swapchain_data->createInfo.imageExtent.width) {
-                            skip |= log_msg(
-                                dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_SWAPCHAIN_KHR_EXT,
-                                HandleToUint64(pPresentInfo->pSwapchains[i]), __LINE__, DRAWSTATE_SWAPCHAIN_INVALID_IMAGE, "DS",
-                                "vkQueuePresentKHR(): For VkPresentRegionKHR down pNext "
-                                "chain, pRegion[%i].pRectangles[%i], the sum of offset.x "
-                                "(%i) and extent.width (%i) is greater than the "
-                                "corresponding swapchain's imageExtent.width (%i).",
-                                i, j, rect.offset.x, rect.extent.width, swapchain_data->createInfo.imageExtent.width);
-                        }
-                        if ((rect.offset.y + rect.extent.height) > swapchain_data->createInfo.imageExtent.height) {
-                            skip |= log_msg(
-                                dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_SWAPCHAIN_KHR_EXT,
-                                HandleToUint64(pPresentInfo->pSwapchains[i]), __LINE__, DRAWSTATE_SWAPCHAIN_INVALID_IMAGE, "DS",
-                                "vkQueuePresentKHR(): For VkPresentRegionKHR down pNext "
-                                "chain, pRegion[%i].pRectangles[%i], the sum of offset.y "
-                                "(%i) and extent.height (%i) is greater than the "
-                                "corresponding swapchain's imageExtent.height (%i).",
-                                i, j, rect.offset.y, rect.extent.height, swapchain_data->createInfo.imageExtent.height);
-                        }
-                        if (rect.layer > swapchain_data->createInfo.imageArrayLayers) {
-                            skip |= log_msg(
-                                dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_SWAPCHAIN_KHR_EXT,
-                                HandleToUint64(pPresentInfo->pSwapchains[i]), __LINE__, DRAWSTATE_SWAPCHAIN_INVALID_IMAGE, "DS",
-                                "vkQueuePresentKHR(): For VkPresentRegionKHR down pNext chain, pRegion[%i].pRectangles[%i], the "
-                                "layer (%i) is greater than the corresponding swapchain's imageArrayLayers (%i).",
-                                i, j, rect.layer, swapchain_data->createInfo.imageArrayLayers);
-                        }
+        const auto *present_regions = lvl_find_in_chain<VkPresentRegionsKHR>(pPresentInfo->pNext);
+        if (present_regions) {
+            for (uint32_t i = 0; i < present_regions->swapchainCount; ++i) {
+                auto swapchain_data = GetSwapchainNode(dev_data, pPresentInfo->pSwapchains[i]);
+                assert(swapchain_data);
+                VkPresentRegionKHR region = present_regions->pRegions[i];
+                for (uint32_t j = 0; j < region.rectangleCount; ++j) {
+                    VkRectLayerKHR rect = region.pRectangles[j];
+                    // TODO: Need to update these errors to their unique error ids when available
+                    if ((rect.offset.x + rect.extent.width) > swapchain_data->createInfo.imageExtent.width) {
+                        skip |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT,
+                                        VK_DEBUG_REPORT_OBJECT_TYPE_SWAPCHAIN_KHR_EXT, HandleToUint64(pPresentInfo->pSwapchains[i]),
+                                        __LINE__, DRAWSTATE_SWAPCHAIN_INVALID_IMAGE, "DS",
+                                        "vkQueuePresentKHR(): For VkPresentRegionKHR down pNext "
+                                        "chain, pRegion[%i].pRectangles[%i], the sum of offset.x "
+                                        "(%i) and extent.width (%i) is greater than the "
+                                        "corresponding swapchain's imageExtent.width (%i).",
+                                        i, j, rect.offset.x, rect.extent.width, swapchain_data->createInfo.imageExtent.width);
+                    }
+                    if ((rect.offset.y + rect.extent.height) > swapchain_data->createInfo.imageExtent.height) {
+                        skip |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT,
+                                        VK_DEBUG_REPORT_OBJECT_TYPE_SWAPCHAIN_KHR_EXT, HandleToUint64(pPresentInfo->pSwapchains[i]),
+                                        __LINE__, DRAWSTATE_SWAPCHAIN_INVALID_IMAGE, "DS",
+                                        "vkQueuePresentKHR(): For VkPresentRegionKHR down pNext "
+                                        "chain, pRegion[%i].pRectangles[%i], the sum of offset.y "
+                                        "(%i) and extent.height (%i) is greater than the "
+                                        "corresponding swapchain's imageExtent.height (%i).",
+                                        i, j, rect.offset.y, rect.extent.height, swapchain_data->createInfo.imageExtent.height);
+                    }
+                    if (rect.layer > swapchain_data->createInfo.imageArrayLayers) {
+                        skip |= log_msg(
+                            dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_SWAPCHAIN_KHR_EXT,
+                            HandleToUint64(pPresentInfo->pSwapchains[i]), __LINE__, DRAWSTATE_SWAPCHAIN_INVALID_IMAGE, "DS",
+                            "vkQueuePresentKHR(): For VkPresentRegionKHR down pNext chain, pRegion[%i].pRectangles[%i], the "
+                            "layer (%i) is greater than the corresponding swapchain's imageArrayLayers (%i).",
+                            i, j, rect.layer, swapchain_data->createInfo.imageArrayLayers);
                     }
                 }
-            } else if (VK_STRUCTURE_TYPE_PRESENT_TIMES_INFO_GOOGLE == pnext->sType) {
-                VkPresentTimesInfoGOOGLE *present_times_info = (VkPresentTimesInfoGOOGLE *)pnext;
-                if (pPresentInfo->swapchainCount != present_times_info->swapchainCount) {
-                    skip |=
-                        log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_SWAPCHAIN_KHR_EXT,
+            }
+        }
+
+        const auto *present_times_info = lvl_find_in_chain<VkPresentTimesInfoGOOGLE>(pPresentInfo->pNext);
+        if (present_times_info) {
+            if (pPresentInfo->swapchainCount != present_times_info->swapchainCount) {
+                skip |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_SWAPCHAIN_KHR_EXT,
                                 HandleToUint64(pPresentInfo->pSwapchains[0]), __LINE__,
 
                                 VALIDATION_ERROR_118009be, "DS",
@@ -9800,9 +9788,7 @@ VKAPI_ATTR VkResult VKAPI_CALL QueuePresentKHR(VkQueue queue, const VkPresentInf
                                 "chain of VkPresentInfoKHR, VkPresentTimesInfoGOOGLE.swapchainCount "
                                 "must equal VkPresentInfoKHR.swapchainCount.",
                                 present_times_info->swapchainCount, pPresentInfo->swapchainCount);
-                }
             }
-            pnext = (GENERIC_HEADER *)pnext->pNext;
         }
     }
 

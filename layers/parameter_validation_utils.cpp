@@ -39,6 +39,7 @@
 #include "vulkan/vk_layer.h"
 #include "vk_layer_config.h"
 #include "vk_dispatch_table_helper.h"
+#include "vk_typemap_helper.h"
 
 #include "vk_layer_table.h"
 #include "vk_layer_data.h"
@@ -354,40 +355,13 @@ static bool ValidateDeviceCreateInfo(instance_layer_data *instance_data, VkPhysi
 
     if (pCreateInfo->pNext != NULL && pCreateInfo->pEnabledFeatures) {
         // Check for get_physical_device_properties2 struct
-        struct std_header {
-            VkStructureType sType;
-            const void *pNext;
-        };
-        std_header *cur_pnext = (std_header *)pCreateInfo->pNext;
-        while (cur_pnext) {
-            if (VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2_KHR == cur_pnext->sType) {
-                // Cannot include VkPhysicalDeviceFeatures2KHR and have non-null pEnabledFeatures
-                skip |= log_msg(instance_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT,
-                                0, __LINE__, INVALID_USAGE, LayerName,
-                                "VkDeviceCreateInfo->pNext includes a VkPhysicalDeviceFeatures2KHR struct when "
-                                "pCreateInfo->pEnabledFeatures is non-NULL.");
-                break;
-            }
-            cur_pnext = (std_header *)cur_pnext->pNext;
-        }
-    }
-    if (pCreateInfo->pNext != NULL && pCreateInfo->pEnabledFeatures) {
-        // Check for get_physical_device_properties2 struct
-        struct std_header {
-            VkStructureType sType;
-            const void *pNext;
-        };
-        std_header *cur_pnext = (std_header *)pCreateInfo->pNext;
-        while (cur_pnext) {
-            if (VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2_KHR == cur_pnext->sType) {
-                // Cannot include VkPhysicalDeviceFeatures2KHR and have non-null pEnabledFeatures
-                skip |= log_msg(instance_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT,
-                                0, __LINE__, INVALID_USAGE, LayerName,
-                                "VkDeviceCreateInfo->pNext includes a VkPhysicalDeviceFeatures2KHR struct when "
-                                "pCreateInfo->pEnabledFeatures is non-NULL.");
-                break;
-            }
-            cur_pnext = (std_header *)cur_pnext->pNext;
+        const auto *features2 = lvl_find_in_chain<VkPhysicalDeviceFeatures2KHR>(pCreateInfo->pNext);
+        if (features2) {
+            // Cannot include VkPhysicalDeviceFeatures2KHR and have non-null pEnabledFeatures
+            skip |= log_msg(instance_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0,
+                            __LINE__, INVALID_USAGE, LayerName,
+                            "VkDeviceCreateInfo->pNext includes a VkPhysicalDeviceFeatures2KHR struct when "
+                            "pCreateInfo->pEnabledFeatures is non-NULL.");
         }
     }
 
@@ -501,15 +475,9 @@ VKAPI_ATTR VkResult VKAPI_CALL vkCreateDevice(VkPhysicalDevice physicalDevice, c
             // The enabled features can come from either pEnabledFeatures, or from the pNext chain
             const VkPhysicalDeviceFeatures *enabled_features_found = pCreateInfo->pEnabledFeatures;
             if ((nullptr == enabled_features_found) && my_device_data->extensions.vk_khr_get_physical_device_properties_2) {
-                const GenericHeader *current = reinterpret_cast<const GenericHeader *>(pCreateInfo->pNext);
-                while (current) {
-                    if (VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2_KHR == current->sType) {
-                        const VkPhysicalDeviceFeatures2KHR *features2 = reinterpret_cast<const VkPhysicalDeviceFeatures2KHR *>(current);
-                        enabled_features_found = &(features2->features);
-                        current = nullptr;
-                    } else {
-                        current = reinterpret_cast<const GenericHeader *>(current->pNext);
-                    }
+                const auto *features2 = lvl_find_in_chain<VkPhysicalDeviceFeatures2KHR>(pCreateInfo->pNext);
+                if (features2) {
+                    enabled_features_found = &(features2->features);
                 }
             }
             if (enabled_features_found) {
@@ -2291,39 +2259,29 @@ bool pv_vkQueuePresentKHR(VkQueue queue, const VkPresentInfoKHR *pPresentInfo) {
     layer_data *device_data = GetLayerDataPtr(get_dispatch_key(queue), layer_data_map);
 
     if (pPresentInfo && pPresentInfo->pNext) {
-        // Verify ext struct
-        struct std_header {
-            VkStructureType sType;
-            const void *pNext;
-        };
-        std_header *pnext = (std_header *)pPresentInfo->pNext;
-        while (pnext) {
-            if (VK_STRUCTURE_TYPE_PRESENT_REGIONS_KHR == pnext->sType) {
-                // TODO: This and all other pNext extension dependencies should be added to code-generation
-                skip |= require_device_extension(device_data, device_data->extensions.vk_khr_incremental_present,
-                                                 "vkQueuePresentKHR", VK_KHR_INCREMENTAL_PRESENT_EXTENSION_NAME);
-                VkPresentRegionsKHR *present_regions = (VkPresentRegionsKHR *)pnext;
-                if (present_regions->swapchainCount != pPresentInfo->swapchainCount) {
-                    skip |= log_msg(device_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT,
-                                    VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__, INVALID_USAGE, LayerName,
-                                    "QueuePresentKHR(): pPresentInfo->swapchainCount has a value of %i"
-                                    " but VkPresentRegionsKHR extension swapchainCount is %i. These values must be equal.",
-                                    pPresentInfo->swapchainCount, present_regions->swapchainCount);
-                }
-                skip |= validate_struct_pnext(device_data->report_data, "QueuePresentKHR", "pCreateInfo->pNext->pNext", NULL,
-                                              present_regions->pNext, 0, NULL, GeneratedHeaderVersion, VALIDATION_ERROR_1121c40d);
-                skip |= validate_array(device_data->report_data, "QueuePresentKHR", "pCreateInfo->pNext->swapchainCount",
-                                       "pCreateInfo->pNext->pRegions", present_regions->swapchainCount, present_regions->pRegions,
-                                       true, false, VALIDATION_ERROR_UNDEFINED, VALIDATION_ERROR_UNDEFINED);
-                for (uint32_t i = 0; i < present_regions->swapchainCount; ++i) {
-                    skip |=
-                        validate_array(device_data->report_data, "QueuePresentKHR", "pCreateInfo->pNext->pRegions[].rectangleCount",
+        const auto *present_regions = lvl_find_in_chain<VkPresentRegionsKHR>(pPresentInfo->pNext);
+        if (present_regions) {
+            // TODO: This and all other pNext extension dependencies should be added to code-generation
+            skip |= require_device_extension(device_data, device_data->extensions.vk_khr_incremental_present, "vkQueuePresentKHR",
+                                             VK_KHR_INCREMENTAL_PRESENT_EXTENSION_NAME);
+            if (present_regions->swapchainCount != pPresentInfo->swapchainCount) {
+                skip |= log_msg(device_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0,
+                                __LINE__, INVALID_USAGE, LayerName,
+                                "QueuePresentKHR(): pPresentInfo->swapchainCount has a value of %i"
+                                " but VkPresentRegionsKHR extension swapchainCount is %i. These values must be equal.",
+                                pPresentInfo->swapchainCount, present_regions->swapchainCount);
+            }
+            skip |= validate_struct_pnext(device_data->report_data, "QueuePresentKHR", "pCreateInfo->pNext->pNext", NULL,
+                                          present_regions->pNext, 0, NULL, GeneratedHeaderVersion, VALIDATION_ERROR_1121c40d);
+            skip |= validate_array(device_data->report_data, "QueuePresentKHR", "pCreateInfo->pNext->swapchainCount",
+                                   "pCreateInfo->pNext->pRegions", present_regions->swapchainCount, present_regions->pRegions, true,
+                                   false, VALIDATION_ERROR_UNDEFINED, VALIDATION_ERROR_UNDEFINED);
+            for (uint32_t i = 0; i < present_regions->swapchainCount; ++i) {
+                skip |= validate_array(device_data->report_data, "QueuePresentKHR", "pCreateInfo->pNext->pRegions[].rectangleCount",
                                        "pCreateInfo->pNext->pRegions[].pRectangles", present_regions->pRegions[i].rectangleCount,
                                        present_regions->pRegions[i].pRectangles, true, false, VALIDATION_ERROR_UNDEFINED,
                                        VALIDATION_ERROR_UNDEFINED);
-                }
             }
-            pnext = (std_header *)pnext->pNext;
         }
     }
 
