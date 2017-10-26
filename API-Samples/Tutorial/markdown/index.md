@@ -27,16 +27,18 @@ code from the progression.
 * [Vertex Buffer](13-init_vertex_buffer.html)
 * [Pipeline](14-init_pipeline.html)
 * [Draw Cube](15-draw_cube.html)
+* [Vulkan 1.1 Changes](16-vulkan_1_1_changes.html)
 
 ## The Goal
 
 The final section in the tutorial produces a program that displays this:
 
 ![Draw Cube](../images/drawcube.png)
-<footer>&copy; Copyright 2016 LunarG, Inc</footer>
+<footer>&copy; Copyright 2016-2017 LunarG, Inc</footer>
 
 ## Change Log
 
 * 26 Aug 2016 - Initial Revision
 * 26 Oct 2016 - Image layout transitions are now specified
 in render pass and subpass definitions, instead of using memory barriers
+* 26 Oct 2017 - Added new page on Vulkan 1.1

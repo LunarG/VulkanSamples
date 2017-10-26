@@ -303,7 +303,8 @@ At this point, you should now see a cube on the screen!
 <table border="1" width="100%">
     <tr>
         <td align="center" width="50%"><a href="14-init_pipeline.html" title="Prev">Pipeline</a></td>
-        <td align="center" width="50%"><a href="index.html" title="Index">Index</a></td>
+        <td align="center" width="33%">Back to: <a href="index.html" title="Index">Index</a></td>
+        <td align="center" width="33%">Next: <a href="16-vulkan_1_1_changes.html" title="Next">Vulkan 1.1</a></td>
     </tr>
 </table>
-<footer>&copy; Copyright 2016 LunarG, Inc</footer>
+<footer>&copy; Copyright 2016-2017 LunarG, Inc</footer>
