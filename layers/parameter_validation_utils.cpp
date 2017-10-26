@@ -1539,6 +1539,19 @@ bool pv_vkCreateSampler(VkDevice device, const VkSamplerCreateInfo *pCreateInfo,
                         "but the VK_KHR_sampler_mirror_clamp_to_edge extension has not been enabled. %s",
                         validation_error_map[VALIDATION_ERROR_1260086e]);
         }
+
+        // Checks for the IMG cubic filtering extension
+        if (device_data->extensions.vk_img_filter_cubic) {
+            if ((pCreateInfo->anisotropyEnable == VK_TRUE) &&
+                ((pCreateInfo->minFilter == VK_FILTER_CUBIC_IMG) || (pCreateInfo->magFilter == VK_FILTER_CUBIC_IMG))) {
+                skip |=
+                    log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
+                            VALIDATION_ERROR_12600872, LayerName,
+                            "vkCreateSampler(): Anisotropic sampling must not be VK_TRUE when either minFilter or magFilter are "
+                            "VK_FILTER_CUBIC_IMG. %s",
+                            validation_error_map[VALIDATION_ERROR_12600872]);
+            }
+        }
     }
 
     return skip;

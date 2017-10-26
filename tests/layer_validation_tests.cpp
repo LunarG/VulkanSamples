@@ -1266,6 +1266,12 @@ TEST_F(VkLayerTest, AnisotropyFeatureEnabled) {
         return;
     }
 
+    bool cubic_support = false;
+    if (DeviceExtensionSupported(gpu(), nullptr, "VK_IMG_filter_cubic")) {
+        m_device_extension_names.push_back("VK_IMG_filter_cubic");
+        cubic_support = true;
+    }
+
     VkSamplerCreateInfo sampler_info_ref = SafeSaneSamplerCreateInfo();
     sampler_info_ref.anisotropyEnable = VK_TRUE;
     VkSamplerCreateInfo sampler_info = sampler_info_ref;
@@ -1296,6 +1302,19 @@ TEST_F(VkLayerTest, AnisotropyFeatureEnabled) {
     sampler_info.unnormalizedCoordinates = VK_TRUE;
     do_test(VALIDATION_ERROR_12600868, &sampler_info);
     sampler_info.unnormalizedCoordinates = sampler_info_ref.unnormalizedCoordinates;
+
+    // Both anisotropy and cubic filtering enabled
+    if (cubic_support) {
+        sampler_info.minFilter = VK_FILTER_CUBIC_IMG;
+        do_test(VALIDATION_ERROR_12600872, &sampler_info);
+        sampler_info.minFilter = sampler_info_ref.minFilter;
+
+        sampler_info.magFilter = VK_FILTER_CUBIC_IMG;
+        do_test(VALIDATION_ERROR_12600872, &sampler_info);
+        sampler_info.magFilter = sampler_info_ref.magFilter;
+    } else {
+        printf("             Test requires unsupported extension \"VK_IMG_filter_cubic\". Skipped.\n");
+    }
 }
 
 TEST_F(VkLayerTest, UnrecognizedValueMaxEnum) {
