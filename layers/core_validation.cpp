@@ -358,6 +358,18 @@ static void add_mem_obj_info(layer_data *dev_data, void *object, const VkDeviceM
     assert(object != NULL);
 
     dev_data->memObjMap[mem] = unique_ptr<DEVICE_MEM_INFO>(new DEVICE_MEM_INFO(object, mem, pAllocateInfo));
+
+    if (pAllocateInfo->pNext) {
+        auto struct_header = reinterpret_cast<const GENERIC_HEADER *>(pAllocateInfo->pNext);
+        while (struct_header) {
+            if (VK_STRUCTURE_TYPE_IMPORT_MEMORY_FD_INFO_KHR == struct_header->sType ||
+                VK_STRUCTURE_TYPE_IMPORT_MEMORY_WIN32_HANDLE_INFO_KHR == struct_header->sType) {
+                dev_data->memObjMap[mem]->global_valid = true;
+                break;
+            }
+            struct_header = reinterpret_cast<const GENERIC_HEADER *>(struct_header->pNext);
+        }
+    }
 }
 
 // For given bound_object_handle, bound to given mem allocation, verify that the range for the bound object is valid

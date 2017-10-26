@@ -316,7 +316,7 @@ struct MEMORY_RANGE {
 // Data struct for tracking memory object
 struct DEVICE_MEM_INFO : public BASE_NODE {
     void *object;       // Dispatchable object used to create this memory (device of swapchain)
-    bool global_valid;  // If allocation is mapped, set to "true" to be picked up by subsequently bound ranges
+    bool global_valid;  // If allocation is mapped or external, set to "true" to be picked up by subsequently bound ranges
     VkDeviceMemory mem;
     VkMemoryAllocateInfo alloc_info;
     std::unordered_set<VK_OBJECT> obj_bindings;               // objects bound to this memory
