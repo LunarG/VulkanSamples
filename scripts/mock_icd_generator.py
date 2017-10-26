@@ -599,7 +599,12 @@ CUSTOM_C_INTERCEPTS = {
 ''',
 'vkGetPhysicalDeviceImageFormatProperties': '''
     // TODO: Just hard-coding some values for now
-    *pImageFormatProperties = { { 4096, 4096, 256 }, 12, 256, 0x7F, 4294967296 };
+    // TODO: If tiling is linear, limit the mips, levels, & sample count
+    if (VK_IMAGE_TILING_LINEAR == tiling) {
+        *pImageFormatProperties = { { 4096, 4096, 256 }, 1, 1, VK_SAMPLE_COUNT_1_BIT, 4294967296 };
+    } else {
+        *pImageFormatProperties = { { 4096, 4096, 256 }, 12, 256, 0x7F, 4294967296 };
+    }
     return VK_SUCCESS;
 ''',
 'vkGetPhysicalDeviceImageFormatProperties2KHR': '''
