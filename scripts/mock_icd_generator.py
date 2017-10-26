@@ -832,9 +832,13 @@ class MockICDOutputGenerator(OutputGenerator):
             # } VkExtensionProperties;
             device_exts = []
             instance_exts = []
+            # Ignore extensions that ICDs should not implement
+            ignore_exts = ['VK_EXT_validation_cache']
             for ext in self.registry.tree.findall("extensions/extension"):
                 if '0' != ext[0][0].attrib['value']: # Only include implemented extensions
-                    if (ext.attrib.get('type') and 'instance' == ext.attrib['type']):
+                    if (ext.attrib['name'] in ignore_exts):
+                        pass
+                    elif (ext.attrib.get('type') and 'instance' == ext.attrib['type']):
                         instance_exts.append('    {"%s", %s},' % (ext.attrib['name'], ext[0][0].attrib['value']))
                     else:
                         device_exts.append('    {"%s", %s},' % (ext.attrib['name'], ext[0][0].attrib['value']))
