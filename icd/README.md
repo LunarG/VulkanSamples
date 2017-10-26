@@ -65,12 +65,6 @@ Currently 324/332 tests are passing with the mock icd, but many passing tests ha
 
 ### Failing Tests
 
-VkLayerTest.ImageFormatLimits
-VkLayerTest.CopyImageTypeExtentMismatch
-VkLayerTest.CopyImageCompressedBlockAlignment
-VkLayerTest.CopyImageSrcSizeExceeded
-VkLayerTest.CopyImageDstSizeExceeded
-VkPositiveLayerTest.UncompressedToCompressedImageCopy
 VkPositiveLayerTest.EmptyDescriptorUpdateTest
 
 ### Passing Tests With Unexpected Errors
