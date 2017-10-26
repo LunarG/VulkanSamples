@@ -62,14 +62,6 @@ std::vector<T> make_handles(const std::vector<S> &v) {
     return handles;
 }
 
-VkMemoryAllocateInfo get_resource_alloc_info(const vk_testing::Device &dev, const VkMemoryRequirements &reqs,
-                                             VkMemoryPropertyFlags mem_props) {
-    VkMemoryAllocateInfo info = vk_testing::DeviceMemory::alloc_info(reqs.size, 0);
-    dev.phy().set_memory_type(reqs.memoryTypeBits, &info, mem_props);
-
-    return info;
-}
-
 }  // namespace
 
 namespace vk_testing {
@@ -426,6 +418,13 @@ void *DeviceMemory::map(VkFlags flags) {
 
 void DeviceMemory::unmap() const { vkUnmapMemory(device(), handle()); }
 
+VkMemoryAllocateInfo DeviceMemory::get_resource_alloc_info(const Device &dev, const VkMemoryRequirements &reqs,
+                                                           VkMemoryPropertyFlags mem_props) {
+    VkMemoryAllocateInfo info = alloc_info(reqs.size, 0);
+    dev.phy().set_memory_type(reqs.memoryTypeBits, &info, mem_props);
+    return info;
+}
+
 NON_DISPATCHABLE_HANDLE_DTOR(Fence, vkDestroyFence)
 
 void Fence::init(const Device &dev, const VkFenceCreateInfo &info) { NON_DISPATCHABLE_HANDLE_INIT(vkCreateFence, dev, &info); }
@@ -462,7 +461,7 @@ NON_DISPATCHABLE_HANDLE_DTOR(Buffer, vkDestroyBuffer)
 void Buffer::init(const Device &dev, const VkBufferCreateInfo &info, VkMemoryPropertyFlags mem_props) {
     init_no_mem(dev, info);
 
-    internal_mem_.init(dev, get_resource_alloc_info(dev, memory_requirements(), mem_props));
+    internal_mem_.init(dev, DeviceMemory::get_resource_alloc_info(dev, memory_requirements(), mem_props));
     bind_memory(internal_mem_, 0);
 }
 
@@ -495,7 +494,7 @@ void Image::init(const Device &dev, const VkImageCreateInfo &info, VkMemoryPrope
     init_no_mem(dev, info);
 
     if (initialized()) {
-        internal_mem_.init(dev, get_resource_alloc_info(dev, memory_requirements(), mem_props));
+        internal_mem_.init(dev, DeviceMemory::get_resource_alloc_info(dev, memory_requirements(), mem_props));
         bind_memory(internal_mem_, 0);
     }
 }
