@@ -61,32 +61,22 @@ capabilities.
 ## Status
 
 This is a temporary section used for tracking as the mock icd is being developed. Once all tests are passing with the mock, this section can be removed.
-Currently 324/332 tests are passing with the mock icd, but many passing tests have unexpected validation errors that need to be cleaned up.
+Currently 333/333 tests are passing with the mock icd, but many passing tests have unexpected validation errors that need to be cleaned up.
 
 ### Failing Tests
 
-VkPositiveLayerTest.EmptyDescriptorUpdateTest
+NONE
 
 ### Passing Tests With Unexpected Errors
 
-VkLayerTest.InvalidUsageBits
-VkLayerTest.ImageSampleCounts
 VkLayerTest.InvalidCmdBufferBufferDestroyed
 VkLayerTest.RenderPassInUseDestroyedSignaled
-VkLayerTest.BufferMemoryNotBound
 VkLayerTest.InvalidCmdBufferDescriptorSetBufferDestroyed
+VkLayerTest.InvalidDynamicOffsetCases
 VkLayerTest.DSUsageBitsErrors
 VkLayerTest.DSBufferInfoErrors
 VkLayerTest.DSBufferLimitErrors
 VkLayerTest.RenderPassIncompatible
-VkLayerTest.InvalidImageLayout
-VkLayerTest.CopyImageLayerCountMismatch
-VkLayerTest.MiscImageLayerTests
-VkLayerTest.CopyImageTypeExtentMismatchMaintenance1
-VkLayerTest.CopyImageFormatSizeMismatch
-VkLayerTest.CopyImageDepthStencilFormatMismatch
-VkLayerTest.CopyImageAspectMismatch
-
 
 ### Skipped Tests
 
@@ -95,9 +85,8 @@ VkLayerTest.CreatePipelineBadVertexAttributeFormat
 VkLayerTest.MiscBlitImageTests
 VkLayerTest.TemporaryExternalSemaphore
 VkLayerTest.TemporaryExternalFence
-VkLayerTest.InvalidDynamicOffsetCases
 VkLayerTest.PSOViewportScissorCountTests
-VkLayerTest.ImageBufferCopyTests
+VkLayerTest.InvalidBarriers
 VkLayerTest.CommandQueueFlags
 VkPositiveLayerTest.TwoQueuesEnsureCorrectRetirementWithWorkStolen
 VkPositiveLayerTest.ExternalSemaphore
