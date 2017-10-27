@@ -202,11 +202,8 @@ static VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL GetPhysicalDeviceProcAddr(VkInst
 #define EXPORT
 #endif
 
-#ifdef WIN32
-    extern "C" __declspec(dllexport) {
-#else
-    extern "C" {
-#endif
+extern "C" {
+
 EXPORT VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL vk_icdGetInstanceProcAddr(VkInstance instance, const char* pName) {
     if (!vkmock::negotiate_loader_icd_interface_called) {
         vkmock::loader_interface_version = 1;
@@ -412,11 +409,9 @@ EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateMacOSSurfaceMVK(
     return vkmock::CreateMacOSSurfaceMVK(instance, pCreateInfo, pAllocator, pSurface);
 }
 #endif /* VK_USE_PLATFORM_MACOS_MVK */
-#ifdef WIN32
-    } // end extern "C"
-#else
-    } // end extern "C"
-#endif
+
+} // end extern "C"
+
 '''
 
 CUSTOM_C_INTERCEPTS = {
@@ -488,7 +483,7 @@ CUSTOM_C_INTERCEPTS = {
     // If requesting number of extensions, return that
     if (!pLayerName) {
         if (!pProperties) {
-            *pPropertyCount = instance_extension_map.size();
+            *pPropertyCount = (uint32_t)instance_extension_map.size();
         } else {
             uint32_t i = 0;
             for (const auto &name_ver_pair : instance_extension_map) {
@@ -512,7 +507,7 @@ CUSTOM_C_INTERCEPTS = {
     // If requesting number of extensions, return that
     if (!pLayerName) {
         if (!pProperties) {
-            *pPropertyCount = device_extension_map.size();
+            *pPropertyCount = (uint32_t)device_extension_map.size();
         } else {
             uint32_t i = 0;
             for (const auto &name_ver_pair : device_extension_map) {
@@ -649,7 +644,7 @@ CUSTOM_C_INTERCEPTS = {
     // TODO: Just hard-coding 4k whole size for now
     if (VK_WHOLE_SIZE == size)
         size = 4096;
-    void* map_addr = malloc(size);
+    void* map_addr = malloc((size_t)size);
     mapped_memory_map[memory].push_back(map_addr);
     *ppData = map_addr;
     return VK_SUCCESS;
