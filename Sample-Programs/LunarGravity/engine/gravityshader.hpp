@@ -20,6 +20,7 @@
 
 #pragma once
 
+#include <vector>
 #include <string>
 #include <vulkan/vulkan.h>
 
@@ -56,7 +57,7 @@ class GravityShader {
     virtual ~GravityShader();
 
     bool Read(std::string const &shader_prefix);
-    bool Load();
+    bool Load(std::vector<VkPipelineShaderStageCreateInfo>& create_info);
     bool Unload();
 
    protected:

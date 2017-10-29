@@ -103,7 +103,7 @@ bool GravityShader::Read(std::string const &shader_prefix) {
 
         shader_spv_size = strstream.str().size();
 
-        // Read teh file contents
+        // Read the file contents
         shader_spv_content = new char[shader_spv_size];
         memcpy(shader_spv_content, strstream.str().c_str(), shader_spv_size);
         delete infile;
@@ -142,7 +142,38 @@ bool GravityShader::Read(std::string const &shader_prefix) {
     return m_read;
 }
 
-bool GravityShader::Load() {
+bool GravityShader::Load(std::vector<VkPipelineShaderStageCreateInfo>& create_info) {
+    if (create_info.size() > 0) {
+        create_info.clear();
+    }
+    for (uint8_t shader = 0; shader < GRAVITY_SHADER_NUM_STAGES; shader++) {
+        if (m_shader_data[shader].valid) {
+            size_t cur_size = create_info.size();
+            create_info.resize(cur_size + 1);
+            create_info[cur_size].sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+            create_info[cur_size].module = m_shader_data[shader].vk_shader_module;
+            create_info[cur_size].pName = "main";
+            switch (shader) {
+                case GRAVITY_SHADER_VERTEX:
+                    create_info[cur_size].stage = VK_SHADER_STAGE_VERTEX_BIT;
+                    break;
+                case GRAVITY_SHADER_TESSELLATION_CONTROL:
+                    create_info[cur_size].stage = VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT;
+                    break;
+                case GRAVITY_SHADER_TESSELLATION_EVALUATION:
+                    create_info[cur_size].stage = VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT;
+                    break;
+                case GRAVITY_SHADER_GEOMETRY:
+                    create_info[cur_size].stage = VK_SHADER_STAGE_GEOMETRY_BIT;
+                    break;
+                case GRAVITY_SHADER_FRAGMENT:
+                    create_info[cur_size].stage = VK_SHADER_STAGE_FRAGMENT_BIT;
+                    break;
+                default:
+                    continue;
+            }
+        }
+    }
     return true;
 }
 

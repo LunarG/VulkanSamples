@@ -11,9 +11,9 @@
     "debug": "on",
     "loglevel": "warnings",
     "swap" : {
-      "number buffers": "2",
+      "number buffers": "3",
       "flip type": "Fifo",
-      "format": "B8G8R8A8"
+      "format": "B8G8R8A8_SRGB"
     },
     "depthbuffer": "D24_S8"
   },

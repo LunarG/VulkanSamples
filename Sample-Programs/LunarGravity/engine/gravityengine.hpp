@@ -59,25 +59,30 @@ struct GravityCmdBuffer {
     std::vector<GravityCmdBuffer> child_cmd_bufs;
 };
 
-struct GraivtySwapchainImage {
+struct GravitySwapchainImage {
     VkImage vk_image;
     VkImageView vk_image_view;
     VkFence vk_fence;
     VkCommandBuffer vk_present_cmd_buf;
+    VkFramebuffer vk_framebuffer;
+};
+
+struct GravityFrame {
+    GravityCmdBuffer cmd_buf;
+    VkRenderPass vk_render_pass;
 };
 
 struct GravitySwapchainSurface {
     VkFormat vk_format;
     VkColorSpaceKHR vk_color_space;
-    uint32_t frame_index;
-    uint32_t cur_framebuffer;
+    uint32_t cur_frame_index;
     VkPresentModeKHR vk_present_mode;
     VkSemaphore vk_image_acquired_semaphores[MAX_NUM_BACK_BUFFERS];
     VkSemaphore vk_draw_complete_semaphores[MAX_NUM_BACK_BUFFERS];
     VkSemaphore vk_image_ownership_semaphores[MAX_NUM_BACK_BUFFERS];
     VkFence vk_fences[MAX_NUM_BACK_BUFFERS];
     VkSwapchainKHR vk_swapchain;
-    std::vector<GraivtySwapchainImage> swapchain_images;
+    std::vector<GravitySwapchainImage> swapchain_images;
 };
 
 struct GravityDepthStencilSurface {
@@ -130,7 +135,6 @@ class GravityEngine {
     int64_t m_app_version;
     std::string m_engine_name;
     int64_t m_engine_version;
-    uint64_t m_cur_frame;
 
     // Settings
     GravitySettingGroup *m_settings;
@@ -160,6 +164,13 @@ class GravityEngine {
 
     // Depth/stencil info
     GravityDepthStencilSurface m_depth_stencil_surface;
+
+    // Frame information
+    uint32_t m_frame_index;
+    std::vector<GravityFrame> m_frames;
+
+    // Frame-rate tracking information
+    uint64_t m_cur_frame;
 
     // Vulkan Physical Device items
     VkPhysicalDevice m_vk_phys_dev;

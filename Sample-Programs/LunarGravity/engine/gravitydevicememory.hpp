@@ -34,7 +34,8 @@ struct GravityDeviceMemory {
 
 class GravityDeviceMemoryManager {
    public:
-    GravityDeviceMemoryManager(GravityInstanceExtIf *inst_ext_if, VkPhysicalDevice *phys_dev);
+    GravityDeviceMemoryManager(GravityInstanceExtIf *inst_ext_if, VkPhysicalDeviceProperties& phys_dev_props,
+                               VkPhysicalDevice *phys_dev);
     ~GravityDeviceMemoryManager();
 
     GravityDeviceMemoryManager(GravityDeviceMemoryManager const &) = delete;

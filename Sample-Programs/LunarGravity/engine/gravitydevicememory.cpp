@@ -29,8 +29,8 @@
 #include "gravitydeviceextif.hpp"
 #include "gravitydevicememory.hpp"
 
-GravityDeviceMemoryManager::GravityDeviceMemoryManager(GravityInstanceExtIf *inst_ext_if, VkPhysicalDevice *phys_dev) {
-    VkPhysicalDeviceProperties phys_dev_props;
+GravityDeviceMemoryManager::GravityDeviceMemoryManager(GravityInstanceExtIf *inst_ext_if, VkPhysicalDeviceProperties& phys_dev_props,
+                                                       VkPhysicalDevice *phys_dev) {
     m_inst_ext_if = inst_ext_if;
     m_dev_ext_if = nullptr;
     m_vk_phys_dev = phys_dev;
@@ -40,7 +40,6 @@ GravityDeviceMemoryManager::GravityDeviceMemoryManager(GravityInstanceExtIf *ins
     vkGetPhysicalDeviceMemoryProperties(*phys_dev, &m_vk_dev_mem_props);
 
     // Get the Memory limits
-    vkGetPhysicalDeviceProperties(*phys_dev, &phys_dev_props);
     m_vk_dev_limits = phys_dev_props.limits;
 }
 

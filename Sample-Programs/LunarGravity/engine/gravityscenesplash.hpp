@@ -63,7 +63,7 @@ class GravitySceneSplash : public GravityScene {
     virtual ~GravitySceneSplash();
 
     virtual bool Load(GravityDeviceExtIf *dev_ext_if, GravityDeviceMemoryManager *dev_memory_mgr, VkFormat rt_color_format, VkFormat rt_depth_stencil_format);
-    virtual bool Start();
+    virtual bool Start(VkRenderPass render_pass);
     virtual bool Update(float comp_time, float game_time);
     virtual bool Draw(VkCommandBuffer &cmd_buf);
     virtual bool End();
@@ -78,9 +78,10 @@ class GravitySceneSplash : public GravityScene {
     SplashTexture m_texture;
     SplashUniformBuffer m_uniform_buffer;
     SplashShaderVerts m_vertices;
-    float m_clear_color[4];
 
     VkDescriptorSetLayout m_vk_desc_set_layout;
     VkPipelineLayout m_vk_pipeline_layout;
     VkRenderPass m_vk_render_pass;
+    VkPipelineCache m_vk_pipeline_cache;
+    VkPipeline m_vk_pipeline;
 };

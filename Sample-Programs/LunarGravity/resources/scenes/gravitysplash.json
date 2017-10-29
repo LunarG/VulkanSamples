@@ -6,6 +6,8 @@
     "version": "1",
     "data" : {
       "clear color" : [ 0.0, 0.0, 0.0, 1.0 ],
+      "clear depth" : 1.0,
+      "clear stencil" : 0,
       "texture" : {
         "index" : 0,
         "name" : "LunarG Logo Texture",

@@ -103,7 +103,7 @@ bool GravityDemo::Init(std::vector<std::string> &arguments) {
     }
     
     // Load the initial scene here
-    return m_cur_scene->Start();
+    return m_cur_scene->Start(m_frames[m_frame_index].vk_render_pass);
 }
 
 bool GravityDemo::BeginDrawFrame() {
