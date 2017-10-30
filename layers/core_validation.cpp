@@ -3887,7 +3887,11 @@ VKAPI_ATTR void VKAPI_CALL GetBufferMemoryRequirements(VkDevice device, VkBuffer
                                                        VkMemoryRequirements *pMemoryRequirements) {
     layer_data *dev_data = GetLayerDataPtr(get_dispatch_key(device), layer_data_map);
     dev_data->dispatch_table.GetBufferMemoryRequirements(device, buffer, pMemoryRequirements);
-    auto buffer_state = GetBufferState(dev_data, buffer);
+    BUFFER_STATE* buffer_state;
+    {
+        unique_lock_t lock(global_lock);
+        buffer_state = GetBufferState(dev_data, buffer);
+    }
     if (buffer_state) {
         buffer_state->requirements = *pMemoryRequirements;
         buffer_state->memory_requirements_checked = true;
@@ -3897,7 +3901,11 @@ VKAPI_ATTR void VKAPI_CALL GetBufferMemoryRequirements(VkDevice device, VkBuffer
 VKAPI_ATTR void VKAPI_CALL GetImageMemoryRequirements(VkDevice device, VkImage image, VkMemoryRequirements *pMemoryRequirements) {
     layer_data *dev_data = GetLayerDataPtr(get_dispatch_key(device), layer_data_map);
     dev_data->dispatch_table.GetImageMemoryRequirements(device, image, pMemoryRequirements);
-    auto image_state = GetImageState(dev_data, image);
+    IMAGE_STATE* image_state;
+    {
+        unique_lock_t lock(global_lock);
+        image_state = GetImageState(dev_data, image);
+    }
     if (image_state) {
         image_state->requirements = *pMemoryRequirements;
         image_state->memory_requirements_checked = true;
