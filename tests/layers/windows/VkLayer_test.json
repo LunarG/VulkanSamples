@@ -4,7 +4,7 @@
         "name": "VK_LAYER_LUNARG_test",
         "type": "GLOBAL",
         "library_path": ".\\libVkLayer_test.dll",
-        "api_version": "1.0.59",
+        "api_version": "1.0.65",
         "implementation_version": "1",
         "description": "LunarG Test Layer",
         "enable_environment": {
