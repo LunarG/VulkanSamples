@@ -1278,15 +1278,15 @@ function.
 - A layer initializes its device dispatch table within its `vkCreateDevice`
 function.
 - The loader passes a linked list of initialization structures to layers via
-the "pNext" field in the VkInstanceCreateInfo and `VkDeviceCreateInfo`
+the "pNext" field in the `VkInstanceCreateInfo` and `VkDeviceCreateInfo`
 structures for `vkCreateInstance` and `VkCreateDevice` respectively.
 - The head node in this linked list is of type `VkLayerInstanceCreateInfo` for
 instance and VkLayerDeviceCreateInfo for device. See file
 `include/vulkan/vk_layer.h` for details.
 - A VK_STRUCTURE_TYPE_LOADER_INSTANCE_CREATE_INFO is used by the loader for the
-"sType" field in VkLayerInstanceCreateInfo.
+"sType" field in `VkLayerInstanceCreateInfo`.
 - A VK_STRUCTURE_TYPE_LOADER_DEVICE_CREATE_INFO is used by the loader for the
-"sType" field in VkLayerDeviceCreateInfo.
+"sType" field in `VkLayerDeviceCreateInfo`.
 - The "function" field indicates how the union field "u" should be interpreted
 within `VkLayer*CreateInfo`. The loader will set the "function" field to
 VK_LAYER_LINK_INFO. This indicates "u" field should be `VkLayerInstanceLink` or
@@ -1300,7 +1300,7 @@ used by a layer.
 - Given the above structures set up by the loader, layer must initialize their
 dispatch table as follows:
   - Find the `VkLayerInstanceCreateInfo`/`VkLayerDeviceCreateInfo` structure in
-the VkInstanceCreateInfo/VkDeviceCreateInfo structure.
+the `VkInstanceCreateInfo`/`VkDeviceCreateInfo` structure.
   - Get the next entity's vkGet*ProcAddr from the "pLayerInfo" field.
   - For CreateInstance get the next entity's `vkCreateInstance` by calling the
 "pfnNextGetInstanceProcAddr":
@@ -2078,7 +2078,7 @@ The following section discusses the details of the ICD Manifest JSON file
 format.  The JSON file itself does not have any requirements for naming.  The
 only requirement is that the extension suffix of the file ends with ".json".
 
-Here is an example layer JSON Manifest file:
+Here is an example ICD JSON Manifest file:
 
 ```
 {
@@ -2401,7 +2401,7 @@ corresponding ICD only supports either interface version 0 or 1.
 
 From the other side of the interface, if an ICD sees a call to
 `vk_icdGetInstanceProcAddr` before a call to
-`vk_icdGetLoaderICDInterfaceVersion`, then it knows that loader making the calls
+`vk_icdNegotiateLoaderICDInterfaceVersion`, then it knows that loader making the calls
 is a legacy loader supporting version 0 or 1.  If the loader calls
 `vk_icdGetInstanceProcAddr` first, it supports at least version 1.  Otherwise,
 the loader only supports version 0.

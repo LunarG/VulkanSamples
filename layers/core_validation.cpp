@@ -181,6 +181,7 @@ struct layer_data {
     PHYS_DEV_PROPERTIES_NODE phys_dev_properties = {};
     VkPhysicalDeviceMemoryProperties phys_dev_mem_props = {};
     VkPhysicalDeviceProperties phys_dev_props = {};
+    bool external_sync_warning = false;
 };
 
 // TODO : Do we need to guard access to layer_data_map w/ lock?
@@ -357,6 +358,18 @@ static void add_mem_obj_info(layer_data *dev_data, void *object, const VkDeviceM
     assert(object != NULL);
 
     dev_data->memObjMap[mem] = unique_ptr<DEVICE_MEM_INFO>(new DEVICE_MEM_INFO(object, mem, pAllocateInfo));
+
+    if (pAllocateInfo->pNext) {
+        auto struct_header = reinterpret_cast<const GENERIC_HEADER *>(pAllocateInfo->pNext);
+        while (struct_header) {
+            if (VK_STRUCTURE_TYPE_IMPORT_MEMORY_FD_INFO_KHR == struct_header->sType ||
+                VK_STRUCTURE_TYPE_IMPORT_MEMORY_WIN32_HANDLE_INFO_KHR == struct_header->sType) {
+                dev_data->memObjMap[mem]->global_valid = true;
+                break;
+            }
+            struct_header = reinterpret_cast<const GENERIC_HEADER *>(struct_header->pNext);
+        }
+    }
 }
 
 // For given bound_object_handle, bound to given mem allocation, verify that the range for the bound object is valid
@@ -2126,9 +2139,25 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateDevice(VkPhysicalDevice gpu, const VkDevice
     }
 
     // Check that any requested features are available
-    if (pCreateInfo->pEnabledFeatures) {
-        skip |= ValidateRequestedFeatures(instance_data, pd_state, pCreateInfo->pEnabledFeatures);
+    // The enabled features can come from either pEnabledFeatures, or from the pNext chain
+    const VkPhysicalDeviceFeatures *enabled_features_found = pCreateInfo->pEnabledFeatures;
+    if (nullptr == enabled_features_found) {
+        GENERIC_HEADER *struct_header = (GENERIC_HEADER *)pCreateInfo->pNext;
+        while (struct_header) {
+            if (VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2_KHR == struct_header->sType) {
+                VkPhysicalDeviceFeatures2KHR *features2 = (VkPhysicalDeviceFeatures2KHR *)struct_header;
+                enabled_features_found =  &(features2->features);
+                struct_header = nullptr;
+            } else {
+                struct_header = (GENERIC_HEADER *)struct_header->pNext;
+            }
+        }
     }
+
+    if (enabled_features_found) {
+        skip |= ValidateRequestedFeatures(instance_data, pd_state, enabled_features_found);
+    }
+
     skip |=
         ValidateDeviceQueueCreateInfos(instance_data, pd_state, pCreateInfo->queueCreateInfoCount, pCreateInfo->pQueueCreateInfos);
 
@@ -2175,8 +2204,8 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateDevice(VkPhysicalDevice gpu, const VkDevice
     instance_data->dispatch_table.GetPhysicalDeviceQueueFamilyProperties(
         gpu, &count, &device_data->phys_dev_properties.queue_family_properties[0]);
     // TODO: device limits should make sure these are compatible
-    if (pCreateInfo->pEnabledFeatures) {
-        device_data->enabled_features = *pCreateInfo->pEnabledFeatures;
+    if (enabled_features_found) {
+        device_data->enabled_features = *enabled_features_found;
     } else {
         memset(&device_data->enabled_features, 0, sizeof(VkPhysicalDeviceFeatures));
     }
@@ -2356,7 +2385,7 @@ static bool VerifyQueueStateToSeq(layer_data *dev_data, QUEUE_STATE *initial_que
 // When the given fence is retired, verify outstanding queue operations through the point of the fence
 static bool VerifyQueueStateToFence(layer_data *dev_data, VkFence fence) {
     auto fence_state = GetFenceNode(dev_data, fence);
-    if (VK_NULL_HANDLE != fence_state->signaler.first) {
+    if (fence_state->scope == kSyncScopeInternal && VK_NULL_HANDLE != fence_state->signaler.first) {
         return VerifyQueueStateToSeq(dev_data, GetQueueState(dev_data, fence_state->signaler.first), fence_state->signaler.second);
     }
     return false;
@@ -2396,6 +2425,13 @@ static void RetireWorkOnQueue(layer_data *dev_data, QUEUE_STATE *pQueue, uint64_
             }
         }
 
+        for (auto &semaphore : submission.externalSemaphores) {
+            auto pSemaphore = GetSemaphoreNode(dev_data, semaphore);
+            if (pSemaphore) {
+                pSemaphore->in_use.fetch_sub(1);
+            }
+        }
+
         for (auto cb : submission.cbs) {
             auto cb_node = GetCBNode(dev_data, cb);
             if (!cb_node) {
@@ -2428,7 +2464,7 @@ static void RetireWorkOnQueue(layer_data *dev_data, QUEUE_STATE *pQueue, uint64_
         }
 
         auto pFence = GetFenceNode(dev_data, submission.fence);
-        if (pFence) {
+        if (pFence && pFence->scope == kSyncScopeInternal) {
             pFence->state = FENCE_RETIRED;
         }
 
@@ -2617,7 +2653,7 @@ static bool validatePrimaryCommandBufferState(layer_data *dev_data, GLOBAL_CB_NO
 static bool ValidateFenceForSubmit(layer_data *dev_data, FENCE_NODE *pFence) {
     bool skip = false;
 
-    if (pFence) {
+    if (pFence && pFence->scope == kSyncScopeInternal) {
         if (pFence->state == FENCE_INFLIGHT) {
             // TODO: opportunities for VALIDATION_ERROR_31a00080, VALIDATION_ERROR_316008b4, VALIDATION_ERROR_16400a0e
             skip |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_FENCE_EXT,
@@ -2639,12 +2675,34 @@ static bool ValidateFenceForSubmit(layer_data *dev_data, FENCE_NODE *pFence) {
 
 static void PostCallRecordQueueSubmit(layer_data *dev_data, VkQueue queue, uint32_t submitCount, const VkSubmitInfo *pSubmits,
                                       VkFence fence) {
+    uint64_t early_retire_seq = 0;
     auto pQueue = GetQueueState(dev_data, queue);
     auto pFence = GetFenceNode(dev_data, fence);
 
-    // Mark the fence in-use.
     if (pFence) {
-        SubmitFence(pQueue, pFence, std::max(1u, submitCount));
+        if (pFence->scope == kSyncScopeInternal) {
+            // Mark fence in use
+            SubmitFence(pQueue, pFence, std::max(1u, submitCount));
+            if (!submitCount) {
+                // If no submissions, but just dropping a fence on the end of the queue,
+                // record an empty submission with just the fence, so we can determine
+                // its completion.
+                pQueue->submissions.emplace_back(std::vector<VkCommandBuffer>(), std::vector<SEMAPHORE_WAIT>(),
+                                                 std::vector<VkSemaphore>(), std::vector<VkSemaphore>(), fence);
+            }
+        } else {
+            // Retire work up until this fence early, we will not see the wait that corresponds to this signal
+            early_retire_seq = pQueue->seq + pQueue->submissions.size();
+            if (!dev_data->external_sync_warning) {
+                dev_data->external_sync_warning = true;
+                log_msg(dev_data->report_data, VK_DEBUG_REPORT_WARNING_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_FENCE_EXT,
+                        HandleToUint64(fence), __LINE__, DRAWSTATE_QUEUE_FORWARD_PROGRESS, "DS",
+                        "vkQueueSubmit(): Signaling external fence 0x%" PRIx64 " on queue 0x%" PRIx64
+                        " will disable validation of preceding command buffer lifecycle states and the in-use status of "
+                        "associated objects.",
+                        HandleToUint64(fence), HandleToUint64(queue));
+            }
+        }
     }
 
     // Now process each individual submit
@@ -2653,27 +2711,50 @@ static void PostCallRecordQueueSubmit(layer_data *dev_data, VkQueue queue, uint3
         const VkSubmitInfo *submit = &pSubmits[submit_idx];
         vector<SEMAPHORE_WAIT> semaphore_waits;
         vector<VkSemaphore> semaphore_signals;
+        vector<VkSemaphore> semaphore_externals;
         for (uint32_t i = 0; i < submit->waitSemaphoreCount; ++i) {
             VkSemaphore semaphore = submit->pWaitSemaphores[i];
             auto pSemaphore = GetSemaphoreNode(dev_data, semaphore);
             if (pSemaphore) {
-                if (pSemaphore->signaler.first != VK_NULL_HANDLE) {
-                    semaphore_waits.push_back({semaphore, pSemaphore->signaler.first, pSemaphore->signaler.second});
+                if (pSemaphore->scope == kSyncScopeInternal) {
+                    if (pSemaphore->signaler.first != VK_NULL_HANDLE) {
+                        semaphore_waits.push_back({semaphore, pSemaphore->signaler.first, pSemaphore->signaler.second});
+                        pSemaphore->in_use.fetch_add(1);
+                    }
+                    pSemaphore->signaler.first = VK_NULL_HANDLE;
+                    pSemaphore->signaled = false;
+                } else {
+                    semaphore_externals.push_back(semaphore);
                     pSemaphore->in_use.fetch_add(1);
+                    if (pSemaphore->scope == kSyncScopeExternalTemporary) {
+                        pSemaphore->scope = kSyncScopeInternal;
+                    }
                 }
-                pSemaphore->signaler.first = VK_NULL_HANDLE;
-                pSemaphore->signaled = false;
             }
         }
         for (uint32_t i = 0; i < submit->signalSemaphoreCount; ++i) {
             VkSemaphore semaphore = submit->pSignalSemaphores[i];
             auto pSemaphore = GetSemaphoreNode(dev_data, semaphore);
             if (pSemaphore) {
-                pSemaphore->signaler.first = queue;
-                pSemaphore->signaler.second = pQueue->seq + pQueue->submissions.size() + 1;
-                pSemaphore->signaled = true;
-                pSemaphore->in_use.fetch_add(1);
-                semaphore_signals.push_back(semaphore);
+                if (pSemaphore->scope == kSyncScopeInternal) {
+                    pSemaphore->signaler.first = queue;
+                    pSemaphore->signaler.second = pQueue->seq + pQueue->submissions.size() + 1;
+                    pSemaphore->signaled = true;
+                    pSemaphore->in_use.fetch_add(1);
+                    semaphore_signals.push_back(semaphore);
+                } else {
+                    // Retire work up until this submit early, we will not see the wait that corresponds to this signal
+                    early_retire_seq = std::max(early_retire_seq, pQueue->seq + pQueue->submissions.size() + 1);
+                    if (!dev_data->external_sync_warning) {
+                        dev_data->external_sync_warning = true;
+                        log_msg(dev_data->report_data, VK_DEBUG_REPORT_WARNING_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_SEMAPHORE_EXT,
+                                HandleToUint64(semaphore), __LINE__, DRAWSTATE_QUEUE_FORWARD_PROGRESS, "DS",
+                                "vkQueueSubmit(): Signaling external semaphore 0x%" PRIx64 " on queue 0x%" PRIx64
+                                " will disable validation of preceding command buffer lifecycle states and the in-use status of "
+                                "associated objects.",
+                                HandleToUint64(semaphore), HandleToUint64(queue));
+                    }
+                }
             }
         }
         for (uint32_t i = 0; i < submit->commandBufferCount; i++) {
@@ -2690,16 +2771,12 @@ static void PostCallRecordQueueSubmit(layer_data *dev_data, VkQueue queue, uint3
                 }
             }
         }
-        pQueue->submissions.emplace_back(cbs, semaphore_waits, semaphore_signals,
+        pQueue->submissions.emplace_back(cbs, semaphore_waits, semaphore_signals, semaphore_externals,
                                          submit_idx == submitCount - 1 ? fence : VK_NULL_HANDLE);
     }
 
-    if (pFence && !submitCount) {
-        // If no submissions, but just dropping a fence on the end of the queue,
-        // record an empty submission with just the fence, so we can determine
-        // its completion.
-        pQueue->submissions.emplace_back(std::vector<VkCommandBuffer>(), std::vector<SEMAPHORE_WAIT>(), std::vector<VkSemaphore>(),
-                                         fence);
+    if (early_retire_seq) {
+        RetireWorkOnQueue(dev_data, pQueue, early_retire_seq);
     }
 }
 
@@ -2713,6 +2790,7 @@ static bool PreCallValidateQueueSubmit(layer_data *dev_data, VkQueue queue, uint
 
     unordered_set<VkSemaphore> signaled_semaphores;
     unordered_set<VkSemaphore> unsignaled_semaphores;
+    unordered_set<VkSemaphore> internal_semaphores;
     vector<VkCommandBuffer> current_cmds;
     unordered_map<ImageSubresourcePair, IMAGE_LAYOUT_NODE> localImageLayoutMap;
     // Now verify each individual submit
@@ -2723,7 +2801,7 @@ static bool PreCallValidateQueueSubmit(layer_data *dev_data, VkQueue queue, uint
                                                  VALIDATION_ERROR_13c00098, VALIDATION_ERROR_13c0009a);
             VkSemaphore semaphore = submit->pWaitSemaphores[i];
             auto pSemaphore = GetSemaphoreNode(dev_data, semaphore);
-            if (pSemaphore) {
+            if (pSemaphore && (pSemaphore->scope == kSyncScopeInternal || internal_semaphores.count(semaphore))) {
                 if (unsignaled_semaphores.count(semaphore) ||
                     (!(signaled_semaphores.count(semaphore)) && !(pSemaphore->signaled))) {
                     skip |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_SEMAPHORE_EXT,
@@ -2735,11 +2813,14 @@ static bool PreCallValidateQueueSubmit(layer_data *dev_data, VkQueue queue, uint
                     unsignaled_semaphores.insert(semaphore);
                 }
             }
+            if (pSemaphore && pSemaphore->scope == kSyncScopeExternalTemporary) {
+                internal_semaphores.insert(semaphore);
+            }
         }
         for (uint32_t i = 0; i < submit->signalSemaphoreCount; ++i) {
             VkSemaphore semaphore = submit->pSignalSemaphores[i];
             auto pSemaphore = GetSemaphoreNode(dev_data, semaphore);
-            if (pSemaphore) {
+            if (pSemaphore && (pSemaphore->scope == kSyncScopeInternal || internal_semaphores.count(semaphore))) {
                 if (signaled_semaphores.count(semaphore) || (!(unsignaled_semaphores.count(semaphore)) && pSemaphore->signaled)) {
                     skip |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_SEMAPHORE_EXT,
                                     HandleToUint64(semaphore), __LINE__, DRAWSTATE_QUEUE_FORWARD_PROGRESS, "DS",
@@ -2834,15 +2915,15 @@ VKAPI_ATTR VkResult VKAPI_CALL AllocateMemory(VkDevice device, const VkMemoryAll
 }
 
 // For given obj node, if it is use, flag a validation error and return callback result, else return false
-bool ValidateObjectNotInUse(const layer_data *dev_data, BASE_NODE *obj_node, VK_OBJECT obj_struct,
+bool ValidateObjectNotInUse(const layer_data *dev_data, BASE_NODE *obj_node, VK_OBJECT obj_struct, const char *caller_name,
                             UNIQUE_VALIDATION_ERROR_CODE error_code) {
     if (dev_data->instance_data->disabled.object_in_use) return false;
     bool skip = false;
     if (obj_node->in_use.load()) {
-        skip |=
-            log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, get_debug_report_enum[obj_struct.type], obj_struct.handle,
-                    __LINE__, error_code, "DS", "Cannot delete %s 0x%" PRIx64 " that is currently in use by a command buffer. %s",
-                    object_string[obj_struct.type], obj_struct.handle, validation_error_map[error_code]);
+        skip |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, get_debug_report_enum[obj_struct.type],
+                        obj_struct.handle, __LINE__, error_code, "DS",
+                        "Cannot call %s on %s 0x%" PRIx64 " that is currently in use by a command buffer. %s", caller_name,
+                        object_string[obj_struct.type], obj_struct.handle, validation_error_map[error_code]);
     }
     return skip;
 }
@@ -2853,7 +2934,7 @@ static bool PreCallValidateFreeMemory(layer_data *dev_data, VkDeviceMemory mem, 
     if (dev_data->instance_data->disabled.free_memory) return false;
     bool skip = false;
     if (*mem_info) {
-        skip |= ValidateObjectNotInUse(dev_data, *mem_info, *obj_struct, VALIDATION_ERROR_2880054a);
+        skip |= ValidateObjectNotInUse(dev_data, *mem_info, *obj_struct, "vkFreeMemory", VALIDATION_ERROR_2880054a);
     }
     return skip;
 }
@@ -3025,7 +3106,7 @@ static inline bool verifyWaitFenceState(layer_data *dev_data, VkFence fence, con
     bool skip = false;
 
     auto pFence = GetFenceNode(dev_data, fence);
-    if (pFence) {
+    if (pFence && pFence->scope == kSyncScopeInternal) {
         if (pFence->state == FENCE_UNSIGNALED) {
             skip |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_WARNING_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_FENCE_EXT,
                             HandleToUint64(fence), __LINE__, MEMTRACK_INVALID_FENCE_STATE, "MEM",
@@ -3040,13 +3121,15 @@ static inline bool verifyWaitFenceState(layer_data *dev_data, VkFence fence, con
 
 static void RetireFence(layer_data *dev_data, VkFence fence) {
     auto pFence = GetFenceNode(dev_data, fence);
-    if (pFence->signaler.first != VK_NULL_HANDLE) {
-        // Fence signaller is a queue -- use this as proof that prior operations on that queue have completed.
-        RetireWorkOnQueue(dev_data, GetQueueState(dev_data, pFence->signaler.first), pFence->signaler.second);
-    } else {
-        // Fence signaller is the WSI. We're not tracking what the WSI op actually /was/ in CV yet, but we need to mark
-        // the fence as retired.
-        pFence->state = FENCE_RETIRED;
+    if (pFence->scope == kSyncScopeInternal) {
+        if (pFence->signaler.first != VK_NULL_HANDLE) {
+            // Fence signaller is a queue -- use this as proof that prior operations on that queue have completed.
+            RetireWorkOnQueue(dev_data, GetQueueState(dev_data, pFence->signaler.first), pFence->signaler.second);
+        } else {
+            // Fence signaller is the WSI. We're not tracking what the WSI op actually /was/ in CV yet, but we need to mark
+            // the fence as retired.
+            pFence->state = FENCE_RETIRED;
+        }
     }
 }
 
@@ -3195,7 +3278,7 @@ static bool PreCallValidateDestroyFence(layer_data *dev_data, VkFence fence, FEN
     if (dev_data->instance_data->disabled.destroy_fence) return false;
     bool skip = false;
     if (*fence_node) {
-        if ((*fence_node)->state == FENCE_INFLIGHT) {
+        if ((*fence_node)->scope == kSyncScopeInternal && (*fence_node)->state == FENCE_INFLIGHT) {
             skip |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_FENCE_EXT,
                             HandleToUint64(fence), __LINE__, VALIDATION_ERROR_24e008c0, "DS", "Fence 0x%" PRIx64 " is in use. %s",
                             HandleToUint64(fence), validation_error_map[VALIDATION_ERROR_24e008c0]);
@@ -3229,7 +3312,7 @@ static bool PreCallValidateDestroySemaphore(layer_data *dev_data, VkSemaphore se
     if (dev_data->instance_data->disabled.destroy_semaphore) return false;
     bool skip = false;
     if (*sema_node) {
-        skip |= ValidateObjectNotInUse(dev_data, *sema_node, *obj_struct, VALIDATION_ERROR_268008e2);
+        skip |= ValidateObjectNotInUse(dev_data, *sema_node, *obj_struct, "vkDestroySemaphore", VALIDATION_ERROR_268008e2);
     }
     return skip;
 }
@@ -3256,7 +3339,7 @@ static bool PreCallValidateDestroyEvent(layer_data *dev_data, VkEvent event, EVE
     if (dev_data->instance_data->disabled.destroy_event) return false;
     bool skip = false;
     if (*event_state) {
-        skip |= ValidateObjectNotInUse(dev_data, *event_state, *obj_struct, VALIDATION_ERROR_24c008f2);
+        skip |= ValidateObjectNotInUse(dev_data, *event_state, *obj_struct, "vkDestroyEvent", VALIDATION_ERROR_24c008f2);
     }
     return skip;
 }
@@ -3289,7 +3372,7 @@ static bool PreCallValidateDestroyQueryPool(layer_data *dev_data, VkQueryPool qu
     if (dev_data->instance_data->disabled.destroy_query_pool) return false;
     bool skip = false;
     if (*qp_state) {
-        skip |= ValidateObjectNotInUse(dev_data, *qp_state, *obj_struct, VALIDATION_ERROR_26200632);
+        skip |= ValidateObjectNotInUse(dev_data, *qp_state, *obj_struct, "vkDestroyQueryPool", VALIDATION_ERROR_26200632);
     }
     return skip;
 }
@@ -3856,7 +3939,7 @@ static bool PreCallValidateDestroyPipeline(layer_data *dev_data, VkPipeline pipe
     if (dev_data->instance_data->disabled.destroy_pipeline) return false;
     bool skip = false;
     if (*pipeline_state) {
-        skip |= ValidateObjectNotInUse(dev_data, *pipeline_state, *obj_struct, VALIDATION_ERROR_25c005fa);
+        skip |= ValidateObjectNotInUse(dev_data, *pipeline_state, *obj_struct, "vkDestroyPipeline", VALIDATION_ERROR_25c005fa);
     }
     return skip;
 }
@@ -3901,7 +3984,7 @@ static bool PreCallValidateDestroySampler(layer_data *dev_data, VkSampler sample
     if (dev_data->instance_data->disabled.destroy_sampler) return false;
     bool skip = false;
     if (*sampler_state) {
-        skip |= ValidateObjectNotInUse(dev_data, *sampler_state, *obj_struct, VALIDATION_ERROR_26600874);
+        skip |= ValidateObjectNotInUse(dev_data, *sampler_state, *obj_struct, "vkDestroySampler", VALIDATION_ERROR_26600874);
     }
     return skip;
 }
@@ -3948,7 +4031,8 @@ static bool PreCallValidateDestroyDescriptorPool(layer_data *dev_data, VkDescrip
     if (dev_data->instance_data->disabled.destroy_descriptor_pool) return false;
     bool skip = false;
     if (*desc_pool_state) {
-        skip |= ValidateObjectNotInUse(dev_data, *desc_pool_state, *obj_struct, VALIDATION_ERROR_2440025e);
+        skip |=
+            ValidateObjectNotInUse(dev_data, *desc_pool_state, *obj_struct, "vkDestroyDescriptorPool", VALIDATION_ERROR_2440025e);
     }
     return skip;
 }
@@ -4160,7 +4244,7 @@ VKAPI_ATTR VkResult VKAPI_CALL ResetFences(VkDevice device, uint32_t fenceCount,
     unique_lock_t lock(global_lock);
     for (uint32_t i = 0; i < fenceCount; ++i) {
         auto pFence = GetFenceNode(dev_data, pFences[i]);
-        if (pFence && pFence->state == FENCE_INFLIGHT) {
+        if (pFence && pFence->scope == kSyncScopeInternal && pFence->state == FENCE_INFLIGHT) {
             skip |=
                 log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_FENCE_EXT,
                         HandleToUint64(pFences[i]), __LINE__, VALIDATION_ERROR_32e008c6, "DS", "Fence 0x%" PRIx64 " is in use. %s",
@@ -4178,7 +4262,11 @@ VKAPI_ATTR VkResult VKAPI_CALL ResetFences(VkDevice device, uint32_t fenceCount,
         for (uint32_t i = 0; i < fenceCount; ++i) {
             auto pFence = GetFenceNode(dev_data, pFences[i]);
             if (pFence) {
-                pFence->state = FENCE_UNSIGNALED;
+                if (pFence->scope == kSyncScopeInternal) {
+                    pFence->state = FENCE_UNSIGNALED;
+                } else if (pFence->scope == kSyncScopeExternalTemporary) {
+                    pFence->scope = kSyncScopeInternal;
+                }
             }
         }
         lock.unlock();
@@ -4215,7 +4303,8 @@ static bool PreCallValidateDestroyFramebuffer(layer_data *dev_data, VkFramebuffe
     if (dev_data->instance_data->disabled.destroy_framebuffer) return false;
     bool skip = false;
     if (*framebuffer_state) {
-        skip |= ValidateObjectNotInUse(dev_data, *framebuffer_state, *obj_struct, VALIDATION_ERROR_250006f8);
+        skip |=
+            ValidateObjectNotInUse(dev_data, *framebuffer_state, *obj_struct, "vkDestroyFrameBuffer", VALIDATION_ERROR_250006f8);
     }
     return skip;
 }
@@ -4249,7 +4338,7 @@ static bool PreCallValidateDestroyRenderPass(layer_data *dev_data, VkRenderPass 
     if (dev_data->instance_data->disabled.destroy_renderpass) return false;
     bool skip = false;
     if (*rp_state) {
-        skip |= ValidateObjectNotInUse(dev_data, *rp_state, *obj_struct, VALIDATION_ERROR_264006d2);
+        skip |= ValidateObjectNotInUse(dev_data, *rp_state, *obj_struct, "vkDestroyRenderPass", VALIDATION_ERROR_264006d2);
     }
     return skip;
 }
@@ -4766,19 +4855,34 @@ VKAPI_ATTR VkResult VKAPI_CALL CreatePipelineLayout(VkDevice device, const VkPip
         }
     }
 
+    std::vector<std::shared_ptr<cvdescriptorset::DescriptorSetLayout const>> set_layouts(pCreateInfo->setLayoutCount, nullptr);
+    unique_lock_t lock(global_lock);
+    unsigned int push_descriptor_set_count = 0;
+    for (i = 0; i < pCreateInfo->setLayoutCount; ++i) {
+        set_layouts[i] = GetDescriptorSetLayout(dev_data, pCreateInfo->pSetLayouts[i]);
+        if (set_layouts[i]->IsPushDescriptor()) ++push_descriptor_set_count;
+    }
+    lock.unlock();
+    if (push_descriptor_set_count > 1) {
+        skip |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0,
+                        __LINE__, VALIDATION_ERROR_0fe0024a, "DS",
+                        "vkCreatePipelineLayout() Multiple push descriptor sets found. %s",
+                        validation_error_map[VALIDATION_ERROR_0fe0024a]);
+    }
+    if (skip) return VK_ERROR_VALIDATION_FAILED_EXT;
+
     VkResult result = dev_data->dispatch_table.CreatePipelineLayout(device, pCreateInfo, pAllocator, pPipelineLayout);
     if (VK_SUCCESS == result) {
-        lock_guard_t lock(global_lock);
+        lock.lock();
         PIPELINE_LAYOUT_NODE &plNode = dev_data->pipelineLayoutMap[*pPipelineLayout];
         plNode.layout = *pPipelineLayout;
         plNode.set_layouts.resize(pCreateInfo->setLayoutCount);
-        for (i = 0; i < pCreateInfo->setLayoutCount; ++i) {
-            plNode.set_layouts[i] = GetDescriptorSetLayout(dev_data, pCreateInfo->pSetLayouts[i]);
-        }
+        plNode.set_layouts.swap(set_layouts);
         plNode.push_constant_ranges.resize(pCreateInfo->pushConstantRangeCount);
         for (i = 0; i < pCreateInfo->pushConstantRangeCount; ++i) {
             plNode.push_constant_ranges[i] = pCreateInfo->pPushConstantRanges[i];
         }
+        lock.unlock();
     }
     return result;
 }
@@ -4996,11 +5100,6 @@ static void AddFramebufferBinding(layer_data *dev_data, GLOBAL_CB_NODE *cb_state
         if (view_state) {
             AddCommandBufferBindingImageView(dev_data, cb_state, view_state);
         }
-        auto rp_state = GetRenderPassState(dev_data, fb_state->createInfo.renderPass);
-        if (rp_state) {
-            addCommandBufferBinding(&rp_state->cb_bindings, {HandleToUint64(rp_state->renderPass), kVulkanObjectTypeRenderPass},
-                                    cb_state);
-        }
     }
 }
 
@@ -5198,14 +5297,6 @@ VKAPI_ATTR void VKAPI_CALL CmdBindPipeline(VkCommandBuffer commandBuffer, VkPipe
         set_pipeline_state(pipe_state);
         skip |= validate_dual_src_blend_feature(dev_data, pipe_state);
         addCommandBufferBinding(&pipe_state->cb_bindings, {HandleToUint64(pipeline), kVulkanObjectTypePipeline}, cb_state);
-        if (VK_PIPELINE_BIND_POINT_GRAPHICS == pipelineBindPoint) {
-            // Add binding for child renderpass
-            auto rp_state = GetRenderPassState(dev_data, pipe_state->rp_state->renderPass);
-            if (rp_state) {
-                addCommandBufferBinding(&rp_state->cb_bindings, {HandleToUint64(rp_state->renderPass), kVulkanObjectTypeRenderPass},
-                                        cb_state);
-            }
-        }
     }
     lock.unlock();
     if (!skip) dev_data->dispatch_table.CmdBindPipeline(commandBuffer, pipelineBindPoint, pipeline);
@@ -5453,7 +5544,7 @@ static void PreCallRecordCmdBindDescriptorSets(layer_data *device_data, GLOBAL_C
 
             if ((last_bound->boundDescriptorSets[set_idx + firstSet] != nullptr) &&
                 last_bound->boundDescriptorSets[set_idx + firstSet]->IsPushDescriptor()) {
-                last_bound->push_descriptors[set_idx + firstSet] = nullptr;
+                last_bound->push_descriptor_set = nullptr;
                 last_bound->boundDescriptorSets[set_idx + firstSet] = nullptr;
             }
 
@@ -5623,22 +5714,15 @@ static void PreCallRecordCmdPushDescriptorSetKHR(layer_data *device_data, VkComm
                                                  uint32_t descriptorWriteCount, const VkWriteDescriptorSet *pDescriptorWrites) {
     auto cb_state = GetCBNode(device_data, commandBuffer);
 
-    if (set >= cb_state->lastBound[pipelineBindPoint].push_descriptors.size()) {
-        cb_state->lastBound[pipelineBindPoint].push_descriptors.resize(set + 1);
-    }
     if (set >= cb_state->lastBound[pipelineBindPoint].boundDescriptorSets.size()) {
         cb_state->lastBound[pipelineBindPoint].boundDescriptorSets.resize(set + 1);
         cb_state->lastBound[pipelineBindPoint].dynamicOffsets.resize(set + 1);
-    } else {
-        if (cb_state->lastBound[pipelineBindPoint].boundDescriptorSets[set]->IsPushDescriptor()) {
-            cb_state->lastBound[pipelineBindPoint].push_descriptors[set] = nullptr;
-        }
     }
     const auto &layout_state = getPipelineLayout(device_data, layout);
     std::unique_ptr<cvdescriptorset::DescriptorSet> new_desc{
         new cvdescriptorset::DescriptorSet(0, 0, layout_state->set_layouts[set], device_data)};
     cb_state->lastBound[pipelineBindPoint].boundDescriptorSets[set] = new_desc.get();
-    cb_state->lastBound[pipelineBindPoint].push_descriptors[set] = std::move(new_desc);
+    cb_state->lastBound[pipelineBindPoint].push_descriptor_set = std::move(new_desc);
 }
 
 VKAPI_ATTR void VKAPI_CALL CmdPushDescriptorSetKHR(VkCommandBuffer commandBuffer, VkPipelineBindPoint pipelineBindPoint,
@@ -6715,12 +6799,6 @@ static bool ValidateBarriers(layer_data *device_data, const char *funcName, GLOB
             }
         }
 
-        if (mem_barrier->oldLayout != mem_barrier->newLayout) {
-            skip |= ValidateMaskBitsFromLayouts(device_data, cb_state->commandBuffer, mem_barrier->srcAccessMask,
-                                                mem_barrier->oldLayout, "Source");
-            skip |= ValidateMaskBitsFromLayouts(device_data, cb_state->commandBuffer, mem_barrier->dstAccessMask,
-                                                mem_barrier->newLayout, "Dest");
-        }
         if (mem_barrier->newLayout == VK_IMAGE_LAYOUT_UNDEFINED || mem_barrier->newLayout == VK_IMAGE_LAYOUT_PREINITIALIZED) {
             skip |= log_msg(device_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
                             HandleToUint64(cb_state->commandBuffer), __LINE__, DRAWSTATE_INVALID_BARRIER, "DS",
@@ -7744,12 +7822,10 @@ static bool CreatePassDAG(const layer_data *dev_data, const VkRenderPassCreateIn
                             "Dependency graph must be specified such that an earlier pass cannot depend on a later pass.");
         } else if (dependency.srcSubpass == dependency.dstSubpass) {
             has_self_dependency[dependency.srcSubpass] = true;
+            subpass_to_dep_index[dependency.srcSubpass] = i;
         } else {
             subpass_to_node[dependency.dstSubpass].prev.push_back(dependency.srcSubpass);
             subpass_to_node[dependency.srcSubpass].next.push_back(dependency.dstSubpass);
-        }
-        if (dependency.srcSubpass != VK_SUBPASS_EXTERNAL) {
-            subpass_to_dep_index[dependency.srcSubpass] = i;
         }
     }
     return skip;
@@ -8126,6 +8202,9 @@ VKAPI_ATTR void VKAPI_CALL CmdBeginRenderPass(VkCommandBuffer commandBuffer, con
             cb_node->framebuffers.insert(pRenderPassBegin->framebuffer);
             // Connect this framebuffer and its children to this cmdBuffer
             AddFramebufferBinding(dev_data, cb_node, framebuffer);
+            // Connect this RP to cmdBuffer
+            addCommandBufferBinding(&render_pass_state->cb_bindings,
+                                    {HandleToUint64(render_pass_state->renderPass), kVulkanObjectTypeRenderPass}, cb_node);
             // transition attachments to the correct layouts for beginning of renderPass and first subpass
             TransitionBeginRenderPassLayouts(dev_data, cb_node, render_pass_state, framebuffer);
         }
@@ -8760,20 +8839,88 @@ VKAPI_ATTR VkResult VKAPI_CALL SetEvent(VkDevice device, VkEvent event) {
     return result;
 }
 
-VKAPI_ATTR VkResult VKAPI_CALL QueueBindSparse(VkQueue queue, uint32_t bindInfoCount, const VkBindSparseInfo *pBindInfo,
-                                               VkFence fence) {
-    layer_data *dev_data = GetLayerDataPtr(get_dispatch_key(queue), layer_data_map);
-    VkResult result = VK_ERROR_VALIDATION_FAILED_EXT;
-    bool skip = false;
-    unique_lock_t lock(global_lock);
+static bool PreCallValidateQueueBindSparse(layer_data *dev_data, VkQueue queue, uint32_t bindInfoCount,
+                                           const VkBindSparseInfo *pBindInfo, VkFence fence) {
+    auto pFence = GetFenceNode(dev_data, fence);
+    bool skip = ValidateFenceForSubmit(dev_data, pFence);
+    if (skip) {
+        return true;
+    }
+
+    unordered_set<VkSemaphore> signaled_semaphores;
+    unordered_set<VkSemaphore> unsignaled_semaphores;
+    unordered_set<VkSemaphore> internal_semaphores;
+    for (uint32_t bindIdx = 0; bindIdx < bindInfoCount; ++bindIdx) {
+        const VkBindSparseInfo &bindInfo = pBindInfo[bindIdx];
+
+        std::vector<SEMAPHORE_WAIT> semaphore_waits;
+        std::vector<VkSemaphore> semaphore_signals;
+        for (uint32_t i = 0; i < bindInfo.waitSemaphoreCount; ++i) {
+            VkSemaphore semaphore = bindInfo.pWaitSemaphores[i];
+            auto pSemaphore = GetSemaphoreNode(dev_data, semaphore);
+            if (pSemaphore && (pSemaphore->scope == kSyncScopeInternal || internal_semaphores.count(semaphore))) {
+                if (unsignaled_semaphores.count(semaphore) ||
+                    (!(signaled_semaphores.count(semaphore)) && !(pSemaphore->signaled))) {
+                    skip |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_SEMAPHORE_EXT,
+                                    HandleToUint64(semaphore), __LINE__, DRAWSTATE_QUEUE_FORWARD_PROGRESS, "DS",
+                                    "Queue 0x%p is waiting on semaphore 0x%" PRIx64 " that has no way to be signaled.", queue,
+                                    HandleToUint64(semaphore));
+                } else {
+                    signaled_semaphores.erase(semaphore);
+                    unsignaled_semaphores.insert(semaphore);
+                }
+            }
+            if (pSemaphore && pSemaphore->scope == kSyncScopeExternalTemporary) {
+                internal_semaphores.insert(semaphore);
+            }
+        }
+        for (uint32_t i = 0; i < bindInfo.signalSemaphoreCount; ++i) {
+            VkSemaphore semaphore = bindInfo.pSignalSemaphores[i];
+            auto pSemaphore = GetSemaphoreNode(dev_data, semaphore);
+            if (pSemaphore && pSemaphore->scope == kSyncScopeInternal) {
+                if (signaled_semaphores.count(semaphore) || (!(unsignaled_semaphores.count(semaphore)) && pSemaphore->signaled)) {
+                    skip |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_SEMAPHORE_EXT,
+                                    HandleToUint64(semaphore), __LINE__, DRAWSTATE_QUEUE_FORWARD_PROGRESS, "DS",
+                                    "Queue 0x%p is signaling semaphore 0x%" PRIx64
+                                    " that has already been signaled but not waited on by queue 0x%" PRIx64 ".",
+                                    queue, HandleToUint64(semaphore), HandleToUint64(pSemaphore->signaler.first));
+                } else {
+                    unsignaled_semaphores.erase(semaphore);
+                    signaled_semaphores.insert(semaphore);
+                }
+            }
+        }
+    }
+
+    return skip;
+}
+static void PostCallRecordQueueBindSparse(layer_data *dev_data, VkQueue queue, uint32_t bindInfoCount,
+                                          const VkBindSparseInfo *pBindInfo, VkFence fence) {
+    uint64_t early_retire_seq = 0;
     auto pFence = GetFenceNode(dev_data, fence);
     auto pQueue = GetQueueState(dev_data, queue);
 
-    // First verify that fence is not in use
-    skip |= ValidateFenceForSubmit(dev_data, pFence);
-
     if (pFence) {
-        SubmitFence(pQueue, pFence, std::max(1u, bindInfoCount));
+        if (pFence->scope == kSyncScopeInternal) {
+            SubmitFence(pQueue, pFence, std::max(1u, bindInfoCount));
+            if (!bindInfoCount) {
+                // No work to do, just dropping a fence in the queue by itself.
+                pQueue->submissions.emplace_back(std::vector<VkCommandBuffer>(), std::vector<SEMAPHORE_WAIT>(),
+                                                 std::vector<VkSemaphore>(), std::vector<VkSemaphore>(), fence);
+            }
+        } else {
+            // Retire work up until this fence early, we will not see the wait that corresponds to this signal
+            early_retire_seq = pQueue->seq + pQueue->submissions.size();
+            if (!dev_data->external_sync_warning) {
+                dev_data->external_sync_warning = true;
+                log_msg(dev_data->report_data, VK_DEBUG_REPORT_WARNING_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_FENCE_EXT,
+                        HandleToUint64(fence), __LINE__, DRAWSTATE_QUEUE_FORWARD_PROGRESS, "DS",
+                        "vkQueueBindSparse(): Signaling external fence 0x%" PRIx64 " on queue 0x%" PRIx64
+                        " will disable validation of preceding command buffer lifecycle states and the in-use status of "
+                        "associated objects.",
+                        HandleToUint64(fence), HandleToUint64(queue));
+            }
+        }
     }
 
     for (uint32_t bindIdx = 0; bindIdx < bindInfoCount; ++bindIdx) {
@@ -8782,17 +8929,15 @@ VKAPI_ATTR VkResult VKAPI_CALL QueueBindSparse(VkQueue queue, uint32_t bindInfoC
         for (uint32_t j = 0; j < bindInfo.bufferBindCount; j++) {
             for (uint32_t k = 0; k < bindInfo.pBufferBinds[j].bindCount; k++) {
                 auto sparse_binding = bindInfo.pBufferBinds[j].pBinds[k];
-                if (SetSparseMemBinding(dev_data, {sparse_binding.memory, sparse_binding.memoryOffset, sparse_binding.size},
-                                        HandleToUint64(bindInfo.pBufferBinds[j].buffer), kVulkanObjectTypeBuffer))
-                    skip = true;
+                SetSparseMemBinding(dev_data, {sparse_binding.memory, sparse_binding.memoryOffset, sparse_binding.size},
+                                    HandleToUint64(bindInfo.pBufferBinds[j].buffer), kVulkanObjectTypeBuffer);
             }
         }
         for (uint32_t j = 0; j < bindInfo.imageOpaqueBindCount; j++) {
             for (uint32_t k = 0; k < bindInfo.pImageOpaqueBinds[j].bindCount; k++) {
                 auto sparse_binding = bindInfo.pImageOpaqueBinds[j].pBinds[k];
-                if (SetSparseMemBinding(dev_data, {sparse_binding.memory, sparse_binding.memoryOffset, sparse_binding.size},
-                                        HandleToUint64(bindInfo.pImageOpaqueBinds[j].image), kVulkanObjectTypeImage))
-                    skip = true;
+                SetSparseMemBinding(dev_data, {sparse_binding.memory, sparse_binding.memoryOffset, sparse_binding.size},
+                                    HandleToUint64(bindInfo.pImageOpaqueBinds[j].image), kVulkanObjectTypeImage);
             }
         }
         for (uint32_t j = 0; j < bindInfo.imageBindCount; j++) {
@@ -8800,19 +8945,19 @@ VKAPI_ATTR VkResult VKAPI_CALL QueueBindSparse(VkQueue queue, uint32_t bindInfoC
                 auto sparse_binding = bindInfo.pImageBinds[j].pBinds[k];
                 // TODO: This size is broken for non-opaque bindings, need to update to comprehend full sparse binding data
                 VkDeviceSize size = sparse_binding.extent.depth * sparse_binding.extent.height * sparse_binding.extent.width * 4;
-                if (SetSparseMemBinding(dev_data, {sparse_binding.memory, sparse_binding.memoryOffset, size},
-                                        HandleToUint64(bindInfo.pImageBinds[j].image), kVulkanObjectTypeImage))
-                    skip = true;
+                SetSparseMemBinding(dev_data, {sparse_binding.memory, sparse_binding.memoryOffset, size},
+                                    HandleToUint64(bindInfo.pImageBinds[j].image), kVulkanObjectTypeImage);
             }
         }
 
         std::vector<SEMAPHORE_WAIT> semaphore_waits;
         std::vector<VkSemaphore> semaphore_signals;
+        std::vector<VkSemaphore> semaphore_externals;
         for (uint32_t i = 0; i < bindInfo.waitSemaphoreCount; ++i) {
             VkSemaphore semaphore = bindInfo.pWaitSemaphores[i];
             auto pSemaphore = GetSemaphoreNode(dev_data, semaphore);
             if (pSemaphore) {
-                if (pSemaphore->signaled) {
+                if (pSemaphore->scope == kSyncScopeInternal) {
                     if (pSemaphore->signaler.first != VK_NULL_HANDLE) {
                         semaphore_waits.push_back({semaphore, pSemaphore->signaler.first, pSemaphore->signaler.second});
                         pSemaphore->in_use.fetch_add(1);
@@ -8820,11 +8965,11 @@ VKAPI_ATTR VkResult VKAPI_CALL QueueBindSparse(VkQueue queue, uint32_t bindInfoC
                     pSemaphore->signaler.first = VK_NULL_HANDLE;
                     pSemaphore->signaled = false;
                 } else {
-                    skip |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_SEMAPHORE_EXT,
-                                    HandleToUint64(semaphore), __LINE__, DRAWSTATE_QUEUE_FORWARD_PROGRESS, "DS",
-                                    "vkQueueBindSparse: Queue 0x%p is waiting on semaphore 0x%" PRIx64
-                                    " that has no way to be signaled.",
-                                    queue, HandleToUint64(semaphore));
+                    semaphore_externals.push_back(semaphore);
+                    pSemaphore->in_use.fetch_add(1);
+                    if (pSemaphore->scope == kSyncScopeExternalTemporary) {
+                        pSemaphore->scope = kSyncScopeInternal;
+                    }
                 }
             }
         }
@@ -8832,36 +8977,51 @@ VKAPI_ATTR VkResult VKAPI_CALL QueueBindSparse(VkQueue queue, uint32_t bindInfoC
             VkSemaphore semaphore = bindInfo.pSignalSemaphores[i];
             auto pSemaphore = GetSemaphoreNode(dev_data, semaphore);
             if (pSemaphore) {
-                if (pSemaphore->signaled) {
-                    skip = log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_SEMAPHORE_EXT,
-                                   HandleToUint64(semaphore), __LINE__, DRAWSTATE_QUEUE_FORWARD_PROGRESS, "DS",
-                                   "vkQueueBindSparse: Queue 0x%p is signaling semaphore 0x%" PRIx64
-                                   ", but that semaphore is already signaled.",
-                                   queue, HandleToUint64(semaphore));
-                } else {
+                if (pSemaphore->scope == kSyncScopeInternal) {
                     pSemaphore->signaler.first = queue;
                     pSemaphore->signaler.second = pQueue->seq + pQueue->submissions.size() + 1;
                     pSemaphore->signaled = true;
                     pSemaphore->in_use.fetch_add(1);
                     semaphore_signals.push_back(semaphore);
+                } else {
+                    // Retire work up until this submit early, we will not see the wait that corresponds to this signal
+                    early_retire_seq = std::max(early_retire_seq, pQueue->seq + pQueue->submissions.size() + 1);
+                    if (!dev_data->external_sync_warning) {
+                        dev_data->external_sync_warning = true;
+                        log_msg(dev_data->report_data, VK_DEBUG_REPORT_WARNING_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_SEMAPHORE_EXT,
+                                HandleToUint64(semaphore), __LINE__, DRAWSTATE_QUEUE_FORWARD_PROGRESS, "DS",
+                                "vkQueueBindSparse(): Signaling external semaphore 0x%" PRIx64 " on queue 0x%" PRIx64
+                                " will disable validation of preceding command buffer lifecycle states and the in-use status of "
+                                "associated objects.",
+                                HandleToUint64(semaphore), HandleToUint64(queue));
+                    }
                 }
             }
         }
 
-        pQueue->submissions.emplace_back(std::vector<VkCommandBuffer>(), semaphore_waits, semaphore_signals,
+        pQueue->submissions.emplace_back(std::vector<VkCommandBuffer>(), semaphore_waits, semaphore_signals, semaphore_externals,
                                          bindIdx == bindInfoCount - 1 ? fence : VK_NULL_HANDLE);
     }
 
-    if (pFence && !bindInfoCount) {
-        // No work to do, just dropping a fence in the queue by itself.
-        pQueue->submissions.emplace_back(std::vector<VkCommandBuffer>(), std::vector<SEMAPHORE_WAIT>(), std::vector<VkSemaphore>(),
-                                         fence);
+    if (early_retire_seq) {
+        RetireWorkOnQueue(dev_data, pQueue, early_retire_seq);
     }
+}
 
+VKAPI_ATTR VkResult VKAPI_CALL QueueBindSparse(VkQueue queue, uint32_t bindInfoCount, const VkBindSparseInfo *pBindInfo,
+                                               VkFence fence) {
+    layer_data *dev_data = GetLayerDataPtr(get_dispatch_key(queue), layer_data_map);
+    unique_lock_t lock(global_lock);
+    bool skip = PreCallValidateQueueBindSparse(dev_data, queue, bindInfoCount, pBindInfo, fence);
     lock.unlock();
 
-    if (!skip) return dev_data->dispatch_table.QueueBindSparse(queue, bindInfoCount, pBindInfo, fence);
+    if (skip) return VK_ERROR_VALIDATION_FAILED_EXT;
 
+    VkResult result = dev_data->dispatch_table.QueueBindSparse(queue, bindInfoCount, pBindInfo, fence);
+
+    lock.lock();
+    PostCallRecordQueueBindSparse(dev_data, queue, bindInfoCount, pBindInfo, fence);
+    lock.unlock();
     return result;
 }
 
@@ -8875,6 +9035,193 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateSemaphore(VkDevice device, const VkSemaphor
         sNode->signaler.first = VK_NULL_HANDLE;
         sNode->signaler.second = 0;
         sNode->signaled = false;
+        sNode->scope = kSyncScopeInternal;
+    }
+    return result;
+}
+
+static bool PreCallValidateImportSemaphore(layer_data *dev_data, VkSemaphore semaphore, const char *caller_name) {
+    SEMAPHORE_NODE *sema_node = GetSemaphoreNode(dev_data, semaphore);
+    VK_OBJECT obj_struct = {HandleToUint64(semaphore), kVulkanObjectTypeSemaphore};
+    bool skip = false;
+    if (sema_node) {
+        skip |= ValidateObjectNotInUse(dev_data, sema_node, obj_struct, caller_name, VALIDATION_ERROR_UNDEFINED);
+    }
+    return skip;
+}
+
+static void PostCallRecordImportSemaphore(layer_data *dev_data, VkSemaphore semaphore,
+                                          VkExternalSemaphoreHandleTypeFlagBitsKHR handle_type, VkSemaphoreImportFlagsKHR flags) {
+    SEMAPHORE_NODE *sema_node = GetSemaphoreNode(dev_data, semaphore);
+    if (sema_node && sema_node->scope != kSyncScopeExternalPermanent) {
+        if ((handle_type == VK_EXTERNAL_SEMAPHORE_HANDLE_TYPE_SYNC_FD_BIT_KHR || flags & VK_SEMAPHORE_IMPORT_TEMPORARY_BIT_KHR) &&
+            sema_node->scope == kSyncScopeInternal) {
+            sema_node->scope = kSyncScopeExternalTemporary;
+        } else {
+            sema_node->scope = kSyncScopeExternalPermanent;
+        }
+    }
+}
+
+#ifdef VK_USE_PLATFORM_WIN32_KHR
+VKAPI_ATTR VkResult VKAPI_CALL
+ImportSemaphoreWin32HandleKHR(VkDevice device, const VkImportSemaphoreWin32HandleInfoKHR *pImportSemaphoreWin32HandleInfo) {
+    VkResult result = VK_ERROR_VALIDATION_FAILED_EXT;
+    layer_data *dev_data = GetLayerDataPtr(get_dispatch_key(device), layer_data_map);
+    bool skip =
+        PreCallValidateImportSemaphore(dev_data, pImportSemaphoreWin32HandleInfo->semaphore, "vkImportSemaphoreWin32HandleKHR");
+
+    if (!skip) {
+        result = dev_data->dispatch_table.ImportSemaphoreWin32HandleKHR(device, pImportSemaphoreWin32HandleInfo);
+    }
+
+    if (result == VK_SUCCESS) {
+        PostCallRecordImportSemaphore(dev_data, pImportSemaphoreWin32HandleInfo->semaphore,
+                                      pImportSemaphoreWin32HandleInfo->handleType, pImportSemaphoreWin32HandleInfo->flags);
+    }
+    return result;
+}
+#endif
+
+VKAPI_ATTR VkResult VKAPI_CALL ImportSemaphoreFdKHR(VkDevice device, const VkImportSemaphoreFdInfoKHR *pImportSemaphoreFdInfo) {
+    VkResult result = VK_ERROR_VALIDATION_FAILED_EXT;
+    layer_data *dev_data = GetLayerDataPtr(get_dispatch_key(device), layer_data_map);
+    bool skip = PreCallValidateImportSemaphore(dev_data, pImportSemaphoreFdInfo->semaphore, "vkImportSemaphoreFdKHR");
+
+    if (!skip) {
+        result = dev_data->dispatch_table.ImportSemaphoreFdKHR(device, pImportSemaphoreFdInfo);
+    }
+
+    if (result == VK_SUCCESS) {
+        PostCallRecordImportSemaphore(dev_data, pImportSemaphoreFdInfo->semaphore, pImportSemaphoreFdInfo->handleType,
+                                      pImportSemaphoreFdInfo->flags);
+    }
+    return result;
+}
+
+static void PostCallRecordGetSemaphore(layer_data *dev_data, VkSemaphore semaphore,
+                                       VkExternalSemaphoreHandleTypeFlagBitsKHR handle_type) {
+    SEMAPHORE_NODE *sema_node = GetSemaphoreNode(dev_data, semaphore);
+    if (sema_node && handle_type != VK_EXTERNAL_SEMAPHORE_HANDLE_TYPE_SYNC_FD_BIT_KHR) {
+        // Cannot track semaphore state once it is exported, except for Sync FD handle types which have copy transference
+        sema_node->scope = kSyncScopeExternalPermanent;
+    }
+}
+
+#ifdef VK_USE_PLATFORM_WIN32_KHR
+VKAPI_ATTR VkResult VKAPI_CALL GetSemaphoreWin32HandleKHR(VkDevice device,
+                                                          const VkSemaphoreGetWin32HandleInfoKHR *pGetWin32HandleInfo,
+                                                          HANDLE *pHandle) {
+    layer_data *dev_data = GetLayerDataPtr(get_dispatch_key(device), layer_data_map);
+    VkResult result = dev_data->dispatch_table.GetSemaphoreWin32HandleKHR(device, pGetWin32HandleInfo, pHandle);
+
+    if (result == VK_SUCCESS) {
+        PostCallRecordGetSemaphore(dev_data, pGetWin32HandleInfo->semaphore, pGetWin32HandleInfo->handleType);
+    }
+    return result;
+}
+#endif
+
+VKAPI_ATTR VkResult VKAPI_CALL GetSemaphoreFdKHR(VkDevice device, const VkSemaphoreGetFdInfoKHR *pGetFdInfo, int *pFd) {
+    layer_data *dev_data = GetLayerDataPtr(get_dispatch_key(device), layer_data_map);
+    VkResult result = dev_data->dispatch_table.GetSemaphoreFdKHR(device, pGetFdInfo, pFd);
+
+    if (result == VK_SUCCESS) {
+        PostCallRecordGetSemaphore(dev_data, pGetFdInfo->semaphore, pGetFdInfo->handleType);
+    }
+    return result;
+}
+
+static bool PreCallValidateImportFence(layer_data *dev_data, VkFence fence, const char *caller_name) {
+    FENCE_NODE *fence_node = GetFenceNode(dev_data, fence);
+    bool skip = false;
+    if (fence_node && fence_node->scope == kSyncScopeInternal && fence_node->state == FENCE_INFLIGHT) {
+        skip |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_FENCE_EXT,
+                        HandleToUint64(fence), __LINE__, VALIDATION_ERROR_UNDEFINED, "DS",
+                        "Cannot call %s on fence 0x%" PRIx64 " that is currently in use.", caller_name, HandleToUint64(fence));
+    }
+    return skip;
+}
+
+static void PostCallRecordImportFence(layer_data *dev_data, VkFence fence, VkExternalFenceHandleTypeFlagBitsKHR handle_type,
+                                      VkFenceImportFlagsKHR flags) {
+    FENCE_NODE *fence_node = GetFenceNode(dev_data, fence);
+    if (fence_node && fence_node->scope != kSyncScopeExternalPermanent) {
+        if ((handle_type == VK_EXTERNAL_FENCE_HANDLE_TYPE_SYNC_FD_BIT_KHR || flags & VK_FENCE_IMPORT_TEMPORARY_BIT_KHR) &&
+            fence_node->scope == kSyncScopeInternal) {
+            fence_node->scope = kSyncScopeExternalTemporary;
+        } else {
+            fence_node->scope = kSyncScopeExternalPermanent;
+        }
+    }
+}
+
+#ifdef VK_USE_PLATFORM_WIN32_KHR
+VKAPI_ATTR VkResult VKAPI_CALL ImportFenceWin32HandleKHR(VkDevice device,
+                                                         const VkImportFenceWin32HandleInfoKHR *pImportFenceWin32HandleInfo) {
+    VkResult result = VK_ERROR_VALIDATION_FAILED_EXT;
+    layer_data *dev_data = GetLayerDataPtr(get_dispatch_key(device), layer_data_map);
+    bool skip = PreCallValidateImportFence(dev_data, pImportFenceWin32HandleInfo->fence, "vkImportFenceWin32HandleKHR");
+
+    if (!skip) {
+        result = dev_data->dispatch_table.ImportFenceWin32HandleKHR(device, pImportFenceWin32HandleInfo);
+    }
+
+    if (result == VK_SUCCESS) {
+        PostCallRecordImportFence(dev_data, pImportFenceWin32HandleInfo->fence, pImportFenceWin32HandleInfo->handleType,
+                                  pImportFenceWin32HandleInfo->flags);
+    }
+    return result;
+}
+#endif
+
+VKAPI_ATTR VkResult VKAPI_CALL ImportFenceFdKHR(VkDevice device, const VkImportFenceFdInfoKHR *pImportFenceFdInfo) {
+    VkResult result = VK_ERROR_VALIDATION_FAILED_EXT;
+    layer_data *dev_data = GetLayerDataPtr(get_dispatch_key(device), layer_data_map);
+    bool skip = PreCallValidateImportFence(dev_data, pImportFenceFdInfo->fence, "vkImportFenceFdKHR");
+
+    if (!skip) {
+        result = dev_data->dispatch_table.ImportFenceFdKHR(device, pImportFenceFdInfo);
+    }
+
+    if (result == VK_SUCCESS) {
+        PostCallRecordImportFence(dev_data, pImportFenceFdInfo->fence, pImportFenceFdInfo->handleType, pImportFenceFdInfo->flags);
+    }
+    return result;
+}
+
+static void PostCallRecordGetFence(layer_data *dev_data, VkFence fence, VkExternalFenceHandleTypeFlagBitsKHR handle_type) {
+    FENCE_NODE *fence_node = GetFenceNode(dev_data, fence);
+    if (fence_node) {
+        if (handle_type != VK_EXTERNAL_FENCE_HANDLE_TYPE_SYNC_FD_BIT_KHR) {
+            // Export with reference transference becomes external
+            fence_node->scope = kSyncScopeExternalPermanent;
+        } else if (fence_node->scope == kSyncScopeInternal) {
+            // Export with copy transference has a side effect of resetting the fence
+            fence_node->state = FENCE_UNSIGNALED;
+        }
+    }
+}
+
+#ifdef VK_USE_PLATFORM_WIN32_KHR
+VKAPI_ATTR VkResult VKAPI_CALL GetFenceWin32HandleKHR(VkDevice device, const VkFenceGetWin32HandleInfoKHR *pGetWin32HandleInfo,
+                                                      HANDLE *pHandle) {
+    layer_data *dev_data = GetLayerDataPtr(get_dispatch_key(device), layer_data_map);
+    VkResult result = dev_data->dispatch_table.GetFenceWin32HandleKHR(device, pGetWin32HandleInfo, pHandle);
+
+    if (result == VK_SUCCESS) {
+        PostCallRecordGetFence(dev_data, pGetWin32HandleInfo->fence, pGetWin32HandleInfo->handleType);
+    }
+    return result;
+}
+#endif
+
+VKAPI_ATTR VkResult VKAPI_CALL GetFenceFdKHR(VkDevice device, const VkFenceGetFdInfoKHR *pGetFdInfo, int *pFd) {
+    layer_data *dev_data = GetLayerDataPtr(get_dispatch_key(device), layer_data_map);
+    VkResult result = dev_data->dispatch_table.GetFenceFdKHR(device, pGetFdInfo, pFd);
+
+    if (result == VK_SUCCESS) {
+        PostCallRecordGetFence(dev_data, pGetFdInfo->fence, pGetFdInfo->handleType);
     }
     return result;
 }
@@ -9391,11 +9738,7 @@ VKAPI_ATTR VkResult VKAPI_CALL QueuePresentKHR(VkQueue queue, const VkPresentInf
     }
     if (pPresentInfo && pPresentInfo->pNext) {
         // Verify ext struct
-        struct std_header {
-            VkStructureType sType;
-            const void *pNext;
-        };
-        std_header *pnext = (std_header *)pPresentInfo->pNext;
+        GENERIC_HEADER *pnext = (GENERIC_HEADER *)pPresentInfo->pNext;
         while (pnext) {
             if (VK_STRUCTURE_TYPE_PRESENT_REGIONS_KHR == pnext->sType) {
                 VkPresentRegionsKHR *present_regions = (VkPresentRegionsKHR *)pnext;
@@ -9451,7 +9794,7 @@ VKAPI_ATTR VkResult VKAPI_CALL QueuePresentKHR(VkQueue queue, const VkPresentInf
                                 present_times_info->swapchainCount, pPresentInfo->swapchainCount);
                 }
             }
-            pnext = (std_header *)pnext->pNext;
+            pnext = (GENERIC_HEADER *)pnext->pNext;
         }
     }
 
@@ -9565,13 +9908,9 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateSharedSwapchainsKHR(VkDevice device, uint32
     return result;
 }
 
-VKAPI_ATTR VkResult VKAPI_CALL AcquireNextImageKHR(VkDevice device, VkSwapchainKHR swapchain, uint64_t timeout,
-                                                   VkSemaphore semaphore, VkFence fence, uint32_t *pImageIndex) {
-    layer_data *dev_data = GetLayerDataPtr(get_dispatch_key(device), layer_data_map);
+static bool PreCallValidateAcquireNextImageKHR(layer_data *dev_data, VkDevice device, VkSwapchainKHR swapchain, uint64_t timeout,
+                                               VkSemaphore semaphore, VkFence fence, uint32_t *pImageIndex) {
     bool skip = false;
-
-    unique_lock_t lock(global_lock);
-
     if (fence == VK_NULL_HANDLE && semaphore == VK_NULL_HANDLE) {
         skip |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
                         HandleToUint64(device), __LINE__, DRAWSTATE_SWAPCHAIN_NO_SYNC_FOR_ACQUIRE, "DS",
@@ -9580,7 +9919,7 @@ VKAPI_ATTR VkResult VKAPI_CALL AcquireNextImageKHR(VkDevice device, VkSwapchainK
     }
 
     auto pSemaphore = GetSemaphoreNode(dev_data, semaphore);
-    if (pSemaphore && pSemaphore->signaled) {
+    if (pSemaphore && pSemaphore->scope == kSyncScopeInternal && pSemaphore->signaled) {
         skip |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_SEMAPHORE_EXT,
                         HandleToUint64(semaphore), __LINE__, VALIDATION_ERROR_16400a0c, "DS",
                         "vkAcquireNextImageKHR: Semaphore must not be currently signaled or in a wait state. %s",
@@ -9593,7 +9932,6 @@ VKAPI_ATTR VkResult VKAPI_CALL AcquireNextImageKHR(VkDevice device, VkSwapchainK
     }
 
     auto swapchain_data = GetSwapchainNode(dev_data, swapchain);
-
     if (swapchain_data->replaced) {
         skip |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_SWAPCHAIN_KHR_EXT,
                         HandleToUint64(swapchain), __LINE__, DRAWSTATE_SWAPCHAIN_REPLACED, "DS",
@@ -9620,7 +9958,41 @@ VKAPI_ATTR VkResult VKAPI_CALL AcquireNextImageKHR(VkDevice device, VkSwapchainK
                         "vkAcquireNextImageKHR: No images found to acquire from. Application probably did not call "
                         "vkGetSwapchainImagesKHR after swapchain creation.");
     }
+    return skip;
+}
 
+static void PostCallRecordAcquireNextImageKHR(layer_data *dev_data, VkDevice device, VkSwapchainKHR swapchain, uint64_t timeout,
+                                              VkSemaphore semaphore, VkFence fence, uint32_t *pImageIndex) {
+    auto pFence = GetFenceNode(dev_data, fence);
+    if (pFence && pFence->scope == kSyncScopeInternal) {
+        // Treat as inflight since it is valid to wait on this fence, even in cases where it is technically a temporary
+        // import
+        pFence->state = FENCE_INFLIGHT;
+        pFence->signaler.first = VK_NULL_HANDLE;  // ANI isn't on a queue, so this can't participate in a completion proof.
+    }
+
+    auto pSemaphore = GetSemaphoreNode(dev_data, semaphore);
+    if (pSemaphore && pSemaphore->scope == kSyncScopeInternal) {
+        // Treat as signaled since it is valid to wait on this semaphore, even in cases where it is technically a
+        // temporary import
+        pSemaphore->signaled = true;
+        pSemaphore->signaler.first = VK_NULL_HANDLE;
+    }
+
+    // Mark the image as acquired.
+    auto swapchain_data = GetSwapchainNode(dev_data, swapchain);
+    auto image = swapchain_data->images[*pImageIndex];
+    auto image_state = GetImageState(dev_data, image);
+    image_state->acquired = true;
+    image_state->shared_presentable = swapchain_data->shared_presentable;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL AcquireNextImageKHR(VkDevice device, VkSwapchainKHR swapchain, uint64_t timeout,
+                                                   VkSemaphore semaphore, VkFence fence, uint32_t *pImageIndex) {
+    layer_data *dev_data = GetLayerDataPtr(get_dispatch_key(device), layer_data_map);
+
+    unique_lock_t lock(global_lock);
+    bool skip = PreCallValidateAcquireNextImageKHR(dev_data, device, swapchain, timeout, semaphore, fence, pImageIndex);
     lock.unlock();
 
     if (skip) return VK_ERROR_VALIDATION_FAILED_EXT;
@@ -9629,22 +10001,7 @@ VKAPI_ATTR VkResult VKAPI_CALL AcquireNextImageKHR(VkDevice device, VkSwapchainK
 
     lock.lock();
     if (result == VK_SUCCESS || result == VK_SUBOPTIMAL_KHR) {
-        if (pFence) {
-            pFence->state = FENCE_INFLIGHT;
-            pFence->signaler.first = VK_NULL_HANDLE;  // ANI isn't on a queue, so this can't participate in a completion proof.
-        }
-
-        // A successful call to AcquireNextImageKHR counts as a signal operation on semaphore
-        if (pSemaphore) {
-            pSemaphore->signaled = true;
-            pSemaphore->signaler.first = VK_NULL_HANDLE;
-        }
-
-        // Mark the image as acquired.
-        auto image = swapchain_data->images[*pImageIndex];
-        auto image_state = GetImageState(dev_data, image);
-        image_state->acquired = true;
-        image_state->shared_presentable = swapchain_data->shared_presentable;
+        PostCallRecordAcquireNextImageKHR(dev_data, device, swapchain, timeout, semaphore, fence, pImageIndex);
     }
     lock.unlock();
 
@@ -10594,7 +10951,7 @@ VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL GetPhysicalDeviceProcAddr(VkInstance in
 VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL GetInstanceProcAddr(VkInstance instance, const char *funcName);
 
 // Map of all APIs to be intercepted by this layer
-static const std::unordered_map<std::string, void*> name_to_funcptr_map = {
+static const std::unordered_map<std::string, void *> name_to_funcptr_map = {
     {"vkGetInstanceProcAddr", (void*)GetInstanceProcAddr},
     {"vk_layerGetPhysicalDeviceProcAddr", (void*)GetPhysicalDeviceProcAddr},
     {"vkGetDeviceProcAddr", (void*)GetDeviceProcAddr},
@@ -10751,6 +11108,10 @@ static const std::unordered_map<std::string, void*> name_to_funcptr_map = {
 #ifdef VK_USE_PLATFORM_WIN32_KHR
     {"vkCreateWin32SurfaceKHR", (void*)CreateWin32SurfaceKHR},
     {"vkGetPhysicalDeviceWin32PresentationSupportKHR", (void*)GetPhysicalDeviceWin32PresentationSupportKHR},
+    {"vkImportSemaphoreWin32HandleKHR", (void*)ImportSemaphoreWin32HandleKHR},
+    {"vkGetSemaphoreWin32HandleKHR", (void*)GetSemaphoreWin32HandleKHR},
+    {"vkImportFenceWin32HandleKHR", (void*)ImportFenceWin32HandleKHR},
+    {"vkGetFenceWin32HandleKHR", (void*)GetFenceWin32HandleKHR},
 #endif
 #ifdef VK_USE_PLATFORM_XCB_KHR
     {"vkCreateXcbSurfaceKHR", (void*)CreateXcbSurfaceKHR},
@@ -10775,8 +11136,12 @@ static const std::unordered_map<std::string, void*> name_to_funcptr_map = {
     {"vkDestroyDebugReportCallbackEXT", (void*)DestroyDebugReportCallbackEXT},
     {"vkDebugReportMessageEXT", (void*)DebugReportMessageEXT},
     {"vkGetPhysicalDeviceDisplayPlanePropertiesKHR", (void*)GetPhysicalDeviceDisplayPlanePropertiesKHR},
-    {"GetDisplayPlaneSupportedDisplaysKHR", (void*)GetDisplayPlaneSupportedDisplaysKHR},
-    {"GetDisplayPlaneCapabilitiesKHR", (void*)GetDisplayPlaneCapabilitiesKHR},
+    {"vkGetDisplayPlaneSupportedDisplaysKHR", (void*)GetDisplayPlaneSupportedDisplaysKHR},
+    {"vkGetDisplayPlaneCapabilitiesKHR", (void*)GetDisplayPlaneCapabilitiesKHR},
+    {"vkImportSemaphoreFdKHR", (void*)ImportSemaphoreFdKHR},
+    {"vkGetSemaphoreFdKHR", (void*)GetSemaphoreFdKHR},
+    {"vkImportFenceFdKHR", (void*)ImportFenceFdKHR},
+    {"vkGetFenceFdKHR", (void*)GetFenceFdKHR},
 };
 
 VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL GetDeviceProcAddr(VkDevice device, const char *funcName) {

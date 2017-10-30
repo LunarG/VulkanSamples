@@ -700,16 +700,6 @@ bool cvdescriptorset::DescriptorSet::ValidateCopyUpdate(const debug_report_data 
                                              set_, error_msg))) {
         return false;
     }
-    // First make sure source descriptors are updated
-    for (uint32_t i = 0; i < update->descriptorCount; ++i) {
-        if (!src_set->descriptors_[src_start_idx + i]) {
-            std::stringstream error_str;
-            error_str << "Attempting copy update from descriptorSet " << src_set << " binding #" << update->srcBinding
-                      << " but descriptor at array offset " << update->srcArrayElement + i << " has not been updated";
-            *error_msg = error_str.str();
-            return false;
-        }
-    }
     // Update parameters all look good and descriptor updated so verify update contents
     if (!VerifyCopyUpdateContents(update, src_set, src_type, src_start_idx, error_code, error_msg)) return false;
 
@@ -722,9 +712,15 @@ void cvdescriptorset::DescriptorSet::PerformCopyUpdate(const VkCopyDescriptorSet
     auto dst_start_idx = p_layout_->GetGlobalStartIndexFromBinding(update->dstBinding) + update->dstArrayElement;
     // Update parameters all look good so perform update
     for (uint32_t di = 0; di < update->descriptorCount; ++di) {
-        descriptors_[dst_start_idx + di]->CopyUpdate(src_set->descriptors_[src_start_idx + di].get());
+        auto src = src_set->descriptors_[src_start_idx + di].get();
+        auto dst = descriptors_[dst_start_idx + di].get();
+        if (src->updated) {
+            dst->CopyUpdate(src);
+            some_update_ = true;
+        } else {
+            dst->updated = false;
+        }
     }
-    if (update->descriptorCount) some_update_ = true;
 
     InvalidateBoundCmdBuffers();
 }
@@ -1510,7 +1506,16 @@ bool cvdescriptorset::DescriptorSet::VerifyWriteUpdateContents(const VkWriteDesc
                     return false;
                 }
                 auto buffer = bv_state->create_info.buffer;
-                if (!ValidateBufferUsage(GetBufferState(device_data_, buffer), update->descriptorType, error_code, error_msg)) {
+                auto buffer_state = GetBufferState(device_data_, buffer);
+                // Verify that buffer underlying the view hasn't been destroyed prematurely
+                if (!buffer_state) {
+                    *error_code = VALIDATION_ERROR_15c00286;
+                    std::stringstream error_str;
+                    error_str << "Attempted write update to texel buffer descriptor failed because underlying buffer (" << buffer
+                              << ") has been destroyed: " << error_msg->c_str();
+                    *error_msg = error_str.str();
+                    return false;
+                } else if (!ValidateBufferUsage(buffer_state, update->descriptorType, error_code, error_msg)) {
                     std::stringstream error_str;
                     error_str << "Attempted write update to texel buffer descriptor failed due to: " << error_msg->c_str();
                     *error_msg = error_str.str();
@@ -1550,8 +1555,10 @@ bool cvdescriptorset::DescriptorSet::VerifyCopyUpdateContents(const VkCopyDescri
     switch (src_set->descriptors_[index]->descriptor_class) {
         case PlainSampler: {
             for (uint32_t di = 0; di < update->descriptorCount; ++di) {
-                if (!src_set->descriptors_[index + di]->IsImmutableSampler()) {
-                    auto update_sampler = static_cast<SamplerDescriptor *>(src_set->descriptors_[index + di].get())->GetSampler();
+                const auto src_desc = src_set->descriptors_[index + di].get();
+                if (!src_desc->updated) continue;
+                if (!src_desc->IsImmutableSampler()) {
+                    auto update_sampler = static_cast<SamplerDescriptor *>(src_desc)->GetSampler();
                     if (!ValidateSampler(update_sampler, device_data_)) {
                         *error_code = VALIDATION_ERROR_15c0028a;
                         std::stringstream error_str;
@@ -1567,7 +1574,9 @@ bool cvdescriptorset::DescriptorSet::VerifyCopyUpdateContents(const VkCopyDescri
         }
         case ImageSampler: {
             for (uint32_t di = 0; di < update->descriptorCount; ++di) {
-                auto img_samp_desc = static_cast<const ImageSamplerDescriptor *>(src_set->descriptors_[index + di].get());
+                const auto src_desc = src_set->descriptors_[index + di].get();
+                if (!src_desc->updated) continue;
+                auto img_samp_desc = static_cast<const ImageSamplerDescriptor *>(src_desc);
                 // First validate sampler
                 if (!img_samp_desc->IsImmutableSampler()) {
                     auto update_sampler = img_samp_desc->GetSampler();
@@ -1595,7 +1604,9 @@ bool cvdescriptorset::DescriptorSet::VerifyCopyUpdateContents(const VkCopyDescri
         }
         case Image: {
             for (uint32_t di = 0; di < update->descriptorCount; ++di) {
-                auto img_desc = static_cast<const ImageDescriptor *>(src_set->descriptors_[index + di].get());
+                const auto src_desc = src_set->descriptors_[index + di].get();
+                if (!src_desc->updated) continue;
+                auto img_desc = static_cast<const ImageDescriptor *>(src_desc);
                 auto image_view = img_desc->GetImageView();
                 auto image_layout = img_desc->GetImageLayout();
                 if (!ValidateImageUpdate(image_view, image_layout, type, device_data_, error_code, error_msg)) {
@@ -1609,7 +1620,9 @@ bool cvdescriptorset::DescriptorSet::VerifyCopyUpdateContents(const VkCopyDescri
         }
         case TexelBuffer: {
             for (uint32_t di = 0; di < update->descriptorCount; ++di) {
-                auto buffer_view = static_cast<TexelDescriptor *>(src_set->descriptors_[index + di].get())->GetBufferView();
+                const auto src_desc = src_set->descriptors_[index + di].get();
+                if (!src_desc->updated) continue;
+                auto buffer_view = static_cast<TexelDescriptor *>(src_desc)->GetBufferView();
                 auto bv_state = GetBufferViewState(device_data_, buffer_view);
                 if (!bv_state) {
                     *error_code = VALIDATION_ERROR_15c00286;
@@ -1630,7 +1643,9 @@ bool cvdescriptorset::DescriptorSet::VerifyCopyUpdateContents(const VkCopyDescri
         }
         case GeneralBuffer: {
             for (uint32_t di = 0; di < update->descriptorCount; ++di) {
-                auto buffer = static_cast<BufferDescriptor *>(src_set->descriptors_[index + di].get())->GetBuffer();
+                const auto src_desc = src_set->descriptors_[index + di].get();
+                if (!src_desc->updated) continue;
+                auto buffer = static_cast<BufferDescriptor *>(src_desc)->GetBuffer();
                 if (!ValidateBufferUsage(GetBufferState(device_data_, buffer), type, error_code, error_msg)) {
                     std::stringstream error_str;
                     error_str << "Attempted copy update to buffer descriptor failed due to: " << error_msg->c_str();

@@ -144,6 +144,7 @@ class DescriptorSetLayout {
     // For a particular binding starting at offset and having update_count descriptors
     //  updated, verify that for any binding boundaries crossed, the update is consistent
     bool VerifyUpdateConsistency(uint32_t, uint32_t, uint32_t, const char *, const VkDescriptorSet, std::string *) const;
+    bool IsPushDescriptor() const { return GetCreateFlags() & VK_DESCRIPTOR_SET_LAYOUT_CREATE_PUSH_DESCRIPTOR_BIT_KHR; };
 
    private:
     VkDescriptorSetLayout layout_;
@@ -384,7 +385,7 @@ class DescriptorSet : public BASE_NODE {
     };
     // Return true if any part of set has ever been updated
     bool IsUpdated() const { return some_update_; };
-    bool IsPushDescriptor() const { return p_layout_->GetCreateFlags() & VK_DESCRIPTOR_SET_LAYOUT_CREATE_PUSH_DESCRIPTOR_BIT_KHR; };
+    bool IsPushDescriptor() const { return p_layout_->IsPushDescriptor(); };
 
    private:
     bool VerifyWriteUpdateContents(const VkWriteDescriptorSet *, const uint32_t, UNIQUE_VALIDATION_ERROR_CODE *,

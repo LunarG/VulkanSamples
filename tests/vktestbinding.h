@@ -138,6 +138,17 @@ class PhysicalDevice : public internal::Handle<VkPhysicalDevice> {
     VkPhysicalDeviceProperties device_properties_;
 };
 
+class QueueCreateInfoArray {
+   private:
+    std::vector<VkDeviceQueueCreateInfo> queue_info_;
+    std::vector<std::vector<float>> queue_priorities_;
+
+   public:
+    QueueCreateInfoArray(const std::vector<VkQueueFamilyProperties> &queue_props);
+    size_t size() const { return queue_info_.size(); }
+    const VkDeviceQueueCreateInfo *data() const { return queue_info_.data(); }
+};
+
 class Device : public internal::Handle<VkDevice> {
    public:
     explicit Device(VkPhysicalDevice phy) : phy_(phy) {}
@@ -257,6 +268,8 @@ class DeviceMemory : public internal::NonDispHandle<VkDeviceMemory> {
     void unmap() const;
 
     static VkMemoryAllocateInfo alloc_info(VkDeviceSize size, uint32_t memory_type_index);
+    static VkMemoryAllocateInfo get_resource_alloc_info(const vk_testing::Device &dev, const VkMemoryRequirements &reqs,
+                                                        VkMemoryPropertyFlags mem_props);
 };
 
 class Fence : public internal::NonDispHandle<VkFence> {

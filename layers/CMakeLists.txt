@@ -94,8 +94,6 @@ foreach (config_file ${LAYER_JSON_FILES_NO_DEPENDENCIES})
 endforeach(config_file)
 
 
-
-
 # Add targets for JSON file install on Linux.
 # Need to remove the "./" from the library path before installing to /etc.
 if(UNIX)

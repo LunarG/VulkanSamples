@@ -89,7 +89,7 @@ vkPhysDevExtTermin\num:
 terminError\num:
     mov     eax, [eax + INSTANCE_OFFSET_ICD_TERM]                               # Load the loader_instance into eax
     push    [eax + (HASH_OFFSET_INSTANCE + (HASH_SIZE * \num) + FUNC_NAME_OFFSET_HASH)] # Push the func name (fifth arg)
-    push    offset termin_error_string                                          # Push the error string (fourth arg)
+    push    offset termin_error_string@GOT                                      # Push the error string (fourth arg)
     push    0                                                                   # Push zero (third arg)
     push    VK_DEBUG_REPORT_ERROR_BIT_EXT                                       # Push the error logging bit (second arg)
     push    eax                                                                 # Push the loader_instance (first arg)

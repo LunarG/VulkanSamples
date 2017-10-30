@@ -6,6 +6,7 @@ includedir=${prefix}/include
 Name: @CMAKE_PROJECT_NAME@
 Description: Vulkan Loader
 Version: @VK_API_VERSION@
-Libs: -L${libdir} -lvulkan @PRIVATE_LIBS@
+Libs: -L${libdir} -lvulkan
+Libs.private: @PRIVATE_LIBS@
 Cflags: -I${includedir}
 

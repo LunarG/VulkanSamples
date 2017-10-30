@@ -316,7 +316,7 @@ struct MEMORY_RANGE {
 // Data struct for tracking memory object
 struct DEVICE_MEM_INFO : public BASE_NODE {
     void *object;       // Dispatchable object used to create this memory (device of swapchain)
-    bool global_valid;  // If allocation is mapped, set to "true" to be picked up by subsequently bound ranges
+    bool global_valid;  // If allocation is mapped or external, set to "true" to be picked up by subsequently bound ranges
     VkDeviceMemory mem;
     VkMemoryAllocateInfo alloc_info;
     std::unordered_set<VK_OBJECT> obj_bindings;               // objects bound to this memory
@@ -379,7 +379,7 @@ struct RENDER_PASS_STATE : public BASE_NODE {
     safe_VkRenderPassCreateInfo createInfo;
     std::vector<bool> hasSelfDependency;
     std::vector<DAGNode> subpassToNode;
-    std::vector<int32_t> subpass_to_dependency_index;  // Map srcSubpass to its pDependency index (or -1 if none)
+    std::vector<int32_t> subpass_to_dependency_index;  // srcSubpass to dependency index of self dep, or -1 if none
     std::unordered_map<uint32_t, bool> attachment_first_read;
 
     RENDER_PASS_STATE(VkRenderPassCreateInfo const *pCreateInfo) : createInfo(pCreateInfo) {}
@@ -628,7 +628,7 @@ struct LAST_BOUND_STATE {
     // Track each set that has been bound
     // Ordered bound set tracking where index is set# that given set is bound to
     std::vector<cvdescriptorset::DescriptorSet *> boundDescriptorSets;
-    std::vector<std::unique_ptr<cvdescriptorset::DescriptorSet>> push_descriptors;
+    std::unique_ptr<cvdescriptorset::DescriptorSet> push_descriptor_set;
     // one dynamic offset per dynamic descriptor bound to this CB
     std::vector<std::vector<uint32_t>> dynamicOffsets;
 
@@ -636,7 +636,7 @@ struct LAST_BOUND_STATE {
         pipeline_state = nullptr;
         pipeline_layout.reset();
         boundDescriptorSets.clear();
-        push_descriptors.clear();
+        push_descriptor_set = nullptr;
         dynamicOffsets.clear();
     }
 };
@@ -708,12 +708,18 @@ struct SEMAPHORE_WAIT {
 
 struct CB_SUBMISSION {
     CB_SUBMISSION(std::vector<VkCommandBuffer> const &cbs, std::vector<SEMAPHORE_WAIT> const &waitSemaphores,
-                  std::vector<VkSemaphore> const &signalSemaphores, VkFence fence)
-        : cbs(cbs), waitSemaphores(waitSemaphores), signalSemaphores(signalSemaphores), fence(fence) {}
+                  std::vector<VkSemaphore> const &signalSemaphores, std::vector<VkSemaphore> const &externalSemaphores,
+                  VkFence fence)
+        : cbs(cbs),
+          waitSemaphores(waitSemaphores),
+          signalSemaphores(signalSemaphores),
+          externalSemaphores(externalSemaphores),
+          fence(fence) {}
 
     std::vector<VkCommandBuffer> cbs;
     std::vector<SEMAPHORE_WAIT> waitSemaphores;
     std::vector<VkSemaphore> signalSemaphores;
+    std::vector<VkSemaphore> externalSemaphores;
     VkFence fence;
 };
 
@@ -809,7 +815,8 @@ void AddCommandBufferBindingImage(const layer_data *, GLOBAL_CB_NODE *, IMAGE_ST
 void AddCommandBufferBindingImageView(const layer_data *, GLOBAL_CB_NODE *, IMAGE_VIEW_STATE *);
 void AddCommandBufferBindingBuffer(const layer_data *, GLOBAL_CB_NODE *, BUFFER_STATE *);
 void AddCommandBufferBindingBufferView(const layer_data *, GLOBAL_CB_NODE *, BUFFER_VIEW_STATE *);
-bool ValidateObjectNotInUse(const layer_data *dev_data, BASE_NODE *obj_node, VK_OBJECT obj_struct, UNIQUE_VALIDATION_ERROR_CODE error_code);
+bool ValidateObjectNotInUse(const layer_data *dev_data, BASE_NODE *obj_node, VK_OBJECT obj_struct, const char *caller_name,
+                            UNIQUE_VALIDATION_ERROR_CODE error_code);
 void invalidateCommandBuffers(const layer_data *dev_data, std::unordered_set<GLOBAL_CB_NODE *> const &cb_nodes, VK_OBJECT obj);
 void RemoveImageMemoryRange(uint64_t handle, DEVICE_MEM_INFO *mem_info);
 void RemoveBufferMemoryRange(uint64_t handle, DEVICE_MEM_INFO *mem_info);

@@ -24,7 +24,7 @@ printf "$GREEN[ RUN      ]$NC $0\n"
 pushd ../../scripts
 
 # Validate that layer database matches source contents
-python vk_validation_stats.py $1
+python3 vk_validation_stats.py $1
 
 RES=$?
 

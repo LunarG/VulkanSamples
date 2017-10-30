@@ -20,7 +20,7 @@ set -e
 
 ANDROIDBUILDDIR=$PWD
 BUILDDIR=$ANDROIDBUILDDIR
-BASEDIR=$BUILDDIR/external
+BASEDIR=$BUILDDIR/third_party
 
 GLSLANG_REVISION=$(cat $ANDROIDBUILDDIR/glslang_revision_android)
 SPIRV_TOOLS_REVISION=$(cat $ANDROIDBUILDDIR/spirv-tools_revision_android)
@@ -48,18 +48,62 @@ elif [[ $(uname) == "Darwin" ]]; then
     cores=$(sysctl -n hw.ncpu)
 fi
 
+#
+# Parse parameters
+#
+
+function printUsage {
+   echo "Supported parameters are:"
+   echo "    --abi <abi> (optional)"
+   echo
+   echo "i.e. ${0##*/} --abi arm64-v8a \\"
+   exit 1
+}
+
+if [[ $(($# % 2)) -ne 0 ]]
+then
+    echo Parameters must be provided in pairs.
+    echo parameter count = $#
+    echo
+    printUsage
+    exit 1
+fi
+
+while [[ $# -gt 0 ]]
+do
+    case $1 in
+        --abi)
+            abi="$2"
+            shift 2
+            ;;
+        *)
+            # unknown option
+            echo Unknown option: $1
+            echo
+            printUsage
+            exit 1
+            ;;
+    esac
+done
+
+echo abi=$abi
+if [[ -z $abi ]]
+then
+    echo No abi provided, so building for all supported abis.
+fi
+
 function create_glslang () {
-   rm -rf $BASEDIR/glslang
+   rm -rf $BASEDIR/shaderc/third_party/glslang
    echo "Creating local glslang repository ($BASEDIR/glslang)."
-   mkdir -p $BASEDIR/glslang
-   cd $BASEDIR/glslang
+   mkdir -p $BASEDIR/shaderc/third_party/glslang
+   cd $BASEDIR/shaderc/third_party/glslang
    git clone $GLSLANG_URL .
    git checkout $GLSLANG_REVISION
 }
 
 function update_glslang () {
-   echo "Updating $BASEDIR/glslang"
-   cd $BASEDIR/glslang
+   echo "Updating $BASEDIR/shaderc/third_party/glslang"
+   cd $BASEDIR/shaderc/third_party/glslang
    if [[ $(git config --get remote.origin.url) != $GLSLANG_URL ]]; then
       echo "glslang URL mismatch, recreating local repo"
       create_glslang
@@ -70,17 +114,17 @@ function update_glslang () {
 }
 
 function create_spirv-tools () {
-   rm -rf $BASEDIR/spirv-tools
-   echo "Creating local spirv-tools repository ($BASEDIR/spirv-tools)."
-   mkdir -p $BASEDIR/spirv-tools
-   cd $BASEDIR/spirv-tools
+   rm -rf $BASEDIR/shaderc/third_party/spirv-tools
+   echo "Creating local spirv-tools repository ($BASEDIR/shaderc/third_party/spirv-tools)."
+   mkdir -p $BASEDIR/shaderc/third_party/spirv-tools
+   cd $BASEDIR/shaderc/third_party/spirv-tools
    git clone $SPIRV_TOOLS_URL .
    git checkout $SPIRV_TOOLS_REVISION
 }
 
 function update_spirv-tools () {
-   echo "Updating $BASEDIR/spirv-tools"
-   cd $BASEDIR/spirv-tools
+   echo "Updating $BASEDIR/shaderc/third_party/spirv-tools"
+   cd $BASEDIR/shaderc/third_party/spirv-tools
    if [[ $(git config --get remote.origin.url) != $SPIRV_TOOLS_URL ]]; then
       echo "spirv-tools URL mismatch, recreating local repo"
       create_spirv-tools
@@ -91,17 +135,17 @@ function update_spirv-tools () {
 }
 
 function create_spirv-headers () {
-   rm -rf $BASEDIR/spirv-tools/external/spirv-headers
-   echo "Creating local spirv-headers repository ($BASEDIR/spirv-tools/external/spirv-headers)."
-   mkdir -p $BASEDIR/spirv-tools/external/spirv-headers
-   cd $BASEDIR/spirv-tools/external/spirv-headers
+   rm -rf $BASEDIR/shaderc/third_party/spirv-tools/external/spirv-headers
+   echo "Creating local spirv-headers repository ($BASEDIR/shaderc/third_party/spirv-tools/external/spirv-headers)."
+   mkdir -p $BASEDIR/shaderc/third_party/spirv-tools/external/spirv-headers
+   cd $BASEDIR/shaderc/third_party/spirv-tools/external/spirv-headers
    git clone $SPIRV_HEADERS_URL .
    git checkout $SPIRV_HEADERS_REVISION
 }
 
 function update_spirv-headers () {
-   echo "Updating $BASEDIR/spirv-tools/external/spirv-headers"
-   cd $BASEDIR/spirv-tools/external/spirv-headers
+   echo "Updating $BASEDIR/shaderc/third_party/spirv-tools/external/spirv-headers"
+   cd $BASEDIR/shaderc/third_party/spirv-tools/external/spirv-headers
    if [[ $(git config --get remote.origin.url) != $SPIRV_HEADERS_URL ]]; then
       echo "spirv-headers URL mismatch, recreating local repo"
       create_spirv-headers
@@ -114,9 +158,9 @@ function update_spirv-headers () {
 function create_shaderc () {
    rm -rf $BASEDIR/shaderc
    echo "Creating local shaderc repository ($BASEDIR/shaderc)."
-   cd $BASEDIR
-   git clone $SHADERC_URL
-   cd shaderc
+   mkdir -p $BASEDIR/shaderc
+   cd $BASEDIR/shaderc
+   git clone $SHADERC_URL .
    git checkout $SHADERC_REVISION
 }
 
@@ -135,29 +179,33 @@ function update_shaderc () {
 function build_shaderc () {
    echo "Building $BASEDIR/shaderc"
    cd $BASEDIR/shaderc/android_test
-   ndk-build THIRD_PARTY_PATH=../.. -j $cores
+   if [[ $abi ]]; then
+      ndk-build THIRD_PARTY_PATH=../third_party APP_ABI=$abi -j $cores;
+   else
+      ndk-build THIRD_PARTY_PATH=../third_party -j $cores;
+   fi
 }
-
-if [ ! -d "$BASEDIR/glslang" -o ! -d "$BASEDIR/glslang/.git" -o -d "$BASEDIR/glslang/.svn" ]; then
-   create_glslang
-fi
-update_glslang
-
-
-if [ ! -d "$BASEDIR/spirv-tools" -o ! -d "$BASEDIR/spirv-tools/.git" ]; then
-   create_spirv-tools
-fi
-update_spirv-tools
-
-if [ ! -d "$BASEDIR/spirv-tools/external/spirv-headers" -o ! -d "$BASEDIR/spirv-tools/external/spirv-headers/.git" ]; then
-   create_spirv-headers
-fi
-update_spirv-headers
 
 if [ ! -d "$BASEDIR/shaderc" -o ! -d "$BASEDIR/shaderc/.git" ]; then
      create_shaderc
 fi
 update_shaderc
+
+if [ ! -d "$BASEDIR/shaderc/third_party/glslang" -o ! -d "$BASEDIR/shaderc/third_party/glslang/.git" -o -d "$BASEDIR/shaderc/third_party/glslang/.svn" ]; then
+   create_glslang
+fi
+update_glslang
+
+if [ ! -d "$BASEDIR/shaderc/third_party/spirv-tools" -o ! -d "$BASEDIR/shaderc/third_party/spirv-tools/.git" ]; then
+   create_spirv-tools
+fi
+update_spirv-tools
+
+if [ ! -d "$BASEDIR/shaderc/third_party/spirv-tools/external/spirv-headers" -o ! -d "$BASEDIR/shaderc/third_party/spirv-tools/external/spirv-headers/.git" ]; then
+   create_spirv-headers
+fi
+update_spirv-headers
+
 build_shaderc
 
 echo ""

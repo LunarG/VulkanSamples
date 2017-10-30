@@ -26,6 +26,7 @@ from object_tracker_generator import ObjectTrackerGeneratorOptions, ObjectTracke
 from dispatch_table_helper_generator import DispatchTableHelperOutputGenerator, DispatchTableHelperOutputGeneratorOptions
 from helper_file_generator import HelperFileOutputGenerator, HelperFileOutputGeneratorOptions
 from loader_extension_generator import LoaderExtensionOutputGenerator, LoaderExtensionGeneratorOptions
+from mock_icd_generator import MockICDGeneratorOptions, MockICDOutputGenerator
 
 # Simple timer functions
 startTime = None
@@ -121,7 +122,6 @@ def makeGenOpts(extensions = [], removeExtensions = [], protect = True, director
             apientryp         = 'VKAPI_PTR *',
             alignFuncParam    = 48)
         ]
-
 
     # Options for parameter validation layer
     genOpts['parameter_validation.cpp'] = [
@@ -424,6 +424,49 @@ def makeGenOpts(extensions = [], removeExtensions = [], protect = True, director
             helper_file_type  = 'extension_helper_header')
         ]
 
+    # Options for mock ICD header
+    genOpts['mock_icd.h'] = [
+          MockICDOutputGenerator,
+          MockICDGeneratorOptions(
+            filename          = 'mock_icd.h',
+            directory         = directory,
+            apiname           = 'vulkan',
+            profile           = None,
+            versions          = allVersions,
+            emitversions      = allVersions,
+            defaultExtensions = 'vulkan',
+            addExtensions     = addExtensions,
+            removeExtensions  = removeExtensions,
+            prefixText        = prefixStrings + vkPrefixStrings,
+            protectFeature    = False,
+            apicall           = 'VKAPI_ATTR ',
+            apientry          = 'VKAPI_CALL ',
+            apientryp         = 'VKAPI_PTR *',
+            alignFuncParam    = 48,
+            helper_file_type  = 'mock_icd_header')
+        ]
+
+    # Options for mock ICD cpp
+    genOpts['mock_icd.cpp'] = [
+          MockICDOutputGenerator,
+          MockICDGeneratorOptions(
+            filename          = 'mock_icd.cpp',
+            directory         = directory,
+            apiname           = 'vulkan',
+            profile           = None,
+            versions          = allVersions,
+            emitversions      = allVersions,
+            defaultExtensions = 'vulkan',
+            addExtensions     = addExtensions,
+            removeExtensions  = removeExtensions,
+            prefixText        = prefixStrings + vkPrefixStrings,
+            protectFeature    = False,
+            apicall           = 'VKAPI_ATTR ',
+            apientry          = 'VKAPI_CALL ',
+            apientryp         = 'VKAPI_PTR *',
+            alignFuncParam    = 48,
+            helper_file_type  = 'mock_icd_source')
+        ]
 
 # Generate a target based on the options in the matching genOpts{} object.
 # This is encapsulated in a function so it can be profiled and/or timed.

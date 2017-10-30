@@ -670,47 +670,51 @@ bool PreCallValidateCreateImage(layer_data *device_data, const VkImageCreateInfo
         return skip;
     }
 
-    // Validate that format supports usage as color attachment
-    if (pCreateInfo->usage & VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT) {
-        if ((pCreateInfo->tiling == VK_IMAGE_TILING_OPTIMAL) &&
-            ((properties.optimalTilingFeatures & VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT) == 0)) {
-            std::stringstream ss;
-            ss << "vkCreateImage: VkFormat for TILING_OPTIMAL image (" << string_VkFormat(pCreateInfo->format)
-               << ") does not support requested Image usage type VK_IMAGE_USAGE_COLOR_ATTACHMENT";
-            skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
-                            VALIDATION_ERROR_09e007b2, "IMAGE", "%s. %s", ss.str().c_str(),
-                            validation_error_map[VALIDATION_ERROR_09e007b2]);
+    // TODO: Add checks for EXTENDED_USAGE images to validate images are compatible
+    // For EXTENDED_USAGE images, format can match any image COMPATIBLE with original image
+    if (!GetDeviceExtensions(device_data)->vk_khr_maintenance2 || !(pCreateInfo->flags & VK_IMAGE_CREATE_EXTENDED_USAGE_BIT_KHR)) {
+        // Validate that format supports usage as color attachment
+        if (pCreateInfo->usage & VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT) {
+            if ((pCreateInfo->tiling == VK_IMAGE_TILING_OPTIMAL) &&
+                ((properties.optimalTilingFeatures & VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT) == 0)) {
+                std::stringstream ss;
+                ss << "vkCreateImage: VkFormat for TILING_OPTIMAL image (" << string_VkFormat(pCreateInfo->format)
+                    << ") does not support requested Image usage type VK_IMAGE_USAGE_COLOR_ATTACHMENT";
+                skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
+                    VALIDATION_ERROR_09e007b2, "IMAGE", "%s. %s", ss.str().c_str(),
+                    validation_error_map[VALIDATION_ERROR_09e007b2]);
+            }
+            if ((pCreateInfo->tiling == VK_IMAGE_TILING_LINEAR) &&
+                ((properties.linearTilingFeatures & VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT) == 0)) {
+                std::stringstream ss;
+                ss << "vkCreateImage: VkFormat for TILING_LINEAR image (" << string_VkFormat(pCreateInfo->format)
+                    << ") does not support requested Image usage type VK_IMAGE_USAGE_COLOR_ATTACHMENT";
+                skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
+                    VALIDATION_ERROR_09e007a8, "IMAGE", "%s. %s", ss.str().c_str(),
+                    validation_error_map[VALIDATION_ERROR_09e007a8]);
+            }
         }
-        if ((pCreateInfo->tiling == VK_IMAGE_TILING_LINEAR) &&
-            ((properties.linearTilingFeatures & VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT) == 0)) {
-            std::stringstream ss;
-            ss << "vkCreateImage: VkFormat for TILING_LINEAR image (" << string_VkFormat(pCreateInfo->format)
-               << ") does not support requested Image usage type VK_IMAGE_USAGE_COLOR_ATTACHMENT";
-            skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
-                            VALIDATION_ERROR_09e007a8, "IMAGE", "%s. %s", ss.str().c_str(),
-                            validation_error_map[VALIDATION_ERROR_09e007a8]);
-        }
-    }
 
-    // Validate that format supports usage as depth/stencil attachment
-    if (pCreateInfo->usage & VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT) {
-        if ((pCreateInfo->tiling == VK_IMAGE_TILING_OPTIMAL) &&
-            ((properties.optimalTilingFeatures & VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT) == 0)) {
-            std::stringstream ss;
-            ss << "vkCreateImage: VkFormat for TILING_OPTIMAL image (" << string_VkFormat(pCreateInfo->format)
-               << ") does not support requested Image usage type VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT";
-            skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
-                            VALIDATION_ERROR_09e007b4, "IMAGE", "%s. %s", ss.str().c_str(),
-                            validation_error_map[VALIDATION_ERROR_09e007b4]);
-        }
-        if ((pCreateInfo->tiling == VK_IMAGE_TILING_LINEAR) &&
-            ((properties.linearTilingFeatures & VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT) == 0)) {
-            std::stringstream ss;
-            ss << "vkCreateImage: VkFormat for TILING_LINEAR image (" << string_VkFormat(pCreateInfo->format)
-               << ") does not support requested Image usage type VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT";
-            skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
-                            VALIDATION_ERROR_09e007aa, "IMAGE", "%s. %s", ss.str().c_str(),
-                            validation_error_map[VALIDATION_ERROR_09e007aa]);
+        // Validate that format supports usage as depth/stencil attachment
+        if (pCreateInfo->usage & VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT) {
+            if ((pCreateInfo->tiling == VK_IMAGE_TILING_OPTIMAL) &&
+                ((properties.optimalTilingFeatures & VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT) == 0)) {
+                std::stringstream ss;
+                ss << "vkCreateImage: VkFormat for TILING_OPTIMAL image (" << string_VkFormat(pCreateInfo->format)
+                    << ") does not support requested Image usage type VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT";
+                skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
+                    VALIDATION_ERROR_09e007b4, "IMAGE", "%s. %s", ss.str().c_str(),
+                    validation_error_map[VALIDATION_ERROR_09e007b4]);
+            }
+            if ((pCreateInfo->tiling == VK_IMAGE_TILING_LINEAR) &&
+                ((properties.linearTilingFeatures & VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT) == 0)) {
+                std::stringstream ss;
+                ss << "vkCreateImage: VkFormat for TILING_LINEAR image (" << string_VkFormat(pCreateInfo->format)
+                    << ") does not support requested Image usage type VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT";
+                skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
+                    VALIDATION_ERROR_09e007aa, "IMAGE", "%s. %s", ss.str().c_str(),
+                    validation_error_map[VALIDATION_ERROR_09e007aa]);
+            }
         }
     }
 
@@ -803,6 +807,29 @@ bool PreCallValidateCreateImage(layer_data *device_data, const VkImageCreateInfo
                         "VK_IMAGE_CREATE_SPARSE_ALIASED_BIT set.");
     }
 
+    if (GetDeviceExtensions(device_data)->vk_khr_maintenance2) {
+        if (pCreateInfo->flags & VK_IMAGE_CREATE_BLOCK_TEXEL_VIEW_COMPATIBLE_BIT_KHR) {
+            if (!(FormatIsCompressed_BC(pCreateInfo->format) || FormatIsCompressed_ASTC_LDR(pCreateInfo->format) ||
+                  FormatIsCompressed_ETC2_EAC(pCreateInfo->format))) {
+                // TODO: Add Maintenance2 VUID
+                skip |=
+                    log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
+                            VALIDATION_ERROR_UNDEFINED, "DS",
+                            "vkCreateImage(): If pCreateInfo->flags contains VK_IMAGE_CREATE_BLOCK_TEXEL_VIEW_COMPATIBLE_BIT_KHR, "
+                            "format must be block, ETC or ASTC compressed, but is %s",
+                            string_VkFormat(pCreateInfo->format));
+            }
+            if (!(pCreateInfo->flags & VK_IMAGE_CREATE_MUTABLE_FORMAT_BIT)) {
+                // TODO: Add Maintenance2 VUID
+                skip |=
+                    log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
+                            VALIDATION_ERROR_UNDEFINED, "DS",
+                            "vkCreateImage(): If pCreateInfo->flags contains VK_IMAGE_CREATE_BLOCK_TEXEL_VIEW_COMPATIBLE_BIT_KHR, "
+                            "flags must also contain VK_IMAGE_CREATE_MUTABLE_FORMAT_BIT.");
+            }
+        }
+    }
+
     return skip;
 }
 
@@ -823,7 +850,8 @@ bool PreCallValidateDestroyImage(layer_data *device_data, VkImage image, IMAGE_S
     if (disabled->destroy_image) return false;
     bool skip = false;
     if (*image_state) {
-        skip |= core_validation::ValidateObjectNotInUse(device_data, *image_state, *obj_struct, VALIDATION_ERROR_252007d0);
+        skip |= core_validation::ValidateObjectNotInUse(device_data, *image_state, *obj_struct, "vkDestroyImage",
+                                                        VALIDATION_ERROR_252007d0);
     }
     return skip;
 }
@@ -1241,7 +1269,7 @@ static inline bool CheckItgOffset(layer_data *device_data, const GLOBAL_CB_NODE 
 // Check elements of a VkExtent3D structure against a queue family's Image Transfer Granularity values
 static inline bool CheckItgExtent(layer_data *device_data, const GLOBAL_CB_NODE *cb_node, const VkExtent3D *extent,
                                   const VkOffset3D *offset, const VkExtent3D *granularity, const VkExtent3D *subresource_extent,
-                                  const uint32_t i, const char *function, const char *member) {
+                                  const VkImageType image_type, const uint32_t i, const char *function, const char *member) {
     const debug_report_data *report_data = core_validation::GetReportData(device_data);
     bool skip = false;
     if (IsExtentAllZeroes(granularity)) {
@@ -1263,14 +1291,26 @@ static inline bool CheckItgExtent(layer_data *device_data, const GLOBAL_CB_NODE 
         offset_extent_sum.width = static_cast<uint32_t>(abs(offset->x)) + extent->width;
         offset_extent_sum.height = static_cast<uint32_t>(abs(offset->y)) + extent->height;
         offset_extent_sum.depth = static_cast<uint32_t>(abs(offset->z)) + extent->depth;
-
-        bool x_ok =
-            ((0 == SafeModulo(extent->width, granularity->width)) || (subresource_extent->width == offset_extent_sum.width));
-        bool y_ok =
-            ((0 == SafeModulo(extent->height, granularity->height)) || (subresource_extent->height == offset_extent_sum.height));
-        bool z_ok =
-            ((0 == SafeModulo(extent->depth, granularity->depth)) || (subresource_extent->depth == offset_extent_sum.depth));
-
+        bool x_ok = true;
+        bool y_ok = true;
+        bool z_ok = true;
+        switch (image_type) {
+            case VK_IMAGE_TYPE_3D:
+                z_ok = ((0 == SafeModulo(extent->depth, granularity->depth)) ||
+                        (subresource_extent->depth == offset_extent_sum.depth));
+                // Intentionally fall through to 2D case
+            case VK_IMAGE_TYPE_2D:
+                y_ok = ((0 == SafeModulo(extent->height, granularity->height)) ||
+                        (subresource_extent->height == offset_extent_sum.height));
+                // Intentionally fall through to 1D case
+            case VK_IMAGE_TYPE_1D:
+                x_ok = ((0 == SafeModulo(extent->width, granularity->width)) ||
+                        (subresource_extent->width == offset_extent_sum.width));
+                break;
+            default:
+                // Unrecognized or new IMAGE_TYPE enums will be caught in parameter_validation
+                assert(false);
+        }
         if (!(x_ok && y_ok && z_ok)) {
             skip |=
                 log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
@@ -1344,7 +1384,7 @@ bool ValidateCopyBufferImageTransferGranularityRequirements(layer_data *device_d
         skip |= CheckItgOffset(device_data, cb_node, &region->imageOffset, &granularity, i, function, "imageOffset");
         VkExtent3D subresource_extent = GetImageSubresourceExtent(img, &region->imageSubresource);
         skip |= CheckItgExtent(device_data, cb_node, &region->imageExtent, &region->imageOffset, &granularity, &subresource_extent,
-                               i, function, "imageExtent");
+                               img->createInfo.imageType, i, function, "imageExtent");
     }
     return skip;
 }
@@ -1354,17 +1394,32 @@ bool ValidateCopyImageTransferGranularityRequirements(layer_data *device_data, c
                                                       const IMAGE_STATE *src_img, const IMAGE_STATE *dst_img,
                                                       const VkImageCopy *region, const uint32_t i, const char *function) {
     bool skip = false;
+    // Source image checks
     VkExtent3D granularity = GetScaledItg(device_data, cb_node, src_img);
     skip |= CheckItgOffset(device_data, cb_node, &region->srcOffset, &granularity, i, function, "srcOffset");
     VkExtent3D subresource_extent = GetImageSubresourceExtent(src_img, &region->srcSubresource);
-    skip |= CheckItgExtent(device_data, cb_node, &region->extent, &region->srcOffset, &granularity, &subresource_extent, i,
-                           function, "extent");
+    VkExtent3D extent = region->extent;
+    if (FormatIsCompressed(src_img->createInfo.format) && !FormatIsCompressed(dst_img->createInfo.format)) {
+        // Src is compressed and dest is uncompressed, adjust extent:
+        VkExtent3D block_size = FormatCompressedTexelBlockExtent(src_img->createInfo.format);
+        extent.width /= block_size.width;
+        extent.height /= block_size.height;
+    }
+    skip |= CheckItgExtent(device_data, cb_node, &extent, &region->srcOffset, &granularity, &subresource_extent,
+                           src_img->createInfo.imageType, i, function, "extent");
 
+    // Destination image checks
     granularity = GetScaledItg(device_data, cb_node, dst_img);
     skip |= CheckItgOffset(device_data, cb_node, &region->dstOffset, &granularity, i, function, "dstOffset");
     subresource_extent = GetImageSubresourceExtent(dst_img, &region->dstSubresource);
-    skip |= CheckItgExtent(device_data, cb_node, &region->extent, &region->dstOffset, &granularity, &subresource_extent, i,
-                           function, "extent");
+    if (!FormatIsCompressed(src_img->createInfo.format) && FormatIsCompressed(dst_img->createInfo.format)) {
+        // Src is uncompressed and dest is compressed, adjust extent:
+        VkExtent3D block_size = FormatCompressedTexelBlockExtent(dst_img->createInfo.format);
+        extent.width *= block_size.width;
+        extent.height *= block_size.height;
+    }
+    skip |= CheckItgExtent(device_data, cb_node, &extent, &region->dstOffset, &granularity, &subresource_extent,
+                           dst_img->createInfo.imageType, i, function, "extent");
     return skip;
 }
 
@@ -1468,32 +1523,39 @@ bool ValidateImageCopyData(const layer_data *device_data, const debug_report_dat
                                 validation_error_map[VALIDATION_ERROR_09c0013a]);
             }
 
-            // extent width must be a multiple of block width, or extent+offset width must equal subresource width
+            // Extent width must be a multiple of block width, or extent+offset width must equal subresource width
+            VkExtent3D adj_extent = image_copy.extent;
+            if (!FormatIsCompressed(dst_state->createInfo.format)) {
+                // Copying from compressed source. Modify extent to be extent / texel block size
+                adj_extent.width /= block_size.width;
+                adj_extent.height /= block_size.height;
+            }
+
             VkExtent3D mip_extent = GetImageSubresourceExtent(src_state, &(image_copy.srcSubresource));
-            if ((SafeModulo(image_copy.extent.width, block_size.width) != 0) &&
-                (image_copy.extent.width + image_copy.srcOffset.x != mip_extent.width)) {
+            if ((SafeModulo(adj_extent.width, block_size.width) != 0) &&
+                (adj_extent.width + image_copy.srcOffset.x != mip_extent.width)) {
                 skip |=
                     log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT,
                             reinterpret_cast<const uint64_t &>(src_state->image), __LINE__, VALIDATION_ERROR_09c0013c, "IMAGE",
                             "vkCmdCopyImage(): pRegion[%d] extent width (%d) must be a multiple of the compressed texture block "
                             "width (%d), or when added to srcOffset.x (%d) must equal the image subresource width (%d). %s.",
-                            i, image_copy.extent.width, block_size.width, image_copy.srcOffset.x, mip_extent.width,
+                            i, adj_extent.width, block_size.width, image_copy.srcOffset.x, mip_extent.width,
                             validation_error_map[VALIDATION_ERROR_09c0013c]);
             }
 
-            // extent height must be a multiple of block height, or extent+offset height must equal subresource height
-            if ((SafeModulo(image_copy.extent.height, block_size.height) != 0) &&
-                (image_copy.extent.height + image_copy.srcOffset.y != mip_extent.height)) {
+            // Extent height must be a multiple of block height, or extent+offset height must equal subresource height
+            if ((SafeModulo(adj_extent.height, block_size.height) != 0) &&
+                (adj_extent.height + image_copy.srcOffset.y != mip_extent.height)) {
                 skip |=
                     log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT,
                             reinterpret_cast<const uint64_t &>(src_state->image), __LINE__, VALIDATION_ERROR_09c0013e, "IMAGE",
                             "vkCmdCopyImage(): pRegion[%d] extent height (%d) must be a multiple of the compressed texture block "
                             "height (%d), or when added to srcOffset.y (%d) must equal the image subresource height (%d). %s.",
-                            i, image_copy.extent.height, block_size.height, image_copy.srcOffset.y, mip_extent.height,
+                            i, adj_extent.height, block_size.height, image_copy.srcOffset.y, mip_extent.height,
                             validation_error_map[VALIDATION_ERROR_09c0013e]);
             }
 
-            // extent depth must be a multiple of block depth, or extent+offset depth must equal subresource depth
+            // Extent depth must be a multiple of block depth, or extent+offset depth must equal subresource depth
             uint32_t copy_depth = (slice_override ? depth_slices : image_copy.extent.depth);
             if ((SafeModulo(copy_depth, block_size.depth) != 0) && (copy_depth + image_copy.srcOffset.z != mip_extent.depth)) {
                 skip |=
@@ -1596,32 +1658,39 @@ bool ValidateImageCopyData(const layer_data *device_data, const debug_report_dat
                                 validation_error_map[VALIDATION_ERROR_09c00144]);
             }
 
-            // extent width must be a multiple of block width, or extent+offset width must equal subresource width
+            // Extent width must be a multiple of block width, or extent+offset width must equal subresource width
+            VkExtent3D adj_extent = image_copy.extent;
+            if (!FormatIsCompressed(src_state->createInfo.format)) {
+                // Copying from uncompressed source. Modify extent to be extent * texel block size
+                adj_extent.width *= block_size.width;
+                adj_extent.height *= block_size.height;
+            }
+
             VkExtent3D mip_extent = GetImageSubresourceExtent(dst_state, &(image_copy.dstSubresource));
-            if ((SafeModulo(image_copy.extent.width, block_size.width) != 0) &&
-                (image_copy.extent.width + image_copy.dstOffset.x != mip_extent.width)) {
+            if ((SafeModulo(adj_extent.width, block_size.width) != 0) &&
+                (adj_extent.width + image_copy.dstOffset.x != mip_extent.width)) {
                 skip |=
                     log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT,
                             reinterpret_cast<const uint64_t &>(dst_state->image), __LINE__, VALIDATION_ERROR_09c00146, "IMAGE",
                             "vkCmdCopyImage(): pRegion[%d] extent width (%d) must be a multiple of the compressed texture block "
                             "width (%d), or when added to dstOffset.x (%d) must equal the image subresource width (%d). %s.",
-                            i, image_copy.extent.width, block_size.width, image_copy.dstOffset.x, mip_extent.width,
+                            i, adj_extent.width, block_size.width, image_copy.dstOffset.x, mip_extent.width,
                             validation_error_map[VALIDATION_ERROR_09c00146]);
             }
 
-            // extent height must be a multiple of block height, or extent+offset height must equal subresource height
-            if ((SafeModulo(image_copy.extent.height, block_size.height) != 0) &&
-                (image_copy.extent.height + image_copy.dstOffset.y != mip_extent.height)) {
+            // Extent height must be a multiple of block height, or extent+offset height must equal subresource height
+            if ((SafeModulo(adj_extent.height, block_size.height) != 0) &&
+                (adj_extent.height + image_copy.dstOffset.y != mip_extent.height)) {
                 skip |=
                     log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT,
                             reinterpret_cast<const uint64_t &>(dst_state->image), __LINE__, VALIDATION_ERROR_09c00148, "IMAGE",
                             "vkCmdCopyImage(): pRegion[%d] extent height (%d) must be a multiple of the compressed texture block "
                             "height (%d), or when added to dstOffset.y (%d) must equal the image subresource height (%d). %s.",
-                            i, image_copy.extent.height, block_size.height, image_copy.dstOffset.y, mip_extent.height,
+                            i, adj_extent.height, block_size.height, image_copy.dstOffset.y, mip_extent.height,
                             validation_error_map[VALIDATION_ERROR_09c00148]);
             }
 
-            // extent depth must be a multiple of block depth, or extent+offset depth must equal subresource depth
+            // Extent depth must be a multiple of block depth, or extent+offset depth must equal subresource depth
             uint32_t copy_depth = (slice_override ? depth_slices : image_copy.extent.depth);
             if ((SafeModulo(copy_depth, block_size.depth) != 0) && (copy_depth + image_copy.dstOffset.z != mip_extent.depth)) {
                 skip |=
@@ -2688,73 +2757,6 @@ static bool ValidateMaskBits(core_validation::layer_data *device_data, VkCommand
     return skip;
 }
 
-bool ValidateMaskBitsFromLayouts(core_validation::layer_data *device_data, VkCommandBuffer cmdBuffer,
-                                 const VkAccessFlags &accessMask, const VkImageLayout &layout, const char *type) {
-    const debug_report_data *report_data = core_validation::GetReportData(device_data);
-
-    bool skip = false;
-    switch (layout) {
-        case VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL: {
-            skip |= ValidateMaskBits(device_data, cmdBuffer, accessMask, layout, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
-                                     VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_INPUT_ATTACHMENT_READ_BIT, type);
-            break;
-        }
-        case VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL: {
-            skip |= ValidateMaskBits(device_data, cmdBuffer, accessMask, layout, VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
-                                     VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT | VK_ACCESS_INPUT_ATTACHMENT_READ_BIT, type);
-            break;
-        }
-        case VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL: {
-            skip |= ValidateMaskBits(device_data, cmdBuffer, accessMask, layout, VK_ACCESS_TRANSFER_WRITE_BIT, 0, type);
-            break;
-        }
-        case VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL: {
-            skip |= ValidateMaskBits(
-                device_data, cmdBuffer, accessMask, layout, 0,
-                VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT | VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_INPUT_ATTACHMENT_READ_BIT,
-                type);
-            break;
-        }
-        case VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL: {
-            skip |= ValidateMaskBits(device_data, cmdBuffer, accessMask, layout, 0,
-                                     VK_ACCESS_INPUT_ATTACHMENT_READ_BIT | VK_ACCESS_SHADER_READ_BIT, type);
-            break;
-        }
-        case VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL: {
-            skip |= ValidateMaskBits(device_data, cmdBuffer, accessMask, layout, VK_ACCESS_TRANSFER_READ_BIT, 0, type);
-            break;
-        }
-        case VK_IMAGE_LAYOUT_UNDEFINED: {
-            if (accessMask != 0) {
-                // TODO: Verify against Valid Use section spec
-                skip |= log_msg(report_data, VK_DEBUG_REPORT_WARNING_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
-                                HandleToUint64(cmdBuffer), __LINE__, DRAWSTATE_INVALID_BARRIER, "DS",
-                                "Additional bits in %s accessMask 0x%X %s are specified when layout is %s.", type, accessMask,
-                                string_VkAccessFlags(accessMask).c_str(), string_VkImageLayout(layout));
-            }
-            break;
-        }
-        case VK_IMAGE_LAYOUT_PRESENT_SRC_KHR:
-        // Notes: QueuePresentKHR performs automatic visibility operations,
-        // so the app is /NOT/ required to include VK_ACCESS_MEMORY_READ_BIT
-        // when transitioning to this layout.
-        //
-        // When transitioning /from/ this layout, the application needs to
-        // avoid only a WAR hazard -- any writes need to be ordered after
-        // the PE's reads. There is no need for a memory dependency for this
-        // case.
-        // Intentionally fall through
-
-        case VK_IMAGE_LAYOUT_SHARED_PRESENT_KHR:
-        // Todo -- shouldn't be valid unless extension is enabled
-        // Intentionally fall through
-
-        case VK_IMAGE_LAYOUT_GENERAL:
-        default: { break; }
-    }
-    return skip;
-}
-
 // ValidateLayoutVsAttachmentDescription is a general function where we can validate various state associated with the
 // VkAttachmentDescription structs that are used by the sub-passes of a renderpass. Initial check is to make sure that READ_ONLY
 // layout attachments don't have CLEAR as their loadOp.
@@ -2880,28 +2882,37 @@ bool ValidateLayouts(core_validation::layer_data *device_data, VkDevice device, 
             }
             attach_first_use[attach_index] = false;
         }
+
         if (subpass.pDepthStencilAttachment && subpass.pDepthStencilAttachment->attachment != VK_ATTACHMENT_UNUSED) {
             switch (subpass.pDepthStencilAttachment->layout) {
-                case VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL:
-                case VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL:
-                    // These are ideal.
-                    break;
+            case VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL:
+            case VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL:
+                // These are ideal.
+                break;
 
-                case VK_IMAGE_LAYOUT_GENERAL:
-                    // May not be optimal; TODO: reconsider this warning based on other constraints? GENERAL can be better than
-                    // doing a bunch of transitions.
-                    skip |= log_msg(report_data, VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT,
-                                    VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__, DRAWSTATE_INVALID_IMAGE_LAYOUT, "DS",
-                                    "GENERAL layout for depth attachment may not give optimal performance.");
-                    break;
+            case VK_IMAGE_LAYOUT_GENERAL:
+                // May not be optimal; TODO: reconsider this warning based on other constraints? GENERAL can be better than
+                // doing a bunch of transitions.
+                skip |= log_msg(report_data, VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT,
+                    VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__, DRAWSTATE_INVALID_IMAGE_LAYOUT, "DS",
+                    "GENERAL layout for depth attachment may not give optimal performance.");
+                break;
 
-                default:
-                    // No other layouts are acceptable
-                    skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0,
-                                    __LINE__, DRAWSTATE_INVALID_IMAGE_LAYOUT, "DS",
-                                    "Layout for depth attachment is %s but can only be DEPTH_STENCIL_ATTACHMENT_OPTIMAL, "
-                                    "DEPTH_STENCIL_READ_ONLY_OPTIMAL or GENERAL.",
-                                    string_VkImageLayout(subpass.pDepthStencilAttachment->layout));
+            case VK_IMAGE_LAYOUT_DEPTH_READ_ONLY_STENCIL_ATTACHMENT_OPTIMAL_KHR:
+            case VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_STENCIL_READ_ONLY_OPTIMAL_KHR:
+                if (GetDeviceExtensions(device_data)->vk_khr_maintenance2) {
+                    break;
+                } else {
+                    // Intentionally fall through to generic error message
+                }
+
+            default:
+                // No other layouts are acceptable
+                skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0,
+                    __LINE__, DRAWSTATE_INVALID_IMAGE_LAYOUT, "DS",
+                    "Layout for depth attachment is %s but can only be DEPTH_STENCIL_ATTACHMENT_OPTIMAL, "
+                    "DEPTH_STENCIL_READ_ONLY_OPTIMAL or GENERAL.",
+                    string_VkImageLayout(subpass.pDepthStencilAttachment->layout));
             }
 
             auto attach_index = subpass.pDepthStencilAttachment->attachment;
@@ -3282,17 +3293,20 @@ bool PreCallValidateCreateImageView(layer_data *device_data, const VkImageViewCr
 
         // Validate VK_IMAGE_CREATE_MUTABLE_FORMAT_BIT state
         if (image_flags & VK_IMAGE_CREATE_MUTABLE_FORMAT_BIT) {
-            // Format MUST be compatible (in the same format compatibility class) as the format the image was created with
-            if (FormatCompatibilityClass(image_format) != FormatCompatibilityClass(view_format)) {
-                std::stringstream ss;
-                ss << "vkCreateImageView(): ImageView format " << string_VkFormat(view_format)
-                   << " is not in the same format compatibility class as image (" << HandleToUint64(create_info->image)
-                   << ")  format " << string_VkFormat(image_format)
-                   << ".  Images created with the VK_IMAGE_CREATE_MUTABLE_FORMAT BIT "
-                   << "can support ImageViews with differing formats but they must be in the same compatibility class.";
-                skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
-                                VALIDATION_ERROR_0ac007f4, "IMAGE", "%s %s", ss.str().c_str(),
-                                validation_error_map[VALIDATION_ERROR_0ac007f4]);
+            if ((!GetDeviceExtensions(device_data)->vk_khr_maintenance2 ||
+                 !(image_flags & VK_IMAGE_CREATE_BLOCK_TEXEL_VIEW_COMPATIBLE_BIT_KHR))) {
+                // Format MUST be compatible (in the same format compatibility class) as the format the image was created with
+                if (FormatCompatibilityClass(image_format) != FormatCompatibilityClass(view_format)) {
+                    std::stringstream ss;
+                    ss << "vkCreateImageView(): ImageView format " << string_VkFormat(view_format)
+                       << " is not in the same format compatibility class as image (" << HandleToUint64(create_info->image)
+                       << ")  format " << string_VkFormat(image_format)
+                       << ".  Images created with the VK_IMAGE_CREATE_MUTABLE_FORMAT BIT "
+                       << "can support ImageViews with differing formats but they must be in the same compatibility class.";
+                    skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0,
+                                    __LINE__, VALIDATION_ERROR_0ac007f4, "IMAGE", "%s %s", ss.str().c_str(),
+                                    validation_error_map[VALIDATION_ERROR_0ac007f4]);
+                }
             }
         } else {
             // Format MUST be IDENTICAL to the format the image was created with
@@ -3519,7 +3533,8 @@ bool PreCallValidateDestroyImageView(layer_data *device_data, VkImageView image_
     if (GetDisables(device_data)->destroy_image_view) return false;
     bool skip = false;
     if (*image_view_state) {
-        skip |= ValidateObjectNotInUse(device_data, *image_view_state, *obj_struct, VALIDATION_ERROR_25400804);
+        skip |=
+            ValidateObjectNotInUse(device_data, *image_view_state, *obj_struct, "vkDestroyImageView", VALIDATION_ERROR_25400804);
     }
     return skip;
 }
@@ -3561,7 +3576,8 @@ bool PreCallValidateDestroyBufferView(layer_data *device_data, VkBufferView buff
     if (GetDisables(device_data)->destroy_buffer_view) return false;
     bool skip = false;
     if (*buffer_view_state) {
-        skip |= ValidateObjectNotInUse(device_data, *buffer_view_state, *obj_struct, VALIDATION_ERROR_23e00750);
+        skip |=
+            ValidateObjectNotInUse(device_data, *buffer_view_state, *obj_struct, "vkDestroyBufferView", VALIDATION_ERROR_23e00750);
     }
     return skip;
 }

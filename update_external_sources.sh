@@ -39,6 +39,7 @@ function create_glslang () {
    cd "${BASEDIR}"/glslang
    git clone ${GLSLANG_GITURL} .
    git checkout ${GLSLANG_REVISION}
+   ./update_glslang_sources.py
 }
 
 function update_glslang () {
@@ -46,6 +47,7 @@ function update_glslang () {
    cd "${BASEDIR}"/glslang
    git fetch --all
    git checkout --force ${GLSLANG_REVISION}
+   ./update_glslang_sources.py
 }
 
 function create_spirv-tools () {

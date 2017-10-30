@@ -266,6 +266,7 @@ struct layer_data {
     counter<VkSwapchainKHR> c_VkSwapchainKHR;
     counter<VkDescriptorUpdateTemplateKHR> c_VkDescriptorUpdateTemplateKHR;
     counter<VkValidationCacheEXT> c_VkValidationCacheEXT;
+    counter<VkSamplerYcbcrConversionKHR> c_VkSamplerYcbcrConversionKHR;
 #else   // DISTINCT_NONDISPATCHABLE_HANDLES
     counter<uint64_t> c_uint64_t;
 #endif  // DISTINCT_NONDISPATCHABLE_HANDLES
@@ -307,7 +308,8 @@ struct layer_data {
           c_VkDisplayModeKHR("VkDisplayModeKHR", VK_DEBUG_REPORT_OBJECT_TYPE_DISPLAY_MODE_KHR_EXT),
           c_VkSurfaceKHR("VkSurfaceKHR", VK_DEBUG_REPORT_OBJECT_TYPE_SURFACE_KHR_EXT),
           c_VkSwapchainKHR("VkSwapchainKHR", VK_DEBUG_REPORT_OBJECT_TYPE_SWAPCHAIN_KHR_EXT),
-          c_VkDescriptorUpdateTemplateKHR("VkDescriptorUpdateTemplateKHR", VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_UPDATE_TEMPLATE_KHR_EXT)
+          c_VkDescriptorUpdateTemplateKHR("VkDescriptorUpdateTemplateKHR", VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_UPDATE_TEMPLATE_KHR_EXT),
+          c_VkSamplerYcbcrConversionKHR("VkSamplerYcbcrConversionKHR", VK_DEBUG_REPORT_OBJECT_TYPE_SAMPLER_YCBCR_CONVERSION_KHR_EXT)
 #else   // DISTINCT_NONDISPATCHABLE_HANDLES
           c_uint64_t("NON_DISPATCHABLE_HANDLE", VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT)
 #endif  // DISTINCT_NONDISPATCHABLE_HANDLES
@@ -357,6 +359,7 @@ WRAPPER(VkSurfaceKHR)
 WRAPPER(VkSwapchainKHR)
 WRAPPER(VkDescriptorUpdateTemplateKHR)
 WRAPPER(VkValidationCacheEXT)
+WRAPPER(VkSamplerYcbcrConversionKHR)
 #else   // DISTINCT_NONDISPATCHABLE_HANDLES
 WRAPPER(uint64_t)
 #endif  // DISTINCT_NONDISPATCHABLE_HANDLES

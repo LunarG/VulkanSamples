@@ -190,6 +190,50 @@ bool ValidateDescriptorSet(VkDevice device, VkDescriptorPool descriptor_pool, Vk
     return skip;
 }
 
+template<typename DispObj>
+static bool ValidateDescriptorWrite(DispObj disp, VkWriteDescriptorSet const *desc, bool isPush) {
+    bool skip = false;
+
+    if (!isPush && desc->dstSet) {
+        skip |= ValidateObject(disp, desc->dstSet, kVulkanObjectTypeDescriptorSet, false,
+                               VALIDATION_ERROR_15c00280, VALIDATION_ERROR_15c00009);
+    }
+
+    if ((desc->descriptorType == VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER) ||
+        (desc->descriptorType == VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER)) {
+        for (uint32_t idx2 = 0; idx2 < desc->descriptorCount; ++idx2) {
+            skip |= ValidateObject(disp, desc->pTexelBufferView[idx2], kVulkanObjectTypeBufferView,
+                                   false, VALIDATION_ERROR_15c00286, VALIDATION_ERROR_15c00009);
+        }
+    }
+
+    if ((desc->descriptorType == VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER) ||
+        (desc->descriptorType == VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE) ||
+        (desc->descriptorType == VK_DESCRIPTOR_TYPE_STORAGE_IMAGE) ||
+        (desc->descriptorType == VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT)) {
+        for (uint32_t idx3 = 0; idx3 < desc->descriptorCount; ++idx3) {
+            skip |=
+                    ValidateObject(disp, desc->pImageInfo[idx3].imageView, kVulkanObjectTypeImageView,
+                                   false, VALIDATION_ERROR_15c0028c, VALIDATION_ERROR_04600009);
+        }
+    }
+
+    if ((desc->descriptorType == VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER) ||
+        (desc->descriptorType == VK_DESCRIPTOR_TYPE_STORAGE_BUFFER) ||
+        (desc->descriptorType == VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC) ||
+        (desc->descriptorType == VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC)) {
+        for (uint32_t idx4 = 0; idx4 < desc->descriptorCount; ++idx4) {
+            if (desc->pBufferInfo[idx4].buffer) {
+                skip |=
+                        ValidateObject(disp, desc->pBufferInfo[idx4].buffer, kVulkanObjectTypeBuffer,
+                                       false, VALIDATION_ERROR_04401a01, VALIDATION_ERROR_UNDEFINED);
+            }
+        }
+    }
+
+    return skip;
+}
+
 VKAPI_ATTR void VKAPI_CALL CmdPushDescriptorSetKHR(VkCommandBuffer commandBuffer, VkPipelineBindPoint pipelineBindPoint,
                                                    VkPipelineLayout layout, uint32_t set, uint32_t descriptorWriteCount,
                                                    const VkWriteDescriptorSet *pDescriptorWrites) {
@@ -202,30 +246,7 @@ VKAPI_ATTR void VKAPI_CALL CmdPushDescriptorSetKHR(VkCommandBuffer commandBuffer
                                VALIDATION_ERROR_1be00009);
         if (pDescriptorWrites) {
             for (uint32_t index0 = 0; index0 < descriptorWriteCount; ++index0) {
-                if (pDescriptorWrites[index0].pImageInfo) {
-                    for (uint32_t index1 = 0; index1 < pDescriptorWrites[index0].descriptorCount; ++index1) {
-                        skip |=
-                            ValidateObject(commandBuffer, pDescriptorWrites[index0].pImageInfo[index1].sampler,
-                                           kVulkanObjectTypeSampler, false, VALIDATION_ERROR_UNDEFINED, VALIDATION_ERROR_04600009);
-                        skip |= ValidateObject(commandBuffer, pDescriptorWrites[index0].pImageInfo[index1].imageView,
-                                               kVulkanObjectTypeImageView, false, VALIDATION_ERROR_UNDEFINED,
-                                               VALIDATION_ERROR_04600009);
-                    }
-                }
-                if (pDescriptorWrites[index0].pBufferInfo) {
-                    for (uint32_t index1 = 0; index1 < pDescriptorWrites[index0].descriptorCount; ++index1) {
-                        skip |=
-                            ValidateObject(commandBuffer, pDescriptorWrites[index0].pBufferInfo[index1].buffer,
-                                           kVulkanObjectTypeBuffer, false, VALIDATION_ERROR_04401a01, VALIDATION_ERROR_UNDEFINED);
-                    }
-                }
-                if (pDescriptorWrites[index0].pTexelBufferView) {
-                    for (uint32_t index1 = 0; index1 < pDescriptorWrites[index0].descriptorCount; ++index1) {
-                        skip |= ValidateObject(commandBuffer, pDescriptorWrites[index0].pTexelBufferView[index1],
-                                               kVulkanObjectTypeBufferView, false, VALIDATION_ERROR_UNDEFINED,
-                                               VALIDATION_ERROR_15c00009);
-                    }
-                }
+                skip |= ValidateDescriptorWrite(commandBuffer, &pDescriptorWrites[index0], true);
             }
         }
     }
@@ -413,39 +434,7 @@ VKAPI_ATTR void VKAPI_CALL UpdateDescriptorSets(VkDevice device, uint32_t descri
         }
         if (pDescriptorWrites) {
             for (uint32_t idx1 = 0; idx1 < descriptorWriteCount; ++idx1) {
-                if (pDescriptorWrites[idx1].dstSet) {
-                    skip |= ValidateObject(device, pDescriptorWrites[idx1].dstSet, kVulkanObjectTypeDescriptorSet, false,
-                                           VALIDATION_ERROR_15c00280, VALIDATION_ERROR_15c00009);
-                }
-                if ((pDescriptorWrites[idx1].descriptorType == VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER) ||
-                    (pDescriptorWrites[idx1].descriptorType == VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER)) {
-                    for (uint32_t idx2 = 0; idx2 < pDescriptorWrites[idx1].descriptorCount; ++idx2) {
-                        skip |= ValidateObject(device, pDescriptorWrites[idx1].pTexelBufferView[idx2], kVulkanObjectTypeBufferView,
-                                               false, VALIDATION_ERROR_15c00286, VALIDATION_ERROR_15c00009);
-                    }
-                }
-                if ((pDescriptorWrites[idx1].descriptorType == VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER) ||
-                    (pDescriptorWrites[idx1].descriptorType == VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE) ||
-                    (pDescriptorWrites[idx1].descriptorType == VK_DESCRIPTOR_TYPE_STORAGE_IMAGE) ||
-                    (pDescriptorWrites[idx1].descriptorType == VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT)) {
-                    for (uint32_t idx3 = 0; idx3 < pDescriptorWrites[idx1].descriptorCount; ++idx3) {
-                        skip |=
-                            ValidateObject(device, pDescriptorWrites[idx1].pImageInfo[idx3].imageView, kVulkanObjectTypeImageView,
-                                           false, VALIDATION_ERROR_15c0028c, VALIDATION_ERROR_04600009);
-                    }
-                }
-                if ((pDescriptorWrites[idx1].descriptorType == VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER) ||
-                    (pDescriptorWrites[idx1].descriptorType == VK_DESCRIPTOR_TYPE_STORAGE_BUFFER) ||
-                    (pDescriptorWrites[idx1].descriptorType == VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC) ||
-                    (pDescriptorWrites[idx1].descriptorType == VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC)) {
-                    for (uint32_t idx4 = 0; idx4 < pDescriptorWrites[idx1].descriptorCount; ++idx4) {
-                        if (pDescriptorWrites[idx1].pBufferInfo[idx4].buffer) {
-                            skip |=
-                                ValidateObject(device, pDescriptorWrites[idx1].pBufferInfo[idx4].buffer, kVulkanObjectTypeBuffer,
-                                               false, VALIDATION_ERROR_04401a01, VALIDATION_ERROR_UNDEFINED);
-                        }
-                    }
-                }
+                skip |= ValidateDescriptorWrite(device, &pDescriptorWrites[idx1], false);
             }
         }
     }
