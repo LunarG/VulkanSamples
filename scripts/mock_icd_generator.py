@@ -824,12 +824,7 @@ class MockICDOutputGenerator(OutputGenerator):
         if self.header:
             self.newline()
             write(HEADER_C_CODE, file=self.outFile)
-            # Include all of the extensions
-            # static unordered_map<void *, device_layer_data *> device_layer_data_map;
-            # typedef struct VkExtensionProperties {
-            # char        extensionName[VK_MAX_EXTENSION_NAME_SIZE];
-            # uint32_t    specVersion;
-            # } VkExtensionProperties;
+            # Include all of the extensions in ICD except specific ignored ones
             device_exts = []
             instance_exts = []
             # Ignore extensions that ICDs should not implement
@@ -871,12 +866,6 @@ class MockICDOutputGenerator(OutputGenerator):
             write('#endif', file=self.outFile)
         else: # Loader-layer-interface, need to implement global interface functions
             write(SOURCE_CPP_POSTFIX, file=self.outFile)
-            #init_commands = self.registry.tree.find("feature/require/[@comment='Device initialization']")
-            #for cmd in init_commands:
-            #    cmd_name = cmd.attrib['name']
-            #    write('// Found init function: %s' % (cmd_name), file=self.outFile)
-            #    cmdinfo = self.registry.tree.find("commands/command/[name='%s']" % (cmd_name))
-            #    write('VK_LAYER_EXPORT %s {' % (self.makeCDecls(cmdinfo.elem)[0][:-1]))
         # Finish processing in superclass
         OutputGenerator.endFile(self)
     def beginFeature(self, interface, emit):
@@ -1012,24 +1001,10 @@ class MockICDOutputGenerator(OutputGenerator):
             self.appendSection('command', '{%s}' % (CUSTOM_C_INTERCEPTS[name]))
             return
         self.appendSection('command', '{')
-        # setup common to call wrappers
-        # first parameter is always dispatchable
-        dispatchable_type = cmdinfo.elem.find('param/type').text
-        #dispatchable_name = cmdinfo.elem.find('param/name').text
-        # Default to device
-        device_or_instance = 'device'
-        #dispatch_table_name = 'VkLayerDispatchTable'
-        # Set to instance as necessary
-        #if dispatchable_type in ["VkPhysicalDevice", "VkInstance"]:
-            #device_or_instance = 'instance'
-            #dispatch_table_name = 'VkLayerInstanceDispatchTable'
-        #self.appendSection('command', '    %s_layer_data *%s_data = GetLayerDataPtr(get_dispatch_key(%s), %s_layer_data_map);' % (device_or_instance, device_or_instance, dispatchable_name, device_or_instance))
+
         api_function_name = cmdinfo.elem.attrib.get('name')
-        params = cmdinfo.elem.findall('param/name')
-        paramstext = ', '.join([str(param.text) for param in params])
         # GET THE TYPE OF FUNCTION
         if True in [ftxt in api_function_name for ftxt in ['Create', 'Allocate']]:
-            #self.appendSection('command', '    //Add object generation here for last param')
             # Get last param
             last_param = cmdinfo.elem.findall('param')[-1]
             lp_txt = last_param.find('name').text
@@ -1046,34 +1021,22 @@ class MockICDOutputGenerator(OutputGenerator):
             # Need to lock in both cases
             self.appendSection('command', '    unique_lock_t lock(global_lock);')
             if (lp_len != None):
-                print("%s last params (%s) has len %s" % (handle_type, lp_txt, lp_len))
+                #print("%s last params (%s) has len %s" % (handle_type, lp_txt, lp_len))
                 self.appendSection('command', '    for (uint32_t i = 0; i < %s; ++i) {' % (lp_len))
                 self.appendSection('command', '        %s[i] = (%s)%s;' % (lp_txt, lp_type, allocator_txt))
                 self.appendSection('command', '    }')
             else:
-                print("Single %s last param is '%s' w/ type '%s'" % (handle_type, lp_txt, lp_type))
+                #print("Single %s last param is '%s' w/ type '%s'" % (handle_type, lp_txt, lp_type))
                 self.appendSection('command', '    *%s = (%s)%s;' % (lp_txt, lp_type, allocator_txt))
-            # If las param has a len, then we need to loop over that len
-            # Add unique ID to return value and increment
-
         elif True in [ftxt in api_function_name for ftxt in ['Destroy', 'Free']]:
             self.appendSection('command', '//Destroy object')
         else:
             self.appendSection('command', '//Not a CREATE or DESTROY function')
-        # GENERATE BODY CODE APPROPRIATELY
-        #API = api_function_name.replace('vk','%s_data->dispatch_table.' % (device_or_instance),1)
-        #self.appendSection('command', '    PreCall%s(%s_data, %s);' % (api_function_name[2:], device_or_instance, paramstext))
         # Declare result variable, if any.
         resulttype = cmdinfo.elem.find('proto/type')
         if (resulttype != None and resulttype.text == 'void'):
           resulttype = None
-        if (resulttype != None):
-            assignresult = resulttype.text + ' result = '
-        else:
-            assignresult = ''
 
-        #self.appendSection('command', '    ' + assignresult + API + '(' + paramstext + ');')
-        #self.appendSection('command', '    PostCall%s(%s_data, %s);' % (api_function_name[2:], device_or_instance, paramstext))
         # Return result variable, if any.
         if (resulttype != None):
             self.appendSection('command', '    return VK_SUCCESS;')
