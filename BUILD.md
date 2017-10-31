@@ -40,6 +40,8 @@ cd dbuild
 make
 ```
 
+If your build system supports ccache, you can enable that via cmake option `-DUSE_CCACHE=On`
+
 If you have installed a Vulkan driver obtained from your graphics hardware vendor, the install process should
 have configured the driver so that the Vulkan loader can find and load it.
 

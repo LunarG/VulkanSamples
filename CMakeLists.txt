@@ -15,6 +15,15 @@ string(TOLOWER ${API_NAME} API_LOWERCASE)
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 find_package(PythonInterp 3 REQUIRED)
 
+option(USE_CCACHE "Use ccache" OFF)
+if (USE_CCACHE)
+    find_program(CCACHE_FOUND ccache)
+    if(CCACHE_FOUND)
+        set_property(GLOBAL PROPERTY RULE_LAUNCH_COMPILE ccache)
+        set_property(GLOBAL PROPERTY RULE_LAUNCH_LINK ccache)
+    endif(CCACHE_FOUND)
+endif()
+
 if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
     set(FALLBACK_CONFIG_DIRS "/etc/xdg" CACHE STRING
         "Search path to use when XDG_CONFIG_DIRS is unset or empty or the current process is SUID/SGID. Default is freedesktop compliant.")
