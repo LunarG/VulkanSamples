@@ -54,8 +54,8 @@ VkResult init_global_extension_properties(layer_properties &layer_props) {
             return VK_SUCCESS;
         }
 
-        layer_props.extensions.resize(instance_extension_count);
-        instance_extensions = layer_props.extensions.data();
+        layer_props.instance_extensions.resize(instance_extension_count);
+        instance_extensions = layer_props.instance_extensions.data();
         res = vkEnumerateInstanceExtensionProperties(layer_name, &instance_extension_count, instance_extensions);
     } while (res == VK_INCOMPLETE);
 
@@ -136,8 +136,8 @@ VkResult init_device_extension_properties(struct sample_info &info, layer_proper
             return VK_SUCCESS;
         }
 
-        layer_props.extensions.resize(device_extension_count);
-        device_extensions = layer_props.extensions.data();
+        layer_props.device_extensions.resize(device_extension_count);
+        device_extensions = layer_props.device_extensions.data();
         res = vkEnumerateDeviceExtensionProperties(info.gpus[0], layer_name, &device_extension_count, device_extensions);
     } while (res == VK_INCOMPLETE);
 
@@ -258,6 +258,10 @@ VkResult init_enumerate_device(struct sample_info &info, uint32_t gpu_count) {
     /* This is as good a place as any to do this */
     vkGetPhysicalDeviceMemoryProperties(info.gpus[0], &info.memory_properties);
     vkGetPhysicalDeviceProperties(info.gpus[0], &info.gpu_props);
+    /* query device extensions for enabled layers */
+    for (auto& layer_props : info.instance_layer_properties) {
+      init_device_extension_properties(info, layer_props);
+    }
 
     return res;
 }

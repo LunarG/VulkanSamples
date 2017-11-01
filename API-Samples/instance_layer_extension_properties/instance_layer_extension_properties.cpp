@@ -85,8 +85,8 @@ int sample_main(int argc, char *argv[]) {
                     break;
                 }
 
-                layer_props.extensions.resize(instance_extension_count);
-                instance_extensions = layer_props.extensions.data();
+                layer_props.instance_extensions.resize(instance_extension_count);
+                instance_extensions = layer_props.instance_extensions.data();
                 res = vkEnumerateInstanceExtensionProperties(layer_name, &instance_extension_count, instance_extensions);
             } while (res == VK_INCOMPLETE);
         }
@@ -107,12 +107,12 @@ int sample_main(int argc, char *argv[]) {
              it++) {
             layer_properties *props = &(*it);
             std::cout << props->properties.layerName << std::endl;
-            if (props->extensions.size() > 0) {
-                for (uint32_t j = 0; j < props->extensions.size(); j++) {
+            if (props->instance_extensions.size() > 0) {
+                for (uint32_t j = 0; j < props->instance_extensions.size(); j++) {
                     if (j > 0) {
                         std::cout << ", ";
                     }
-                    std::cout << props->extensions[j].extensionName << " Version " << props->extensions[j].specVersion;
+                    std::cout << props->instance_extensions[j].extensionName << " Version " << props->instance_extensions[j].specVersion;
                 }
             } else {
                 std::cout << "Layer Extensions: None";
