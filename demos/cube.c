@@ -3925,14 +3925,19 @@ static void demo_init(struct demo *demo, int argc, char **argv) {
 #if defined(ANDROID)
         ERR_EXIT("Usage: cube [--validate]\n", "Usage");
 #else
-        fprintf(stderr, "Usage:\n  %s [--use_staging] [--validate] [--validate-checks-disabled] [--break] "
-                        "[--c <framecount>] [--suppress_popups] [--incremental_present] [--display_timing] [--present_mode <present mode enum>]\n"
-                        "VK_PRESENT_MODE_IMMEDIATE_KHR = %d\n"
-                        "VK_PRESENT_MODE_MAILBOX_KHR = %d\n"
-                        "VK_PRESENT_MODE_FIFO_KHR = %d\n"
-                        "VK_PRESENT_MODE_FIFO_RELAXED_KHR = %d\n",
-                APP_SHORT_NAME, VK_PRESENT_MODE_IMMEDIATE_KHR, VK_PRESENT_MODE_MAILBOX_KHR,
-                VK_PRESENT_MODE_FIFO_KHR, VK_PRESENT_MODE_FIFO_RELAXED_KHR);
+        fprintf(stderr,
+                "Usage:\n  %s [--use_staging] [--validate] [--validate-checks-disabled]\n"
+                "       [--break] [--c <framecount>] [--suppress_popups]\n"
+                "       [--incremental_present] [--display_timing]\n"
+                "       [--present_mode {0,1,2,3}]\n"
+                "\n"
+                "Options for --present_mode:\n"
+                "  %d: VK_PRESENT_MODE_IMMEDIATE_KHR\n"
+                "  %d: VK_PRESENT_MODE_MAILBOX_KHR\n"
+                "  %d: VK_PRESENT_MODE_FIFO_KHR (default)\n"
+                "  %d: VK_PRESENT_MODE_FIFO_RELAXED_KHR\n",
+                APP_SHORT_NAME, VK_PRESENT_MODE_IMMEDIATE_KHR, VK_PRESENT_MODE_MAILBOX_KHR, VK_PRESENT_MODE_FIFO_KHR,
+                VK_PRESENT_MODE_FIFO_RELAXED_KHR);
         fflush(stderr);
         exit(1);
 #endif
