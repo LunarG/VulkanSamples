@@ -128,7 +128,8 @@ typedef struct _swap_chain_buffers {
  */
 typedef struct {
     VkLayerProperties properties;
-    std::vector<VkExtensionProperties> extensions;
+    std::vector<VkExtensionProperties> instance_extensions;
+    std::vector<VkExtensionProperties> device_extensions;
 } layer_properties;
 
 /*
