@@ -1519,7 +1519,7 @@ bool validate_compute_pipeline(layer_data *dev_data, PIPELINE_STATE *pipeline) {
 }
 
 uint32_t ValidationCache::MakeShaderHash(VkShaderModuleCreateInfo const *smci) {
-        return XXH32(smci->pCode, smci->codeSize * sizeof(uint32_t), 0);
+        return XXH32(smci->pCode, smci->codeSize, 0);
 }
 
 static ValidationCache *GetValidationCacheInfo(
