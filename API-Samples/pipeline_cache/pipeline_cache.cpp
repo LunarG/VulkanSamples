@@ -20,7 +20,7 @@
 
 /*
 VULKAN_SAMPLE_SHORT_DESCRIPTION
-Create and use a pipeline cache accross runs.
+Create and use a pipeline cache across runs.
 */
 
 #include <util_init.hpp>
@@ -29,12 +29,12 @@ Create and use a pipeline cache accross runs.
 #include <cstdlib>
 #include "cube_data.h"
 
-// This sample tries to save and reuse pipeline cache data between runs
+// This sample tries to save and reuse pipeline cache data between runs.
 // On first run, no cache will be found, it will be created and saved
 // to disk. On later runs, the cache should be found, loaded, and used.
 // Hopefully a speedup will observed.  In the future, the pipeline could
 // be complicated a bit, to show a greater cache benefit.  Also, two
-// pipelines could be created and merged.
+// caches could be created and merged.
 
 const char *vertShaderText =
     "#version 400\n"
@@ -235,7 +235,7 @@ int sample_main(int argc, char *argv[]) {
         }
     }
 
-    // Feed the initial cache data into pipeline creation
+    // Feed the initial cache data into cache creation
     VkPipelineCacheCreateInfo pipelineCache;
     pipelineCache.sType = VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO;
     pipelineCache.pNext = NULL;
@@ -245,8 +245,9 @@ int sample_main(int argc, char *argv[]) {
     res = vkCreatePipelineCache(info.device, &pipelineCache, nullptr, &info.pipelineCache);
     assert(res == VK_SUCCESS);
 
-    // Free our initialData now that pipeline has been created
+    // Free our initialData now that pipeline cache has been created
     free(startCacheData);
+    startCacheData = NULL;
 
     // Time (roughly) taken to create the graphics pipeline
     timestamp_t start = get_milliseconds();
@@ -298,10 +299,8 @@ int sample_main(int argc, char *argv[]) {
 
     // End standard draw stuff
 
-    if (startCacheData) {
-        // TODO: Create another pipeline, preferably different from the first
-        // one and merge it here.  Then store the merged one.
-    }
+    // TODO: Create another pipeline cache, preferably different from the first
+    // one and merge it here.  Then store the merged one.
 
     // Store away the cache that we've populated.  This could conceivably happen
     // earlier, depends on when the pipeline cache stops being populated
