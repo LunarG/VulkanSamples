@@ -115,6 +115,8 @@ echo "SPIR-V Assembly"
 Exec "spirv_assembly"
 echo "SPIR-V Specialization"
 Exec "spirv_specialization"
+echo "Validation Cache"
+Exec "validation_cache"
 if ($global:total_errors -gt 2) {
     throw "$global:total_errors is too many errors"
 }

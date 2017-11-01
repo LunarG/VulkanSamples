@@ -266,7 +266,7 @@ set (S_TARGETS
     copy_blit_image template separate_image_sampler input_attachment
     occlusion_query pipeline_cache pipeline_derivative push_descriptors
     immutable_sampler push_constants draw_subpasses secondary_command_buffer
-    spirv_assembly spirv_specialization memory_barriers)
+    spirv_assembly spirv_specialization memory_barriers validation_cache)
 sampleWithSingleFile()
 
 if (NOT ANDROID)
