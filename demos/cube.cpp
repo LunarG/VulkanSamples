@@ -930,12 +930,14 @@ Demo::Demo()
             }
 
             fprintf(stderr,
-                    "Usage:\n  %s [--use_staging] [--validate] [--break] "
-                    "[--c <framecount>] [--suppress_popups] [--present_mode <present mode enum>]\n"
-                    "VK_PRESENT_MODE_IMMEDIATE_KHR = %d\n"
-                    "VK_PRESENT_MODE_MAILBOX_KHR = %d\n"
-                    "VK_PRESENT_MODE_FIFO_KHR = %d\n"
-                    "VK_PRESENT_MODE_FIFO_RELAXED_KHR = %d\n",
+                    "Usage:\n  %s [--use_staging] [--validate] [--break] [--c <framecount>] \n"
+                    "       [--suppress_popups] [--present_mode {0,1,2,3}]\n"
+                    "\n"
+                    "Options for --present_mode:\n"
+                    "  %d: VK_PRESENT_MODE_IMMEDIATE_KHR\n"
+                    "  %d: VK_PRESENT_MODE_MAILBOX_KHR\n"
+                    "  %d: VK_PRESENT_MODE_FIFO_KHR (default)\n"
+                    "  %d: VK_PRESENT_MODE_FIFO_RELAXED_KHR\n",
                     APP_SHORT_NAME, VK_PRESENT_MODE_IMMEDIATE_KHR, VK_PRESENT_MODE_MAILBOX_KHR, VK_PRESENT_MODE_FIFO_KHR,
                     VK_PRESENT_MODE_FIFO_RELAXED_KHR);
             fflush(stderr);
