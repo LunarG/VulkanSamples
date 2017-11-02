@@ -449,6 +449,7 @@ CUSTOM_C_INTERCEPTS = {
     return VK_SUCCESS;
 ''',
 'vkDestroyDevice': '''
+    unique_lock_t lock(global_lock);
     // First destroy sub-device objects
     // Destroy Queues
     for (auto dev_queue_map_pair : queue_map) {
@@ -464,6 +465,7 @@ CUSTOM_C_INTERCEPTS = {
     // TODO: If emulating specific device caps, will need to add intelligence here
 ''',
 'vkGetDeviceQueue': '''
+    unique_lock_t lock(global_lock);
     auto queue = queue_map[device][queueFamilyIndex][queueIndex];
     if (queue) {
         *pQueue = queue;
@@ -641,6 +643,7 @@ CUSTOM_C_INTERCEPTS = {
     GetImageMemoryRequirements(device, pInfo->image, &pMemoryRequirements->memoryRequirements);
 ''',
 'vkMapMemory': '''
+    unique_lock_t lock(global_lock);
     // TODO: Just hard-coding 4k whole size for now
     if (VK_WHOLE_SIZE == size)
         size = 4096;
@@ -650,6 +653,7 @@ CUSTOM_C_INTERCEPTS = {
     return VK_SUCCESS;
 ''',
 'vkUnmapMemory': '''
+    unique_lock_t lock(global_lock);
     for (auto map_addr : mapped_memory_map[memory]) {
         free(map_addr);
     }
