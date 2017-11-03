@@ -93,8 +93,8 @@ class BASE_NODE {
 struct COMMAND_POOL_NODE : public BASE_NODE {
     VkCommandPoolCreateFlags createFlags;
     uint32_t queueFamilyIndex;
-    // TODO: why is this std::list?
-    std::list<VkCommandBuffer> commandBuffers;  // container of cmd buffers allocated from this pool
+    // Cmd buffers allocated from this pool
+    std::unordered_set<VkCommandBuffer> commandBuffers;
 };
 
 // Generic wrapper for vulkan objects

@@ -20325,6 +20325,58 @@ TEST_F(VkPositiveLayerTest, DeleteDescriptorSetLayoutsBeforeDescriptorSets) {
     m_errorMonitor->VerifyNotFound();
 }
 
+TEST_F(VkPositiveLayerTest, CommandPoolDeleteWithReferences) {
+    TEST_DESCRIPTION("Ensure the validation layers bookkeeping tracks the implicit command buffer frees.");
+    ASSERT_NO_FATAL_FAILURE(Init());
+
+    VkCommandPoolCreateInfo cmd_pool_info = {};
+    cmd_pool_info.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+    cmd_pool_info.pNext = NULL;
+    cmd_pool_info.queueFamilyIndex = m_device->graphics_queue_node_index_;
+    cmd_pool_info.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
+    cmd_pool_info.flags = 0;
+
+    VkCommandPool secondary_cmd_pool;
+    VkResult res = vkCreateCommandPool(m_device->handle(), &cmd_pool_info, NULL, &secondary_cmd_pool);
+    ASSERT_VK_SUCCESS(res);
+
+    VkCommandBufferAllocateInfo cmdalloc = vk_testing::CommandBuffer::create_info(secondary_cmd_pool);
+    cmdalloc.level = VK_COMMAND_BUFFER_LEVEL_SECONDARY;
+
+    VkCommandBuffer secondary_cmds;
+    res = vkAllocateCommandBuffers(m_device->handle(), &cmdalloc, &secondary_cmds);
+
+    VkCommandBufferInheritanceInfo cmd_buf_inheritance_info = {};
+    cmd_buf_inheritance_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_INFO;
+    cmd_buf_inheritance_info.pNext = NULL;
+    cmd_buf_inheritance_info.renderPass = VK_NULL_HANDLE;
+    cmd_buf_inheritance_info.subpass = 0;
+    cmd_buf_inheritance_info.framebuffer = VK_NULL_HANDLE;
+    cmd_buf_inheritance_info.occlusionQueryEnable = VK_FALSE;
+    cmd_buf_inheritance_info.queryFlags = 0;
+    cmd_buf_inheritance_info.pipelineStatistics = 0;
+
+    VkCommandBufferBeginInfo secondary_begin = {};
+    secondary_begin.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+    secondary_begin.pNext = NULL;
+    secondary_begin.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+    secondary_begin.pInheritanceInfo = &cmd_buf_inheritance_info;
+
+    res = vkBeginCommandBuffer(secondary_cmds, &secondary_begin);
+    ASSERT_VK_SUCCESS(res);
+    vkEndCommandBuffer(secondary_cmds);
+
+    m_commandBuffer->begin();
+    vkCmdExecuteCommands(m_commandBuffer->handle(), 1, &secondary_cmds);
+    m_commandBuffer->end();
+
+    // DestroyCommandPool *implicitly* frees the command buffers allocated from it
+    vkDestroyCommandPool(m_device->handle(), secondary_cmd_pool, NULL);
+    // If bookkeeping has been lax, validating the reset will attempt to touch deleted data
+    res = vkResetCommandPool(m_device->handle(), m_commandPool->handle(), 0);
+    ASSERT_VK_SUCCESS(res);
+}
+
 TEST_F(VkPositiveLayerTest, SecondaryCommandBufferClearColorAttachments) {
     TEST_DESCRIPTION("Create a secondary command buffer and record a CmdClearAttachments call into it");
     ASSERT_NO_FATAL_FAILURE(Init());
