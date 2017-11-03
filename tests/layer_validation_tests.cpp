@@ -7054,7 +7054,8 @@ TEST_F(VkLayerTest, InvalidCmdBufferDescriptorSetImageSamplerDestroyed) {
     // TODO - though the particular error above doesn't re-occur, there are other 'unexpecteds' still to clean up
     vkQueueWaitIdle(m_device->m_queue);
     m_errorMonitor->SetUnexpectedError(
-        "pDescriptorSets must be a pointer to an array of descriptorSetCount VkDescriptorSet handles, each element of which must "
+        "pDescriptorSets must be a valid pointer to an array of descriptorSetCount VkDescriptorSet handles, each element of which "
+        "must "
         "either be a valid handle or VK_NULL_HANDLE");
     m_errorMonitor->SetUnexpectedError("Unable to remove DescriptorSet obj");
     vkFreeDescriptorSets(m_device->device(), ds_pool, 1, &descriptorSet);
