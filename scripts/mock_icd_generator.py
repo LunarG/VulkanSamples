@@ -588,8 +588,12 @@ CUSTOM_C_INTERCEPTS = {
     GetPhysicalDeviceFeatures(physicalDevice, &pFeatures->features);
 ''',
 'vkGetPhysicalDeviceFormatProperties': '''
-    // TODO: Just returning full support for everything initially
-    *pFormatProperties = { 0x00FFFFFF, 0x00FFFFFF, 0x00FFFFFF };
+    if (VK_FORMAT_UNDEFINED == format) {
+        *pFormatProperties = { 0x0, 0x0, 0x0 };
+    } else {
+        // TODO: Just returning full support for everything initially
+        *pFormatProperties = { 0x00FFFFFF, 0x00FFFFFF, 0x00FFFFFF };
+    }
 ''',
 'vkGetPhysicalDeviceFormatProperties2KHR': '''
     GetPhysicalDeviceFormatProperties(physicalDevice, format, &pFormatProperties->formatProperties);
