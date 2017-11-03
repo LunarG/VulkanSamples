@@ -133,9 +133,9 @@ static VkPhysicalDeviceLimits SetLimits(VkPhysicalDeviceLimits *limits) {
     limits->viewportBoundsRange[1] = 8191;
     limits->viewportSubPixelBits = 0;
     limits->minMemoryMapAlignment = 64;
-    limits->minTexelBufferOffsetAlignment = 256;
-    limits->minUniformBufferOffsetAlignment = 256;
-    limits->minStorageBufferOffsetAlignment = 256;
+    limits->minTexelBufferOffsetAlignment = 16;
+    limits->minUniformBufferOffsetAlignment = 16;
+    limits->minStorageBufferOffsetAlignment = 16;
     limits->minTexelOffset = -8;
     limits->maxTexelOffset = 7;
     limits->minTexelGatherOffset = -8;
