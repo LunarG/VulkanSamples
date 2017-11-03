@@ -11621,6 +11621,9 @@ TEST_F(VkLayerTest, DSUsageBitsErrors) {
     vkGetBufferMemoryRequirements(m_device->device(), storage_texel_buffer, &mem_reqs);
     pass = m_device->phy().set_memory_type(mem_reqs.memoryTypeBits, &mem_alloc_info, 0);
     if (!pass) {
+        for (uint32_t i = 0; i < VK_DESCRIPTOR_TYPE_RANGE_SIZE; ++i) {
+            vkDestroyDescriptorSetLayout(m_device->device(), ds_layouts[i], NULL);
+        }
         vkDestroyBuffer(m_device->device(), buffer, NULL);
         vkDestroyBufferView(m_device->device(), buff_view, NULL);
         vkFreeMemory(m_device->device(), mem, NULL);
@@ -11656,6 +11659,17 @@ TEST_F(VkLayerTest, DSUsageBitsErrors) {
         }
     }
     if (image_ci.format == VK_FORMAT_UNDEFINED) {
+        // Cleanup before early return
+        for (uint32_t i = 0; i < VK_DESCRIPTOR_TYPE_RANGE_SIZE; ++i) {
+            vkDestroyDescriptorSetLayout(m_device->device(), ds_layouts[i], NULL);
+        }
+        vkDestroyBuffer(m_device->device(), buffer, NULL);
+        vkDestroyBuffer(m_device->device(), storage_texel_buffer, NULL);
+        vkDestroyBufferView(m_device->device(), buff_view, NULL);
+        vkDestroyBufferView(m_device->device(), storage_texel_buffer_view, NULL);
+        vkFreeMemory(m_device->device(), mem, NULL);
+        vkFreeMemory(m_device->device(), storage_texel_buffer_mem, NULL);
+        vkDestroyDescriptorPool(m_device->device(), ds_pool, NULL);
         return;
     }
 
