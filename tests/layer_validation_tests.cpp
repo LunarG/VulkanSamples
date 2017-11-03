@@ -11800,14 +11800,13 @@ TEST_F(VkLayerTest, DSBufferInfoErrors) {
     ASSERT_VK_SUCCESS(err);
 
     // Have to bind memory to buffer before descriptor update
+    VkMemoryRequirements mem_reqs;
+    vkGetBufferMemoryRequirements(m_device->device(), buffer, &mem_reqs);
     VkMemoryAllocateInfo mem_alloc = {};
     mem_alloc.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
     mem_alloc.pNext = NULL;
-    mem_alloc.allocationSize = buff_ci.size;
+    mem_alloc.allocationSize = mem_reqs.size;
     mem_alloc.memoryTypeIndex = 0;
-
-    VkMemoryRequirements mem_reqs;
-    vkGetBufferMemoryRequirements(m_device->device(), buffer, &mem_reqs);
     bool pass = m_device->phy().set_memory_type(mem_reqs.memoryTypeBits, &mem_alloc, 0);
     if (!pass) {
         vkDestroyBuffer(m_device->device(), buffer, NULL);
