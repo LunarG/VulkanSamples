@@ -135,12 +135,6 @@ else()
     set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wpointer-arith -Wno-unused-function -Wno-sign-compare")
 endif()
 
-if (${CMAKE_SYSTEM_PROCESSOR} STREQUAL "mips64")
-    if("${CMAKE_SIZEOF_VOID_P}" EQUAL "8")
-        set_source_files_properties(mock_icd.cpp PROPERTIES COMPILE_FLAGS -mxgot)
-    endif()
-endif()
-
 run_vk_xml_generate(mock_icd_generator.py mock_icd.h)
 run_vk_xml_generate(mock_icd_generator.py mock_icd.cpp)
 
