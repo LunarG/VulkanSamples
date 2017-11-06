@@ -69,27 +69,21 @@ NONE
 
 ### Passing Tests With Unexpected Errors
 
-VkLayerTest.InvalidCmdBufferBufferDestroyed
-VkLayerTest.RenderPassInUseDestroyedSignaled
-VkLayerTest.InvalidCmdBufferDescriptorSetBufferDestroyed
-VkLayerTest.InvalidDynamicOffsetCases
-VkLayerTest.DSUsageBitsErrors
-VkLayerTest.DSBufferInfoErrors
-VkLayerTest.DSBufferLimitErrors
-VkLayerTest.RenderPassIncompatible
+- VkLayerTest.RenderPassInUseDestroyedSignaled
+- VkLayerTest.RenderPassIncompatible
 
 ### Skipped Tests
 
-VkLayerTest.BindImageInvalidMemoryType
-VkLayerTest.CreatePipelineBadVertexAttributeFormat
-VkLayerTest.MiscBlitImageTests
-VkLayerTest.TemporaryExternalSemaphore
-VkLayerTest.TemporaryExternalFence
-VkLayerTest.PSOViewportScissorCountTests
-VkLayerTest.InvalidBarriers
-VkLayerTest.CommandQueueFlags
-VkPositiveLayerTest.TwoQueuesEnsureCorrectRetirementWithWorkStolen
-VkPositiveLayerTest.ExternalSemaphore
-VkPositiveLayerTest.ExternalFence
+- VkLayerTest.BindImageInvalidMemoryType
+- VkLayerTest.CreatePipelineBadVertexAttributeFormat
+- VkLayerTest.MiscBlitImageTests
+- VkLayerTest.TemporaryExternalSemaphore
+- VkLayerTest.TemporaryExternalFence
+- VkLayerTest.PSOViewportScissorCountTests
+- VkLayerTest.InvalidBarriers
+- VkLayerTest.CommandQueueFlags
+- VkPositiveLayerTest.TwoQueuesEnsureCorrectRetirementWithWorkStolen
+- VkPositiveLayerTest.ExternalSemaphore
+- VkPositiveLayerTest.ExternalFence
 
 
