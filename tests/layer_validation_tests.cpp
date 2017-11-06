@@ -7055,8 +7055,7 @@ TEST_F(VkLayerTest, InvalidCmdBufferDescriptorSetImageSamplerDestroyed) {
     vkQueueWaitIdle(m_device->m_queue);
     m_errorMonitor->SetUnexpectedError(
         "pDescriptorSets must be a valid pointer to an array of descriptorSetCount VkDescriptorSet handles, each element of which "
-        "must "
-        "either be a valid handle or VK_NULL_HANDLE");
+        "must either be a valid handle or VK_NULL_HANDLE");
     m_errorMonitor->SetUnexpectedError("Unable to remove DescriptorSet obj");
     vkFreeDescriptorSets(m_device->device(), ds_pool, 1, &descriptorSet);
 
@@ -11927,6 +11926,7 @@ TEST_F(VkLayerTest, DSBufferLimitErrors) {
     ASSERT_VK_SUCCESS(err);
     err = vkBindBufferMemory(m_device->device(), uniform_buffer, mem, 0);
     ASSERT_VK_SUCCESS(err);
+    // TODO: This sas failing on mock w/ 256 offsetAlignment. Update to work for all values.
     auto sb_offset = (ub_ci.size + sb_mem_reqs.alignment - 1) & ~(sb_mem_reqs.alignment - 1);
     err = vkBindBufferMemory(m_device->device(), storage_buffer, mem, sb_offset);
     ASSERT_VK_SUCCESS(err);
