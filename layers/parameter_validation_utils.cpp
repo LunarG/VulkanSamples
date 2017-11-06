@@ -1209,6 +1209,24 @@ bool pv_vkCreateGraphicsPipelines(VkDevice device, VkPipelineCache pipelineCache
                                         "VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO",
                                         i);
                     }
+                    if (pCreateInfos[i].pMultisampleState->sampleShadingEnable == VK_TRUE) {
+                        if (!device_data->physical_device_features.sampleRateShading) {
+                            skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0,
+                                            __LINE__, VALIDATION_ERROR_10000620, LayerName,
+                                            "vkCreateGraphicsPipelines(): parameter "
+                                            "pCreateInfos[%d].pMultisampleState->sampleShadingEnable: %s",
+                                            i, validation_error_map[VALIDATION_ERROR_10000620]);
+                        }
+                        // TODO Add documentation issue about when minSampleShading must be in range and when it is ignored
+                        // For now a "least noise" test *only* when sampleShadingEnable is VK_TRUE.
+                        if (!in_inclusive_range(pCreateInfos[i].pMultisampleState->minSampleShading, 0.F, 1.0F)) {
+                            skip |= log_msg(
+                                report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
+                                VALIDATION_ERROR_10000624, LayerName,
+                                "vkCreateGraphicsPipelines(): parameter pCreateInfos[%d].pMultisampleState->minSampleShading: %s",
+                                i, validation_error_map[VALIDATION_ERROR_10000624]);
+                        }
+                    }
                 }
 
                 // TODO: Conditional NULL check based on subpass depth/stencil attachment
