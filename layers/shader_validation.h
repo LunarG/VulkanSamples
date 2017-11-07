@@ -20,6 +20,8 @@
 #ifndef VULKAN_SHADER_VALIDATION_H
 #define VULKAN_SHADER_VALIDATION_H
 
+#include <spirv_tools_commit_id.h>
+
 // A forward iterator over spirv instructions. Provides easy access to len, opcode, and content words
 // without the caller needing to care too much about the physical SPIRV module layout.
 struct spirv_inst_iter {
@@ -100,9 +102,6 @@ struct shader_module {
     void build_def_index();
 };
 
-// TODO: Wire this up to SPIRV-Tools commit hash
-#define VALIDATION_CACHE_VERSION  1
-
 class ValidationCache {
     // hashes of shaders that have passed validation before, and can be skipped.
     // we don't store negative results, as we would have to also store what was
@@ -128,8 +127,8 @@ public:
             return;
         if (data[1] != VK_VALIDATION_CACHE_HEADER_VERSION_ONE_EXT)
             return;
-        if (data[2] != VALIDATION_CACHE_VERSION || data[3] || data[4] || data[5])
-            return;   // different version
+        if (strncmp((const char*)&data[2], SPIRV_TOOLS_COMMIT_ID, 16) != 0)
+            return;  // different version
 
         data += 6;
 
@@ -157,10 +156,13 @@ public:
         // Write the header
         *out++ = headerSize;
         *out++ = VK_VALIDATION_CACHE_HEADER_VERSION_ONE_EXT;
-        *out++ = VALIDATION_CACHE_VERSION;
-        *out++ = 0;
-        *out++ = 0;
-        *out++ = 0;
+        size_t commitIdSize = strlen(SPIRV_TOOLS_COMMIT_ID);
+        if (commitIdSize > 16) {
+            commitIdSize = 16;
+        }
+        out[0] = out[1] = out[2] = out[3] = 0;
+        memcpy(out, SPIRV_TOOLS_COMMIT_ID, commitIdSize);
+        out += 4;
 
         for (auto it = good_shader_hashes.begin();
              it != good_shader_hashes.end() && actualSize < *pDataSize;
