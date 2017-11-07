@@ -1793,7 +1793,7 @@ static void removeCommandBufferBinding(layer_data *dev_data, VK_OBJECT const *ob
 }
 // Reset the command buffer state
 //  Maintain the createInfo and set state to CB_NEW, but clear all other state
-static void resetCB(layer_data *dev_data, const VkCommandBuffer cb) {
+static void ResetCommandBufferState(layer_data *dev_data, const VkCommandBuffer cb) {
     GLOBAL_CB_NODE *pCB = dev_data->commandBufferMap[cb];
     if (pCB) {
         pCB->in_use.store(0);
@@ -4088,7 +4088,7 @@ static bool checkCommandBuffersInFlight(layer_data *dev_data, COMMAND_POOL_NODE 
     return skip;
 }
 
-// Free all command buffers in given list, removing all references/links to them using resetCB
+// Free all command buffers in given list, removing all references/links to them using ResetCommandBufferState
 static void FreeCommandBufferStates(layer_data *dev_data, COMMAND_POOL_NODE *pool_state, const uint32_t command_buffer_count,
                                     const VkCommandBuffer *command_buffers) {
     for (uint32_t i = 0; i < command_buffer_count; i++) {
@@ -4097,7 +4097,7 @@ static void FreeCommandBufferStates(layer_data *dev_data, COMMAND_POOL_NODE *poo
         if (cb_state) {
             // reset prior to delete, removing various references to it.
             // TODO: fix this, it's insane.
-            resetCB(dev_data, cb_state->commandBuffer);
+            ResetCommandBufferState(dev_data, cb_state->commandBuffer);
             // Remove the cb_state's references from layer_data and COMMAND_POOL_NODE
             dev_data->commandBufferMap.erase(cb_state->commandBuffer);
             pool_state->commandBuffers.erase(command_buffers[i]);
@@ -4224,7 +4224,7 @@ VKAPI_ATTR VkResult VKAPI_CALL ResetCommandPool(VkDevice device, VkCommandPool c
     if (VK_SUCCESS == result) {
         lock.lock();
         for (auto cmdBuffer : pPool->commandBuffers) {
-            resetCB(dev_data, cmdBuffer);
+            ResetCommandBufferState(dev_data, cmdBuffer);
         }
         lock.unlock();
     }
@@ -5074,7 +5074,7 @@ VKAPI_ATTR VkResult VKAPI_CALL AllocateCommandBuffers(VkDevice device, const VkC
                 GLOBAL_CB_NODE *pCB = new GLOBAL_CB_NODE;
                 // Add command buffer to map
                 dev_data->commandBufferMap[pCommandBuffer[i]] = pCB;
-                resetCB(dev_data, pCommandBuffer[i]);
+                ResetCommandBufferState(dev_data, pCommandBuffer[i]);
                 pCB->createInfo = *pCreateInfo;
                 pCB->device = device;
             }
@@ -5182,7 +5182,7 @@ VKAPI_ATTR VkResult VKAPI_CALL BeginCommandBuffer(VkCommandBuffer commandBuffer,
                             ") that does NOT have the VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT bit set. %s",
                             commandBuffer, HandleToUint64(cmdPool), validation_error_map[VALIDATION_ERROR_16e00064]);
             }
-            resetCB(dev_data, commandBuffer);
+            ResetCommandBufferState(dev_data, commandBuffer);
         }
         // Set updated state here in case implicit reset occurs above
         cb_node->state = CB_RECORDING;
@@ -5262,7 +5262,7 @@ VKAPI_ATTR VkResult VKAPI_CALL ResetCommandBuffer(VkCommandBuffer commandBuffer,
     VkResult result = dev_data->dispatch_table.ResetCommandBuffer(commandBuffer, flags);
     if (VK_SUCCESS == result) {
         lock.lock();
-        resetCB(dev_data, commandBuffer);
+        ResetCommandBufferState(dev_data, commandBuffer);
         lock.unlock();
     }
     return result;
