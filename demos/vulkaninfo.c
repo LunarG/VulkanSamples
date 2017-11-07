@@ -2176,7 +2176,9 @@ static void AppGpuDumpMemoryProps(const struct AppGpu *gpu, FILE *out) {
         }
     }
 
-    if (props->memoryTypeCount > 0) fprintf(out, "\t\t\t\t\t\t</details>\n");
+    if (html_output && props->memoryTypeCount > 0) {
+        fprintf(out, "\t\t\t\t\t\t</details>\n");
+    }
 
     if (html_output) {
         fprintf(out, "\t\t\t\t\t\t<details><summary>memoryHeapCount = <div class='val'>%u</div></summary>", props->memoryHeapCount);
