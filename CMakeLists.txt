@@ -94,6 +94,8 @@ if(WIN32)
     # Warn about potentially uninitialized variables
     add_compile_options("$<$<CXX_COMPILER_ID:MSVC>:/w34701>")
     add_compile_options("$<$<CXX_COMPILER_ID:MSVC>:/w34703>")
+    # Warn about different indirection types.
+    add_compile_options("$<$<CXX_COMPILER_ID:MSVC>:/w34057>")
 endif()
 
 if(NOT WIN32)

@@ -465,7 +465,7 @@ bool loaderGetDeviceRegistryEntry(const struct loader_instance *inst, char **reg
         value_name,
         NULL,
         &data_type,
-        manifest_path,
+        (BYTE *)manifest_path,
         &requiredSize
     );
 
