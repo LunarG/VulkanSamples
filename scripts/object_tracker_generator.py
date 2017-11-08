@@ -25,6 +25,9 @@ from generator import *
 from collections import namedtuple
 from vuid_mapping import *
 
+# This is a workaround to use a Python 2.7 and 3.x compatible syntax.
+from io import open
+
 # ObjectTrackerGeneratorOptions - subclass of GeneratorOptions.
 #
 # Adds options used by ObjectTrackerOutputGenerator objects during
