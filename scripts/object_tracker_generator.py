@@ -937,7 +937,12 @@ class ObjectTrackerOutputGenerator(OutputGenerator):
             API = cmdinfo.elem.attrib.get('name').replace('vk', dispatch_table, 1)
             # Put all this together for the final down-chain call
             if assignresult != '':
-                self.appendSection('command', '    if (skip) return VK_ERROR_VALIDATION_FAILED_EXT;')
+                if resulttype.text == 'VkResult':
+                    self.appendSection('command', '    if (skip) return VK_ERROR_VALIDATION_FAILED_EXT;')
+                elif resulttype.text == 'VkBool32':
+                    self.appendSection('command', '    if (skip) return VK_FALSE;')
+                else:
+                    raise Exception('Unknown result type ' + resulttype.text)
             else:
                 self.appendSection('command', '    if (skip) return;')
             self.appendSection('command', '    ' + assignresult + API + '(' + paramstext + ');')

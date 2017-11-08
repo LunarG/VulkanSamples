@@ -1200,7 +1200,13 @@ class ParameterValidationOutputGenerator(OutputGenerator):
                 cmdDef += '%sbool skip = false;\n' % indent
                 if not just_validate:
                     if command.result != '':
-                        cmdDef += indent + '%s result = VK_ERROR_VALIDATION_FAILED_EXT;\n' % command.result
+                        if command.result == "VkResult":
+                            cmdDef += indent + '%s result = VK_ERROR_VALIDATION_FAILED_EXT;\n' % command.result
+                        elif command.result == "VkBool32":
+                            cmdDef += indent + '%s result = VK_FALSE;\n' % command.result
+                        else:
+                            raise Exception("Unknown result type: " + command.result)
+
                     cmdDef += '%sstd::unique_lock<std::mutex> lock(global_lock);\n' % indent
                 for line in lines:
                     cmdDef += '\n'
