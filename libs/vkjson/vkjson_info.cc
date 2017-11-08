@@ -57,7 +57,7 @@ bool ParseOptions(int argc, char* argv[], Options* options) {
       if (arg == "--device-index" || arg == "-d") {
         int result = sscanf(arg2.c_str(), "%u", &options->device_index);
         if (result != 1) {
-          options->device_index = -1;
+          options->device_index = static_cast<uint32_t>(-1);
           std::cerr << "Unable to parse index: " << arg2 << std::endl;
           return false;
         }

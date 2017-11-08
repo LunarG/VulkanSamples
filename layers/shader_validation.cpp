@@ -584,8 +584,8 @@ static std::map<location_t, interface_var> collect_interface_by_location(shader_
             unsigned id = insn.word(2);
             unsigned type = insn.word(1);
 
-            int location = value_or_default(var_locations, id, -1);
-            int builtin = value_or_default(var_builtins, id, -1);
+            int location = value_or_default(var_locations, id, static_cast<unsigned>(-1));
+            int builtin = value_or_default(var_builtins, id, static_cast<unsigned>(-1));
             unsigned component = value_or_default(var_components, id, 0);  // Unspecified is OK, is 0
             bool is_patch = var_patch.find(id) != var_patch.end();
             bool is_relaxed_precision = var_relaxed_precision.find(id) != var_relaxed_precision.end();

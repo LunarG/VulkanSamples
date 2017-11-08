@@ -96,6 +96,8 @@ if(WIN32)
     add_compile_options("$<$<CXX_COMPILER_ID:MSVC>:/w34703>")
     # Warn about different indirection types.
     add_compile_options("$<$<CXX_COMPILER_ID:MSVC>:/w34057>")
+    # Warn about signed/unsigned mismatch.
+    add_compile_options("$<$<CXX_COMPILER_ID:MSVC>:/w34245>")
 endif()
 
 if(NOT WIN32)
