@@ -246,7 +246,7 @@ class ObjectTrackerOutputGenerator(OutputGenerator):
                 break
         if self.vuid_file == None:
             print("Error: Could not find vk_validation_error_messages.h")
-            quit()
+            sys.exit(1)
     #
     # Check if the parameter passed in is optional
     def paramIsOptional(self, param):

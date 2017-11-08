@@ -201,7 +201,7 @@ class ParameterValidationOutputGenerator(OutputGenerator):
                 break
         if self.vuid_file == None:
             print("Error: Could not find vk_validation_error_messages.h")
-            quit()
+            sys.exit(1)
     #
     # Generate Copyright comment block for file
     def GenerateCopyright(self):
@@ -246,7 +246,7 @@ class ParameterValidationOutputGenerator(OutputGenerator):
     def IdToHex(self, dec_num):
         if dec_num > 4294967295:
             print ("ERROR: Decimal # %d can't be represented in 8 hex digits" % (dec_num))
-            sys.exit()
+            sys.exit(1)
         hex_num = hex(dec_num)
         return hex_num[2:].zfill(8)
     #
