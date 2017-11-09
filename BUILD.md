@@ -250,9 +250,10 @@ Install the required tools for Linux and Windows covered above, then add the fol
   - SDK Tools > Android SDK Build-Tools
   - SDK Tools > Android SDK Platform-Tools
   - SDK Tools > Android SDK Tools
-  - SDK Tools > Android NDK
+  - SDK Tools > NDK
 
 #### Add Android specifics to environment
+For each of the below, you may need to specify a different build-tools version, as Android Studio will roll it forward fairly regularly.
 
 On Linux:
 ```
@@ -275,7 +276,11 @@ export ANDROID_NDK_HOME=$HOME/Library/Android/sdk/ndk-bundle
 export PATH=$ANDROID_NDK_PATH:$PATH
 export PATH=$ANDROID_SDK_HOME/build-tools/23.0.3:$PATH
 ```
-Note: If jarsigner is missing from your platform, you can find it in the Android Studio install.
+Note: If jarsigner is missing from your platform, you can find it in the Android Studio install or in your Java installation.  If you do not have Java, you can get it with something like the following:
+```
+sudo apt-get install openjdk-8-jdk
+```
+
 ### Additional OSX System Requirements
 Tested on OSX version 10.12.4
 
@@ -307,7 +312,7 @@ cd build-android
 Resulting validation layer binaries will be in build-android/libs.
 Test and demo APKs can be installed on production devices with:
 ```
-./install_all.sh -s <serial number>
+./install_all.sh [-s <serial number>]
 ```
 Note that there are no equivalent scripts on Windows yet, that work needs to be completed.
 The following per platform commands can be used for layer only builds:
@@ -315,7 +320,7 @@ The following per platform commands can be used for layer only builds:
 Follow the setup steps for Linux or OSX above, then from your terminal:
 ```
 cd build-android
-./update_external_sources_android.sh
+./update_external_sources_android.sh --no-build
 ./android-generate.sh
 ndk-build -j $(sysctl -n hw.ncpu)
 ```
@@ -352,7 +357,9 @@ To build, install, and run Cube with validation layers, first build layers using
 cd build-android
 ./build_all.sh
 adb install -r ../demos/android/cube-with-layers/bin/cube-with-layers.apk
+# Run without validation enabled:
 adb shell am start com.example.CubeWithLayers/android.app.NativeActivity
+# Run with validation enabled:
 adb shell am start -a android.intent.action.MAIN -c android-intent.category.LAUNCH -n com.example.CubeWithLayers/android.app.NativeActivity --es args "--validate"
 ```
 vkjson_info for Android is built as an executable for devices with root access.
