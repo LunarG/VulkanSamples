@@ -3390,6 +3390,19 @@ VKAPI_ATTR void VKAPI_CALL DestroyQueryPool(VkDevice device, VkQueryPool queryPo
 static bool PreCallValidateGetQueryPoolResults(layer_data *dev_data, VkQueryPool query_pool, uint32_t first_query,
                                                uint32_t query_count, VkQueryResultFlags flags,
                                                unordered_map<QueryObject, vector<VkCommandBuffer>> *queries_in_flight) {
+    bool skip = false;
+    auto query_pool_state = dev_data->queryPoolMap.find(query_pool);
+    if (query_pool_state != dev_data->queryPoolMap.end()) {
+        if ((query_pool_state->second.createInfo.queryType == VK_QUERY_TYPE_TIMESTAMP) && (flags & VK_QUERY_RESULT_PARTIAL_BIT)) {
+            skip |= log_msg(
+                dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_QUERY_POOL_EXT, 0, __LINE__,
+                VALIDATION_ERROR_2fa00664, "DS",
+                "QueryPool 0x%" PRIx64
+                " was created with a queryType of VK_QUERY_TYPE_TIMESTAMP but flags contains VK_QUERY_RESULT_PARTIAL_BIT. %s",
+                HandleToUint64(query_pool), validation_error_map[VALIDATION_ERROR_2fa00664]);
+        }
+    }
+
     // TODO: clean this up, it's insanely wasteful.
     for (auto cmd_buffer : dev_data->commandBufferMap) {
         if (cmd_buffer.second->in_use.load()) {
@@ -3400,7 +3413,6 @@ static bool PreCallValidateGetQueryPoolResults(layer_data *dev_data, VkQueryPool
     }
 
     if (dev_data->instance_data->disabled.get_query_pool_results) return false;
-    bool skip = false;
     for (uint32_t i = 0; i < query_count; ++i) {
         QueryObject query = {query_pool, first_query + i};
         auto qif_pair = queries_in_flight->find(query);
