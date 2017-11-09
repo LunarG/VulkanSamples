@@ -13985,6 +13985,13 @@ TEST_F(VkLayerTest, QueryPoolInUseDestroyedSignaled) {
 
     m_commandBuffer->end();
 
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_2fa00664);
+    uint32_t data_space[16];
+    m_errorMonitor->SetUnexpectedError("Cannot get query results on queryPool");
+    vkGetQueryPoolResults(m_device->handle(), query_pool, 0, 1, sizeof(data_space), &data_space, sizeof(uint32_t),
+                          VK_QUERY_RESULT_PARTIAL_BIT);
+    m_errorMonitor->VerifyFound();
+
     VkSubmitInfo submit_info = {};
     submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
     submit_info.commandBufferCount = 1;
