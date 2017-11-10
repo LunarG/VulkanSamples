@@ -58,13 +58,13 @@ int sample_main(int argc, char *argv[]) {
     uint32_t api_version = 0;
     if (NULL != vulkan11EnumerateInstanceVersion && VK_SUCCESS == vulkan11EnumerateInstanceVersion(&api_version)) {
         // Translate the version into major/minor for easier comparison
-        using_major_version = VK_VERSION_MAJOR(api_version);
-        using_minor_version = VK_VERSION_MINOR(api_version);
-        std::cout << "Loader/Runtime support detected for Vulkan " << using_major_version << "." << using_minor_version << "\n";
+        uint32_t loader_major_version = VK_VERSION_MAJOR(api_version);
+        uint32_t loader_minor_version = VK_VERSION_MINOR(api_version);
+        std::cout << "Loader/Runtime support detected for Vulkan " << loader_major_version << "." << loader_minor_version << "\n";
 
         // Check current version against what we want to run
-        if (using_major_version > desired_major_version ||
-            (using_major_version == desired_major_version && using_minor_version >= desired_minor_version)) {
+        if (loader_major_version > desired_major_version ||
+            (loader_major_version == desired_major_version && loader_minor_version >= desired_minor_version)) {
             // Initialize the VkApplicationInfo structure with the version of the API we're intending to use
             VkApplicationInfo app_info = {};
             app_info.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
