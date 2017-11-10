@@ -1359,13 +1359,13 @@ TEST_F(VkLayerTest, UpdateBufferAlignment) {
     // Introduce failure by using dataSize that is < 0
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
                                          "must be greater than zero and less than or equal to 65536");
-    m_commandBuffer->UpdateBuffer(buffer.handle(), 0, -44, updateData);
+    m_commandBuffer->UpdateBuffer(buffer.handle(), 0, (VkDeviceSize)-44, updateData);
     m_errorMonitor->VerifyFound();
 
     // Introduce failure by using dataSize that is > 65536
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
                                          "must be greater than zero and less than or equal to 65536");
-    m_commandBuffer->UpdateBuffer(buffer.handle(), 0, 80000, updateData);
+    m_commandBuffer->UpdateBuffer(buffer.handle(), 0, (VkDeviceSize)80000, updateData);
     m_errorMonitor->VerifyFound();
 
     m_commandBuffer->end();
@@ -15188,7 +15188,7 @@ TEST_F(VkLayerTest, InvalidSPIRVMagic) {
     VkShaderModuleCreateInfo moduleCreateInfo;
     struct icd_spv_header spv;
 
-    spv.magic = ~ICD_SPV_MAGIC;
+    spv.magic = (uint32_t)~ICD_SPV_MAGIC;
     spv.version = ICD_SPV_VERSION;
     spv.gen_magic = 0;
 
