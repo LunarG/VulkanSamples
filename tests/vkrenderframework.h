@@ -64,8 +64,10 @@ class VkRenderFramework : public VkTestFramework {
 
     VkInstance instance() { return inst; }
     VkDevice device() { return m_device->device(); }
+    VkDeviceObj *DeviceObj() const { return m_device; }
     VkPhysicalDevice gpu();
     VkRenderPass renderPass() { return m_renderPass; }
+    const VkRenderPassCreateInfo &RenderPassInfo() const { return renderPass_info_; };
     VkFramebuffer framebuffer() { return m_framebuffer; }
     void InitViewport(float width, float height);
     void InitViewport();
@@ -95,6 +97,7 @@ class VkRenderFramework : public VkTestFramework {
     VkCommandPoolObj *m_commandPool;
     VkCommandBufferObj *m_commandBuffer;
     VkRenderPass m_renderPass;
+    VkRenderPassCreateInfo renderPass_info_ = {};
     VkFramebuffer m_framebuffer;
     std::vector<VkViewport> m_viewports;
     std::vector<VkRect2D> m_scissors;

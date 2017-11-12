@@ -467,7 +467,7 @@ void VkRenderFramework::InitRenderTarget(uint32_t targets, VkImageView *dsBindin
     }
 
     vkCreateRenderPass(device(), &rp_info, NULL, &m_renderPass);
-
+    renderPass_info_ = rp_info;  // Save away a copy for tests that need access to the render pass state
     // Create Framebuffer and RenderPass with color attachments and any
     // depth/stencil attachment
     VkFramebufferCreateInfo fb_info = {};

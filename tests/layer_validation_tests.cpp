@@ -41,9 +41,13 @@
 #include "vk_format_utils.h"
 #include "vk_validation_error_messages.h"
 #include "vkrenderframework.h"
+#include "vk_typemap_helper.h"
+
+#include <limits.h>
 
 #include <algorithm>
-#include <limits.h>
+#include <functional>
+#include <memory>
 #include <unordered_set>
 
 #define GLM_FORCE_RADIANS
@@ -164,22 +168,28 @@ static VkSamplerCreateInfo SafeSaneSamplerCreateInfo() {
     return sampler_create_info;
 }
 
-// Valid (or needed) only for floating point numeric types
-struct NearestLessThan {
-    constexpr static int factor = -1;
-};
-struct NearestGreaterThan {
-    constexpr static int factor = 1;
-};
-template <typename T, typename Comp>
-T NearestNonEqual(const T value, const Comp &comp) {
-    T offset = value * T(Comp::factor);
-    T trial_offset = offset / T(2.);
-    while ((value + trial_offset) != value) {
-        offset = trial_offset;
-        trial_offset = trial_offset / T(2.0);
-    }
-    return value + offset;
+// Dependent "false" type for the static assert, as GCC will evaluate
+// non-dependent static_asserts even for non-instantiated templates
+template <typename T>
+struct AlwaysFalse : std::false_type {};
+
+// Template wrapper of cmath.h versions to avoid portability issues with std::nextafter
+template <typename T>
+T NextAfter(T from, T to) {
+    static_assert(AlwaysFalse<T>::value, "must specialize for each supported type");
+}
+template <>
+float NextAfter(float from, float to) {
+    return nextafterf(from, to);
+}
+// lowest <= value <= max non intuitive, thus the named wrapper
+template <typename T>
+T NextAfterGreater(const T from) {
+    return NextAfter<T>(from, std::numeric_limits<T>::max());
+}
+template <typename T>
+T NextAfterLess(const T from) {
+    return NextAfter<T>(from, std::numeric_limits<T>::lowest());
 }
 
 // ErrorMonitor Usage:
@@ -422,9 +432,13 @@ class VkLayerTest : public VkRenderFramework {
         InitFramework(myDbgFunc, m_errorMonitor);
         InitState(features, flags);
     }
-
    protected:
     ErrorMonitor *m_errorMonitor;
+
+   public:
+    ErrorMonitor *Monitor() { return m_errorMonitor; }
+
+   protected:
     bool m_enableWSI;
 
     virtual void SetUp() {
@@ -908,13 +922,13 @@ struct OneOffDescriptorSet {
     VkDescriptorPool pool_;
     VkDescriptorSetLayout layout_;
     VkDescriptorSet set_;
+    typedef std::vector<VkDescriptorSetLayoutBinding> Bindings;
 
-    OneOffDescriptorSet(VkDevice device, std::initializer_list<VkDescriptorSetLayoutBinding> bindings)
-        : device_{device}, pool_{}, layout_{}, set_{} {
+    OneOffDescriptorSet(VkDevice device, const Bindings &bindings) : device_{device}, pool_{}, layout_{}, set_{} {
         VkResult err;
+
         std::vector<VkDescriptorPoolSize> sizes;
-        for (auto const & b : bindings)
-            sizes.push_back({b.descriptorType, std::max(1u, b.descriptorCount)});
+        for (const auto &b : bindings) sizes.push_back({b.descriptorType, std::max(1u, b.descriptorCount)});
 
         VkDescriptorPoolCreateInfo dspci = {
             VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO, nullptr,
@@ -923,9 +937,8 @@ struct OneOffDescriptorSet {
         if (err != VK_SUCCESS)
             return;
 
-        VkDescriptorSetLayoutCreateInfo dslci = {
-            VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO, nullptr,
-            0, uint32_t(bindings.size()), bindings.begin() };
+        VkDescriptorSetLayoutCreateInfo dslci = {VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO, nullptr, 0,
+                                                 uint32_t(bindings.size()), bindings.data()};
         err = vkCreateDescriptorSetLayout(device_, &dslci, nullptr, &layout_);
         if (err != VK_SUCCESS)
             return;
@@ -935,6 +948,8 @@ struct OneOffDescriptorSet {
             pool_, 1, &layout_};
         err = vkAllocateDescriptorSets(device_, &alloc_info, &set_);
     }
+    OneOffDescriptorSet(VkDevice device, std::initializer_list<VkDescriptorSetLayoutBinding> bindings)
+        : OneOffDescriptorSet(device, Bindings(bindings)){};
 
     ~OneOffDescriptorSet() {
         // No need to destroy set-- it's going away with the pool.
@@ -946,6 +961,238 @@ struct OneOffDescriptorSet {
         return pool_ != VK_NULL_HANDLE && layout_ != VK_NULL_HANDLE && set_ != VK_NULL_HANDLE;
     }
 };
+
+template <typename T>
+bool IsValidVkStruct(const T &s) {
+    return LvlTypeMap<T>::kSType == s.sType;
+}
+
+// Helper class for tersely creating create pipeline tests
+//
+// Designed with minimal error checking to ensure easy error state creation
+// See OneshotTest for typical usage
+struct CreatePipelineHelper {
+   public:
+    std::vector<VkDescriptorSetLayoutBinding> dsl_bindings_;
+    std::unique_ptr<OneOffDescriptorSet> descriptor_set_;
+    std::vector<VkPipelineShaderStageCreateInfo> shader_stages_;
+    VkPipelineVertexInputStateCreateInfo vi_ci_ = {};
+    VkPipelineInputAssemblyStateCreateInfo ia_ci_ = {};
+    VkPipelineTessellationStateCreateInfo tess_ci_ = {};
+    VkViewport viewport_ = {};
+    VkRect2D scissor_ = {};
+    VkPipelineViewportStateCreateInfo vp_state_ci_ = {};
+    VkPipelineMultisampleStateCreateInfo pipe_ms_state_ci_ = {};
+    VkPipelineLayoutCreateInfo pipeline_layout_ci_ = {};
+    VkPipelineLayout pipeline_layout_ = VK_NULL_HANDLE;
+    VkPipelineDynamicStateCreateInfo dyn_state_ci_ = {};
+    VkPipelineRasterizationStateCreateInfo rs_state_ci_ = {};
+    VkPipelineColorBlendAttachmentState cb_attachments_ = {};
+    VkPipelineColorBlendStateCreateInfo cb_ci_ = {};
+    VkGraphicsPipelineCreateInfo gp_ci_ = {};
+    VkPipelineCacheCreateInfo pc_ci_ = {};
+    VkPipeline pipeline_ = VK_NULL_HANDLE;
+    VkPipelineCache pipeline_cache_ = VK_NULL_HANDLE;
+    std::unique_ptr<VkShaderObj> vs_;
+    std::unique_ptr<VkShaderObj> fs_;
+    VkLayerTest &layer_test_;
+    CreatePipelineHelper(VkLayerTest &test) : layer_test_(test) {}
+    ~CreatePipelineHelper() {
+        VkDevice device = layer_test_.device();
+        vkDestroyPipelineCache(device, pipeline_cache_, nullptr);
+        vkDestroyPipeline(device, pipeline_, nullptr);
+        vkDestroyPipelineLayout(device, pipeline_layout_, nullptr);
+    }
+
+    void InitDescriptorSetInfo() { dsl_bindings_ = {{0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1, VK_SHADER_STAGE_ALL, nullptr}}; }
+
+    void InitInputAndVertexInfo() {
+        vi_ci_.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
+
+        ia_ci_.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
+        ia_ci_.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP;
+    }
+
+    void InitMultisampleInfo() {
+        pipe_ms_state_ci_.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
+        pipe_ms_state_ci_.pNext = nullptr;
+        pipe_ms_state_ci_.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
+        pipe_ms_state_ci_.sampleShadingEnable = VK_FALSE;
+        pipe_ms_state_ci_.minSampleShading = 1.0;
+        pipe_ms_state_ci_.pSampleMask = NULL;
+    }
+
+    void InitPipelineLayoutInfo() {
+        pipeline_layout_ci_.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+        pipeline_layout_ci_.setLayoutCount = 1;
+        pipeline_layout_ci_.pSetLayouts = nullptr;  // must bound after it is created
+    }
+
+    void InitViewportInfo() {
+        viewport_ = {0.0f, 0.0f, 64.0f, 64.0f, 0.0f, 1.0f};
+        scissor_ = {{0, 0}, {64, 64}};
+
+        vp_state_ci_.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
+        vp_state_ci_.pNext = nullptr;
+        vp_state_ci_.viewportCount = 1;
+        vp_state_ci_.pViewports = &viewport_;  // ignored if dynamic
+        vp_state_ci_.scissorCount = 1;
+        vp_state_ci_.pScissors = &scissor_;  // ignored if dynamic
+    }
+
+    void InitDynamicStateInfo() {
+        // Use a "validity" check on the {} initialized structure to detect initialization
+        // during late bind
+    }
+
+    void InitShaderInfo() {
+        vs_.reset(new VkShaderObj(layer_test_.DeviceObj(), bindStateVertShaderText, VK_SHADER_STAGE_VERTEX_BIT, &layer_test_));
+        fs_.reset(new VkShaderObj(layer_test_.DeviceObj(), bindStateFragShaderText, VK_SHADER_STAGE_FRAGMENT_BIT, &layer_test_));
+        // We shouldn't need a fragment shader but add it to be able to run on more devices
+        shader_stages_ = {vs_->GetStageCreateInfo(), fs_->GetStageCreateInfo()};
+    }
+
+    void InitRasterizationInfo() {
+        rs_state_ci_.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
+        rs_state_ci_.pNext = nullptr;
+        rs_state_ci_.flags = 0;
+        rs_state_ci_.depthClampEnable = VK_FALSE;
+        rs_state_ci_.rasterizerDiscardEnable = VK_FALSE;
+        rs_state_ci_.polygonMode = VK_POLYGON_MODE_FILL;
+        rs_state_ci_.cullMode = VK_CULL_MODE_BACK_BIT;
+        rs_state_ci_.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
+        rs_state_ci_.depthBiasEnable = VK_FALSE;
+        rs_state_ci_.lineWidth = 1.0F;
+    }
+
+    void InitBlendStateInfo() {
+        cb_ci_.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
+        cb_ci_.logicOpEnable = VK_FALSE;
+        cb_ci_.logicOp = VK_LOGIC_OP_COPY;  // ignored if enable is VK_FALSE above
+        cb_ci_.attachmentCount = layer_test_.RenderPassInfo().subpassCount;
+        ASSERT_TRUE(IsValidVkStruct(layer_test_.RenderPassInfo()));
+        cb_ci_.pAttachments = &cb_attachments_;
+        for (int i = 0; i < 4; i++) {
+            cb_ci_.blendConstants[0] = 1.0F;
+        }
+    }
+
+    void InitGraphicsPipelineInfo() {
+        // Color-only rendering in a subpass with no depth/stencil attachment
+        // Active Pipeline Shader Stages
+        //    Vertex Shader
+        //    Fragment Shader
+        // Required: Fixed-Function Pipeline Stages
+        //    VkPipelineVertexInputStateCreateInfo
+        //    VkPipelineInputAssemblyStateCreateInfo
+        //    VkPipelineViewportStateCreateInfo
+        //    VkPipelineRasterizationStateCreateInfo
+        //    VkPipelineMultisampleStateCreateInfo
+        //    VkPipelineColorBlendStateCreateInfo
+        gp_ci_.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
+        gp_ci_.pNext = nullptr;
+        gp_ci_.flags = VK_PIPELINE_CREATE_DISABLE_OPTIMIZATION_BIT;
+        gp_ci_.pVertexInputState = &vi_ci_;
+        gp_ci_.pInputAssemblyState = &ia_ci_;
+        gp_ci_.pTessellationState = nullptr;
+        gp_ci_.pViewportState = &vp_state_ci_;
+        gp_ci_.pRasterizationState = &rs_state_ci_;
+        gp_ci_.pMultisampleState = &pipe_ms_state_ci_;
+        gp_ci_.pDepthStencilState = nullptr;
+        gp_ci_.pColorBlendState = &cb_ci_;
+        gp_ci_.pDynamicState = nullptr;
+        gp_ci_.renderPass = layer_test_.renderPass();
+    }
+
+    void InitPipelineCacheInfo() {
+        pc_ci_.sType = VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO;
+        pc_ci_.pNext = nullptr;
+        pc_ci_.flags = 0;
+        pc_ci_.initialDataSize = 0;
+        pc_ci_.pInitialData = nullptr;
+    }
+
+    // Not called by default during init_info
+    void InitTesselationState() {
+        // TBD -- add shaders and create_info
+    }
+
+    // TDB -- add control for optional and/or additional initialization
+    void InitInfo() {
+        InitDescriptorSetInfo();
+        InitInputAndVertexInfo();
+        InitMultisampleInfo();
+        InitPipelineLayoutInfo();
+        InitViewportInfo();
+        InitDynamicStateInfo();
+        InitShaderInfo();
+        InitRasterizationInfo();
+        InitBlendStateInfo();
+        InitGraphicsPipelineInfo();
+        InitPipelineCacheInfo();
+    }
+
+    void InitState() {
+        VkResult err;
+        descriptor_set_.reset(new OneOffDescriptorSet(layer_test_.device(), dsl_bindings_));
+        pipeline_layout_ci_.pSetLayouts = &descriptor_set_->layout_;
+        ASSERT_TRUE(descriptor_set_->Initialized());
+
+        err = vkCreatePipelineLayout(layer_test_.device(), &pipeline_layout_ci_, NULL, &pipeline_layout_);
+        ASSERT_VK_SUCCESS(err);
+
+        err = vkCreatePipelineCache(layer_test_.device(), &pc_ci_, NULL, &pipeline_cache_);
+        ASSERT_VK_SUCCESS(err);
+    }
+
+    void LateBindPipelineInfo() {
+        // By value or dynamically located items must be late bound
+        gp_ci_.layout = pipeline_layout_;
+        gp_ci_.stageCount = shader_stages_.size();
+        gp_ci_.pStages = shader_stages_.data();
+        if ((gp_ci_.pTessellationState == nullptr) && IsValidVkStruct(tess_ci_)) {
+            gp_ci_.pTessellationState = &tess_ci_;
+        }
+        if ((gp_ci_.pDynamicState == nullptr) && IsValidVkStruct(dyn_state_ci_)) {
+            gp_ci_.pDynamicState = &dyn_state_ci_;
+        }
+    }
+
+    VkResult CreateGraphicsPipeline(bool implicit_destroy = true, bool do_late_bind = true) {
+        VkResult err;
+        if (do_late_bind) {
+            LateBindPipelineInfo();
+        }
+        if (implicit_destroy && (pipeline_ != VK_NULL_HANDLE)) {
+            vkDestroyPipeline(layer_test_.device(), pipeline_, nullptr);
+            pipeline_ = VK_NULL_HANDLE;
+        }
+        err = vkCreateGraphicsPipelines(layer_test_.device(), pipeline_cache_, 1, &gp_ci_, NULL, &pipeline_);
+        return err;
+    }
+
+    // Helper function to create a simple test case (postive or negative)
+    //
+    // info_override can be any callable that takes a CreatePipelineHeper &
+    // flags, error can be any args accepted by "SetDesiredFailure".
+    template <typename Test, typename OverrideFunc, typename Error>
+    static void OneshotTest(Test &test, OverrideFunc &info_override, const VkFlags flags, Error error, bool positive_test = false) {
+        CreatePipelineHelper helper(test);
+        helper.InitInfo();
+        info_override(helper);
+        helper.InitState();
+
+        test.Monitor()->SetDesiredFailureMsg(flags, error);
+        helper.CreateGraphicsPipeline();
+
+        if (positive_test) {
+            test.Monitor()->VerifyNotFound();
+        } else {
+            test.Monitor()->VerifyFound();
+        }
+    };
+};
+
 // ********************************************************************************************************************
 // ********************************************************************************************************************
 // ********************************************************************************************************************
@@ -1297,12 +1544,12 @@ TEST_F(VkLayerTest, AnisotropyFeatureEnabled) {
     };
 
     // maxAnisotropy out-of-bounds low.
-    sampler_info.maxAnisotropy = NearestNonEqual(1.0F, NearestLessThan());
+    sampler_info.maxAnisotropy = NextAfterLess(1.0F);
     do_test(VALIDATION_ERROR_1260085e, &sampler_info);
     sampler_info.maxAnisotropy = sampler_info_ref.maxAnisotropy;
 
     // maxAnisotropy out-of-bounds high.
-    sampler_info.maxAnisotropy = NearestNonEqual(m_device->phy().properties().limits.maxSamplerAnisotropy, NearestGreaterThan());
+    sampler_info.maxAnisotropy = NextAfterGreater(m_device->phy().properties().limits.maxSamplerAnisotropy);
     do_test(VALIDATION_ERROR_1260085e, &sampler_info);
     sampler_info.maxAnisotropy = sampler_info_ref.maxAnisotropy;
 
@@ -8927,7 +9174,7 @@ TEST_F(VkLayerTest, InvalidPipelineCreateState) {
     VkResult err;
 
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
-                                         "Invalid Pipeline CreateInfo State: Vertex Shader required");
+        "Invalid Pipeline CreateInfo State: Vertex Shader required");
 
     ASSERT_NO_FATAL_FAILURE(Init());
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
@@ -9042,6 +9289,53 @@ TEST_F(VkLayerTest, InvalidPipelineCreateState) {
     vkDestroyPipelineLayout(m_device->device(), pipeline_layout, NULL);
     vkDestroyDescriptorSetLayout(m_device->device(), ds_layout, NULL);
     vkDestroyDescriptorPool(m_device->device(), ds_pool, NULL);
+}
+
+TEST_F(VkLayerTest, InvalidPipelineSampleRateFeatureDisable) {
+    //Enable sample shading in pipeline when the feature is disabled.
+    ASSERT_NO_FATAL_FAILURE(InitFramework(myDbgFunc, m_errorMonitor));
+
+    // Disable sampleRateShading here
+    VkPhysicalDeviceFeatures device_features = {};
+    ASSERT_NO_FATAL_FAILURE(GetPhysicalDeviceFeatures(&device_features));
+    device_features.sampleRateShading = VK_FALSE;
+
+    ASSERT_NO_FATAL_FAILURE(InitState(&device_features));
+    ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
+
+    // Cause the error by enabling sample shading...
+    auto set_shading_enable = [](CreatePipelineHelper &helper) { helper.pipe_ms_state_ci_.sampleShadingEnable = VK_TRUE; };
+    CreatePipelineHelper::OneshotTest(*this, set_shading_enable, VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_10000620);
+}
+
+TEST_F(VkLayerTest, InvalidPipelineSampleRateFeatureEnable) {
+    //Enable sample shading in pipeline when the feature is disabled.
+    ASSERT_NO_FATAL_FAILURE(InitFramework(myDbgFunc, m_errorMonitor));
+
+    // Require sampleRateShading here
+    VkPhysicalDeviceFeatures device_features = {};
+    ASSERT_NO_FATAL_FAILURE(GetPhysicalDeviceFeatures(&device_features));
+    if (device_features.sampleRateShading == VK_FALSE) {
+        printf("             SampleRateShading feature is disabled -- skipping related checks.\n");
+        return;
+    }
+
+    ASSERT_NO_FATAL_FAILURE(InitState(&device_features));
+    ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
+
+    auto range_test = [this](float value, bool positive_test = false) {
+        auto info_override = [value](CreatePipelineHelper &helper) {
+            helper.pipe_ms_state_ci_.sampleShadingEnable = VK_TRUE;
+            helper.pipe_ms_state_ci_.minSampleShading = value;
+        };
+        CreatePipelineHelper::OneshotTest(*this, info_override, VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_10000624,
+                                          positive_test);
+    };
+
+    range_test(NextAfterLess(0.0F));
+    range_test(NextAfterGreater(1.0F));
+    range_test(0.0, /* positive_test= */ true);
+    range_test(1.0, /* positive_test= */ true);
 }
 
 /*// TODO : This test should be good, but needs Tess support in compiler to run
