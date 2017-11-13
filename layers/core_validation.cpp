@@ -3419,19 +3419,6 @@ static bool PreCallValidateGetQueryPoolResults(layer_data *dev_data, VkQueryPool
                                             HandleToUint64(query_pool), first_query + i);
                         }
                     }
-                } else {  // Unavailable and in flight
-                    // TODO : Can there be the same query in use by multiple command buffers in flight?
-                    bool make_available = false;
-                    for (auto cmd_buffer : qif_pair->second) {
-                        auto cb = GetCBNode(dev_data, cmd_buffer);
-                        make_available |= cb->queryToStateMap[query];
-                    }
-                    if (!(((flags & VK_QUERY_RESULT_PARTIAL_BIT) || (flags & VK_QUERY_RESULT_WAIT_BIT)) && make_available)) {
-                        skip |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT,
-                                        VK_DEBUG_REPORT_OBJECT_TYPE_QUERY_POOL_EXT, 0, __LINE__, DRAWSTATE_INVALID_QUERY, "DS",
-                                        "Cannot get query results on queryPool 0x%" PRIx64 " with index %d which is unavailable.",
-                                        HandleToUint64(query_pool), first_query + i);
-                    }
                 }
             } else if (!query_state_pair->second) {  // Unavailable and Not in flight
                 skip |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_QUERY_POOL_EXT, 0,
