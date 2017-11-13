@@ -748,6 +748,7 @@ class VkBufferTest {
             bool pass = aVulkanDevice->phy().set_memory_type(memory_requirements.memoryTypeBits, &memory_allocate_info,
                                                              VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
             if (!pass) {
+                CreateCurrent = false;
                 vkDestroyBuffer(VulkanDevice, VulkanBuffer, nullptr);
                 return;
             }
@@ -12230,6 +12231,11 @@ TEST_F(VkLayerTest, DSUpdateOutOfBounds) {
     });
 
     VkBufferTest buffer_test(m_device, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT);
+    if (!buffer_test.GetBufferCurrent()) {
+        // Something prevented creation of buffer so abort
+        printf("             Buffer creation failed, skipping test\n");
+        return;
+    }
 
     // Correctly update descriptor to avoid "NOT_UPDATED" error
     VkDescriptorBufferInfo buff_info = {};
