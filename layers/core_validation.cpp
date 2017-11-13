@@ -3407,8 +3407,7 @@ static bool PreCallValidateGetQueryPoolResults(layer_data *dev_data, VkQueryPool
         auto query_state_pair = dev_data->queryToStateMap.find(query);
         if (query_state_pair != dev_data->queryToStateMap.end()) {
             // Available and in flight
-            if (qif_pair != queries_in_flight->end() && query_state_pair != dev_data->queryToStateMap.end() &&
-                query_state_pair->second) {
+            if (qif_pair != queries_in_flight->end() && query_state_pair->second) {
                 for (auto cmd_buffer : qif_pair->second) {
                     auto cb = GetCBNode(dev_data, cmd_buffer);
                     auto query_event_pair = cb->waitedEventsBeforeQueryReset.find(query);
@@ -3420,8 +3419,7 @@ static bool PreCallValidateGetQueryPoolResults(layer_data *dev_data, VkQueryPool
                     }
                 }
                 // Unavailable and in flight
-            } else if (qif_pair != queries_in_flight->end() && query_state_pair != dev_data->queryToStateMap.end() &&
-                       !query_state_pair->second) {
+            } else if (qif_pair != queries_in_flight->end() && !query_state_pair->second) {
                 // TODO : Can there be the same query in use by multiple command buffers in flight?
                 bool make_available = false;
                 for (auto cmd_buffer : qif_pair->second) {
@@ -3435,7 +3433,7 @@ static bool PreCallValidateGetQueryPoolResults(layer_data *dev_data, VkQueryPool
                                     HandleToUint64(query_pool), first_query + i);
                 }
                 // Unavailable
-            } else if (query_state_pair != dev_data->queryToStateMap.end() && !query_state_pair->second) {
+            } else if (!query_state_pair->second) {
                 skip |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_QUERY_POOL_EXT, 0,
                                 __LINE__, DRAWSTATE_INVALID_QUERY, "DS",
                                 "Cannot get query results on queryPool 0x%" PRIx64 " with index %d which is unavailable.",
