@@ -145,7 +145,8 @@ void AllocateCommandBuffer(VkDevice device, const VkCommandPool command_pool, co
 void AllocateDescriptorSet(VkDevice device, VkDescriptorPool descriptor_pool, VkDescriptorSet descriptor_set);
 void CreateSwapchainImageObject(VkDevice dispatchable_object, VkImage swapchain_image, VkSwapchainKHR swapchain);
 void ReportUndestroyedObjects(VkDevice device, UNIQUE_VALIDATION_ERROR_CODE error_code);
-
+bool ValidateDeviceObject(uint64_t device_handle, enum UNIQUE_VALIDATION_ERROR_CODE invalid_handle_code,
+                          enum UNIQUE_VALIDATION_ERROR_CODE wrong_device_code);
 
 template <typename T1, typename T2>
 bool ValidateObject(T1 dispatchable_object, T2 object, VulkanObjectType object_type, bool null_allowed,
@@ -154,6 +155,11 @@ bool ValidateObject(T1 dispatchable_object, T2 object, VulkanObjectType object_t
         return false;
     }
     auto object_handle = HandleToUint64(object);
+
+    if (object_type == kVulkanObjectTypeDevice) {
+        return ValidateDeviceObject(object_handle, invalid_handle_code, wrong_device_code);
+    }
+
     VkDebugReportObjectTypeEXT debug_object_type = get_debug_report_enum[object_type];
 
     layer_data *device_data = GetLayerDataPtr(get_dispatch_key(dispatchable_object), layer_data_map);
