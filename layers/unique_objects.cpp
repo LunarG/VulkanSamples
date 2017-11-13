@@ -608,12 +608,13 @@ VKAPI_ATTR void VKAPI_CALL UpdateDescriptorSetWithTemplateKHR(VkDevice device, V
                                                               const void *pData) {
     layer_data *dev_data = GetLayerDataPtr(get_dispatch_key(device), layer_data_map);
     uint64_t template_handle = reinterpret_cast<uint64_t &>(descriptorUpdateTemplate);
+    void *unwrapped_buffer = nullptr;
     {
         std::lock_guard<std::mutex> lock(global_lock);
         descriptorSet = Unwrap(dev_data, descriptorSet);
         descriptorUpdateTemplate = (VkDescriptorUpdateTemplateKHR)dev_data->unique_id_mapping[template_handle];
+        unwrapped_buffer = BuildUnwrappedUpdateTemplateBuffer(dev_data, template_handle, pData);
     }
-    void *unwrapped_buffer = BuildUnwrappedUpdateTemplateBuffer(dev_data, template_handle, pData);
     dev_data->dispatch_table.UpdateDescriptorSetWithTemplateKHR(device, descriptorSet, descriptorUpdateTemplate,
                                                                         unwrapped_buffer);
     free(unwrapped_buffer);
@@ -624,12 +625,13 @@ VKAPI_ATTR void VKAPI_CALL CmdPushDescriptorSetWithTemplateKHR(VkCommandBuffer c
                                                                VkPipelineLayout layout, uint32_t set, const void *pData) {
     layer_data *dev_data = GetLayerDataPtr(get_dispatch_key(commandBuffer), layer_data_map);
     uint64_t template_handle = reinterpret_cast<uint64_t &>(descriptorUpdateTemplate);
+    void *unwrapped_buffer = nullptr;
     {
         std::lock_guard<std::mutex> lock(global_lock);
         descriptorUpdateTemplate = Unwrap(dev_data, descriptorUpdateTemplate);
         layout = Unwrap(dev_data, layout);
+        unwrapped_buffer = BuildUnwrappedUpdateTemplateBuffer(dev_data, template_handle, pData);
     }
-    void *unwrapped_buffer = BuildUnwrappedUpdateTemplateBuffer(dev_data, template_handle, pData);
     dev_data->dispatch_table.CmdPushDescriptorSetWithTemplateKHR(commandBuffer, descriptorUpdateTemplate, layout, set,
                                                                          unwrapped_buffer);
     free(unwrapped_buffer);
