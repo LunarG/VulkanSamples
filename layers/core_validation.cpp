@@ -3394,11 +3394,11 @@ static bool PreCallValidateGetQueryPoolResults(layer_data *dev_data, VkQueryPool
     for (auto cmd_buffer : dev_data->commandBufferMap) {
         if (cmd_buffer.second->in_use.load()) {
             for (auto query_state_pair : cmd_buffer.second->queryToStateMap) {
-                (*queries_in_flight)[query_state_pair.first].push_back(
-                    cmd_buffer.first);
+                (*queries_in_flight)[query_state_pair.first].push_back(cmd_buffer.first);
             }
         }
     }
+
     if (dev_data->instance_data->disabled.get_query_pool_results) return false;
     bool skip = false;
     for (uint32_t i = 0; i < query_count; ++i) {
@@ -3407,45 +3407,44 @@ static bool PreCallValidateGetQueryPoolResults(layer_data *dev_data, VkQueryPool
         auto query_state_pair = dev_data->queryToStateMap.find(query);
         if (query_state_pair != dev_data->queryToStateMap.end()) {
             // Available and in flight
-            if (qif_pair != queries_in_flight->end() && query_state_pair->second) {
-                for (auto cmd_buffer : qif_pair->second) {
-                    auto cb = GetCBNode(dev_data, cmd_buffer);
-                    auto query_event_pair = cb->waitedEventsBeforeQueryReset.find(query);
-                    if (query_event_pair == cb->waitedEventsBeforeQueryReset.end()) {
+            if (qif_pair != queries_in_flight->end()) {
+                if (query_state_pair->second) {
+                    for (auto cmd_buffer : qif_pair->second) {
+                        auto cb = GetCBNode(dev_data, cmd_buffer);
+                        auto query_event_pair = cb->waitedEventsBeforeQueryReset.find(query);
+                        if (query_event_pair == cb->waitedEventsBeforeQueryReset.end()) {
+                            skip |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT,
+                                            VK_DEBUG_REPORT_OBJECT_TYPE_QUERY_POOL_EXT, 0, __LINE__, DRAWSTATE_INVALID_QUERY, "DS",
+                                            "Cannot get query results on queryPool 0x%" PRIx64 " with index %d which is in flight.",
+                                            HandleToUint64(query_pool), first_query + i);
+                        }
+                    }
+                } else {  // Unavailable and in flight
+                    // TODO : Can there be the same query in use by multiple command buffers in flight?
+                    bool make_available = false;
+                    for (auto cmd_buffer : qif_pair->second) {
+                        auto cb = GetCBNode(dev_data, cmd_buffer);
+                        make_available |= cb->queryToStateMap[query];
+                    }
+                    if (!(((flags & VK_QUERY_RESULT_PARTIAL_BIT) || (flags & VK_QUERY_RESULT_WAIT_BIT)) && make_available)) {
                         skip |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT,
                                         VK_DEBUG_REPORT_OBJECT_TYPE_QUERY_POOL_EXT, 0, __LINE__, DRAWSTATE_INVALID_QUERY, "DS",
-                                        "Cannot get query results on queryPool 0x%" PRIx64 " with index %d which is in flight.",
+                                        "Cannot get query results on queryPool 0x%" PRIx64 " with index %d which is unavailable.",
                                         HandleToUint64(query_pool), first_query + i);
                     }
                 }
-                // Unavailable and in flight
-            } else if (qif_pair != queries_in_flight->end() && !query_state_pair->second) {
-                // TODO : Can there be the same query in use by multiple command buffers in flight?
-                bool make_available = false;
-                for (auto cmd_buffer : qif_pair->second) {
-                    auto cb = GetCBNode(dev_data, cmd_buffer);
-                    make_available |= cb->queryToStateMap[query];
-                }
-                if (!(((flags & VK_QUERY_RESULT_PARTIAL_BIT) || (flags & VK_QUERY_RESULT_WAIT_BIT)) && make_available)) {
-                    skip |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT,
-                                    VK_DEBUG_REPORT_OBJECT_TYPE_QUERY_POOL_EXT, 0, __LINE__, DRAWSTATE_INVALID_QUERY, "DS",
-                                    "Cannot get query results on queryPool 0x%" PRIx64 " with index %d which is unavailable.",
-                                    HandleToUint64(query_pool), first_query + i);
-                }
-                // Unavailable
-            } else if (!query_state_pair->second) {
+            } else if (!query_state_pair->second) {  // Unavailable and Not in flight
                 skip |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_QUERY_POOL_EXT, 0,
                                 __LINE__, DRAWSTATE_INVALID_QUERY, "DS",
                                 "Cannot get query results on queryPool 0x%" PRIx64 " with index %d which is unavailable.",
                                 HandleToUint64(query_pool), first_query + i);
-                // Uninitialized
-            } else if (query_state_pair == dev_data->queryToStateMap.end()) {
-                skip |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_QUERY_POOL_EXT, 0,
-                                __LINE__, DRAWSTATE_INVALID_QUERY, "DS",
-                                "Cannot get query results on queryPool 0x%" PRIx64
-                                " with index %d as data has not been collected for this index.",
-                                HandleToUint64(query_pool), first_query + i);
             }
+        } else {  // Uninitialized
+            skip |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_QUERY_POOL_EXT, 0,
+                            __LINE__, DRAWSTATE_INVALID_QUERY, "DS",
+                            "Cannot get query results on queryPool 0x%" PRIx64
+                            " with index %d as data has not been collected for this index.",
+                            HandleToUint64(query_pool), first_query + i);
         }
     }
     return skip;
