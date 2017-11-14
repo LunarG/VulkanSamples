@@ -259,12 +259,20 @@ void Device::init(std::vector<const char *> &extensions, VkPhysicalDeviceFeature
             graphics_queue_node_index_ = i;
         }
     }
+    // Only request creation with queuefamilies that have at least one queue
+    std::vector<VkDeviceQueueCreateInfo> create_queue_infos;
+    auto qci = queue_info.data();
+    for (uint32_t j = 0; j < queue_info.size(); ++j) {
+        if (qci[j].queueCount) {
+            create_queue_infos.push_back(qci[j]);
+        }
+    }
 
     VkDeviceCreateInfo dev_info = {};
     dev_info.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
     dev_info.pNext = NULL;
-    dev_info.queueCreateInfoCount = queue_info.size();
-    dev_info.pQueueCreateInfos = queue_info.data();
+    dev_info.queueCreateInfoCount = create_queue_infos.size();
+    dev_info.pQueueCreateInfos = create_queue_infos.data();
     dev_info.enabledLayerCount = 0;
     dev_info.ppEnabledLayerNames = NULL;
     dev_info.enabledExtensionCount = extensions.size();
