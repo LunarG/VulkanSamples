@@ -421,7 +421,15 @@ void DeviceMemory::unmap() const { vkUnmapMemory(device(), handle()); }
 
 VkMemoryAllocateInfo DeviceMemory::get_resource_alloc_info(const Device &dev, const VkMemoryRequirements &reqs,
                                                            VkMemoryPropertyFlags mem_props) {
-    VkMemoryAllocateInfo info = alloc_info(reqs.size, 0);
+    // Find appropriate memory type for given reqs
+    VkPhysicalDeviceMemoryProperties dev_mem_props = dev.phy().memory_properties();
+    uint32_t mem_type_index = 0;
+    for (mem_type_index = 0; mem_type_index < dev_mem_props.memoryTypeCount; ++mem_type_index) {
+        if (mem_props == (mem_props & dev_mem_props.memoryTypes[mem_type_index].propertyFlags)) break;
+    }
+    // If we exceeded types, then this device doesn't have the memory we need
+    assert(mem_type_index < dev_mem_props.memoryTypeCount);
+    VkMemoryAllocateInfo info = alloc_info(reqs.size, mem_type_index);
     EXPECT(dev.phy().set_memory_type(reqs.memoryTypeBits, &info, mem_props));
     return info;
 }
