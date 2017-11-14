@@ -1170,10 +1170,19 @@ bool pv_vkCreateGraphicsPipelines(VkDevice device, VkPipelineCache pipelineCache
                                     "is VK_FALSE, pCreateInfos[%d].pMultisampleState must not be NULL. %s",
                                     i, i, validation_error_map[VALIDATION_ERROR_096005de]);
                 } else {
+                    constexpr const VkStructureType valid_next_stypes[] = {
+                        LvlTypeMap<VkPipelineCoverageModulationStateCreateInfoNV>::kSType,
+                        LvlTypeMap<VkPipelineCoverageToColorStateCreateInfoNV>::kSType,
+                        LvlTypeMap<VkPipelineSampleLocationsStateCreateInfoEXT>::kSType};
+                    constexpr const char *valid_struct_names =
+                        "VkPipelineCoverageModulationStateCreateInfoNV, "
+                        "VkPipelineCoverageToColorStateCreateInfoNV, "
+                        "VkPipelineSampleLocationsStateCreateInfoEXT";
                     skip |= validate_struct_pnext(
                         report_data, "vkCreateGraphicsPipelines",
-                        ParameterName("pCreateInfos[%i].pMultisampleState->pNext", ParameterName::IndexVector{i}), NULL,
-                        pCreateInfos[i].pMultisampleState->pNext, 0, NULL, GeneratedHeaderVersion, VALIDATION_ERROR_1001c40d);
+                        ParameterName("pCreateInfos[%i].pMultisampleState->pNext", ParameterName::IndexVector{i}),
+                        valid_struct_names, pCreateInfos[i].pMultisampleState->pNext, 3, valid_next_stypes, GeneratedHeaderVersion,
+                        VALIDATION_ERROR_1001c40d);
 
                     skip |= validate_reserved_flags(
                         report_data, "vkCreateGraphicsPipelines",
