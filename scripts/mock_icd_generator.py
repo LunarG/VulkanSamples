@@ -648,9 +648,9 @@ CUSTOM_C_INTERCEPTS = {
 ''',
 'vkMapMemory': '''
     unique_lock_t lock(global_lock);
-    // TODO: Just hard-coding 4k whole size for now
+    // TODO: Just hard-coding 64k whole size for now
     if (VK_WHOLE_SIZE == size)
-        size = 4096;
+        size = 0x10000;
     void* map_addr = malloc((size_t)size);
     mapped_memory_map[memory].push_back(map_addr);
     *ppData = map_addr;
