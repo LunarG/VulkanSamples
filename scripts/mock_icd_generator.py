@@ -632,7 +632,7 @@ CUSTOM_C_INTERCEPTS = {
     // TODO: Just hard-coding reqs for now
     pMemoryRequirements->size = 4096;
     pMemoryRequirements->alignment = 1;
-    pMemoryRequirements->memoryTypeBits = 0x1F;
+    pMemoryRequirements->memoryTypeBits = 0xFFFF;
 ''',
 'vkGetBufferMemoryRequirements2KHR': '''
     GetBufferMemoryRequirements(device, pInfo->buffer, &pMemoryRequirements->memoryRequirements);
@@ -641,7 +641,7 @@ CUSTOM_C_INTERCEPTS = {
     // TODO: Just hard-coding reqs for now
     pMemoryRequirements->size = 4096;
     pMemoryRequirements->alignment = 1;
-    pMemoryRequirements->memoryTypeBits = 0x1F;
+    pMemoryRequirements->memoryTypeBits = 0xFFFF;
 ''',
 'vkGetImageMemoryRequirements2KHR': '''
     GetImageMemoryRequirements(device, pInfo->image, &pMemoryRequirements->memoryRequirements);
