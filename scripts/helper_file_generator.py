@@ -697,8 +697,8 @@ class HelperFileOutputGenerator(OutputGenerator):
         object_types_header += '\n'
         object_types_header += '// Helper array to get Vulkan VK_EXT_debug_report object type enum from the internal layers version\n'
         object_types_header += 'const VkDebugReportObjectTypeEXT get_debug_report_enum[] = {\n'
+        object_types_header += '    VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, // No Match\n'
         for object_type in type_list:
-            done = False
             search_type = object_type.replace("kVulkanObjectType", "").lower()
             for vk_object_type in self.debug_report_object_types:
                 target_type = vk_object_type.replace("VK_DEBUG_REPORT_OBJECT_TYPE_", "").lower()
@@ -706,28 +706,22 @@ class HelperFileOutputGenerator(OutputGenerator):
                 target_type = target_type.replace("_", "")
                 if search_type == target_type:
                     object_types_header += '    %s,   // %s\n' % (vk_object_type, object_type)
-                    done = True
                     break
-            if done == False:
-                object_types_header += '    VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, // No Match\n'
         object_types_header += '};\n'
 
         # Output a conversion routine from the layer object definitions to the core object type definitions
         object_types_header += '\n'
         object_types_header += '// Helper array to get Official Vulkan VkObjectType enum from the internal layers version\n'
         object_types_header += 'const VkObjectType get_object_type_enum[] = {\n'
+        object_types_header += '    VK_OBJECT_TYPE_UNKNOWN, // No Match\n'
         for object_type in type_list:
-            done = False
             search_type = object_type.replace("kVulkanObjectType", "").lower()
             for vk_object_type in self.core_object_types:
                 target_type = vk_object_type.replace("VK_OBJECT_TYPE_", "").lower()
                 target_type = target_type.replace("_", "")
                 if search_type == target_type:
                     object_types_header += '    %s,   // %s\n' % (vk_object_type, object_type)
-                    done = True
                     break
-            if done == False:
-                object_types_header += '    VK_OBJECT_TYPE_UNKNOWN, // No Match\n'
         object_types_header += '};\n'
 
         return object_types_header
