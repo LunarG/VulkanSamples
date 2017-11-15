@@ -22951,14 +22951,14 @@ TEST_F(VkPositiveLayerTest, QueryAndCopySecondaryCommandBuffers) {
     VkBuffer buffer;
     err = vkCreateBuffer(m_device->device(), &buff_create_info, NULL, &buffer);
     ASSERT_VK_SUCCESS(err);
-    VkMemoryAllocateInfo mem_alloc = {};
-    mem_alloc.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-    mem_alloc.pNext = NULL;
-    mem_alloc.allocationSize = 1024;
-    mem_alloc.memoryTypeIndex = 0;
 
     VkMemoryRequirements memReqs;
     vkGetBufferMemoryRequirements(m_device->device(), buffer, &memReqs);
+    VkMemoryAllocateInfo mem_alloc = {};
+    mem_alloc.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+    mem_alloc.pNext = NULL;
+    mem_alloc.allocationSize = memReqs.size;
+    mem_alloc.memoryTypeIndex = 0;
     bool pass = m_device->phy().set_memory_type(memReqs.memoryTypeBits, &mem_alloc, 0);
     if (!pass) {
         vkDestroyBuffer(m_device->device(), buffer, NULL);
@@ -23051,14 +23051,14 @@ TEST_F(VkPositiveLayerTest, QueryAndCopyMultipleCommandBuffers) {
     VkBuffer buffer;
     err = vkCreateBuffer(m_device->device(), &buff_create_info, NULL, &buffer);
     ASSERT_VK_SUCCESS(err);
-    VkMemoryAllocateInfo mem_alloc = {};
-    mem_alloc.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-    mem_alloc.pNext = NULL;
-    mem_alloc.allocationSize = 1024;
-    mem_alloc.memoryTypeIndex = 0;
 
     VkMemoryRequirements memReqs;
     vkGetBufferMemoryRequirements(m_device->device(), buffer, &memReqs);
+    VkMemoryAllocateInfo mem_alloc = {};
+    mem_alloc.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+    mem_alloc.pNext = NULL;
+    mem_alloc.allocationSize = memReqs.size;
+    mem_alloc.memoryTypeIndex = 0;
     bool pass = m_device->phy().set_memory_type(memReqs.memoryTypeBits, &mem_alloc, 0);
     if (!pass) {
         vkDestroyBuffer(m_device->device(), buffer, NULL);
