@@ -25900,13 +25900,21 @@ TEST_F(VkPositiveLayerTest, ParameterLayerFeatures2Capture) {
     // We're not creating a valid m_device, but the phy wrapper is useful
     vk_testing::PhysicalDevice physical_device(gpu());
     vk_testing::QueueCreateInfoArray queue_info(physical_device.queue_properties());
+    // Only request creation with queuefamilies that have at least one queue
+    std::vector<VkDeviceQueueCreateInfo> create_queue_infos;
+    auto qci = queue_info.data();
+    for (uint32_t i = 0; i < queue_info.size(); ++i) {
+        if (qci[i].queueCount) {
+            create_queue_infos.push_back(qci[i]);
+        }
+    }
 
     VkDeviceCreateInfo dev_info = {};
     dev_info.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
     dev_info.pNext = &features2;
     dev_info.flags = 0;
-    dev_info.queueCreateInfoCount = queue_info.size();
-    dev_info.pQueueCreateInfos = queue_info.data();
+    dev_info.queueCreateInfoCount = create_queue_infos.size();
+    dev_info.pQueueCreateInfos = create_queue_infos.data();
     dev_info.enabledLayerCount = 0;
     dev_info.ppEnabledLayerNames = nullptr;
     dev_info.enabledExtensionCount = 0;
