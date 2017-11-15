@@ -89,6 +89,23 @@ bool VkRenderFramework::InstanceLayerSupported(const char *name, uint32_t spec, 
     return false;
 };
 
+// Enable device profile as last layer on stack overriding devsim if there, or return if not available
+bool VkRenderFramework::EnableDeviceProfileLayer() {
+    if (InstanceLayerSupported("VK_LAYER_LUNARG_device_profile_api")) {
+        if (VkTestFramework::m_devsim_layer) {
+            assert(0 == strcmp(m_instance_layer_names.back(), "VK_LAYER_LUNARG_device_simulation"));
+            m_instance_layer_names.pop_back();
+            m_instance_layer_names.push_back("VK_LAYER_LUNARG_device_profile_api");
+        } else {
+            m_instance_layer_names.push_back("VK_LAYER_LUNARG_device_profile_api");
+        }
+    } else {
+        printf("             Did not find VK_LAYER_LUNARG_device_profile_api layer; skipped.\n");
+        return false;
+    }
+    return true;
+}
+
 // Return true if extension name is found and spec value is >= requested spec value
 bool VkRenderFramework::InstanceExtensionSupported(const char *ext_name, uint32_t spec) {
     uint32_t ext_count = 0;
@@ -134,7 +151,8 @@ bool VkRenderFramework::DeviceExtensionSupported(VkPhysicalDevice dev, const cha
 };
 
 void VkRenderFramework::InitFramework(PFN_vkDebugReportCallbackEXT dbgFunction, void *userData) {
-    if (InstanceLayerSupported("VK_LAYER_LUNARG_device_profile_api")) {
+    // Only enable device profile layer by default if devsim is not enabled
+    if (!VkTestFramework::m_devsim_layer && InstanceLayerSupported("VK_LAYER_LUNARG_device_profile_api")) {
         m_instance_layer_names.push_back("VK_LAYER_LUNARG_device_profile_api");
     }
 

@@ -24,6 +24,9 @@
 VkTestFramework::VkTestFramework() {}
 VkTestFramework::~VkTestFramework() {}
 
+// Define static elements
+bool VkTestFramework::m_devsim_layer = false;
+
 VkFormat VkTestFramework::GetFormat(VkInstance instance, vk_testing::Device *device) {
     VkFormatProperties format_props;
     vkGetPhysicalDeviceFormatProperties(device->phy().handle(), VK_FORMAT_B8G8R8A8_UNORM, &format_props);
