@@ -1,0 +1,1426 @@
+{
+    "$schema": "https://schema.khronos.org/vulkan/devsim_1_0_0.json#",
+    "comments": {
+        "info": "Vulkan Hardware Report generated via https://vulkan.gpuinfo.org",
+        "desc": "https://vulkan.gpuinfo.org/displayreport.php?id=2001"
+    },
+    "environment": {
+        "architecture": "arm",
+        "comment": "",
+        "name": "android",
+        "reportversion": "1.4",
+        "submitter": "Iwandi",
+        "version": "7.1.2"
+    },
+    "extended": {
+        "devicefeatures2": [],
+        "deviceproperties2": []
+    },
+    "platformdetails": {
+        "android.BuildID": "NHG47K",
+        "android.BuildVersionIncremental": "eng.root.20170901.232851",
+        "android.ProductManufacturer": "rockchip",
+        "android.ProductModel": "rk3288"
+    },
+    "surfacecapabilites": {
+        "maxImageArrayLayers": 1,
+        "maxImageCount": 3,
+        "maxImageExtent": {
+            "height": 4096,
+            "width": 4096
+        },
+        "minImageCount": 2,
+        "minImageExtent": {
+            "height": 1,
+            "width": 1
+        },
+        "presentmodes": [
+            1,
+            2
+        ],
+        "supportedCompositeAlpha": 8,
+        "supportedTransforms": 271,
+        "supportedUsageFlags": 159,
+        "surfaceExtension": "VK_KHR_android_surface",
+        "surfaceformats": [
+            {
+                "colorSpace": 0,
+                "format": 37
+            },
+            {
+                "colorSpace": 0,
+                "format": 43
+            },
+            {
+                "colorSpace": 0,
+                "format": 4
+            }
+        ],
+        "validSurface": true
+    },
+    "VkPhysicalDeviceFeatures": {
+        "alphaToOne": 0,
+        "depthBiasClamp": 1,
+        "depthBounds": 0,
+        "depthClamp": 0,
+        "drawIndirectFirstInstance": 1,
+        "dualSrcBlend": 0,
+        "fillModeNonSolid": 0,
+        "fragmentStoresAndAtomics": 1,
+        "fullDrawIndexUint32": 1,
+        "geometryShader": 0,
+        "imageCubeArray": 0,
+        "independentBlend": 1,
+        "inheritedQueries": 0,
+        "largePoints": 1,
+        "logicOp": 0,
+        "multiDrawIndirect": 0,
+        "multiViewport": 0,
+        "occlusionQueryPrecise": 0,
+        "pipelineStatisticsQuery": 0,
+        "robustBufferAccess": 1,
+        "sampleRateShading": 0,
+        "samplerAnisotropy": 0,
+        "shaderClipDistance": 0,
+        "shaderCullDistance": 0,
+        "shaderFloat64": 0,
+        "shaderImageGatherExtended": 1,
+        "shaderInt16": 0,
+        "shaderInt64": 0,
+        "shaderResourceMinLod": 0,
+        "shaderResourceResidency": 0,
+        "shaderSampledImageArrayDynamicIndexing": 1,
+        "shaderStorageBufferArrayDynamicIndexing": 1,
+        "shaderStorageImageArrayDynamicIndexing": 1,
+        "shaderStorageImageExtendedFormats": 0,
+        "shaderStorageImageMultisample": 0,
+        "shaderStorageImageReadWithoutFormat": 0,
+        "shaderStorageImageWriteWithoutFormat": 0,
+        "shaderTessellationAndGeometryPointSize": 0,
+        "shaderUniformBufferArrayDynamicIndexing": 1,
+        "sparseBinding": 0,
+        "sparseResidency16Samples": 0,
+        "sparseResidency2Samples": 0,
+        "sparseResidency4Samples": 0,
+        "sparseResidency8Samples": 0,
+        "sparseResidencyAliased": 0,
+        "sparseResidencyBuffer": 0,
+        "sparseResidencyImage2D": 0,
+        "sparseResidencyImage3D": 0,
+        "tessellationShader": 0,
+        "textureCompressionASTC_LDR": 1,
+        "textureCompressionBC": 0,
+        "textureCompressionETC2": 1,
+        "variableMultisampleRate": 0,
+        "vertexPipelineStoresAndAtomics": 0,
+        "wideLines": 0
+    },
+    "VkPhysicalDeviceProperties": {
+        "apiVersion": 4194322,
+        "deviceID": 122683393,
+        "deviceName": "Mali-T760",
+        "deviceType": 1,
+        "driverVersion": 2734070174,
+        "limits": {
+            "bufferImageGranularity": 4096,
+            "discreteQueuePriorities": 2,
+            "framebufferColorSampleCounts": 5,
+            "framebufferDepthSampleCounts": 5,
+            "framebufferNoAttachmentsSampleCounts": 5,
+            "framebufferStencilSampleCounts": 5,
+            "lineWidthGranularity": 0,
+            "lineWidthRange": [
+                1,
+                1
+            ],
+            "maxBoundDescriptorSets": 4,
+            "maxClipDistances": 0,
+            "maxColorAttachments": 4,
+            "maxCombinedClipAndCullDistances": 0,
+            "maxComputeSharedMemorySize": 32768,
+            "maxComputeWorkGroupCount": [
+                65536,
+                65536,
+                65536
+            ],
+            "maxComputeWorkGroupInvocations": 256,
+            "maxComputeWorkGroupSize": [
+                256,
+                256,
+                256
+            ],
+            "maxCullDistances": 0,
+            "maxDescriptorSetInputAttachments": 4,
+            "maxDescriptorSetSampledImages": 96,
+            "maxDescriptorSetSamplers": 768,
+            "maxDescriptorSetStorageBuffers": 24,
+            "maxDescriptorSetStorageBuffersDynamic": 4,
+            "maxDescriptorSetStorageImages": 24,
+            "maxDescriptorSetUniformBuffers": 72,
+            "maxDescriptorSetUniformBuffersDynamic": 8,
+            "maxDrawIndexedIndexValue": 4294967295,
+            "maxDrawIndirectCount": 1,
+            "maxFragmentCombinedOutputResources": 12,
+            "maxFragmentDualSrcAttachments": 0,
+            "maxFragmentInputComponents": 128,
+            "maxFragmentOutputAttachments": 4,
+            "maxFramebufferHeight": 8192,
+            "maxFramebufferLayers": 256,
+            "maxFramebufferWidth": 8192,
+            "maxGeometryInputComponents": 0,
+            "maxGeometryOutputComponents": 0,
+            "maxGeometryOutputVertices": 0,
+            "maxGeometryShaderInvocations": 0,
+            "maxGeometryTotalOutputComponents": 0,
+            "maxImageArrayLayers": 256,
+            "maxImageDimension1D": 8192,
+            "maxImageDimension2D": 8192,
+            "maxImageDimension3D": 4096,
+            "maxImageDimensionCube": 8192,
+            "maxInterpolationOffset": 0,
+            "maxMemoryAllocationCount": 4294967295,
+            "maxPerStageDescriptorInputAttachments": 4,
+            "maxPerStageDescriptorSampledImages": 16,
+            "maxPerStageDescriptorSamplers": 128,
+            "maxPerStageDescriptorStorageBuffers": 4,
+            "maxPerStageDescriptorStorageImages": 4,
+            "maxPerStageDescriptorUniformBuffers": 12,
+            "maxPerStageResources": 44,
+            "maxPushConstantsSize": 128,
+            "maxSampleMaskWords": 1,
+            "maxSamplerAllocationCount": 16384,
+            "maxSamplerAnisotropy": 1,
+            "maxSamplerLodBias": 2,
+            "maxStorageBufferRange": 134217728,
+            "maxTessellationControlPerPatchOutputComponents": 0,
+            "maxTessellationControlPerVertexInputComponents": 0,
+            "maxTessellationControlPerVertexOutputComponents": 0,
+            "maxTessellationControlTotalOutputComponents": 0,
+            "maxTessellationEvaluationInputComponents": 0,
+            "maxTessellationEvaluationOutputComponents": 0,
+            "maxTessellationGenerationLevel": 0,
+            "maxTessellationPatchSize": 0,
+            "maxTexelBufferElements": 65536,
+            "maxTexelGatherOffset": 7,
+            "maxTexelOffset": 7,
+            "maxUniformBufferRange": 16384,
+            "maxVertexInputAttributeOffset": 2047,
+            "maxVertexInputAttributes": 16,
+            "maxVertexInputBindingStride": 2048,
+            "maxVertexInputBindings": 16,
+            "maxVertexOutputComponents": 128,
+            "maxViewportDimensions": [
+                8192,
+                8192
+            ],
+            "maxViewports": 1,
+            "minInterpolationOffset": 0,
+            "minMemoryMapAlignment": 64,
+            "minStorageBufferOffsetAlignment": 256,
+            "minTexelBufferOffsetAlignment": 256,
+            "minTexelGatherOffset": -8,
+            "minTexelOffset": -8,
+            "minUniformBufferOffsetAlignment": 16,
+            "mipmapPrecisionBits": 4,
+            "nonCoherentAtomSize": 64,
+            "optimalBufferCopyOffsetAlignment": 64,
+            "optimalBufferCopyRowPitchAlignment": 64,
+            "pointSizeGranularity": 0.0625,
+            "pointSizeRange": [
+                1,
+                64
+            ],
+            "sampledImageColorSampleCounts": 5,
+            "sampledImageDepthSampleCounts": 5,
+            "sampledImageIntegerSampleCounts": 1,
+            "sampledImageStencilSampleCounts": 5,
+            "sparseAddressSpaceSize": 0,
+            "standardSampleLocations": 1,
+            "storageImageSampleCounts": 1,
+            "strictLines": 1,
+            "subPixelInterpolationOffsetBits": 0,
+            "subPixelPrecisionBits": 4,
+            "subTexelPrecisionBits": 4,
+            "timestampComputeAndGraphics": 0,
+            "timestampPeriod": 0,
+            "viewportBoundsRange": [
+                -16384,
+                16383
+            ],
+            "viewportSubPixelBits": 0
+        },
+        "pipelineCacheUUID": [
+            88,
+            5,
+            49,
+            68,
+            63,
+            234,
+            15,
+            79,
+            105,
+            109,
+            177,
+            149,
+            123,
+            226,
+            236,
+            179
+        ],
+        "sparseProperties": {
+            "residencyAlignedMipSize": 0,
+            "residencyNonResidentStrict": 0,
+            "residencyStandard2DBlockShape": 0,
+            "residencyStandard2DMultisampleBlockShape": 0,
+            "residencyStandard3DBlockShape": 0
+        },
+        "vendorID": 5045
+    },
+    "VkPhysicalDeviceMemoryProperties": {
+        "memoryHeaps": [
+            {
+                "flags": 1,
+                "size": 2108874752
+            }
+        ],
+        "memoryTypes": [
+            {
+                "heapIndex": 0,
+                "propertyFlags": 7
+            },
+            {
+                "heapIndex": 0,
+                "propertyFlags": 11
+            },
+            {
+                "heapIndex": 0,
+                "propertyFlags": 17
+            }
+        ]
+    },
+    "ArrayOfVkExtensionProperties": [
+        {
+            "extensionName": "VK_KHR_swapchain",
+            "specVersion": 68
+        }
+    ],
+    "ArrayOfVkLayerProperties": [],
+    "ArrayOfVkQueueFamilyProperties": [
+        {
+            "minImageTransferGranularity": {
+                "depth": 1,
+                "height": 1,
+                "width": 1
+            },
+            "queueCount": 2,
+            "queueFlags": 7,
+            "timestampValidBits": 0
+        }
+    ],
+    "ArrayOfVkFormatProperties": [
+        {
+            "formatID": 1,
+            "linearTilingFeatures": 1025,
+            "optimalTilingFeatures": 1025,
+            "bufferFeatures": 0
+        },
+        {
+            "formatID": 2,
+            "linearTilingFeatures": 5121,
+            "optimalTilingFeatures": 5121,
+            "bufferFeatures": 0
+        },
+        {
+            "formatID": 3,
+            "linearTilingFeatures": 5121,
+            "optimalTilingFeatures": 5121,
+            "bufferFeatures": 0
+        },
+        {
+            "formatID": 4,
+            "linearTilingFeatures": 7553,
+            "optimalTilingFeatures": 7553,
+            "bufferFeatures": 0
+        },
+        {
+            "formatID": 5,
+            "linearTilingFeatures": 7553,
+            "optimalTilingFeatures": 7553,
+            "bufferFeatures": 0
+        },
+        {
+            "formatID": 6,
+            "linearTilingFeatures": 5121,
+            "optimalTilingFeatures": 5121,
+            "bufferFeatures": 0
+        },
+        {
+            "formatID": 7,
+            "linearTilingFeatures": 5121,
+            "optimalTilingFeatures": 5121,
+            "bufferFeatures": 0
+        },
+        {
+            "formatID": 8,
+            "linearTilingFeatures": 7553,
+            "optimalTilingFeatures": 7553,
+            "bufferFeatures": 0
+        },
+        {
+            "formatID": 9,
+            "linearTilingFeatures": 7553,
+            "optimalTilingFeatures": 7553,
+            "bufferFeatures": 72
+        },
+        {
+            "formatID": 10,
+            "linearTilingFeatures": 7553,
+            "optimalTilingFeatures": 7553,
+            "bufferFeatures": 72
+        },
+        {
+            "formatID": 11,
+            "linearTilingFeatures": 0,
+            "optimalTilingFeatures": 0,
+            "bufferFeatures": 0
+        },
+        {
+            "formatID": 12,
+            "linearTilingFeatures": 0,
+            "optimalTilingFeatures": 0,
+            "bufferFeatures": 0
+        },
+        {
+            "formatID": 13,
+            "linearTilingFeatures": 3201,
+            "optimalTilingFeatures": 3201,
+            "bufferFeatures": 72
+        },
+        {
+            "formatID": 14,
+            "linearTilingFeatures": 3201,
+            "optimalTilingFeatures": 3201,
+            "bufferFeatures": 72
+        },
+        {
+            "formatID": 15,
+            "linearTilingFeatures": 0,
+            "optimalTilingFeatures": 0,
+            "bufferFeatures": 0
+        },
+        {
+            "formatID": 16,
+            "linearTilingFeatures": 7553,
+            "optimalTilingFeatures": 7553,
+            "bufferFeatures": 72
+        },
+        {
+            "formatID": 17,
+            "linearTilingFeatures": 7553,
+            "optimalTilingFeatures": 7553,
+            "bufferFeatures": 72
+        },
+        {
+            "formatID": 18,
+            "linearTilingFeatures": 0,
+            "optimalTilingFeatures": 0,
+            "bufferFeatures": 0
+        },
+        {
+            "formatID": 19,
+            "linearTilingFeatures": 0,
+            "optimalTilingFeatures": 0,
+            "bufferFeatures": 0
+        },
+        {
+            "formatID": 20,
+            "linearTilingFeatures": 3201,
+            "optimalTilingFeatures": 3201,
+            "bufferFeatures": 72
+        },
+        {
+            "formatID": 21,
+            "linearTilingFeatures": 3201,
+            "optimalTilingFeatures": 3201,
+            "bufferFeatures": 72
+        },
+        {
+            "formatID": 22,
+            "linearTilingFeatures": 0,
+            "optimalTilingFeatures": 0,
+            "bufferFeatures": 0
+        },
+        {
+            "formatID": 23,
+            "linearTilingFeatures": 7553,
+            "optimalTilingFeatures": 7553,
+            "bufferFeatures": 0
+        },
+        {
+            "formatID": 24,
+            "linearTilingFeatures": 5121,
+            "optimalTilingFeatures": 5121,
+            "bufferFeatures": 0
+        },
+        {
+            "formatID": 25,
+            "linearTilingFeatures": 0,
+            "optimalTilingFeatures": 0,
+            "bufferFeatures": 0
+        },
+        {
+            "formatID": 26,
+            "linearTilingFeatures": 0,
+            "optimalTilingFeatures": 0,
+            "bufferFeatures": 0
+        },
+        {
+            "formatID": 27,
+            "linearTilingFeatures": 1025,
+            "optimalTilingFeatures": 1025,
+            "bufferFeatures": 0
+        },
+        {
+            "formatID": 28,
+            "linearTilingFeatures": 1025,
+            "optimalTilingFeatures": 1025,
+            "bufferFeatures": 0
+        },
+        {
+            "formatID": 29,
+            "linearTilingFeatures": 0,
+            "optimalTilingFeatures": 0,
+            "bufferFeatures": 0
+        },
+        {
+            "formatID": 30,
+            "linearTilingFeatures": 7553,
+            "optimalTilingFeatures": 7553,
+            "bufferFeatures": 0
+        },
+        {
+            "formatID": 31,
+            "linearTilingFeatures": 5121,
+            "optimalTilingFeatures": 5121,
+            "bufferFeatures": 0
+        },
+        {
+            "formatID": 32,
+            "linearTilingFeatures": 0,
+            "optimalTilingFeatures": 0,
+            "bufferFeatures": 0
+        },
+        {
+            "formatID": 33,
+            "linearTilingFeatures": 0,
+            "optimalTilingFeatures": 0,
+            "bufferFeatures": 0
+        },
+        {
+            "formatID": 34,
+            "linearTilingFeatures": 1025,
+            "optimalTilingFeatures": 1025,
+            "bufferFeatures": 0
+        },
+        {
+            "formatID": 35,
+            "linearTilingFeatures": 1025,
+            "optimalTilingFeatures": 1025,
+            "bufferFeatures": 0
+        },
+        {
+            "formatID": 36,
+            "linearTilingFeatures": 0,
+            "optimalTilingFeatures": 0,
+            "bufferFeatures": 0
+        },
+        {
+            "formatID": 37,
+            "linearTilingFeatures": 7555,
+            "optimalTilingFeatures": 7555,
+            "bufferFeatures": 88
+        },
+        {
+            "formatID": 38,
+            "linearTilingFeatures": 7555,
+            "optimalTilingFeatures": 7555,
+            "bufferFeatures": 88
+        },
+        {
+            "formatID": 39,
+            "linearTilingFeatures": 0,
+            "optimalTilingFeatures": 0,
+            "bufferFeatures": 0
+        },
+        {
+            "formatID": 40,
+            "linearTilingFeatures": 0,
+            "optimalTilingFeatures": 0,
+            "bufferFeatures": 0
+        },
+        {
+            "formatID": 41,
+            "linearTilingFeatures": 3203,
+            "optimalTilingFeatures": 3203,
+            "bufferFeatures": 88
+        },
+        {
+            "formatID": 42,
+            "linearTilingFeatures": 3203,
+            "optimalTilingFeatures": 3203,
+            "bufferFeatures": 88
+        },
+        {
+            "formatID": 43,
+            "linearTilingFeatures": 7553,
+            "optimalTilingFeatures": 7553,
+            "bufferFeatures": 0
+        },
+        {
+            "formatID": 44,
+            "linearTilingFeatures": 7553,
+            "optimalTilingFeatures": 7553,
+            "bufferFeatures": 72
+        },
+        {
+            "formatID": 45,
+            "linearTilingFeatures": 5121,
+            "optimalTilingFeatures": 5121,
+            "bufferFeatures": 0
+        },
+        {
+            "formatID": 46,
+            "linearTilingFeatures": 0,
+            "optimalTilingFeatures": 0,
+            "bufferFeatures": 0
+        },
+        {
+            "formatID": 47,
+            "linearTilingFeatures": 0,
+            "optimalTilingFeatures": 0,
+            "bufferFeatures": 0
+        },
+        {
+            "formatID": 48,
+            "linearTilingFeatures": 1025,
+            "optimalTilingFeatures": 1025,
+            "bufferFeatures": 0
+        },
+        {
+            "formatID": 49,
+            "linearTilingFeatures": 1025,
+            "optimalTilingFeatures": 1025,
+            "bufferFeatures": 0
+        },
+        {
+            "formatID": 50,
+            "linearTilingFeatures": 7553,
+            "optimalTilingFeatures": 7553,
+            "bufferFeatures": 0
+        },
+        {
+            "formatID": 51,
+            "linearTilingFeatures": 7555,
+            "optimalTilingFeatures": 7555,
+            "bufferFeatures": 88
+        },
+        {
+            "formatID": 52,
+            "linearTilingFeatures": 7555,
+            "optimalTilingFeatures": 7555,
+            "bufferFeatures": 88
+        },
+        {
+            "formatID": 53,
+            "linearTilingFeatures": 0,
+            "optimalTilingFeatures": 0,
+            "bufferFeatures": 0
+        },
+        {
+            "formatID": 54,
+            "linearTilingFeatures": 0,
+            "optimalTilingFeatures": 0,
+            "bufferFeatures": 0
+        },
+        {
+            "formatID": 55,
+            "linearTilingFeatures": 3203,
+            "optimalTilingFeatures": 3203,
+            "bufferFeatures": 88
+        },
+        {
+            "formatID": 56,
+            "linearTilingFeatures": 3203,
+            "optimalTilingFeatures": 3203,
+            "bufferFeatures": 88
+        },
+        {
+            "formatID": 57,
+            "linearTilingFeatures": 7553,
+            "optimalTilingFeatures": 7553,
+            "bufferFeatures": 0
+        },
+        {
+            "formatID": 58,
+            "linearTilingFeatures": 7553,
+            "optimalTilingFeatures": 7553,
+            "bufferFeatures": 64
+        },
+        {
+            "formatID": 59,
+            "linearTilingFeatures": 0,
+            "optimalTilingFeatures": 0,
+            "bufferFeatures": 0
+        },
+        {
+            "formatID": 60,
+            "linearTilingFeatures": 0,
+            "optimalTilingFeatures": 0,
+            "bufferFeatures": 0
+        },
+        {
+            "formatID": 61,
+            "linearTilingFeatures": 0,
+            "optimalTilingFeatures": 0,
+            "bufferFeatures": 0
+        },
+        {
+            "formatID": 62,
+            "linearTilingFeatures": 1025,
+            "optimalTilingFeatures": 1025,
+            "bufferFeatures": 64
+        },
+        {
+            "formatID": 63,
+            "linearTilingFeatures": 1025,
+            "optimalTilingFeatures": 1025,
+            "bufferFeatures": 64
+        },
+        {
+            "formatID": 64,
+            "linearTilingFeatures": 7553,
+            "optimalTilingFeatures": 7553,
+            "bufferFeatures": 72
+        },
+        {
+            "formatID": 65,
+            "linearTilingFeatures": 0,
+            "optimalTilingFeatures": 0,
+            "bufferFeatures": 0
+        },
+        {
+            "formatID": 66,
+            "linearTilingFeatures": 0,
+            "optimalTilingFeatures": 0,
+            "bufferFeatures": 0
+        },
+        {
+            "formatID": 67,
+            "linearTilingFeatures": 0,
+            "optimalTilingFeatures": 0,
+            "bufferFeatures": 0
+        },
+        {
+            "formatID": 68,
+            "linearTilingFeatures": 3201,
+            "optimalTilingFeatures": 3201,
+            "bufferFeatures": 72
+        },
+        {
+            "formatID": 69,
+            "linearTilingFeatures": 1025,
+            "optimalTilingFeatures": 1025,
+            "bufferFeatures": 0
+        },
+        {
+            "formatID": 70,
+            "linearTilingFeatures": 3457,
+            "optimalTilingFeatures": 3457,
+            "bufferFeatures": 72
+        },
+        {
+            "formatID": 71,
+            "linearTilingFeatures": 3457,
+            "optimalTilingFeatures": 3457,
+            "bufferFeatures": 72
+        },
+        {
+            "formatID": 72,
+            "linearTilingFeatures": 0,
+            "optimalTilingFeatures": 0,
+            "bufferFeatures": 0
+        },
+        {
+            "formatID": 73,
+            "linearTilingFeatures": 0,
+            "optimalTilingFeatures": 0,
+            "bufferFeatures": 0
+        },
+        {
+            "formatID": 74,
+            "linearTilingFeatures": 3201,
+            "optimalTilingFeatures": 3201,
+            "bufferFeatures": 72
+        },
+        {
+            "formatID": 75,
+            "linearTilingFeatures": 3201,
+            "optimalTilingFeatures": 3201,
+            "bufferFeatures": 72
+        },
+        {
+            "formatID": 76,
+            "linearTilingFeatures": 7553,
+            "optimalTilingFeatures": 7553,
+            "bufferFeatures": 72
+        },
+        {
+            "formatID": 77,
+            "linearTilingFeatures": 3457,
+            "optimalTilingFeatures": 3457,
+            "bufferFeatures": 72
+        },
+        {
+            "formatID": 78,
+            "linearTilingFeatures": 3457,
+            "optimalTilingFeatures": 3457,
+            "bufferFeatures": 72
+        },
+        {
+            "formatID": 79,
+            "linearTilingFeatures": 0,
+            "optimalTilingFeatures": 0,
+            "bufferFeatures": 0
+        },
+        {
+            "formatID": 80,
+            "linearTilingFeatures": 0,
+            "optimalTilingFeatures": 0,
+            "bufferFeatures": 0
+        },
+        {
+            "formatID": 81,
+            "linearTilingFeatures": 3201,
+            "optimalTilingFeatures": 3201,
+            "bufferFeatures": 72
+        },
+        {
+            "formatID": 82,
+            "linearTilingFeatures": 3201,
+            "optimalTilingFeatures": 3201,
+            "bufferFeatures": 72
+        },
+        {
+            "formatID": 83,
+            "linearTilingFeatures": 7553,
+            "optimalTilingFeatures": 7553,
+            "bufferFeatures": 72
+        },
+        {
+            "formatID": 84,
+            "linearTilingFeatures": 1025,
+            "optimalTilingFeatures": 1025,
+            "bufferFeatures": 0
+        },
+        {
+            "formatID": 85,
+            "linearTilingFeatures": 1025,
+            "optimalTilingFeatures": 1025,
+            "bufferFeatures": 0
+        },
+        {
+            "formatID": 86,
+            "linearTilingFeatures": 0,
+            "optimalTilingFeatures": 0,
+            "bufferFeatures": 0
+        },
+        {
+            "formatID": 87,
+            "linearTilingFeatures": 0,
+            "optimalTilingFeatures": 0,
+            "bufferFeatures": 0
+        },
+        {
+            "formatID": 88,
+            "linearTilingFeatures": 1025,
+            "optimalTilingFeatures": 1025,
+            "bufferFeatures": 0
+        },
+        {
+            "formatID": 89,
+            "linearTilingFeatures": 1025,
+            "optimalTilingFeatures": 1025,
+            "bufferFeatures": 0
+        },
+        {
+            "formatID": 90,
+            "linearTilingFeatures": 5121,
+            "optimalTilingFeatures": 5121,
+            "bufferFeatures": 0
+        },
+        {
+            "formatID": 91,
+            "linearTilingFeatures": 3457,
+            "optimalTilingFeatures": 3457,
+            "bufferFeatures": 72
+        },
+        {
+            "formatID": 92,
+            "linearTilingFeatures": 3457,
+            "optimalTilingFeatures": 3457,
+            "bufferFeatures": 72
+        },
+        {
+            "formatID": 93,
+            "linearTilingFeatures": 0,
+            "optimalTilingFeatures": 0,
+            "bufferFeatures": 0
+        },
+        {
+            "formatID": 94,
+            "linearTilingFeatures": 0,
+            "optimalTilingFeatures": 0,
+            "bufferFeatures": 0
+        },
+        {
+            "formatID": 95,
+            "linearTilingFeatures": 3203,
+            "optimalTilingFeatures": 3203,
+            "bufferFeatures": 88
+        },
+        {
+            "formatID": 96,
+            "linearTilingFeatures": 3203,
+            "optimalTilingFeatures": 3203,
+            "bufferFeatures": 88
+        },
+        {
+            "formatID": 97,
+            "linearTilingFeatures": 7555,
+            "optimalTilingFeatures": 7555,
+            "bufferFeatures": 88
+        },
+        {
+            "formatID": 98,
+            "linearTilingFeatures": 3207,
+            "optimalTilingFeatures": 3207,
+            "bufferFeatures": 120
+        },
+        {
+            "formatID": 99,
+            "linearTilingFeatures": 3207,
+            "optimalTilingFeatures": 3207,
+            "bufferFeatures": 120
+        },
+        {
+            "formatID": 100,
+            "linearTilingFeatures": 7299,
+            "optimalTilingFeatures": 7299,
+            "bufferFeatures": 88
+        },
+        {
+            "formatID": 101,
+            "linearTilingFeatures": 3203,
+            "optimalTilingFeatures": 3203,
+            "bufferFeatures": 88
+        },
+        {
+            "formatID": 102,
+            "linearTilingFeatures": 3203,
+            "optimalTilingFeatures": 3203,
+            "bufferFeatures": 88
+        },
+        {
+            "formatID": 103,
+            "linearTilingFeatures": 7299,
+            "optimalTilingFeatures": 7299,
+            "bufferFeatures": 88
+        },
+        {
+            "formatID": 104,
+            "linearTilingFeatures": 1025,
+            "optimalTilingFeatures": 1025,
+            "bufferFeatures": 64
+        },
+        {
+            "formatID": 105,
+            "linearTilingFeatures": 1025,
+            "optimalTilingFeatures": 1025,
+            "bufferFeatures": 64
+        },
+        {
+            "formatID": 106,
+            "linearTilingFeatures": 5121,
+            "optimalTilingFeatures": 5121,
+            "bufferFeatures": 64
+        },
+        {
+            "formatID": 107,
+            "linearTilingFeatures": 3203,
+            "optimalTilingFeatures": 3203,
+            "bufferFeatures": 88
+        },
+        {
+            "formatID": 108,
+            "linearTilingFeatures": 3203,
+            "optimalTilingFeatures": 3203,
+            "bufferFeatures": 88
+        },
+        {
+            "formatID": 109,
+            "linearTilingFeatures": 7299,
+            "optimalTilingFeatures": 7299,
+            "bufferFeatures": 88
+        },
+        {
+            "formatID": 110,
+            "linearTilingFeatures": 0,
+            "optimalTilingFeatures": 0,
+            "bufferFeatures": 0
+        },
+        {
+            "formatID": 111,
+            "linearTilingFeatures": 0,
+            "optimalTilingFeatures": 0,
+            "bufferFeatures": 0
+        },
+        {
+            "formatID": 112,
+            "linearTilingFeatures": 0,
+            "optimalTilingFeatures": 0,
+            "bufferFeatures": 0
+        },
+        {
+            "formatID": 113,
+            "linearTilingFeatures": 0,
+            "optimalTilingFeatures": 0,
+            "bufferFeatures": 0
+        },
+        {
+            "formatID": 114,
+            "linearTilingFeatures": 0,
+            "optimalTilingFeatures": 0,
+            "bufferFeatures": 0
+        },
+        {
+            "formatID": 115,
+            "linearTilingFeatures": 0,
+            "optimalTilingFeatures": 0,
+            "bufferFeatures": 0
+        },
+        {
+            "formatID": 116,
+            "linearTilingFeatures": 0,
+            "optimalTilingFeatures": 0,
+            "bufferFeatures": 0
+        },
+        {
+            "formatID": 117,
+            "linearTilingFeatures": 0,
+            "optimalTilingFeatures": 0,
+            "bufferFeatures": 0
+        },
+        {
+            "formatID": 118,
+            "linearTilingFeatures": 0,
+            "optimalTilingFeatures": 0,
+            "bufferFeatures": 0
+        },
+        {
+            "formatID": 119,
+            "linearTilingFeatures": 0,
+            "optimalTilingFeatures": 0,
+            "bufferFeatures": 0
+        },
+        {
+            "formatID": 120,
+            "linearTilingFeatures": 0,
+            "optimalTilingFeatures": 0,
+            "bufferFeatures": 0
+        },
+        {
+            "formatID": 121,
+            "linearTilingFeatures": 0,
+            "optimalTilingFeatures": 0,
+            "bufferFeatures": 0
+        },
+        {
+            "formatID": 122,
+            "linearTilingFeatures": 7297,
+            "optimalTilingFeatures": 7297,
+            "bufferFeatures": 8
+        },
+        {
+            "formatID": 123,
+            "linearTilingFeatures": 5121,
+            "optimalTilingFeatures": 5121,
+            "bufferFeatures": 0
+        },
+        {
+            "formatID": 124,
+            "linearTilingFeatures": 5633,
+            "optimalTilingFeatures": 5633,
+            "bufferFeatures": 0
+        },
+        {
+            "formatID": 125,
+            "linearTilingFeatures": 5633,
+            "optimalTilingFeatures": 5633,
+            "bufferFeatures": 0
+        },
+        {
+            "formatID": 126,
+            "linearTilingFeatures": 5121,
+            "optimalTilingFeatures": 5121,
+            "bufferFeatures": 0
+        },
+        {
+            "formatID": 127,
+            "linearTilingFeatures": 1025,
+            "optimalTilingFeatures": 1025,
+            "bufferFeatures": 0
+        },
+        {
+            "formatID": 128,
+            "linearTilingFeatures": 0,
+            "optimalTilingFeatures": 0,
+            "bufferFeatures": 0
+        },
+        {
+            "formatID": 129,
+            "linearTilingFeatures": 5633,
+            "optimalTilingFeatures": 5633,
+            "bufferFeatures": 0
+        },
+        {
+            "formatID": 130,
+            "linearTilingFeatures": 0,
+            "optimalTilingFeatures": 0,
+            "bufferFeatures": 0
+        },
+        {
+            "formatID": 131,
+            "linearTilingFeatures": 0,
+            "optimalTilingFeatures": 0,
+            "bufferFeatures": 0
+        },
+        {
+            "formatID": 132,
+            "linearTilingFeatures": 0,
+            "optimalTilingFeatures": 0,
+            "bufferFeatures": 0
+        },
+        {
+            "formatID": 133,
+            "linearTilingFeatures": 0,
+            "optimalTilingFeatures": 0,
+            "bufferFeatures": 0
+        },
+        {
+            "formatID": 134,
+            "linearTilingFeatures": 0,
+            "optimalTilingFeatures": 0,
+            "bufferFeatures": 0
+        },
+        {
+            "formatID": 135,
+            "linearTilingFeatures": 0,
+            "optimalTilingFeatures": 0,
+            "bufferFeatures": 0
+        },
+        {
+            "formatID": 136,
+            "linearTilingFeatures": 0,
+            "optimalTilingFeatures": 0,
+            "bufferFeatures": 0
+        },
+        {
+            "formatID": 137,
+            "linearTilingFeatures": 0,
+            "optimalTilingFeatures": 0,
+            "bufferFeatures": 0
+        },
+        {
+            "formatID": 138,
+            "linearTilingFeatures": 0,
+            "optimalTilingFeatures": 0,
+            "bufferFeatures": 0
+        },
+        {
+            "formatID": 139,
+            "linearTilingFeatures": 0,
+            "optimalTilingFeatures": 0,
+            "bufferFeatures": 0
+        },
+        {
+            "formatID": 140,
+            "linearTilingFeatures": 0,
+            "optimalTilingFeatures": 0,
+            "bufferFeatures": 0
+        },
+        {
+            "formatID": 141,
+            "linearTilingFeatures": 0,
+            "optimalTilingFeatures": 0,
+            "bufferFeatures": 0
+        },
+        {
+            "formatID": 142,
+            "linearTilingFeatures": 0,
+            "optimalTilingFeatures": 0,
+            "bufferFeatures": 0
+        },
+        {
+            "formatID": 143,
+            "linearTilingFeatures": 0,
+            "optimalTilingFeatures": 0,
+            "bufferFeatures": 0
+        },
+        {
+            "formatID": 144,
+            "linearTilingFeatures": 0,
+            "optimalTilingFeatures": 0,
+            "bufferFeatures": 0
+        },
+        {
+            "formatID": 145,
+            "linearTilingFeatures": 0,
+            "optimalTilingFeatures": 0,
+            "bufferFeatures": 0
+        },
+        {
+            "formatID": 146,
+            "linearTilingFeatures": 0,
+            "optimalTilingFeatures": 0,
+            "bufferFeatures": 0
+        },
+        {
+            "formatID": 147,
+            "linearTilingFeatures": 5121,
+            "optimalTilingFeatures": 5121,
+            "bufferFeatures": 0
+        },
+        {
+            "formatID": 148,
+            "linearTilingFeatures": 5121,
+            "optimalTilingFeatures": 5121,
+            "bufferFeatures": 0
+        },
+        {
+            "formatID": 149,
+            "linearTilingFeatures": 5121,
+            "optimalTilingFeatures": 5121,
+            "bufferFeatures": 0
+        },
+        {
+            "formatID": 150,
+            "linearTilingFeatures": 5121,
+            "optimalTilingFeatures": 5121,
+            "bufferFeatures": 0
+        },
+        {
+            "formatID": 151,
+            "linearTilingFeatures": 5121,
+            "optimalTilingFeatures": 5121,
+            "bufferFeatures": 0
+        },
+        {
+            "formatID": 152,
+            "linearTilingFeatures": 5121,
+            "optimalTilingFeatures": 5121,
+            "bufferFeatures": 0
+        },
+        {
+            "formatID": 153,
+            "linearTilingFeatures": 5121,
+            "optimalTilingFeatures": 5121,
+            "bufferFeatures": 0
+        },
+        {
+            "formatID": 154,
+            "linearTilingFeatures": 5121,
+            "optimalTilingFeatures": 5121,
+            "bufferFeatures": 0
+        },
+        {
+            "formatID": 155,
+            "linearTilingFeatures": 5121,
+            "optimalTilingFeatures": 5121,
+            "bufferFeatures": 0
+        },
+        {
+            "formatID": 156,
+            "linearTilingFeatures": 5121,
+            "optimalTilingFeatures": 5121,
+            "bufferFeatures": 0
+        },
+        {
+            "formatID": 157,
+            "linearTilingFeatures": 5121,
+            "optimalTilingFeatures": 5121,
+            "bufferFeatures": 0
+        },
+        {
+            "formatID": 158,
+            "linearTilingFeatures": 5121,
+            "optimalTilingFeatures": 5121,
+            "bufferFeatures": 0
+        },
+        {
+            "formatID": 159,
+            "linearTilingFeatures": 5121,
+            "optimalTilingFeatures": 5121,
+            "bufferFeatures": 0
+        },
+        {
+            "formatID": 160,
+            "linearTilingFeatures": 5121,
+            "optimalTilingFeatures": 5121,
+            "bufferFeatures": 0
+        },
+        {
+            "formatID": 161,
+            "linearTilingFeatures": 5121,
+            "optimalTilingFeatures": 5121,
+            "bufferFeatures": 0
+        },
+        {
+            "formatID": 162,
+            "linearTilingFeatures": 5121,
+            "optimalTilingFeatures": 5121,
+            "bufferFeatures": 0
+        },
+        {
+            "formatID": 163,
+            "linearTilingFeatures": 5121,
+            "optimalTilingFeatures": 5121,
+            "bufferFeatures": 0
+        },
+        {
+            "formatID": 164,
+            "linearTilingFeatures": 5121,
+            "optimalTilingFeatures": 5121,
+            "bufferFeatures": 0
+        },
+        {
+            "formatID": 165,
+            "linearTilingFeatures": 5121,
+            "optimalTilingFeatures": 5121,
+            "bufferFeatures": 0
+        },
+        {
+            "formatID": 166,
+            "linearTilingFeatures": 5121,
+            "optimalTilingFeatures": 5121,
+            "bufferFeatures": 0
+        },
+        {
+            "formatID": 167,
+            "linearTilingFeatures": 5121,
+            "optimalTilingFeatures": 5121,
+            "bufferFeatures": 0
+        },
+        {
+            "formatID": 168,
+            "linearTilingFeatures": 5121,
+            "optimalTilingFeatures": 5121,
+            "bufferFeatures": 0
+        },
+        {
+            "formatID": 169,
+            "linearTilingFeatures": 5121,
+            "optimalTilingFeatures": 5121,
+            "bufferFeatures": 0
+        },
+        {
+            "formatID": 170,
+            "linearTilingFeatures": 5121,
+            "optimalTilingFeatures": 5121,
+            "bufferFeatures": 0
+        },
+        {
+            "formatID": 171,
+            "linearTilingFeatures": 5121,
+            "optimalTilingFeatures": 5121,
+            "bufferFeatures": 0
+        },
+        {
+            "formatID": 172,
+            "linearTilingFeatures": 5121,
+            "optimalTilingFeatures": 5121,
+            "bufferFeatures": 0
+        },
+        {
+            "formatID": 173,
+            "linearTilingFeatures": 5121,
+            "optimalTilingFeatures": 5121,
+            "bufferFeatures": 0
+        },
+        {
+            "formatID": 174,
+            "linearTilingFeatures": 5121,
+            "optimalTilingFeatures": 5121,
+            "bufferFeatures": 0
+        },
+        {
+            "formatID": 175,
+            "linearTilingFeatures": 5121,
+            "optimalTilingFeatures": 5121,
+            "bufferFeatures": 0
+        },
+        {
+            "formatID": 176,
+            "linearTilingFeatures": 5121,
+            "optimalTilingFeatures": 5121,
+            "bufferFeatures": 0
+        },
+        {
+            "formatID": 177,
+            "linearTilingFeatures": 5121,
+            "optimalTilingFeatures": 5121,
+            "bufferFeatures": 0
+        },
+        {
+            "formatID": 178,
+            "linearTilingFeatures": 5121,
+            "optimalTilingFeatures": 5121,
+            "bufferFeatures": 0
+        },
+        {
+            "formatID": 179,
+            "linearTilingFeatures": 5121,
+            "optimalTilingFeatures": 5121,
+            "bufferFeatures": 0
+        },
+        {
+            "formatID": 180,
+            "linearTilingFeatures": 5121,
+            "optimalTilingFeatures": 5121,
+            "bufferFeatures": 0
+        },
+        {
+            "formatID": 181,
+            "linearTilingFeatures": 5121,
+            "optimalTilingFeatures": 5121,
+            "bufferFeatures": 0
+        },
+        {
+            "formatID": 182,
+            "linearTilingFeatures": 5121,
+            "optimalTilingFeatures": 5121,
+            "bufferFeatures": 0
+        },
+        {
+            "formatID": 183,
+            "linearTilingFeatures": 5121,
+            "optimalTilingFeatures": 5121,
+            "bufferFeatures": 0
+        },
+        {
+            "formatID": 184,
+            "linearTilingFeatures": 5121,
+            "optimalTilingFeatures": 5121,
+            "bufferFeatures": 0
+        }
+    ]
+}

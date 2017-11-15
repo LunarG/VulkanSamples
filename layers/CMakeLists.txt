@@ -39,6 +39,14 @@ set(LAYER_JSON_FILES_NO_DEPENDENCIES
 
 set(LAYER_JSON_FILES ${LAYER_JSON_FILES_WITH_DEPENDENCIES} ${LAYER_JSON_FILES_NO_DEPENDENCIES})
 
+set(LAYER_BINARY_JSON_FILES
+    VkLayer_device_simulation
+    )
+
+set(LAYER_BINARY_FILES
+    libVkLayer_device_simulation
+    )
+
 if (WIN32)
     if (NOT (CMAKE_CURRENT_SOURCE_DIR STREQUAL CMAKE_CURRENT_BINARY_DIR))
         if (CMAKE_GENERATOR MATCHES "^Visual Studio.*")
@@ -77,6 +85,18 @@ else()
                 VERBATIM
                 )
         endforeach(config_file)
+        foreach (config_file ${LAYER_BINARY_JSON_FILES})
+            add_custom_target(${config_file}-json ALL
+                COMMAND ln -sf ${CMAKE_CURRENT_SOURCE_DIR}/linux/${config_file}.json
+                VERBATIM
+                )
+        endforeach(config_file)
+        foreach (config_file ${LAYER_BINARY_FILES})
+            add_custom_target(${config_file}-so ALL
+                COMMAND ln -sf ${CMAKE_CURRENT_SOURCE_DIR}/linux/${config_file}.so
+                VERBATIM
+                )
+        endforeach(config_file)
         # Add link to vk_validation_error_messages.h in build dir for scripts to pick up
         add_custom_target(vk_validation_error_messages ALL
             COMMAND ln -sf ${CMAKE_CURRENT_SOURCE_DIR}/vk_validation_error_messages.h
@@ -84,7 +104,7 @@ else()
             )
     endif()
 endif()
-# If a layer has a direcgt dependency on a project with the same name, use it.
+# If a layer has a direct dependency on a project with the same name, use it.
 foreach (config_file ${LAYER_JSON_FILES_WITH_DEPENDENCIES})
     add_dependencies(${config_file}-json ${config_file})
 endforeach(config_file)
@@ -92,7 +112,14 @@ endforeach(config_file)
 foreach (config_file ${LAYER_JSON_FILES_NO_DEPENDENCIES})
     add_dependencies(${config_file}-json VkLayer_utils)
 endforeach(config_file)
-
+if(UNIX)
+    foreach (config_file ${LAYER_BINARY_JSON_FILES})
+        add_dependencies(${config_file}-json VkLayer_utils)
+    endforeach(config_file)
+    foreach (config_file ${LAYER_BINARY_FILES})
+        add_dependencies(${config_file}-so VkLayer_utils)
+    endforeach(config_file)
+endif()
 
 # Add targets for JSON file install on Linux.
 # Need to remove the "./" from the library path before installing to /etc.
