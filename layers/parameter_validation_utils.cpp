@@ -975,6 +975,9 @@ bool pv_vkCreateGraphicsPipelines(VkDevice device, VkPipelineCache pipelineCache
             bool has_dynamic_viewport = false;
             bool has_dynamic_scissor = false;
             bool has_dynamic_line_width = false;
+            bool has_dynamic_viewport_w_scaling_nv = false;
+            bool has_dynamic_discard_rectangle_ext = false;
+            bool has_dynamic_sample_locations_ext = false;
             if (pCreateInfos[i].pDynamicState != nullptr) {
                 const auto &dynamic_state_info = *pCreateInfos[i].pDynamicState;
                 for (uint32_t state_index = 0; state_index < dynamic_state_info.dynamicStateCount; ++state_index) {
@@ -982,6 +985,9 @@ bool pv_vkCreateGraphicsPipelines(VkDevice device, VkPipelineCache pipelineCache
                     if (dynamic_state == VK_DYNAMIC_STATE_VIEWPORT) has_dynamic_viewport = true;
                     if (dynamic_state == VK_DYNAMIC_STATE_SCISSOR) has_dynamic_scissor = true;
                     if (dynamic_state == VK_DYNAMIC_STATE_LINE_WIDTH) has_dynamic_line_width = true;
+                    if (dynamic_state == VK_DYNAMIC_STATE_VIEWPORT_W_SCALING_NV) has_dynamic_viewport_w_scaling_nv = true;
+                    if (dynamic_state == VK_DYNAMIC_STATE_DISCARD_RECTANGLE_EXT) has_dynamic_discard_rectangle_ext = true;
+                    if (dynamic_state == VK_DYNAMIC_STATE_SAMPLE_LOCATIONS_EXT) has_dynamic_sample_locations_ext = true;
                 }
             }
 
@@ -1221,6 +1227,36 @@ bool pv_vkCreateGraphicsPipelines(VkDevice device, VkPipelineCache pipelineCache
                     }
 
                     // TODO: validate the VkViewports in pViewports here
+
+                    if (has_dynamic_viewport_w_scaling_nv && !device_data->extensions.vk_nv_clip_space_w_scaling) {
+                        skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_PIPELINE_EXT,
+                                        VK_NULL_HANDLE, __LINE__, EXTENSION_NOT_ENABLED, LayerName,
+                                        "vkCreateGraphicsPipelines: pCreateInfos[%" PRIu32
+                                        "].pDynamicState->pDynamicStates "
+                                        "contains VK_DYNAMIC_STATE_VIEWPORT_W_SCALING_NV, but "
+                                        "VK_NV_clip_space_w_scaling extension is not enabled.",
+                                        i);
+                    }
+
+                    if (has_dynamic_discard_rectangle_ext && !device_data->extensions.vk_ext_discard_rectangles) {
+                        skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_PIPELINE_EXT,
+                                        VK_NULL_HANDLE, __LINE__, EXTENSION_NOT_ENABLED, LayerName,
+                                        "vkCreateGraphicsPipelines: pCreateInfos[%" PRIu32
+                                        "].pDynamicState->pDynamicStates "
+                                        "contains VK_DYNAMIC_STATE_DISCARD_RECTANGLE_EXT, but "
+                                        "VK_EXT_discard_rectangles extension is not enabled.",
+                                        i);
+                    }
+
+                    if (has_dynamic_sample_locations_ext && !device_data->extensions.vk_ext_sample_locations) {
+                        skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_PIPELINE_EXT,
+                                        VK_NULL_HANDLE, __LINE__, EXTENSION_NOT_ENABLED, LayerName,
+                                        "vkCreateGraphicsPipelines: pCreateInfos[%" PRIu32
+                                        "].pDynamicState->pDynamicStates "
+                                        "contains VK_DYNAMIC_STATE_SAMPLE_LOCATIONS_EXT, but "
+                                        "VK_EXT_sample_locations extension is not enabled.",
+                                        i);
+                    }
                 }
 
                 if (pCreateInfos[i].pMultisampleState == nullptr) {

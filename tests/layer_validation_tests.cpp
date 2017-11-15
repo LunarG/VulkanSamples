@@ -9804,6 +9804,43 @@ TEST_F(VkLayerTest, PSOViewportStateTests) {
     }
 }
 
+// Set Extension dynamic states without enabling the required Extensions.
+TEST_F(VkLayerTest, ExtensionDynamicStatesSetWOExtensionEnabled) {
+    TEST_DESCRIPTION("Create a graphics pipeline with Extension dynamic states without enabling the required Extensions.");
+
+    ASSERT_NO_FATAL_FAILURE(Init());
+    ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
+
+    using std::vector;
+    struct TestCase {
+        uint32_t dynamic_state_count;
+        VkDynamicState dynamic_state;
+
+        char const *errmsg;
+    };
+
+    vector<TestCase> dyn_test_cases = {
+        {1, VK_DYNAMIC_STATE_VIEWPORT_W_SCALING_NV,
+         "contains VK_DYNAMIC_STATE_VIEWPORT_W_SCALING_NV, but VK_NV_clip_space_w_scaling"},
+        {1, VK_DYNAMIC_STATE_DISCARD_RECTANGLE_EXT,
+         "contains VK_DYNAMIC_STATE_DISCARD_RECTANGLE_EXT, but VK_EXT_discard_rectangles"},
+        {1, VK_DYNAMIC_STATE_SAMPLE_LOCATIONS_EXT, "contains VK_DYNAMIC_STATE_SAMPLE_LOCATIONS_EXT, but VK_EXT_sample_locations"},
+    };
+
+    for (const auto &test_case : dyn_test_cases) {
+        VkDynamicState state[1];
+        state[0] = test_case.dynamic_state;
+        const auto break_vp = [&](CreatePipelineHelper &helper) {
+            VkPipelineDynamicStateCreateInfo dyn_state_ci = {};
+            dyn_state_ci.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
+            dyn_state_ci.dynamicStateCount = test_case.dynamic_state_count;
+            dyn_state_ci.pDynamicStates = state;
+            helper.dyn_state_ci_ = dyn_state_ci;
+        };
+        CreatePipelineHelper::OneshotTest(*this, break_vp, VK_DEBUG_REPORT_ERROR_BIT_EXT, test_case.errmsg);
+    }
+}
+
 TEST_F(VkLayerTest, PSOViewportStateMultiViewportTests) {
     TEST_DESCRIPTION("Test VkPipelineViewportStateCreateInfo viewport and scissor count validation for multiViewport feature");
 
