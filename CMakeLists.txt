@@ -175,10 +175,10 @@ if (WIN32)
         set (SPIRV_TOOLS_OPT_SEARCH_PATH "${SPIRV_TOOLS_OPT_BINARY_ROOT}/${BUILDTGT_DIR}/source/opt/${RELEASE_DECORATION}")
         set (SPIRV_TOOLS_OPT_DEBUG_SEARCH_PATH "${SPIRV_TOOLS_OPT_BINARY_ROOT}/${BUILDTGT_DIR}/source/opt/${DEBUG_DECORATION}")
     else()
-        set (SPIRV_TOOLS_SEARCH_PATH "${EXTERNAL_SOURCE_ROOT}/spirv-tools/${BUILDTGT_DIR}/source/${RELEASE_DECORATION}")
-        set (SPIRV_TOOLS_DEBUG_SEARCH_PATH "${EXTERNAL_SOURCE_ROOT}/spirv-tools/${BUILDTGT_DIR}/source/${DEBUG_DECORATION}")
-        set (SPIRV_TOOLS_OPT_SEARCH_PATH "${EXTERNAL_SOURCE_ROOT}/spirv-tools/${BUILDTGT_DIR}/source/opt/${RELEASE_DECORATION}")
-        set (SPIRV_TOOLS_OPT_DEBUG_SEARCH_PATH "${EXTERNAL_SOURCE_ROOT}/spirv-tools/${BUILDTGT_DIR}/source/opt/${DEBUG_DECORATION}")
+        set (SPIRV_TOOLS_SEARCH_PATH "${EXTERNAL_SOURCE_ROOT}/glslang/${BUILDTGT_DIR}/External/spirv-tools/source/${RELEASE_DECORATION}")
+        set (SPIRV_TOOLS_DEBUG_SEARCH_PATH "${EXTERNAL_SOURCE_ROOT}/glslang/${BUILDTGT_DIR}/External/spirv-tools/source/${DEBUG_DECORATION}")
+        set (SPIRV_TOOLS_OPT_SEARCH_PATH "${EXTERNAL_SOURCE_ROOT}/glslang/${BUILDTGT_DIR}/External/spirv-tools/source/opt/${RELEASE_DECORATION}")
+        set (SPIRV_TOOLS_OPT_DEBUG_SEARCH_PATH "${EXTERNAL_SOURCE_ROOT}/glslang/${BUILDTGT_DIR}/External/spirv-tools/source/opt/${DEBUG_DECORATION}")
     endif()
 else()
     # not WIN32
@@ -198,8 +198,8 @@ else()
         set (SPIRV_TOOLS_SEARCH_PATH "${SPIRV_TOOLS_BINARY_ROOT}/source" )
         set (SPIRV_TOOLS_OPT_SEARCH_PATH "${SPIRV_TOOLS_OPT_BINARY_ROOT}/source/opt" )
     else()
-        set (SPIRV_TOOLS_SEARCH_PATH "${EXTERNAL_SOURCE_ROOT}/spirv-tools/${BUILDTGT_DIR}/source" "${CMAKE_SOURCE_DIR}/../x86_64/lib/spirv-tools" )
-        set (SPIRV_TOOLS_OPT_SEARCH_PATH "${EXTERNAL_SOURCE_ROOT}/spirv-tools/${BUILDTGT_DIR}/source/opt" "${CMAKE_SOURCE_DIR}/../x86_64/lib/spirv-tools" )
+        set (SPIRV_TOOLS_SEARCH_PATH "${EXTERNAL_SOURCE_ROOT}/glslang/${BUILDTGT_DIR}/External/spirv-tools/source" "${CMAKE_SOURCE_DIR}/../x86_64/lib/spirv-tools" )
+        set (SPIRV_TOOLS_OPT_SEARCH_PATH "${EXTERNAL_SOURCE_ROOT}/glslang/${BUILDTGT_DIR}/External/spirv-tools/source/opt" "${CMAKE_SOURCE_DIR}/../x86_64/lib/spirv-tools" )
     endif()
 endif()
 
@@ -212,11 +212,8 @@ find_path(GLSLANG_SPIRV_INCLUDE_DIR SPIRV/spirv.hpp HINTS "${EXTERNAL_SOURCE_ROO
                                                     "${CMAKE_SOURCE_DIR}/../glslang"
                                               DOC "Path to SPIRV/spirv.hpp")
 
-find_path(SPIRV_TOOLS_INCLUDE_DIR spirv-tools/libspirv.h HINTS "${EXTERNAL_SOURCE_ROOT}/spirv-tools/include"
-                                                   "${EXTERNAL_SOURCE_ROOT}/SPIRV-Tools/include"
-                                                   "${CMAKE_SOURCE_DIR}/../spirv-tools/include"
-                                                   "${CMAKE_SOURCE_DIR}/../SPIRV-Tools/include"
-                                                   "${EXTERNAL_SOURCE_ROOT}/source/spirv-tools/external/include"
+find_path(SPIRV_TOOLS_INCLUDE_DIR spirv-tools/libspirv.h HINTS "${EXTERNAL_SOURCE_ROOT}/glslang/External/spirv-tools/include"
+                                                   "${CMAKE_SOURCE_DIR}/../glslang/External/spirv-tools/include"
                                              DOC "Path to spirv-tools/libspirv.h")
 
 find_library(GLSLANG_LIB NAMES glslang
@@ -266,9 +263,9 @@ if (WIN32)
                  HINTS ${GLSLANG_DEBUG_SEARCH_PATH} )
     find_library(SPIRV_REMAPPER_DLIB NAMES SPVRemapperd
                  HINTS ${GLSLANG_DEBUG_SEARCH_PATH} )
-    find_library(SPIRV_TOOLS_DLIB NAMES SPIRV-Tools
+    find_library(SPIRV_TOOLS_DLIB NAMES SPIRV-Toolsd
                  HINTS ${SPIRV_TOOLS_DEBUG_SEARCH_PATH} )
-    find_library(SPIRV_TOOLS_OPT_DLIB NAMES SPIRV-Tools-opt
+    find_library(SPIRV_TOOLS_OPT_DLIB NAMES SPIRV-Tools-optd
                  HINTS ${SPIRV_TOOLS_OPT_DEBUG_SEARCH_PATH} )
 
     set_target_properties(glslang PROPERTIES
