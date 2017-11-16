@@ -1192,6 +1192,37 @@ struct CreatePipelineHelper {
         }
     };
 };
+namespace chain_util {
+template <typename T>
+T Init(const void *pnext_in = nullptr) {
+    T pnext_obj = {};
+    pnext_obj.sType = LvlTypeMap<T>::kSType;
+    pnext_obj.pNext = pnext_in;
+    return pnext_obj;
+}
+class ExtensionChain {
+    const void *head_ = nullptr;
+    typedef std::function<bool(const char *)> AddIfFunction;
+    AddIfFunction add_if_;
+    typedef std::vector<const char *> List;
+    List *list_;
+
+   public:
+    template <typename F>
+    ExtensionChain(F &add_if, List *list) : add_if_(add_if), list_(list) {}
+    template <typename T>
+    void Add(const char *name, T &obj) {
+        if (add_if_(name)) {
+            if (list_) {
+                list_->push_back(name);
+            }
+            obj.pNext = head_;
+            head_ = &obj;
+        }
+    }
+    const void *Head() const { return head_; }
+};
+};  // namespace chain_util
 
 // ********************************************************************************************************************
 // ********************************************************************************************************************
@@ -9336,6 +9367,37 @@ TEST_F(VkLayerTest, InvalidPipelineSampleRateFeatureEnable) {
     range_test(NextAfterGreater(1.0F));
     range_test(0.0, /* positive_test= */ true);
     range_test(1.0, /* positive_test= */ true);
+}
+
+TEST_F(VkLayerTest, InvalidPipelineSamplePNext) {
+    // Enable sample shading in pipeline when the feature is disabled.
+    ASSERT_NO_FATAL_FAILURE(InitFramework(myDbgFunc, m_errorMonitor));
+
+    // Set up the extension structs
+    auto sampleLocations = chain_util::Init<VkPipelineSampleLocationsStateCreateInfoEXT>();
+    auto coverageToColor = chain_util::Init<VkPipelineCoverageToColorStateCreateInfoNV>();
+    auto coverageModulation = chain_util::Init<VkPipelineCoverageModulationStateCreateInfoNV>();
+    auto discriminatrix = [this](const char *name) { return DeviceExtensionSupported(gpu(), nullptr, name); };
+    chain_util::ExtensionChain chain(discriminatrix, &m_device_extension_names);
+    chain.Add(VK_EXT_SAMPLE_LOCATIONS_EXTENSION_NAME, sampleLocations);
+    chain.Add(VK_NV_FRAGMENT_COVERAGE_TO_COLOR_EXTENSION_NAME, coverageToColor);
+    chain.Add(VK_NV_FRAMEBUFFER_MIXED_SAMPLES_EXTENSION_NAME, coverageModulation);
+    const void *extension_head = chain.Head();
+
+    ASSERT_NO_FATAL_FAILURE(InitState());
+    ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
+
+    if (extension_head) {
+        auto good_chain = [extension_head](CreatePipelineHelper &helper) { helper.pipe_ms_state_ci_.pNext = extension_head; };
+        CreatePipelineHelper::OneshotTest(*this, good_chain, (VK_DEBUG_REPORT_ERROR_BIT_EXT | VK_DEBUG_REPORT_WARNING_BIT_EXT),
+                                          "No error", true);
+    } else {
+        printf("             Required extension not present -- skipping positive checks.\n");
+    }
+
+    auto instance_ci = chain_util::Init<VkInstanceCreateInfo>();
+    auto bad_chain = [&instance_ci](CreatePipelineHelper &helper) { helper.pipe_ms_state_ci_.pNext = &instance_ci; };
+    CreatePipelineHelper::OneshotTest(*this, bad_chain, VK_DEBUG_REPORT_WARNING_BIT_EXT, VALIDATION_ERROR_1001c40d);
 }
 
 /*// TODO : This test should be good, but needs Tess support in compiler to run
