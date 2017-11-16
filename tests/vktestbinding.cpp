@@ -422,7 +422,7 @@ void DeviceMemory::unmap() const { vkUnmapMemory(device(), handle()); }
 VkMemoryAllocateInfo DeviceMemory::get_resource_alloc_info(const Device &dev, const VkMemoryRequirements &reqs,
                                                            VkMemoryPropertyFlags mem_props) {
     VkMemoryAllocateInfo info = alloc_info(reqs.size, 0);
-    dev.phy().set_memory_type(reqs.memoryTypeBits, &info, mem_props);
+    EXPECT(dev.phy().set_memory_type(reqs.memoryTypeBits, &info, mem_props));
     return info;
 }
 

@@ -25579,7 +25579,7 @@ TEST_F(VkPositiveLayerTest, ClearDepthStencilWithValidRange) {
 }
 
 TEST_F(VkPositiveLayerTest, ExternalMemory) {
-    TEST_DESCRIPTION("Perform a copy from a buffer backed by external memory");
+    TEST_DESCRIPTION("Perform a copy through a pair of buffers linked by external memory");
 
 #ifdef _WIN32
     const auto extension_name = VK_KHR_EXTERNAL_MEMORY_WIN32_EXTENSION_NAME;
@@ -25599,6 +25599,34 @@ TEST_F(VkPositiveLayerTest, ExternalMemory) {
     }
     ASSERT_NO_FATAL_FAILURE(InitFramework(myDbgFunc, m_errorMonitor));
 
+    // Check for import/export capability
+    VkPhysicalDeviceExternalBufferInfoKHR ebi = {VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_EXTERNAL_BUFFER_INFO_KHR, nullptr, 0,
+                                                 VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, handle_type};
+    VkExternalBufferPropertiesKHR ebp = {VK_STRUCTURE_TYPE_EXTERNAL_BUFFER_PROPERTIES_KHR, nullptr, {0, 0, 0}};
+    auto vkGetPhysicalDeviceExternalBufferPropertiesKHR = (PFN_vkGetPhysicalDeviceExternalBufferPropertiesKHR)vkGetInstanceProcAddr(
+        instance(), "vkGetPhysicalDeviceExternalBufferPropertiesKHR");
+    ASSERT_TRUE(vkGetPhysicalDeviceExternalBufferPropertiesKHR != nullptr);
+    vkGetPhysicalDeviceExternalBufferPropertiesKHR(gpu(), &ebi, &ebp);
+    if (!(ebp.externalMemoryProperties.compatibleHandleTypes & handle_type) ||
+        !(ebp.externalMemoryProperties.externalMemoryFeatures & VK_EXTERNAL_MEMORY_FEATURE_EXPORTABLE_BIT_KHR) ||
+        !(ebp.externalMemoryProperties.externalMemoryFeatures & VK_EXTERNAL_MEMORY_FEATURE_IMPORTABLE_BIT_KHR)) {
+        printf("             External buffer does not support importing and exporting, skipping test\n");
+        return;
+    }
+
+    // Check if dedicated allocation is required
+    bool dedicated_allocation =
+        ebp.externalMemoryProperties.externalMemoryFeatures & VK_EXTERNAL_MEMORY_FEATURE_DEDICATED_ONLY_BIT_KHR;
+    if (dedicated_allocation) {
+        if (DeviceExtensionSupported(gpu(), nullptr, VK_KHR_DEDICATED_ALLOCATION_EXTENSION_NAME)) {
+            m_device_extension_names.push_back(VK_KHR_DEDICATED_ALLOCATION_EXTENSION_NAME);
+            m_device_extension_names.push_back(VK_KHR_GET_MEMORY_REQUIREMENTS_2_EXTENSION_NAME);
+        } else {
+            printf("             Dedicated allocation extension not supported, skipping test\n");
+            return;
+        }
+    }
+
     // Check for external memory device extensions
     if (DeviceExtensionSupported(gpu(), nullptr, extension_name)) {
         m_device_extension_names.push_back(extension_name);
@@ -25609,32 +25637,42 @@ TEST_F(VkPositiveLayerTest, ExternalMemory) {
     }
     ASSERT_NO_FATAL_FAILURE(InitState());
 
-    // Check for import/export capability
-    VkPhysicalDeviceExternalBufferInfoKHR ebi = {VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_EXTERNAL_BUFFER_INFO_KHR, nullptr, 0,
-                                                 VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, handle_type};
-    VkExternalBufferPropertiesKHR ebp = {VK_STRUCTURE_TYPE_EXTERNAL_BUFFER_PROPERTIES_KHR, nullptr, {0, 0, 0}};
-    auto vkGetPhysicalDeviceExternalBufferPropertiesKHR = (PFN_vkGetPhysicalDeviceExternalBufferPropertiesKHR)vkGetInstanceProcAddr(
-        instance(), "vkGetPhysicalDeviceExternalBufferPropertiesKHR");
-    ASSERT_TRUE(vkGetPhysicalDeviceExternalBufferPropertiesKHR != nullptr);
-    vkGetPhysicalDeviceExternalBufferPropertiesKHR(gpu(), &ebi, &ebp);
-    if (!(ebp.externalMemoryProperties.compatibleHandleTypes & handle_type)) {
-        printf("             External buffer does not support importing and exporting, skipping test\n");
-        return;
-    }
-
     m_errorMonitor->ExpectSuccess(VK_DEBUG_REPORT_ERROR_BIT_EXT | VK_DEBUG_REPORT_WARNING_BIT_EXT);
 
-    VkMemoryPropertyFlags mem_flags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
-    const VkDeviceSize buffer_size = 32;
+    VkMemoryPropertyFlags mem_flags = 0;
+    const VkDeviceSize buffer_size = 1024;
 
-    // Create source buffer
-    vk_testing::Buffer buffer_src;
-    buffer_src.init_no_mem(*m_device, vk_testing::Buffer::create_info(buffer_size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT));
+    // Create export and import buffers
+    const VkExternalMemoryBufferCreateInfoKHR external_buffer_info = {VK_STRUCTURE_TYPE_EXTERNAL_MEMORY_BUFFER_CREATE_INFO_KHR,
+                                                                      nullptr, handle_type};
+    auto buffer_info =
+        vk_testing::Buffer::create_info(buffer_size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT);
+    buffer_info.pNext = &external_buffer_info;
+    vk_testing::Buffer buffer_export;
+    buffer_export.init_no_mem(*m_device, buffer_info);
+    vk_testing::Buffer buffer_import;
+    buffer_import.init_no_mem(*m_device, buffer_info);
 
-    // Allocate memory
+    // Allocation info
+    auto alloc_info = vk_testing::DeviceMemory::get_resource_alloc_info(*m_device, buffer_export.memory_requirements(), mem_flags);
+
+    // Add export allocation info to pNext chain
+    VkExportMemoryAllocateInfoKHR export_info = {VK_STRUCTURE_TYPE_EXPORT_MEMORY_ALLOCATE_INFO_KHR, nullptr, handle_type};
+    alloc_info.pNext = &export_info;
+
+    // Add dedicated allocation info to pNext chain if required
+    VkMemoryDedicatedAllocateInfoKHR dedicated_info = {VK_STRUCTURE_TYPE_MEMORY_DEDICATED_ALLOCATE_INFO_KHR, nullptr,
+                                                       VK_NULL_HANDLE, buffer_export.handle()};
+    if (dedicated_allocation) {
+        export_info.pNext = &dedicated_info;
+    }
+
+    // Allocate memory to be exported
     vk_testing::DeviceMemory memory_export;
-    auto alloc_info = vk_testing::DeviceMemory::get_resource_alloc_info(*m_device, buffer_src.memory_requirements(), mem_flags);
     memory_export.init(*m_device, alloc_info);
+
+    // Bind exported memory
+    buffer_export.bind_memory(memory_export, 0);
 
 #ifdef _WIN32
     // Export memory to handle
@@ -25659,24 +25697,45 @@ TEST_F(VkPositiveLayerTest, ExternalMemory) {
 #endif
 
     // Import memory
-    vk_testing::DeviceMemory memory_import;
+    alloc_info = vk_testing::DeviceMemory::get_resource_alloc_info(*m_device, buffer_import.memory_requirements(), mem_flags);
     alloc_info.pNext = &import_info;
+    vk_testing::DeviceMemory memory_import;
     memory_import.init(*m_device, alloc_info);
 
-    // Bind source buffer to external memory
-    buffer_src.bind_memory(memory_import, 0);
+    // Bind imported memory
+    buffer_import.bind_memory(memory_import, 0);
 
-    // Create destination buffer because we need a target for the copy
-    vk_testing::Buffer buffer_dst;
-    vk_testing::Buffer buffer;
-    buffer_dst.init_as_dst(*m_device, buffer_size, mem_flags);
+    // Create test buffers and fill input buffer
+    VkMemoryPropertyFlags mem_prop = VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
+    vk_testing::Buffer buffer_input;
+    buffer_input.init_as_src_and_dst(*m_device, buffer_size, mem_prop);
+    auto input_mem = (uint8_t *)buffer_input.memory().map();
+    for (int i = 0; i < buffer_size; i++) {
+        input_mem[i] = (i & 0xFF);
+    }
+    buffer_input.memory().unmap();
+    vk_testing::Buffer buffer_output;
+    buffer_output.init_as_src_and_dst(*m_device, buffer_size, mem_prop);
 
-    // Copy from source buffer with external backing memory
+    // Copy from input buffer to output buffer through the exported/imported memory
     m_commandBuffer->begin();
     VkBufferCopy copy_info = {0, 0, buffer_size};
-    vkCmdCopyBuffer(m_commandBuffer->handle(), buffer_src.handle(), buffer_dst.handle(), 1, &copy_info);
+    vkCmdCopyBuffer(m_commandBuffer->handle(), buffer_input.handle(), buffer_export.handle(), 1, &copy_info);
+    // Insert memory barrier to guarantee copy order
+    VkMemoryBarrier mem_barrier = {VK_STRUCTURE_TYPE_MEMORY_BARRIER, nullptr, VK_ACCESS_TRANSFER_WRITE_BIT,
+                                   VK_ACCESS_TRANSFER_READ_BIT};
+    vkCmdPipelineBarrier(m_commandBuffer->handle(), VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 1,
+                         &mem_barrier, 0, nullptr, 0, nullptr);
+    vkCmdCopyBuffer(m_commandBuffer->handle(), buffer_import.handle(), buffer_output.handle(), 1, &copy_info);
     m_commandBuffer->end();
     m_commandBuffer->QueueCommandBuffer();
+
+    // Verify output buffer
+    auto output_mem = (uint8_t *)buffer_output.memory().map();
+    for (int i = 0; i < buffer_size; i++) {
+        ASSERT_TRUE(output_mem[i] == (i & 0xFF));
+    }
+    buffer_output.memory().unmap();
 
     m_errorMonitor->VerifyNotFound();
 }
