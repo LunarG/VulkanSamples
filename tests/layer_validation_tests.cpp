@@ -9371,9 +9371,9 @@ TEST_F(VkLayerTest, DynViewportAndScissorMismatch) {
 
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
 
+    VkDescriptorSetLayout ds_layout;
     VkPipelineLayout pipeline_layout;
     {
-        VkDescriptorSetLayout ds_layout;
         {
             VkDescriptorSetLayoutCreateInfo ds_layout_ci = {};
             ds_layout_ci.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
@@ -9389,8 +9389,6 @@ TEST_F(VkLayerTest, DynViewportAndScissorMismatch) {
 
         VkResult err = vkCreatePipelineLayout(m_device->device(), &pipeline_layout_ci, nullptr, &pipeline_layout);
         ASSERT_VK_SUCCESS(err);
-
-        vkDestroyDescriptorSetLayout(m_device->device(), ds_layout, nullptr);
     }
 
     VkViewport viewport = {0.0f, 0.0f, 64.0f, 64.0f, 0.0f, 1.0f};
@@ -9448,7 +9446,7 @@ TEST_F(VkLayerTest, DynViewportAndScissorMismatch) {
 
     VkGraphicsPipelineCreateInfo gp_ci = {};
     gp_ci.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
-    gp_ci.stageCount = 2;
+    gp_ci.stageCount = shader_stages_size;
     gp_ci.pStages = shaderStages;
     gp_ci.pVertexInputState = &vi_ci;
     gp_ci.pInputAssemblyState = &ia_ci;
@@ -9494,6 +9492,7 @@ TEST_F(VkLayerTest, DynViewportAndScissorMismatch) {
     vkDestroyPipeline(m_device->device(), pipeline_dyn_vp, nullptr);
     vkDestroyPipeline(m_device->device(), pipeline_dyn_sc, nullptr);
     vkDestroyPipelineLayout(m_device->device(), pipeline_layout, nullptr);
+    vkDestroyDescriptorSetLayout(m_device->device(), ds_layout, nullptr);
 }
 
 TEST_F(VkLayerTest, PSOLineWidthInvalid) {
