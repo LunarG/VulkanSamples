@@ -9359,7 +9359,7 @@ TEST_F(VkLayerTest, PSOViewportStateMultiViewportTests) {
     vkDestroyPipelineLayout(m_device->device(), pipeline_layout, nullptr);
 }
 
-TEST_F(VkLayerTest, DynViewporAndScissorMismatch) {
+TEST_F(VkLayerTest, DynViewportAndScissorMismatch) {
     TEST_DESCRIPTION("Test dynamic viewport and scissor count that does not match count in PSO ");
 
     ASSERT_NO_FATAL_FAILURE(Init());
