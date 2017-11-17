@@ -389,34 +389,30 @@ adb shell am start -a android.intent.action.MAIN -c android-intent.category.LAUN
 The [Qt Creator IDE](https://qt.io/download-open-source/#section-2) can open a root CMakeList.txt as a project directly, and it provides tools within Creator to configure and generate Vulkan SDK build files for one to many targets concurrently, resolving configuration issues as needed. Alternatively, when invoking CMake use the -G Codeblocks Ninja option to generate Ninja build files to be used as project files for QtCreator
 
 - Follow the steps defined elsewhere for the OS using the update\_external\_sources script or as shown in **Loader and Validation Layer Dependencies** below
-- Open, configure, and build the gslang and spirv-tools CMakeList.txt files
+- Open, configure, and build the gslang CMakeList.txt files. Note that building the glslang project will provide access to spirv-tools and spirv-headers.
 - Then do the same with the Vulkan-LoaderAndValidationLayers CMakeList.txt file.
 - In order to debug with QtCreator, a [Microsoft WDK: eg WDK 10](http://go.microsoft.com/fwlink/p/?LinkId=526733) is required. Note that installing the WDK breaks the MSVC vcvarsall.bat build scripts provided by MSVC, requiring that the LIB, INCLUDE, and PATH env variables be set to the WDK paths by some other means
 
 ## Loader and Validation Layer Dependencies
-gslang and SPIRV-Tools repos are required to build and run Loader and Validation Layer components. They are not git sub-modules of Vulkan-LoaderAndValidationLayers but Vulkan-LoaderAndValidationLayers is linked to specific revisions of gslang and spirv-tools. These can be automatically cloned and built to predefined locations with the update\_external\_sources scripts. If a custom configuration is required, do the following steps:
+The gslang repo is required to build and run Loader and Validation Layer components. It is not a git sub-module of Vulkan-LoaderAndValidationLayers but Vulkan-LoaderAndValidationLayers is linked to a specific revision of gslang. This can be automatically cloned and built to predefined locations with the update\_external\_sources scripts. If a custom configuration is required, do the following steps:
 
-1) clone the repos:
+1) clone the repo:
 
     git clone https://github.com/KhronosGroup/glslang.git
-    git clone https://github.com/KhronosGroup/SPIRV-Tools.git
 
-
-2) checkout the correct version of each tree based on the contents of the glslang\_revision and spirv-tools\_revision files at the root of the Vulkan-LoaderAndValidationLayers tree (do the same anytime that Vulkan-LoaderAndValidationLayers is updated from remote)
+2) checkout the correct version of the tree based on the contents of the glslang\_revision file at the root of the Vulkan-LoaderAndValidationLayers tree (do the same anytime that Vulkan-LoaderAndValidationLayers is updated from remote)
 
 _on windows_
 
     git checkout < [path to Vulkan-LoaderAndValidationLayers]\glslang_revision [in glslang repo]
-	git checkout < [path to Vulkan-LoaderAndValidationLayers]\spirv-tools_revision[in spriv-tools repo]
 
 *non windows*
 
     git checkout `cat [path to Vulkan-LoaderAndValidationLayers]\glslang_revision` [in glslang repo]
-	git checkout `cat [path to Vulkan-LoaderAndValidationLayers]\spirv-tools_revision` [in spriv-tools repo]
 
-3) Configure the gslang and spirv-tools source trees with cmake and build them with your IDE of choice
+3) Configure the gslang source tree with cmake and build it with your IDE of choice
 
-4) Enable the CUSTOM\_GSLANG\_BIN\_PATH and CUSTOM\_SPIRV\_TOOLS\_BIN\_PATH options in the Vulkan-LoaderAndValidationLayers cmake configuration and point the GSLANG\_BINARY\_PATH and SPIRV\_TOOLS\_BINARY\_PATH variables to the correct location
+4) Enable the CUSTOM\_GSLANG\_BIN\_PATH and CUSTOM\_SPIRV\_TOOLS\_BIN\_PATH options in the Vulkan-LoaderAndValidationLayers cmake configuration and point the GSLANG\_BINARY\_PATH  and SPIRV\_TOOLS\_BINARY\_PATH variables to the correct location
 
 5) If building on Windows with MSVC, set DISABLE\_BUILDTGT\_DIR\_DECORATION to _On_. If building on Windows, but without MSVC set DISABLE\_BUILD\_PATH\_DECORATION to _On_
 
