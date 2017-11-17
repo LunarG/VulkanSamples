@@ -25540,7 +25540,7 @@ TEST_F(VkPositiveLayerTest, ExternalMemory) {
     vk_testing::Buffer buffer_input;
     buffer_input.init_as_src_and_dst(*m_device, buffer_size, mem_prop);
     auto input_mem = (uint8_t *)buffer_input.memory().map();
-    for (int i = 0; i < buffer_size; i++) {
+    for (uint32_t i = 0; i < buffer_size; i++) {
         input_mem[i] = (i & 0xFF);
     }
     buffer_input.memory().unmap();
@@ -25562,7 +25562,7 @@ TEST_F(VkPositiveLayerTest, ExternalMemory) {
 
     // Verify output buffer
     auto output_mem = (uint8_t *)buffer_output.memory().map();
-    for (int i = 0; i < buffer_size; i++) {
+    for (uint32_t i = 0; i < buffer_size; i++) {
         ASSERT_TRUE(output_mem[i] == (i & 0xFF));
     }
     buffer_output.memory().unmap();
