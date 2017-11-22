@@ -2088,7 +2088,7 @@ Demo::Demo()
                 // Nothing in the pipeline needs to be complete to start, and don't allow fragment
                 // shader to run until layout transition completes
                 set_image_layout(textures[i].image, vk::ImageAspectFlagBits::eColor, vk::ImageLayout::ePreinitialized,
-                                 textures[i].imageLayout, vk::AccessFlagBits::eHostWrite, vk::PipelineStageFlagBits::eTopOfPipe,
+                                 textures[i].imageLayout, vk::AccessFlagBits(), vk::PipelineStageFlagBits::eTopOfPipe,
                                  vk::PipelineStageFlagBits::eFragmentShader);
                 staging_texture.image = vk::Image();
             } else if (props.optimalTilingFeatures & vk::FormatFeatureFlagBits::eSampledImage) {
@@ -2103,11 +2103,11 @@ Demo::Demo()
                                       vk::MemoryPropertyFlagBits::eDeviceLocal);
 
                 set_image_layout(staging_texture.image, vk::ImageAspectFlagBits::eColor, vk::ImageLayout::ePreinitialized,
-                                 vk::ImageLayout::eTransferSrcOptimal, vk::AccessFlagBits::eHostWrite,
+                                 vk::ImageLayout::eTransferSrcOptimal, vk::AccessFlagBits(),
                                  vk::PipelineStageFlagBits::eTopOfPipe, vk::PipelineStageFlagBits::eTransfer);
 
                 set_image_layout(textures[i].image, vk::ImageAspectFlagBits::eColor, vk::ImageLayout::ePreinitialized,
-                                 vk::ImageLayout::eTransferDstOptimal, vk::AccessFlagBits::eHostWrite,
+                                 vk::ImageLayout::eTransferDstOptimal, vk::AccessFlagBits(),
                                  vk::PipelineStageFlagBits::eTopOfPipe, vk::PipelineStageFlagBits::eTransfer);
 
                 auto const subresource = vk::ImageSubresourceLayers()
