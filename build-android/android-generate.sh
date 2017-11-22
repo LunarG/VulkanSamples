@@ -37,5 +37,6 @@ mkdir -p generated/include generated/common
 ( cd generated/include; python3 ../../../scripts/lvl_genvk.py -registry ../../../scripts/vk.xml vk_extension_helper.h )
 ( cd generated/include; python3 ../../../scripts/lvl_genvk.py -registry ../../../scripts/vk.xml object_tracker.cpp )
 ( cd generated/include; python3 ../../../scripts/lvl_genvk.py -registry ../../../scripts/vk.xml vk_typemap_helper.h )
+( cd generated/include; python3 ../../../scripts/external_revision_generator.py ../../../external/spirv-tools ../../../external_revisions/spirv-tools_revision spirv_tools_commit_id.h )
 
 exit 0
