@@ -1100,7 +1100,7 @@ bool pv_vkCreateGraphicsPipelines(VkDevice device, VkPipelineCache pipelineCache
                         if (viewport_state.viewportCount == 0) {
                             skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_PIPELINE_EXT,
                                             VK_NULL_HANDLE, __LINE__, VALIDATION_ERROR_10c30a1b, LayerName,
-                                            "vkCreateGraphicsPipelines: The pCreateInfos[%" PRIu32
+                                            "vkCreateGraphicsPipelines: pCreateInfos[%" PRIu32
                                             "].pViewportState->viewportCount is 0. %s",
                                             i, validation_error_map[VALIDATION_ERROR_10c30a1b]);
                         } else if (viewport_state.viewportCount > device_data->device_limits.maxViewports) {
@@ -1116,7 +1116,7 @@ bool pv_vkCreateGraphicsPipelines(VkDevice device, VkPipelineCache pipelineCache
                         if (viewport_state.scissorCount == 0) {
                             skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_PIPELINE_EXT,
                                             VK_NULL_HANDLE, __LINE__, VALIDATION_ERROR_10c2b61b, LayerName,
-                                            "vkCreateGraphicsPipelines: The pCreateInfos[%" PRIu32
+                                            "vkCreateGraphicsPipelines: pCreateInfos[%" PRIu32
                                             "].pViewportState->scissorCount is 0. %s",
                                             i, validation_error_map[VALIDATION_ERROR_10c2b61b]);
                         } else if (viewport_state.scissorCount > device_data->device_limits.maxViewports) {
@@ -1146,7 +1146,7 @@ bool pv_vkCreateGraphicsPipelines(VkDevice device, VkPipelineCache pipelineCache
                             __LINE__, VALIDATION_ERROR_096005d6, LayerName,
                             "vkCreateGraphicsPipelines: The viewport state is static (pCreateInfos[%" PRIu32
                             "].pDynamicState->pDynamicStates does not contain VK_DYNAMIC_STATE_VIEWPORT), but pCreateInfos[%" PRIu32
-                            "].pViewportState->pViewports (=NULL) is a invalid pointer. %s",
+                            "].pViewportState->pViewports (=NULL) is an invalid pointer. %s",
                             i, i, validation_error_map[VALIDATION_ERROR_096005d6]);
                     }
 
@@ -1156,7 +1156,7 @@ bool pv_vkCreateGraphicsPipelines(VkDevice device, VkPipelineCache pipelineCache
                             __LINE__, VALIDATION_ERROR_096005d8, LayerName,
                             "vkCreateGraphicsPipelines: The scissor state is static (pCreateInfos[%" PRIu32
                             "].pDynamicState->pDynamicStates does not contain VK_DYNAMIC_STATE_SCISSOR), but pCreateInfos[%" PRIu32
-                            "].pViewportState->pScissors (=NULL)  is a invalid pointer. %s",
+                            "].pViewportState->pScissors (=NULL) is an invalid pointer. %s",
                             i, i, validation_error_map[VALIDATION_ERROR_096005d8]);
                     }
 
