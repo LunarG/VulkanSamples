@@ -188,8 +188,7 @@ public:
     }
 private:
     void CommitIdToUuid(const char* commitId, uint8_t uuid[VK_UUID_SIZE]) {
-      size_t commitIdLen = strlen(commitId);
-      assert(commitIdLen/2 >= VK_UUID_SIZE);
+      assert(strlen(commitId)/2 >= VK_UUID_SIZE);
       char str[3] = {};
       for (uint32_t i = 0; i < VK_UUID_SIZE; ++i) {
         str[0] = commitId[2 * i + 0];
