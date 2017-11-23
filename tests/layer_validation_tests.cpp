@@ -11364,6 +11364,46 @@ TEST_F(VkLayerTest, ImageBarrierWithBadRange) {
     }
 }
 
+TEST_F(VkLayerTest, ValidationCacheTestBadMerge) {
+    ASSERT_NO_FATAL_FAILURE(InitFramework(myDbgFunc, m_errorMonitor));
+    if (DeviceExtensionSupported(gpu(), "VK_LAYER_LUNARG_core_validation", VK_EXT_VALIDATION_CACHE_EXTENSION_NAME)) {
+        m_device_extension_names.push_back(VK_EXT_VALIDATION_CACHE_EXTENSION_NAME);
+    } else {
+        printf("             %s not supported, skipping test\n", VK_EXT_VALIDATION_CACHE_EXTENSION_NAME);
+        return;
+    }
+    ASSERT_NO_FATAL_FAILURE(InitState());
+
+    // Load extension functions
+    auto fpCreateValidationCache =
+        (PFN_vkCreateValidationCacheEXT)vkGetDeviceProcAddr(m_device->device(), "vkCreateValidationCacheEXT");
+    auto fpDestroyValidationCache =
+        (PFN_vkDestroyValidationCacheEXT)vkGetDeviceProcAddr(m_device->device(), "vkDestroyValidationCacheEXT");
+    // auto fpGetValidationCacheData =
+    //  (PFN_vkGetValidationCacheDataEXT)vkGetDeviceProcAddr(m_device->device(), "vkGetValidationCacheDataEXT");
+    auto fpMergeValidationCaches =
+        (PFN_vkMergeValidationCachesEXT)vkGetDeviceProcAddr(m_device->device(), "vkMergeValidationCachesEXT");
+    if (!fpCreateValidationCache || !fpDestroyValidationCache || !fpMergeValidationCaches) {
+        printf("             Failed to load function pointers for %s\n", VK_EXT_VALIDATION_CACHE_EXTENSION_NAME);
+        return;
+    }
+
+    VkValidationCacheCreateInfoEXT validationCacheCreateInfo;
+    validationCacheCreateInfo.sType = VK_STRUCTURE_TYPE_VALIDATION_CACHE_CREATE_INFO_EXT;
+    validationCacheCreateInfo.pNext = NULL;
+    validationCacheCreateInfo.initialDataSize = 0;
+    validationCacheCreateInfo.pInitialData = NULL;
+    validationCacheCreateInfo.flags = 0;
+    VkValidationCacheEXT validationCache = VK_NULL_HANDLE;
+    VkResult res = fpCreateValidationCache(m_device->device(), &validationCacheCreateInfo, nullptr, &validationCache);
+
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_3e600c00);
+    res = fpMergeValidationCaches(m_device->device(), validationCache, 1, &validationCache);
+    m_errorMonitor->VerifyFound();
+
+    fpDestroyValidationCache(m_device->device(), validationCache, nullptr);
+}
+
 TEST_F(VkPositiveLayerTest, LayoutFromPresentWithoutAccessMemoryRead) {
     // Transition an image away from PRESENT_SRC_KHR without ACCESS_MEMORY_READ
     // in srcAccessMask.
