@@ -127,7 +127,9 @@ public:
             return;
         if (data[1] != VK_VALIDATION_CACHE_HEADER_VERSION_ONE_EXT)
             return;
-        if (strncmp((const char*)&data[2], SPIRV_TOOLS_COMMIT_ID, 16) != 0)
+        uint8_t expected_uuid[16];
+        CommitIdToUuid(SPIRV_TOOLS_COMMIT_ID, expected_uuid);
+        if (memcmp(&data[2], expected_uuid, 16) != 0)
             return;  // different version
 
         data += 6;
@@ -156,12 +158,9 @@ public:
         // Write the header
         *out++ = headerSize;
         *out++ = VK_VALIDATION_CACHE_HEADER_VERSION_ONE_EXT;
-        size_t commitIdSize = strlen(SPIRV_TOOLS_COMMIT_ID);
-        if (commitIdSize > 16) {
-            commitIdSize = 16;
-        }
-        out[0] = out[1] = out[2] = out[3] = 0;
-        memcpy(out, SPIRV_TOOLS_COMMIT_ID, commitIdSize);
+        // Convert SPIRV-Tools commit ID (as a string of hexadecimal digits) into bytes,
+        // and write as many bytes as will fit into the header as a UUID.
+        CommitIdToUuid(SPIRV_TOOLS_COMMIT_ID, reinterpret_cast<uint8_t*>(out));
         out += 4;
 
         for (auto it = good_shader_hashes.begin();
@@ -186,6 +185,17 @@ public:
 
     void Insert(uint32_t hash) {
         good_shader_hashes.insert(hash);
+    }
+private:
+    void CommitIdToUuid(const char* commitId, uint8_t uuid[VK_UUID_SIZE]) {
+      size_t commitIdLen = strlen(commitId);
+      assert(commitIdLen/2 >= VK_UUID_SIZE);
+      char str[3] = {};
+      for (uint32_t i = 0; i < VK_UUID_SIZE; ++i) {
+        str[0] = commitId[2 * i + 0];
+        str[1] = commitId[2 * i + 1];
+        uuid[i] = static_cast<uint8_t>(strtol(str, NULL, 16));
+      }
     }
 };
 
