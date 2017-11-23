@@ -23,24 +23,17 @@ import os
 import subprocess
 import sys
 
-
-
 if __name__ == '__main__':
     if (len(sys.argv) != 4):
-        print("Usage: %s <SPIRV_TOOLS_SOURCE_DIR> <SPIRV_TOOLS_REVISION_FILE> <OUTPUT_HEADER_FILE>" % sys.argv[0])
+        print("Usage: %s <SOURCE_DIR> <SYMBOL_NAME> <OUTPUT_HEADER_FILE>" % sys.argv[0])
         sys.exit(os.EX_USAGE)
     
-    spirv_tools_source_dir = sys.argv[1]
-    spirv_tools_revision_file = sys.argv[2]
+    source_dir = sys.argv[1]
+    symbol_name = sys.argv[2]
     output_header_file = sys.argv[3]
     
-    # Load SPIRV-Tools revision
-    with open(spirv_tools_revision_file, "r") as rev_file:
-      revision = rev_file.read().replace('\n', '')
-      
-    # The revision listed in the file may be symbolic; use "git rev-parse" to
-    # convert it to a commit hash
-    spirv_tools_commit_id = subprocess.check_output(["git", "rev-parse", revision], cwd=spirv_tools_source_dir).decode('utf-8').strip()
+    # Extract commit ID from the specified source directory
+    commit_id = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=source_dir).decode('utf-8').strip()
     
     # Write commit ID to output header file
     with open(output_header_file, "w") as header_file:
@@ -77,6 +70,6 @@ if __name__ == '__main__':
         header_file.write(copyright)
         # Contents
         contents = '#pragma once\n\n'
-        contents += '#define SPIRV_TOOLS_COMMIT_ID "' + spirv_tools_commit_id + '"\n'
+        contents += '#define %s "%s"\n' % (symbol_name, commit_id)
         header_file.write(contents)
     

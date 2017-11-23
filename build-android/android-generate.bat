@@ -34,6 +34,6 @@ py -3 ../../../scripts/lvl_genvk.py -registry ../../../scripts/vk.xml vk_layer_d
 py -3 ../../../scripts/lvl_genvk.py -registry ../../../scripts/vk.xml vk_extension_helper.h
 py -3 ../../../scripts/lvl_genvk.py -registry ../../../scripts/vk.xml object_tracker.cpp
 py -3 ../../../scripts/lvl_genvk.py -registry ../../../scripts/vk.xml vk_typemap_helper.h
-py -3 ../../../scripts/external_revision_generator.py ../../../external/spirv-tools ../../../external_revisions/spirv-tools_revision spirv_tools_commit_id.h
+py -3 ../../../scripts/external_revision_generator.py ../../third_party/shaderc/third_party/spirv-tools SPIRV_TOOLS_COMMIT_ID spirv_tools_commit_id.h
 cd ../..
 

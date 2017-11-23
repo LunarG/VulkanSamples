@@ -316,10 +316,10 @@ macro(run_vk_xml_generate dependency output)
 endmacro()
 
 # Define macro used for generating header files containing commit IDs for external dependencies
-macro(run_external_revision_generate source_dir revision_file output)
+macro(run_external_revision_generate source_dir symbol_name output)
     add_custom_command(OUTPUT ${output}
-    COMMAND ${PYTHON_CMD} ${SCRIPTS_DIR}/external_revision_generator.py ${source_dir} ${revision_file} ${output}
-    DEPENDS ${SCRIPTS_DIR}/external_revision_generator.py ${revision_file}
+    COMMAND ${PYTHON_CMD} ${SCRIPTS_DIR}/external_revision_generator.py ${source_dir} ${symbol_name} ${output}
+    DEPENDS ${SCRIPTS_DIR}/external_revision_generator.py ${source_dir}/.git/HEAD ${source_dir}/.git/index
     )
 endmacro()
 
@@ -349,7 +349,7 @@ run_vk_xml_generate(helper_file_generator.py vk_enum_string_helper.h)
 run_vk_xml_generate(helper_file_generator.py vk_object_types.h)
 run_vk_xml_generate(helper_file_generator.py vk_extension_helper.h)
 run_vk_xml_generate(helper_file_generator.py vk_typemap_helper.h)
-run_external_revision_generate(${EXTERNAL_SOURCE_ROOT}/spirv-tools ${CMAKE_CURRENT_SOURCE_DIR}/external_revisions/spirv-tools_revision spirv_tools_commit_id.h)
+run_external_revision_generate(${EXTERNAL_SOURCE_ROOT}/glslang/External/spirv-tools SPIRV_TOOLS_COMMIT_ID spirv_tools_commit_id.h)
 
 if(NOT WIN32)
     include(GNUInstallDirs)
