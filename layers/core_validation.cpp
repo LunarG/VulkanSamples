@@ -4517,14 +4517,26 @@ VKAPI_ATTR VkResult VKAPI_CALL GetValidationCacheDataEXT(VkDevice device, VkVali
 }
 
 VKAPI_ATTR VkResult VKAPI_CALL MergeValidationCachesEXT(VkDevice device, VkValidationCacheEXT dstCache, uint32_t srcCacheCount,
-                                                   const VkValidationCacheEXT *pSrcCaches) {
+                                                        const VkValidationCacheEXT *pSrcCaches) {
+    layer_data *dev_data = GetLayerDataPtr(get_dispatch_key(device), layer_data_map);
+    bool skip = false;
     auto dst = (ValidationCache *)dstCache;
-    auto src = (ValidationCache const * const *)pSrcCaches;
+    auto src = (ValidationCache const *const *)pSrcCaches;
+    VkResult result = VK_SUCCESS;
+    for (uint32_t i = 0; i < srcCacheCount; i++) {
+        if (src[i] == dst) {
+            skip |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_VALIDATION_CACHE_EXT,
+                            0, __LINE__, VALIDATION_ERROR_3e600c00, "DS",
+                            "vkMergeValidationCachesEXT: dstCache (0x%" PRIxLEAST64 ") must not appear in pSrcCaches array. %s",
+                            HandleToUint64(dstCache), validation_error_map[VALIDATION_ERROR_3e600c00]);
+            result = VK_ERROR_VALIDATION_FAILED_EXT;
+        }
+        if (!skip) {
+            dst->Merge(src[i]);
+        }
+    }
 
-    for (uint32_t i = 0; i < srcCacheCount; i++)
-        dst->Merge(src[i]);
-
-    return VK_SUCCESS;
+    return result;
 }
 
 // utility function to set collective state for pipeline
