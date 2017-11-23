@@ -141,7 +141,7 @@ public:
     }
 
     void Write(size_t *pDataSize, void *pData) {
-        auto headerSize = 8u + VK_UUID_SIZE;
+        auto headerSize = 8u + VK_UUID_SIZE; // 4 bytes for header size + 4 bytes for version number + UUID
         if (!pData) {
             *pDataSize = headerSize + good_shader_hashes.size() * sizeof(uint32_t);
             return;
@@ -173,6 +173,7 @@ public:
     }
 
     void Merge(ValidationCache const *other) {
+        good_shader_hashes.reserve(good_shader_hashes.size() + other->good_shader_hashes.size());
         for (auto h : other->good_shader_hashes)
             good_shader_hashes.insert(h);
     }
