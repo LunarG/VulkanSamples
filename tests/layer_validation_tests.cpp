@@ -11251,195 +11251,197 @@ TEST_F(VkLayerTest, ImageBarrierWithBadRange) {
     m_commandBuffer->begin();
 
     // try for vkCmdPipelineBarrier
-    {// Try baseMipLevel >= image.mipLevels with VK_REMAINING_MIP_LEVELS
-     {m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_0a000b9c);
-    const VkImageSubresourceRange range = {VK_IMAGE_ASPECT_COLOR_BIT, 1, VK_REMAINING_MIP_LEVELS, 0, 1};
-    VkImageMemoryBarrier img_barrier = img_barrier_template;
-    img_barrier.subresourceRange = range;
-    vkCmdPipelineBarrier(m_commandBuffer->handle(), VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, 0, 0,
-                         nullptr, 0, nullptr, 1, &img_barrier);
-    m_errorMonitor->VerifyFound();
-}
-
-// Try baseMipLevel >= image.mipLevels without VK_REMAINING_MIP_LEVELS
-{
-    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_0a000b9c);
-    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_0a000b9e);
-    const VkImageSubresourceRange range = {VK_IMAGE_ASPECT_COLOR_BIT, 1, 1, 0, 1};
-    VkImageMemoryBarrier img_barrier = img_barrier_template;
-    img_barrier.subresourceRange = range;
-    vkCmdPipelineBarrier(m_commandBuffer->handle(), VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, 0, 0,
-                         nullptr, 0, nullptr, 1, &img_barrier);
-    m_errorMonitor->VerifyFound();
-}
-
-// Try levelCount = 0
-{
-    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_0a000b9e);
-    const VkImageSubresourceRange range = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 0, 0, 1};
-    VkImageMemoryBarrier img_barrier = img_barrier_template;
-    img_barrier.subresourceRange = range;
-    vkCmdPipelineBarrier(m_commandBuffer->handle(), VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, 0, 0,
-                         nullptr, 0, nullptr, 1, &img_barrier);
-    m_errorMonitor->VerifyFound();
-}
-
-// Try baseMipLevel + levelCount > image.mipLevels
-{
-    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_0a000b9e);
-    const VkImageSubresourceRange range = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 2, 0, 1};
-    VkImageMemoryBarrier img_barrier = img_barrier_template;
-    img_barrier.subresourceRange = range;
-    vkCmdPipelineBarrier(m_commandBuffer->handle(), VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, 0, 0,
-                         nullptr, 0, nullptr, 1, &img_barrier);
-    m_errorMonitor->VerifyFound();
-}
-
-// Try baseArrayLayer >= image.arrayLayers with VK_REMAINING_ARRAY_LAYERS
-{
-    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_0a000ba0);
-    const VkImageSubresourceRange range = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 1, VK_REMAINING_ARRAY_LAYERS};
-    VkImageMemoryBarrier img_barrier = img_barrier_template;
-    img_barrier.subresourceRange = range;
-    vkCmdPipelineBarrier(m_commandBuffer->handle(), VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, 0, 0,
-                         nullptr, 0, nullptr, 1, &img_barrier);
-    m_errorMonitor->VerifyFound();
-}
-
-// Try baseArrayLayer >= image.arrayLayers without VK_REMAINING_ARRAY_LAYERS
-{
-    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_0a000ba0);
-    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_0a000ba2);
-    const VkImageSubresourceRange range = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 1, 1};
-    VkImageMemoryBarrier img_barrier = img_barrier_template;
-    img_barrier.subresourceRange = range;
-    vkCmdPipelineBarrier(m_commandBuffer->handle(), VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, 0, 0,
-                         nullptr, 0, nullptr, 1, &img_barrier);
-    m_errorMonitor->VerifyFound();
-}
-
-// Try layerCount = 0
-{
-    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_0a000ba2);
-    const VkImageSubresourceRange range = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 0};
-    VkImageMemoryBarrier img_barrier = img_barrier_template;
-    img_barrier.subresourceRange = range;
-    vkCmdPipelineBarrier(m_commandBuffer->handle(), VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, 0, 0,
-                         nullptr, 0, nullptr, 1, &img_barrier);
-    m_errorMonitor->VerifyFound();
-}
-
-// Try baseArrayLayer + layerCount > image.arrayLayers
-{
-    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_0a000ba2);
-    const VkImageSubresourceRange range = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 2};
-    VkImageMemoryBarrier img_barrier = img_barrier_template;
-    img_barrier.subresourceRange = range;
-    vkCmdPipelineBarrier(m_commandBuffer->handle(), VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, 0, 0,
-                         nullptr, 0, nullptr, 1, &img_barrier);
-    m_errorMonitor->VerifyFound();
-}
-}
-
-// try for vkCmdWaitEvents
-{
-    VkEvent event;
-    VkEventCreateInfo eci{VK_STRUCTURE_TYPE_EVENT_CREATE_INFO, NULL, 0};
-    VkResult err = vkCreateEvent(m_device->handle(), &eci, nullptr, &event);
-    ASSERT_VK_SUCCESS(err);
-
-    // Try baseMipLevel >= image.mipLevels with VK_REMAINING_MIP_LEVELS
     {
-        m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_0a000b9c);
-        const VkImageSubresourceRange range = {VK_IMAGE_ASPECT_COLOR_BIT, 1, VK_REMAINING_MIP_LEVELS, 0, 1};
-        VkImageMemoryBarrier img_barrier = img_barrier_template;
-        img_barrier.subresourceRange = range;
-        vkCmdWaitEvents(m_commandBuffer->handle(), 1, &event, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
-                        VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, 0, nullptr, 0, nullptr, 1, &img_barrier);
-        m_errorMonitor->VerifyFound();
+        // Try baseMipLevel >= image.mipLevels with VK_REMAINING_MIP_LEVELS
+        {
+            m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_0a000b9c);
+            const VkImageSubresourceRange range = {VK_IMAGE_ASPECT_COLOR_BIT, 1, VK_REMAINING_MIP_LEVELS, 0, 1};
+            VkImageMemoryBarrier img_barrier = img_barrier_template;
+            img_barrier.subresourceRange = range;
+            vkCmdPipelineBarrier(m_commandBuffer->handle(), VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, 0, 0,
+                                 nullptr, 0, nullptr, 1, &img_barrier);
+            m_errorMonitor->VerifyFound();
+        }
+
+        // Try baseMipLevel >= image.mipLevels without VK_REMAINING_MIP_LEVELS
+        {
+            m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_0a000b9c);
+            m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_0a000b9e);
+            const VkImageSubresourceRange range = {VK_IMAGE_ASPECT_COLOR_BIT, 1, 1, 0, 1};
+            VkImageMemoryBarrier img_barrier = img_barrier_template;
+            img_barrier.subresourceRange = range;
+            vkCmdPipelineBarrier(m_commandBuffer->handle(), VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, 0, 0,
+                                 nullptr, 0, nullptr, 1, &img_barrier);
+            m_errorMonitor->VerifyFound();
+        }
+
+        // Try levelCount = 0
+        {
+            m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_0a000b9e);
+            const VkImageSubresourceRange range = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 0, 0, 1};
+            VkImageMemoryBarrier img_barrier = img_barrier_template;
+            img_barrier.subresourceRange = range;
+            vkCmdPipelineBarrier(m_commandBuffer->handle(), VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, 0, 0,
+                                 nullptr, 0, nullptr, 1, &img_barrier);
+            m_errorMonitor->VerifyFound();
+        }
+
+        // Try baseMipLevel + levelCount > image.mipLevels
+        {
+            m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_0a000b9e);
+            const VkImageSubresourceRange range = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 2, 0, 1};
+            VkImageMemoryBarrier img_barrier = img_barrier_template;
+            img_barrier.subresourceRange = range;
+            vkCmdPipelineBarrier(m_commandBuffer->handle(), VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, 0, 0,
+                                 nullptr, 0, nullptr, 1, &img_barrier);
+            m_errorMonitor->VerifyFound();
+        }
+
+        // Try baseArrayLayer >= image.arrayLayers with VK_REMAINING_ARRAY_LAYERS
+        {
+            m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_0a000ba0);
+            const VkImageSubresourceRange range = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 1, VK_REMAINING_ARRAY_LAYERS};
+            VkImageMemoryBarrier img_barrier = img_barrier_template;
+            img_barrier.subresourceRange = range;
+            vkCmdPipelineBarrier(m_commandBuffer->handle(), VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, 0, 0,
+                                 nullptr, 0, nullptr, 1, &img_barrier);
+            m_errorMonitor->VerifyFound();
+        }
+
+        // Try baseArrayLayer >= image.arrayLayers without VK_REMAINING_ARRAY_LAYERS
+        {
+            m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_0a000ba0);
+            m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_0a000ba2);
+            const VkImageSubresourceRange range = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 1, 1};
+            VkImageMemoryBarrier img_barrier = img_barrier_template;
+            img_barrier.subresourceRange = range;
+            vkCmdPipelineBarrier(m_commandBuffer->handle(), VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, 0, 0,
+                                 nullptr, 0, nullptr, 1, &img_barrier);
+            m_errorMonitor->VerifyFound();
+        }
+
+        // Try layerCount = 0
+        {
+            m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_0a000ba2);
+            const VkImageSubresourceRange range = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 0};
+            VkImageMemoryBarrier img_barrier = img_barrier_template;
+            img_barrier.subresourceRange = range;
+            vkCmdPipelineBarrier(m_commandBuffer->handle(), VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, 0, 0,
+                                 nullptr, 0, nullptr, 1, &img_barrier);
+            m_errorMonitor->VerifyFound();
+        }
+
+        // Try baseArrayLayer + layerCount > image.arrayLayers
+        {
+            m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_0a000ba2);
+            const VkImageSubresourceRange range = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 2};
+            VkImageMemoryBarrier img_barrier = img_barrier_template;
+            img_barrier.subresourceRange = range;
+            vkCmdPipelineBarrier(m_commandBuffer->handle(), VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, 0, 0,
+                                 nullptr, 0, nullptr, 1, &img_barrier);
+            m_errorMonitor->VerifyFound();
+        }
     }
 
-    // Try baseMipLevel >= image.mipLevels without VK_REMAINING_MIP_LEVELS
+    // try for vkCmdWaitEvents
     {
-        m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_0a000b9c);
-        m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_0a000b9e);
-        const VkImageSubresourceRange range = {VK_IMAGE_ASPECT_COLOR_BIT, 1, 1, 0, 1};
-        VkImageMemoryBarrier img_barrier = img_barrier_template;
-        img_barrier.subresourceRange = range;
-        vkCmdWaitEvents(m_commandBuffer->handle(), 1, &event, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
-                        VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, 0, nullptr, 0, nullptr, 1, &img_barrier);
-        m_errorMonitor->VerifyFound();
-    }
+        VkEvent event;
+        VkEventCreateInfo eci{VK_STRUCTURE_TYPE_EVENT_CREATE_INFO, NULL, 0};
+        VkResult err = vkCreateEvent(m_device->handle(), &eci, nullptr, &event);
+        ASSERT_VK_SUCCESS(err);
 
-    // Try levelCount = 0
-    {
-        m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_0a000b9e);
-        const VkImageSubresourceRange range = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 0, 0, 1};
-        VkImageMemoryBarrier img_barrier = img_barrier_template;
-        img_barrier.subresourceRange = range;
-        vkCmdWaitEvents(m_commandBuffer->handle(), 1, &event, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
-                        VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, 0, nullptr, 0, nullptr, 1, &img_barrier);
-        m_errorMonitor->VerifyFound();
-    }
+        // Try baseMipLevel >= image.mipLevels with VK_REMAINING_MIP_LEVELS
+        {
+            m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_0a000b9c);
+            const VkImageSubresourceRange range = {VK_IMAGE_ASPECT_COLOR_BIT, 1, VK_REMAINING_MIP_LEVELS, 0, 1};
+            VkImageMemoryBarrier img_barrier = img_barrier_template;
+            img_barrier.subresourceRange = range;
+            vkCmdWaitEvents(m_commandBuffer->handle(), 1, &event, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
+                            VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, 0, nullptr, 0, nullptr, 1, &img_barrier);
+            m_errorMonitor->VerifyFound();
+        }
 
-    // Try baseMipLevel + levelCount > image.mipLevels
-    {
-        m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_0a000b9e);
-        const VkImageSubresourceRange range = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 2, 0, 1};
-        VkImageMemoryBarrier img_barrier = img_barrier_template;
-        img_barrier.subresourceRange = range;
-        vkCmdWaitEvents(m_commandBuffer->handle(), 1, &event, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
-                        VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, 0, nullptr, 0, nullptr, 1, &img_barrier);
-        m_errorMonitor->VerifyFound();
-    }
+        // Try baseMipLevel >= image.mipLevels without VK_REMAINING_MIP_LEVELS
+        {
+            m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_0a000b9c);
+            m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_0a000b9e);
+            const VkImageSubresourceRange range = {VK_IMAGE_ASPECT_COLOR_BIT, 1, 1, 0, 1};
+            VkImageMemoryBarrier img_barrier = img_barrier_template;
+            img_barrier.subresourceRange = range;
+            vkCmdWaitEvents(m_commandBuffer->handle(), 1, &event, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
+                            VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, 0, nullptr, 0, nullptr, 1, &img_barrier);
+            m_errorMonitor->VerifyFound();
+        }
 
-    // Try baseArrayLayer >= image.arrayLayers with VK_REMAINING_ARRAY_LAYERS
-    {
-        m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_0a000ba0);
-        const VkImageSubresourceRange range = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 1, VK_REMAINING_ARRAY_LAYERS};
-        VkImageMemoryBarrier img_barrier = img_barrier_template;
-        img_barrier.subresourceRange = range;
-        vkCmdWaitEvents(m_commandBuffer->handle(), 1, &event, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
-                        VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, 0, nullptr, 0, nullptr, 1, &img_barrier);
-        m_errorMonitor->VerifyFound();
-    }
+        // Try levelCount = 0
+        {
+            m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_0a000b9e);
+            const VkImageSubresourceRange range = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 0, 0, 1};
+            VkImageMemoryBarrier img_barrier = img_barrier_template;
+            img_barrier.subresourceRange = range;
+            vkCmdWaitEvents(m_commandBuffer->handle(), 1, &event, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
+                            VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, 0, nullptr, 0, nullptr, 1, &img_barrier);
+            m_errorMonitor->VerifyFound();
+        }
 
-    // Try baseArrayLayer >= image.arrayLayers without VK_REMAINING_ARRAY_LAYERS
-    {
-        m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_0a000ba0);
-        m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_0a000ba2);
-        const VkImageSubresourceRange range = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 1, 1};
-        VkImageMemoryBarrier img_barrier = img_barrier_template;
-        img_barrier.subresourceRange = range;
-        vkCmdWaitEvents(m_commandBuffer->handle(), 1, &event, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
-                        VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, 0, nullptr, 0, nullptr, 1, &img_barrier);
-        m_errorMonitor->VerifyFound();
-    }
+        // Try baseMipLevel + levelCount > image.mipLevels
+        {
+            m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_0a000b9e);
+            const VkImageSubresourceRange range = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 2, 0, 1};
+            VkImageMemoryBarrier img_barrier = img_barrier_template;
+            img_barrier.subresourceRange = range;
+            vkCmdWaitEvents(m_commandBuffer->handle(), 1, &event, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
+                            VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, 0, nullptr, 0, nullptr, 1, &img_barrier);
+            m_errorMonitor->VerifyFound();
+        }
 
-    // Try layerCount = 0
-    {
-        m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_0a000ba2);
-        const VkImageSubresourceRange range = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 0};
-        VkImageMemoryBarrier img_barrier = img_barrier_template;
-        img_barrier.subresourceRange = range;
-        vkCmdWaitEvents(m_commandBuffer->handle(), 1, &event, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
-                        VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, 0, nullptr, 0, nullptr, 1, &img_barrier);
-        m_errorMonitor->VerifyFound();
-    }
+        // Try baseArrayLayer >= image.arrayLayers with VK_REMAINING_ARRAY_LAYERS
+        {
+            m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_0a000ba0);
+            const VkImageSubresourceRange range = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 1, VK_REMAINING_ARRAY_LAYERS};
+            VkImageMemoryBarrier img_barrier = img_barrier_template;
+            img_barrier.subresourceRange = range;
+            vkCmdWaitEvents(m_commandBuffer->handle(), 1, &event, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
+                            VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, 0, nullptr, 0, nullptr, 1, &img_barrier);
+            m_errorMonitor->VerifyFound();
+        }
 
-    // Try baseArrayLayer + layerCount > image.arrayLayers
-    {
-        m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_0a000ba2);
-        const VkImageSubresourceRange range = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 2};
-        VkImageMemoryBarrier img_barrier = img_barrier_template;
-        img_barrier.subresourceRange = range;
-        vkCmdWaitEvents(m_commandBuffer->handle(), 1, &event, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
-                        VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, 0, nullptr, 0, nullptr, 1, &img_barrier);
-        m_errorMonitor->VerifyFound();
-    }
+        // Try baseArrayLayer >= image.arrayLayers without VK_REMAINING_ARRAY_LAYERS
+        {
+            m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_0a000ba0);
+            m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_0a000ba2);
+            const VkImageSubresourceRange range = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 1, 1};
+            VkImageMemoryBarrier img_barrier = img_barrier_template;
+            img_barrier.subresourceRange = range;
+            vkCmdWaitEvents(m_commandBuffer->handle(), 1, &event, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
+                            VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, 0, nullptr, 0, nullptr, 1, &img_barrier);
+            m_errorMonitor->VerifyFound();
+        }
 
-    vkDestroyEvent(m_device->handle(), event, nullptr);
-}
+        // Try layerCount = 0
+        {
+            m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_0a000ba2);
+            const VkImageSubresourceRange range = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 0};
+            VkImageMemoryBarrier img_barrier = img_barrier_template;
+            img_barrier.subresourceRange = range;
+            vkCmdWaitEvents(m_commandBuffer->handle(), 1, &event, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
+                            VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, 0, nullptr, 0, nullptr, 1, &img_barrier);
+            m_errorMonitor->VerifyFound();
+        }
+
+        // Try baseArrayLayer + layerCount > image.arrayLayers
+        {
+            m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_0a000ba2);
+            const VkImageSubresourceRange range = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 2};
+            VkImageMemoryBarrier img_barrier = img_barrier_template;
+            img_barrier.subresourceRange = range;
+            vkCmdWaitEvents(m_commandBuffer->handle(), 1, &event, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
+                            VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, 0, nullptr, 0, nullptr, 1, &img_barrier);
+            m_errorMonitor->VerifyFound();
+        }
+
+        vkDestroyEvent(m_device->handle(), event, nullptr);
+    }
 }
 
 TEST_F(VkPositiveLayerTest, LayoutFromPresentWithoutAccessMemoryRead) {
