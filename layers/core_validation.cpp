@@ -1234,34 +1234,6 @@ static void UpdateDrawState(layer_data *dev_data, GLOBAL_CB_NODE *cb_state, cons
     }
 }
 
-// Validate HW line width capabilities prior to setting requested line width.
-static bool verifyLineWidth(layer_data *dev_data, DRAW_STATE_ERROR dsError, VulkanObjectType object_type, const uint64_t &target,
-                            float lineWidth) {
-    bool skip = false;
-
-    // First check to see if the physical device supports wide lines.
-    if ((VK_FALSE == dev_data->enabled_features.wideLines) && (1.0f != lineWidth)) {
-        skip |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, get_debug_report_enum[object_type], target, __LINE__,
-                        dsError, "DS",
-                        "Attempt to set lineWidth to %f but physical device wideLines feature "
-                        "not supported/enabled so lineWidth must be 1.0f!",
-                        lineWidth);
-    } else {
-        // Otherwise, make sure the width falls in the valid range.
-        if ((dev_data->phys_dev_properties.properties.limits.lineWidthRange[0] > lineWidth) ||
-            (dev_data->phys_dev_properties.properties.limits.lineWidthRange[1] < lineWidth)) {
-            skip |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, get_debug_report_enum[object_type], target,
-                            __LINE__, dsError, "DS",
-                            "Attempt to set lineWidth to %f but physical device limits line width "
-                            "to between [%f, %f]!",
-                            lineWidth, dev_data->phys_dev_properties.properties.limits.lineWidthRange[0],
-                            dev_data->phys_dev_properties.properties.limits.lineWidthRange[1]);
-        }
-    }
-
-    return skip;
-}
-
 static bool ValidatePipelineLocked(layer_data *dev_data, std::vector<std::unique_ptr<PIPELINE_STATE>> const &pPipelines, int pipelineIndex) {
     bool skip = false;
 
@@ -1432,13 +1404,6 @@ static bool ValidatePipelineUnlocked(layer_data *dev_data, std::vector<std::uniq
 
     // If a rasterization state is provided...
     if (pPipeline->graphicsPipelineCI.pRasterizationState) {
-        // Make sure that the line width conforms to the HW.
-        if (!isDynamic(pPipeline, VK_DYNAMIC_STATE_LINE_WIDTH)) {
-            skip |=
-                verifyLineWidth(dev_data, DRAWSTATE_INVALID_PIPELINE_CREATE_STATE, kVulkanObjectTypePipeline,
-                                HandleToUint64(pPipeline->pipeline), pPipeline->graphicsPipelineCI.pRasterizationState->lineWidth);
-        }
-
         if ((pPipeline->graphicsPipelineCI.pRasterizationState->depthClampEnable == VK_TRUE) &&
             (!dev_data->enabled_features.depthClamp)) {
             skip |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_PIPELINE_EXT,
@@ -5354,9 +5319,6 @@ VKAPI_ATTR void VKAPI_CALL CmdSetLineWidth(VkCommandBuffer commandBuffer, float 
                             "vkCmdSetLineWidth called but pipeline was created without VK_DYNAMIC_STATE_LINE_WIDTH "
                             "flag. %s",
                             validation_error_map[VALIDATION_ERROR_1d600626]);
-        } else {
-            skip |= verifyLineWidth(dev_data, DRAWSTATE_INVALID_SET, kVulkanObjectTypeCommandBuffer, HandleToUint64(commandBuffer),
-                                    lineWidth);
         }
         if (!skip) {
             pCB->status |= CBSTATUS_LINE_WIDTH_SET;

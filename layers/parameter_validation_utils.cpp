@@ -912,6 +912,19 @@ bool pv_vkCreateGraphicsPipelines(VkDevice device, VkPipelineCache pipelineCache
 
     if (pCreateInfos != nullptr) {
         for (uint32_t i = 0; i < createInfoCount; ++i) {
+            bool has_dynamic_viewport = false;
+            bool has_dynamic_scissor = false;
+            bool has_dynamic_line_width = false;
+            if (pCreateInfos[i].pDynamicState != nullptr) {
+                const auto &dynamic_state_info = *pCreateInfos[i].pDynamicState;
+                for (uint32_t state_index = 0; state_index < dynamic_state_info.dynamicStateCount; ++state_index) {
+                    const auto &dynamic_state = dynamic_state_info.pDynamicStates[state_index];
+                    if (dynamic_state == VK_DYNAMIC_STATE_VIEWPORT) has_dynamic_viewport = true;
+                    if (dynamic_state == VK_DYNAMIC_STATE_SCISSOR) has_dynamic_scissor = true;
+                    if (dynamic_state == VK_DYNAMIC_STATE_LINE_WIDTH) has_dynamic_line_width = true;
+                }
+            }
+
             // Validation for parameters excluded from the generated validation code due to a 'noautovalidity' tag in vk.xml
             if (pCreateInfos[i].pVertexInputState != nullptr) {
                 auto const &vertex_input_state = pCreateInfos[i].pVertexInputState;
@@ -1125,17 +1138,6 @@ bool pv_vkCreateGraphicsPipelines(VkDevice device, VkPipelineCache pipelineCache
                                         "].pViewportState->viewportCount (=%" PRIu32 "). %s",
                                         i, viewport_state.scissorCount, i, viewport_state.viewportCount,
                                         validation_error_map[VALIDATION_ERROR_10c00988]);
-                    }
-
-                    bool has_dynamic_viewport = false;
-                    bool has_dynamic_scissor = false;
-                    if (pCreateInfos[i].pDynamicState != nullptr) {
-                        const auto &dynamic_state_info = *pCreateInfos[i].pDynamicState;
-                        for (uint32_t state_index = 0; state_index < dynamic_state_info.dynamicStateCount; ++state_index) {
-                            const auto &dynamic_state = dynamic_state_info.pDynamicStates[state_index];
-                            if (dynamic_state == VK_DYNAMIC_STATE_VIEWPORT) has_dynamic_viewport = true;
-                            if (dynamic_state == VK_DYNAMIC_STATE_SCISSOR) has_dynamic_scissor = true;
-                        }
                     }
 
                     if (!has_dynamic_viewport && viewport_state.viewportCount > 0 && viewport_state.pViewports == nullptr) {
@@ -1448,6 +1450,18 @@ bool pv_vkCreateGraphicsPipelines(VkDevice device, VkPipelineCache pipelineCache
                         "vkCreateGraphicsPipelines parameter, VkPolygonMode pCreateInfos->pRasterizationState->polygonMode cannot "
                         "be "
                         "VK_POLYGON_MODE_POINT or VK_POLYGON_MODE_LINE if VkPhysicalDeviceFeatures->fillModeNonSolid is false.");
+                }
+
+                if (!has_dynamic_line_width && !device_data->physical_device_features.wideLines &&
+                    (pCreateInfos[i].pRasterizationState->lineWidth != 1.0f)) {
+                    skip |= log_msg(device_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT,
+                                    VK_DEBUG_REPORT_OBJECT_TYPE_PIPELINE_EXT, 0, __LINE__, VALIDATION_ERROR_096005da, LayerName,
+                                    "The line width state is static (pCreateInfos[%" PRIu32
+                                    "].pDynamicState->pDynamicStates does not contain VK_DYNAMIC_STATE_LINE_WIDTH) and "
+                                    "VkPhysicalDeviceFeatures::wideLines is disabled, but pCreateInfos[%" PRIu32
+                                    "].pRasterizationState->lineWidth (=%f) is not 1.0. %s",
+                                    i, i, pCreateInfos[i].pRasterizationState->lineWidth,
+                                    validation_error_map[VALIDATION_ERROR_096005da]);
                 }
             }
 
@@ -1999,6 +2013,21 @@ bool pv_vkCmdSetScissor(VkCommandBuffer commandBuffer, uint32_t firstScissor, ui
     return skip;
 }
 
+bool pv_vkCmdSetLineWidth(VkCommandBuffer commandBuffer, float lineWidth) {
+    bool skip = false;
+    layer_data *device_data = GetLayerDataPtr(get_dispatch_key(commandBuffer), layer_data_map);
+    debug_report_data *report_data = device_data->report_data;
+
+    if (!device_data->physical_device_features.wideLines && (lineWidth != 1.0f)) {
+        skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
+                        HandleToUint64(commandBuffer), __LINE__, VALIDATION_ERROR_1d600628, LayerName,
+                        "VkPhysicalDeviceFeatures::wideLines is disabled, but lineWidth (=%f) is not 1.0. %s", lineWidth,
+                        validation_error_map[VALIDATION_ERROR_1d600628]);
+    }
+
+    return skip;
+}
+
 bool pv_vkCmdDraw(VkCommandBuffer commandBuffer, uint32_t vertexCount, uint32_t instanceCount, uint32_t firstVertex,
                   uint32_t firstInstance) {
     bool skip = false;
@@ -2438,6 +2467,7 @@ void InitializeManualParameterValidationFunctionPointers() {
     custom_functions["vkBeginCommandBuffer"] = (void*)pv_vkBeginCommandBuffer;
     custom_functions["vkCmdSetViewport"] = (void*)pv_vkCmdSetViewport;
     custom_functions["vkCmdSetScissor"] = (void*)pv_vkCmdSetScissor;
+    custom_functions["vkCmdSetLineWidth"] = (void *)pv_vkCmdSetLineWidth;
     custom_functions["vkCmdDraw"] = (void*)pv_vkCmdDraw;
     custom_functions["vkCmdDrawIndirect"] = (void*)pv_vkCmdDrawIndirect;
     custom_functions["vkCmdDrawIndexedIndirect"] = (void*)pv_vkCmdDrawIndexedIndirect;
