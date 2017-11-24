@@ -1411,12 +1411,10 @@ bool pv_vkCreateGraphicsPipelines(VkDevice device, VkPipelineCache pipelineCache
                     }
                 }
             }
-        }
 
-        if (pCreateInfos != nullptr) {
-            if (pCreateInfos->flags & VK_PIPELINE_CREATE_DERIVATIVE_BIT) {
-                if (pCreateInfos->basePipelineIndex != -1) {
-                    if (pCreateInfos->basePipelineHandle != VK_NULL_HANDLE) {
+            if (pCreateInfos[i].flags & VK_PIPELINE_CREATE_DERIVATIVE_BIT) {
+                if (pCreateInfos[i].basePipelineIndex != -1) {
+                    if (pCreateInfos[i].basePipelineHandle != VK_NULL_HANDLE) {
                         skip |= log_msg(
                             report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
                             VALIDATION_ERROR_096005a8, LayerName,
@@ -1427,8 +1425,8 @@ bool pv_vkCreateGraphicsPipelines(VkDevice device, VkPipelineCache pipelineCache
                     }
                 }
 
-                if (pCreateInfos->basePipelineHandle != VK_NULL_HANDLE) {
-                    if (pCreateInfos->basePipelineIndex != -1) {
+                if (pCreateInfos[i].basePipelineHandle != VK_NULL_HANDLE) {
+                    if (pCreateInfos[i].basePipelineIndex != -1) {
                         skip |= log_msg(
                             report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
                             VALIDATION_ERROR_096005aa, LayerName,
@@ -1441,16 +1439,8 @@ bool pv_vkCreateGraphicsPipelines(VkDevice device, VkPipelineCache pipelineCache
                 }
             }
 
-            if (pCreateInfos->pRasterizationState != nullptr) {
-                if (pCreateInfos->pRasterizationState->cullMode & ~VK_CULL_MODE_FRONT_AND_BACK) {
-                    skip |= log_msg(
-                        report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
-                        UNRECOGNIZED_VALUE, LayerName,
-                        "vkCreateGraphicsPipelines parameter, VkCullMode pCreateInfos->pRasterizationState->cullMode, is an "
-                        "unrecognized enumerator");
-                }
-
-                if ((pCreateInfos->pRasterizationState->polygonMode != VK_POLYGON_MODE_FILL) &&
+            if (pCreateInfos[i].pRasterizationState) {
+                if ((pCreateInfos[i].pRasterizationState->polygonMode != VK_POLYGON_MODE_FILL) &&
                     (device_data->physical_device_features.fillModeNonSolid == false)) {
                     skip |= log_msg(
                         report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
@@ -1461,7 +1451,6 @@ bool pv_vkCreateGraphicsPipelines(VkDevice device, VkPipelineCache pipelineCache
                 }
             }
 
-            size_t i = 0;
             for (size_t j = 0; j < pCreateInfos[i].stageCount; j++) {
                 skip |= validate_string(device_data->report_data, "vkCreateGraphicsPipelines",
                                         ParameterName("pCreateInfos[%i].pStages[%i].pName", ParameterName::IndexVector{i, j}),
