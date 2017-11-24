@@ -9219,6 +9219,7 @@ TEST_F(VkLayerTest, PSOViewportStateTests) {
     rs_state_ci.polygonMode = VK_POLYGON_MODE_FILL;
     rs_state_ci.cullMode = VK_CULL_MODE_BACK_BIT;
     rs_state_ci.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
+    rs_state_ci.lineWidth = 1.0f;
 
     VkPipelineMultisampleStateCreateInfo pipe_ms_state_ci = {};
     pipe_ms_state_ci.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
@@ -9673,173 +9674,92 @@ TEST_F(VkLayerTest, DynViewportAndScissorMismatch) {
 }
 
 TEST_F(VkLayerTest, PSOLineWidthInvalid) {
-    VkResult err;
-
-    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, "Attempt to set lineWidth to -1");
-
-    ASSERT_NO_FATAL_FAILURE(Init());
+    TEST_DESCRIPTION("Test non-1.0 lineWidth errors when pipeline is created and in vkCmdSetLineWidth");
+    VkPhysicalDeviceFeatures features{};
+    ASSERT_NO_FATAL_FAILURE(Init(&features));
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
 
-    VkDescriptorPoolSize ds_type_count = {};
-    ds_type_count.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-    ds_type_count.descriptorCount = 1;
+    VkShaderObj vs(m_device, bindStateVertShaderText, VK_SHADER_STAGE_VERTEX_BIT, this);
+    VkShaderObj fs(m_device, bindStateFragShaderText, VK_SHADER_STAGE_FRAGMENT_BIT, this);
+    VkPipelineShaderStageCreateInfo shader_state_cis[] = {vs.GetStageCreateInfo(), fs.GetStageCreateInfo()};
 
-    VkDescriptorPoolCreateInfo ds_pool_ci = {};
-    ds_pool_ci.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
-    ds_pool_ci.maxSets = 1;
-    ds_pool_ci.poolSizeCount = 1;
-    ds_pool_ci.pPoolSizes = &ds_type_count;
+    VkPipelineVertexInputStateCreateInfo vi_state_ci = {};
+    vi_state_ci.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
 
-    VkDescriptorPool ds_pool;
-    err = vkCreateDescriptorPool(m_device->device(), &ds_pool_ci, NULL, &ds_pool);
-    ASSERT_VK_SUCCESS(err);
+    VkPipelineInputAssemblyStateCreateInfo ia_state_ci = {};
+    ia_state_ci.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
+    ia_state_ci.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP;
 
-    VkDescriptorSetLayoutBinding dsl_binding = {};
-    dsl_binding.binding = 0;
-    dsl_binding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-    dsl_binding.descriptorCount = 1;
-    dsl_binding.stageFlags = VK_SHADER_STAGE_ALL;
+    VkViewport viewport = {0.0f, 0.0f, 64.0f, 64.0f, 0.0f, 1.0f};
+    VkRect2D scissor = {{0, 0}, {64, 64}};
+    VkPipelineViewportStateCreateInfo vp_state_ci = {};
+    vp_state_ci.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
+    vp_state_ci.viewportCount = 1;
+    vp_state_ci.pViewports = &viewport;
+    vp_state_ci.scissorCount = 1;
+    vp_state_ci.pScissors = &scissor;
 
-    VkDescriptorSetLayoutCreateInfo ds_layout_ci = {};
-    ds_layout_ci.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-    ds_layout_ci.bindingCount = 1;
-    ds_layout_ci.pBindings = &dsl_binding;
+    VkPipelineRasterizationStateCreateInfo rs_state_ci = {};
+    rs_state_ci.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
+    rs_state_ci.rasterizerDiscardEnable = VK_FALSE;
+    // lineWidth to be set by checks
 
-    VkDescriptorSetLayout ds_layout;
-    err = vkCreateDescriptorSetLayout(m_device->device(), &ds_layout_ci, NULL, &ds_layout);
-    ASSERT_VK_SUCCESS(err);
+    VkPipelineMultisampleStateCreateInfo ms_state_ci = {};
+    ms_state_ci.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
+    ms_state_ci.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;  // must match subpass att.
 
-    VkDescriptorSet descriptorSet;
-    VkDescriptorSetAllocateInfo alloc_info = {};
-    alloc_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-    alloc_info.descriptorSetCount = 1;
-    alloc_info.descriptorPool = ds_pool;
-    alloc_info.pSetLayouts = &ds_layout;
-    err = vkAllocateDescriptorSets(m_device->device(), &alloc_info, &descriptorSet);
-    ASSERT_VK_SUCCESS(err);
+    VkPipelineColorBlendAttachmentState cba_state = {};
 
-    VkPipelineLayoutCreateInfo pipeline_layout_ci = {};
-    pipeline_layout_ci.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-    pipeline_layout_ci.setLayoutCount = 1;
-    pipeline_layout_ci.pSetLayouts = &ds_layout;
+    VkPipelineColorBlendStateCreateInfo cb_state_ci = {};
+    cb_state_ci.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
+    cb_state_ci.attachmentCount = 1;  // must match count in subpass
+    cb_state_ci.pAttachments = &cba_state;
 
     VkPipelineLayout pipeline_layout;
-    err = vkCreatePipelineLayout(m_device->device(), &pipeline_layout_ci, NULL, &pipeline_layout);
-    ASSERT_VK_SUCCESS(err);
+    {
+        VkPipelineLayoutCreateInfo pipeline_layout_ci = {};
+        pipeline_layout_ci.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
 
-    VkDynamicState dynamic_state = VK_DYNAMIC_STATE_LINE_WIDTH;
-    VkPipelineDynamicStateCreateInfo dyn_state_ci = {};
-    dyn_state_ci.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
-    dyn_state_ci.dynamicStateCount = 1;
-    dyn_state_ci.pDynamicStates = &dynamic_state;
-
-    VkPipelineShaderStageCreateInfo shaderStages[2];
-    memset(&shaderStages, 0, 2 * sizeof(VkPipelineShaderStageCreateInfo));
-
-    VkShaderObj vs(m_device, bindStateVertShaderText, VK_SHADER_STAGE_VERTEX_BIT, this);
-    VkShaderObj fs(m_device, bindStateFragShaderText, VK_SHADER_STAGE_FRAGMENT_BIT,
-                   this);  // TODO - We shouldn't need a fragment shader
-                           // but add it to be able to run on more devices
-    shaderStages[0] = vs.GetStageCreateInfo();
-    shaderStages[1] = fs.GetStageCreateInfo();
-
-    VkPipelineVertexInputStateCreateInfo vi_ci = {};
-    vi_ci.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
-    vi_ci.pNext = nullptr;
-    vi_ci.vertexBindingDescriptionCount = 0;
-    vi_ci.pVertexBindingDescriptions = nullptr;
-    vi_ci.vertexAttributeDescriptionCount = 0;
-    vi_ci.pVertexAttributeDescriptions = nullptr;
-
-    VkPipelineInputAssemblyStateCreateInfo ia_ci = {};
-    ia_ci.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
-    ia_ci.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP;
-
-    VkPipelineRasterizationStateCreateInfo rs_ci = {};
-    rs_ci.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
-    rs_ci.pNext = nullptr;
-    rs_ci.rasterizerDiscardEnable = VK_TRUE;
-
-    // Check too low (line width of -1.0f).
-    rs_ci.lineWidth = -1.0f;
-
-    VkPipelineColorBlendAttachmentState att = {};
-    att.blendEnable = VK_FALSE;
-    att.colorWriteMask = 0xf;
-
-    VkPipelineColorBlendStateCreateInfo cb_ci = {};
-    cb_ci.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
-    cb_ci.pNext = nullptr;
-    cb_ci.attachmentCount = 1;
-    cb_ci.pAttachments = &att;
+        VkResult err = vkCreatePipelineLayout(m_device->device(), &pipeline_layout_ci, nullptr, &pipeline_layout);
+        ASSERT_VK_SUCCESS(err);
+    }
 
     VkGraphicsPipelineCreateInfo gp_ci = {};
     gp_ci.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
-    gp_ci.stageCount = 2;
-    gp_ci.pStages = shaderStages;
-    gp_ci.pVertexInputState = &vi_ci;
-    gp_ci.pInputAssemblyState = &ia_ci;
-    gp_ci.pViewportState = nullptr;  // no vieport b/c rasterizer is disabled
-    gp_ci.pRasterizationState = &rs_ci;
-    gp_ci.pColorBlendState = &cb_ci;
-    gp_ci.pDynamicState = nullptr;  // to be set later
-    gp_ci.flags = VK_PIPELINE_CREATE_DISABLE_OPTIMIZATION_BIT;
+    gp_ci.stageCount = sizeof(shader_state_cis)/sizeof(VkPipelineShaderStageCreateInfo);
+    gp_ci.pStages = shader_state_cis;
+    gp_ci.pVertexInputState = &vi_state_ci;
+    gp_ci.pInputAssemblyState = &ia_state_ci;
+    gp_ci.pViewportState = &vp_state_ci;
+    gp_ci.pRasterizationState = &rs_state_ci;
+    gp_ci.pMultisampleState = &ms_state_ci;
+    gp_ci.pColorBlendState = &cb_state_ci;
     gp_ci.layout = pipeline_layout;
     gp_ci.renderPass = renderPass();
+    gp_ci.subpass = 0;
 
-    VkPipelineCacheCreateInfo pc_ci = {};
-    pc_ci.sType = VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO;
+    const std::vector<float> test_cases = {-1.0f, 0.0f, nextafterf(1.0f, 0.0f), nextafterf(1.0f, 2.0f), NAN};
 
-    VkPipeline pipeline;
-    VkPipelineCache pipelineCache;
+    // test VkPipelineRasterizationStateCreateInfo::lineWidth
+    for (const auto test_case : test_cases) {
+        rs_state_ci.lineWidth = test_case;
 
-    err = vkCreatePipelineCache(m_device->device(), &pc_ci, NULL, &pipelineCache);
-    ASSERT_VK_SUCCESS(err);
-    err = vkCreateGraphicsPipelines(m_device->device(), pipelineCache, 1, &gp_ci, NULL, &pipeline);
+        m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_096005da);
+        VkPipeline pipeline;
+        vkCreateGraphicsPipelines(m_device->device(), VK_NULL_HANDLE, 1, &gp_ci, nullptr, &pipeline);
+        m_errorMonitor->VerifyFound();
+    }
 
-    m_errorMonitor->VerifyFound();
-    vkDestroyPipelineCache(m_device->device(), pipelineCache, NULL);
-
-    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, "Attempt to set lineWidth to 65536");
-
-    // Check too high (line width of 65536.0f).
-    rs_ci.lineWidth = 65536.0f;
-
-    err = vkCreatePipelineCache(m_device->device(), &pc_ci, NULL, &pipelineCache);
-    ASSERT_VK_SUCCESS(err);
-    err = vkCreateGraphicsPipelines(m_device->device(), pipelineCache, 1, &gp_ci, NULL, &pipeline);
-
-    m_errorMonitor->VerifyFound();
-    vkDestroyPipelineCache(m_device->device(), pipelineCache, NULL);
-
-    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, "Attempt to set lineWidth to -1");
-
-    gp_ci.pDynamicState = &dyn_state_ci;
-
-    rs_ci.lineWidth = 1.0f;
-
-    err = vkCreatePipelineCache(m_device->device(), &pc_ci, NULL, &pipelineCache);
-    ASSERT_VK_SUCCESS(err);
-    err = vkCreateGraphicsPipelines(m_device->device(), pipelineCache, 1, &gp_ci, NULL, &pipeline);
+    // test vkCmdSetLineWidth
     m_commandBuffer->begin();
-    vkCmdBindPipeline(m_commandBuffer->handle(), VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
 
-    // Check too low with dynamic setting.
-    vkCmdSetLineWidth(m_commandBuffer->handle(), -1.0f);
-    m_errorMonitor->VerifyFound();
+    for (const auto test_case : test_cases) {
+        m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_1d600628);
+        vkCmdSetLineWidth(m_commandBuffer->handle(), test_case);
+        m_errorMonitor->VerifyFound();
+    }
 
-    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, "Attempt to set lineWidth to 65536");
-
-    // Check too high with dynamic setting.
-    vkCmdSetLineWidth(m_commandBuffer->handle(), 65536.0f);
-    m_errorMonitor->VerifyFound();
-    m_commandBuffer->end();
-
-    vkDestroyPipelineCache(m_device->device(), pipelineCache, NULL);
-    vkDestroyPipelineLayout(m_device->device(), pipeline_layout, NULL);
-    vkDestroyDescriptorSetLayout(m_device->device(), ds_layout, NULL);
-    vkDestroyDescriptorPool(m_device->device(), ds_pool, NULL);
-    vkDestroyPipeline(m_device->device(), pipeline, NULL);
+    vkDestroyPipelineLayout(m_device->device(), pipeline_layout, nullptr);
 }
 
 TEST_F(VkLayerTest, VALIDATION_ERROR_14c004d4) {
