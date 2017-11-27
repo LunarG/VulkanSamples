@@ -574,6 +574,10 @@ func_struct_id_map = {
 'VkDeviceQueueGlobalPriorityCreateInfoEXT' : 518,
 'vkGetShaderInfoAMD' : 519,
 'VkShaderStatisticsInfoAMD' : 520,
+'VkImportMemoryHostPointerInfoEXT' : 521,
+'VkMemoryHostPointerPropertiesEXT' : 522,
+'VkPhysicalDeviceExternalMemoryHostPropertiesEXT' : 523,
+'vkGetMemoryHostPointerPropertiesEXT' : 524,
 ### ADD New func/struct mappings above this line
 }
 # Mapping of params to unique IDs
@@ -1084,6 +1088,8 @@ implicit_param_map = {
 'infoType' : 503,
 'pInfoSize' : 504,
 'shaderStageMask' : 505,
+'pMemoryHostPointerProperties' : 506,
+'pHostPointer' : 507,
 ### ADD New implicit param mappings above this line
 }
 
