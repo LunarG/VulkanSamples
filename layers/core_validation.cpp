@@ -4499,18 +4499,19 @@ VKAPI_ATTR VkResult VKAPI_CALL MergePipelineCaches(VkDevice device, VkPipelineCa
 // Validation cache:
 // CV is the bottommost implementor of this extension. Don't pass calls down.
 VKAPI_ATTR VkResult VKAPI_CALL CreateValidationCacheEXT(VkDevice device, const VkValidationCacheCreateInfoEXT *pCreateInfo,
-                                                   const VkAllocationCallbacks *pAllocator, VkValidationCacheEXT *pValidationCache) {
+                                                        const VkAllocationCallbacks *pAllocator,
+                                                        VkValidationCacheEXT *pValidationCache) {
     *pValidationCache = ValidationCache::Create(pCreateInfo);
     return *pValidationCache ? VK_SUCCESS : VK_ERROR_INITIALIZATION_FAILED;
 }
 
 VKAPI_ATTR void VKAPI_CALL DestroyValidationCacheEXT(VkDevice device, VkValidationCacheEXT validationCache,
-                                                const VkAllocationCallbacks *pAllocator) {
+                                                     const VkAllocationCallbacks *pAllocator) {
     delete (ValidationCache *)validationCache;
 }
 
 VKAPI_ATTR VkResult VKAPI_CALL GetValidationCacheDataEXT(VkDevice device, VkValidationCacheEXT validationCache, size_t *pDataSize,
-                                                    void *pData) {
+                                                         void *pData) {
     size_t inSize = *pDataSize;
     ((ValidationCache *)validationCache)->Write(pDataSize, pData);
     return (pData && *pDataSize != inSize) ? VK_INCOMPLETE : VK_SUCCESS;
