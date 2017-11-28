@@ -5200,12 +5200,24 @@ VKAPI_ATTR VkResult VKAPI_CALL BeginCommandBuffer(VkCommandBuffer commandBuffer,
             cb_node->inheritanceInfo = *(cb_node->beginInfo.pInheritanceInfo);
             cb_node->beginInfo.pInheritanceInfo = &cb_node->inheritanceInfo;
             // If we are a secondary command-buffer and inheriting.  Update the items we should inherit.
-            if ((cb_node->createInfo.level != VK_COMMAND_BUFFER_LEVEL_PRIMARY) &&
-                (cb_node->beginInfo.flags & VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT)) {
-                cb_node->activeRenderPass = GetRenderPassState(dev_data, cb_node->beginInfo.pInheritanceInfo->renderPass);
-                cb_node->activeSubpass = cb_node->beginInfo.pInheritanceInfo->subpass;
-                cb_node->activeFramebuffer = cb_node->beginInfo.pInheritanceInfo->framebuffer;
-                cb_node->framebuffers.insert(cb_node->beginInfo.pInheritanceInfo->framebuffer);
+            if (cb_node->createInfo.level != VK_COMMAND_BUFFER_LEVEL_PRIMARY) {
+                if (cb_node->beginInfo.flags & VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT) {
+                    cb_node->activeRenderPass = GetRenderPassState(dev_data, cb_node->beginInfo.pInheritanceInfo->renderPass);
+                    cb_node->activeSubpass = cb_node->beginInfo.pInheritanceInfo->subpass;
+                    cb_node->activeFramebuffer = cb_node->beginInfo.pInheritanceInfo->framebuffer;
+                    cb_node->framebuffers.insert(cb_node->beginInfo.pInheritanceInfo->framebuffer);
+                } else if (VK_NULL_HANDLE != cb_node->beginInfo.pInheritanceInfo->renderPass) {
+                    // This is a user-requested warning. This is a likely case where user forgot to set RP continue bit
+                    skip |=
+                        log_msg(dev_data->report_data, VK_DEBUG_REPORT_WARNING_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_RENDER_PASS_EXT,
+                                HandleToUint64(cb_node->beginInfo.pInheritanceInfo->renderPass), __LINE__,
+                                VALIDATION_ERROR_0280006a, "CORE",
+                                "vkBeginCommandBuffer(): Secondary command buffer with a non-null pInheritanceInfo->renderPass "
+                                "does not have "
+                                "VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT. If you intend to draw from this command buffer "
+                                "you must set "
+                                "VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT in pBeginInfo->flags.");
+                }
             }
         }
     }
