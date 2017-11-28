@@ -20260,10 +20260,10 @@ TEST_F(VkPositiveLayerTest, UncompressedToCompressedImageCopy) {
         return;
     }
 
-    uncomp_color_image.Init(3, 3, 1, VK_FORMAT_R16G16B16A16_UINT,
-                            VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT);
+    uncomp_color_image.Init(3, 3, 1, VK_FORMAT_R16G16B16A16_UINT, VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT,
+                            VK_IMAGE_TILING_OPTIMAL);
     comp_color_image.Init(12, 12, 1, VK_FORMAT_BC1_RGBA_SRGB_BLOCK,
-                          VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT);
+                          VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT, VK_IMAGE_TILING_OPTIMAL);
 
     if (!uncomp_color_image.initialized() || !comp_color_image.initialized()) {
         printf("             Unable to initialize surfaces - UncompressedToCompressedImageCopy skipped.\n");
