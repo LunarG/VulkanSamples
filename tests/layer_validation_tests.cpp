@@ -11379,8 +11379,6 @@ TEST_F(VkLayerTest, ValidationCacheTestBadMerge) {
         (PFN_vkCreateValidationCacheEXT)vkGetDeviceProcAddr(m_device->device(), "vkCreateValidationCacheEXT");
     auto fpDestroyValidationCache =
         (PFN_vkDestroyValidationCacheEXT)vkGetDeviceProcAddr(m_device->device(), "vkDestroyValidationCacheEXT");
-    // auto fpGetValidationCacheData =
-    //  (PFN_vkGetValidationCacheDataEXT)vkGetDeviceProcAddr(m_device->device(), "vkGetValidationCacheDataEXT");
     auto fpMergeValidationCaches =
         (PFN_vkMergeValidationCachesEXT)vkGetDeviceProcAddr(m_device->device(), "vkMergeValidationCachesEXT");
     if (!fpCreateValidationCache || !fpDestroyValidationCache || !fpMergeValidationCaches) {
