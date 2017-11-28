@@ -901,8 +901,9 @@ static struct loader_layer_properties *loader_get_next_layer_property(const stru
 
 // Remove all layer properties entries from the list
 void loader_delete_layer_properties(const struct loader_instance *inst, struct loader_layer_list *layer_list) {
-    uint32_t i, j;
+    uint32_t i, j, k;
     struct loader_device_extension_list *dev_ext_list;
+    struct loader_dev_ext_props *ext_props;
     if (!layer_list) return;
 
     for (i = 0; i < layer_list->count; i++) {
@@ -912,11 +913,16 @@ void loader_delete_layer_properties(const struct loader_instance *inst, struct l
         }
         loader_destroy_generic_list(inst, (struct loader_generic_list *)&layer_list->list[i].instance_extension_list);
         dev_ext_list = &layer_list->list[i].device_extension_list;
-        if (dev_ext_list->capacity > 0 && NULL != dev_ext_list->list && dev_ext_list->list->entrypoint_count > 0) {
-            for (j = 0; j < dev_ext_list->list->entrypoint_count; j++) {
-                loader_instance_heap_free(inst, dev_ext_list->list->entrypoints[j]);
+        if (dev_ext_list->capacity > 0 && NULL != dev_ext_list->list) {
+            for (j = 0; j < dev_ext_list->count; j++) {
+                ext_props = &dev_ext_list->list[j];
+                if (ext_props->entrypoint_count > 0) {
+                    for (k = 0; k < ext_props->entrypoint_count; k++) {
+                        loader_instance_heap_free(inst, ext_props->entrypoints[k]);
+                    }
+                    loader_instance_heap_free(inst, ext_props->entrypoints);
+                }
             }
-            loader_instance_heap_free(inst, dev_ext_list->list->entrypoints);
         }
         loader_destroy_generic_list(inst, (struct loader_generic_list *)dev_ext_list);
     }
