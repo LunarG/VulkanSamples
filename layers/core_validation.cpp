@@ -49,6 +49,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <string>
+#include <valarray>
 #include <inttypes.h>
 
 #include "vk_loader_platform.h"
@@ -115,6 +116,10 @@ using std::max;
 static const VkDeviceMemory MEMTRACKER_SWAP_CHAIN_IMAGE_KEY = (VkDeviceMemory)(-1);
 // 2nd special memory handle used to flag object as unbound from memory
 static const VkDeviceMemory MEMORY_UNBOUND = VkDeviceMemory(~((uint64_t)(0)) - 1);
+
+// A special value of (0xFFFFFFFF, 0xFFFFFFFF) indicates that the surface size will be determined
+// by the extent of a swapchain targeting the surface.
+static const uint32_t kSurfaceSizeFromSwapchain = 0xFFFFFFFFu;
 
 struct instance_layer_data {
     VkInstance instance = VK_NULL_HANDLE;
@@ -4823,12 +4828,94 @@ static bool validatePushConstantRange(const layer_data *dev_data, const uint32_t
     return skip;
 }
 
-VKAPI_ATTR VkResult VKAPI_CALL CreatePipelineLayout(VkDevice device, const VkPipelineLayoutCreateInfo *pCreateInfo,
-                                                    const VkAllocationCallbacks *pAllocator, VkPipelineLayout *pPipelineLayout) {
+enum DSL_DESCRIPTOR_TYPES {
+    DSL_TYPE_SAMPLERS = 0,
+    DSL_TYPE_UNIFORM_BUFFERS,
+    DSL_TYPE_STORAGE_BUFFERS,
+    DSL_TYPE_SAMPLED_IMAGES,
+    DSL_TYPE_STORAGE_IMAGES,
+    DSL_NUM_DESCRIPTOR_TYPES
+};
+
+// Used by PreCallValiateCreatePipelineLayout.
+// Returns an array of size DSL_NUM_DESCRIPTOR_TYPES of the maximum number of descriptors used in any single pipeline stage
+std::valarray<uint32_t> GetDescriptorCountMaxPerStage(
+    const layer_data *dev_data, const std::vector<std::shared_ptr<cvdescriptorset::DescriptorSetLayout const>> set_layouts) {
+    // Identify active pipeline stages
+    std::vector<VkShaderStageFlags> stage_flags = {VK_SHADER_STAGE_VERTEX_BIT, 
+                                                   VK_SHADER_STAGE_FRAGMENT_BIT,
+                                                   VK_SHADER_STAGE_COMPUTE_BIT};
+    if (dev_data->enabled_features.geometryShader) {
+        stage_flags.push_back(VK_SHADER_STAGE_GEOMETRY_BIT);
+    }
+    if (dev_data->enabled_features.tessellationShader) {
+        stage_flags.push_back(VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT);
+        stage_flags.push_back(VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT);
+    }
+
+    // Allow iteration over enum
+    std::vector<DSL_DESCRIPTOR_TYPES> dsl_types = {DSL_TYPE_SAMPLERS, DSL_TYPE_UNIFORM_BUFFERS, DSL_TYPE_STORAGE_BUFFERS,
+                                        DSL_TYPE_SAMPLED_IMAGES, DSL_TYPE_STORAGE_IMAGES};
+
+    // Sum by layouts per stage, then pick max of stages per type
+    std::valarray<uint32_t> max_sum(0U, 5);  // max descriptor sum among all pipeline stages
+    for (auto stage : stage_flags) {
+        std::valarray<uint32_t> stage_sum(0U, 5);  // per-stage sums
+        for (auto dsl : set_layouts) {
+            for (uint32_t binding_idx = 0; binding_idx < dsl->GetBindingCount(); binding_idx++) {
+                const VkDescriptorSetLayoutBinding *binding = dsl->GetDescriptorSetLayoutBindingPtrFromIndex(binding_idx);
+                if (0 != (stage & binding->stageFlags)) {
+                    switch (binding->descriptorType) {
+                        case VK_DESCRIPTOR_TYPE_SAMPLER:
+                            stage_sum[DSL_TYPE_SAMPLERS] += binding->descriptorCount;
+                            break;
+                        case VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER:
+                        case VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC:
+                            stage_sum[DSL_TYPE_UNIFORM_BUFFERS] += binding->descriptorCount;
+                            break;
+                        case VK_DESCRIPTOR_TYPE_STORAGE_BUFFER:
+                        case VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC:
+                            stage_sum[DSL_TYPE_STORAGE_BUFFERS] += binding->descriptorCount;
+                            break;
+                        case VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE:
+                        case VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER:
+                            stage_sum[DSL_TYPE_SAMPLED_IMAGES] += binding->descriptorCount;
+                            break;
+                        case VK_DESCRIPTOR_TYPE_STORAGE_IMAGE:
+                        case VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER:
+                            stage_sum[DSL_TYPE_STORAGE_IMAGES] += binding->descriptorCount;
+                            break;
+                        case VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER:
+                            stage_sum[DSL_TYPE_SAMPLED_IMAGES] += binding->descriptorCount;
+                            stage_sum[DSL_TYPE_SAMPLERS] += binding->descriptorCount;
+                            break;
+                        default:
+                            break;
+                    }
+                }
+            }
+        }
+        for (auto type : dsl_types) {
+            max_sum[type] = std::max(stage_sum[type], max_sum[type]);
+        }
+    }
+    return max_sum;
+}
+
+static bool PreCallValiateCreatePipelineLayout(const layer_data *dev_data, const VkPipelineLayoutCreateInfo *pCreateInfo) {
     bool skip = false;
-    layer_data *dev_data = GetLayerDataPtr(get_dispatch_key(device), layer_data_map);
-    // TODO : Add checks for VALIDATION_ERRORS 865-870
-    // Push Constant Range checks
+
+    // Validate layout count against device physical limit
+    if (pCreateInfo->setLayoutCount > dev_data->phys_dev_props.limits.maxBoundDescriptorSets) {
+        skip |=
+            log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
+                    VALIDATION_ERROR_0fe0023c, "DS",
+                    "vkCreatePipelineLayout(): setLayoutCount (%d) exceeds physical device maxBoundDescriptorSets limit (%d). %s",
+                    pCreateInfo->setLayoutCount, dev_data->phys_dev_props.limits.maxBoundDescriptorSets,
+                    validation_error_map[VALIDATION_ERROR_0fe0023c]);
+    }
+
+    // Validate Push Constant ranges
     uint32_t i, j;
     for (i = 0; i < pCreateInfo->pushConstantRangeCount; ++i) {
         skip |= validatePushConstantRange(dev_data, pCreateInfo->pPushConstantRanges[i].offset,
@@ -4839,7 +4926,6 @@ VKAPI_ATTR VkResult VKAPI_CALL CreatePipelineLayout(VkDevice device, const VkPip
                             validation_error_map[VALIDATION_ERROR_11a2dc03]);
         }
     }
-    if (skip) return VK_ERROR_VALIDATION_FAILED_EXT;
 
     // As of 1.0.28, there is a VU that states that a stage flag cannot appear more than once in the list of push constant ranges.
     for (i = 0; i < pCreateInfo->pushConstantRangeCount; ++i) {
@@ -4853,34 +4939,112 @@ VKAPI_ATTR VkResult VKAPI_CALL CreatePipelineLayout(VkDevice device, const VkPip
         }
     }
 
+    // Early-out
+    if (skip) return skip;
+
     std::vector<std::shared_ptr<cvdescriptorset::DescriptorSetLayout const>> set_layouts(pCreateInfo->setLayoutCount, nullptr);
-    unique_lock_t lock(global_lock);
     unsigned int push_descriptor_set_count = 0;
-    for (i = 0; i < pCreateInfo->setLayoutCount; ++i) {
-        set_layouts[i] = GetDescriptorSetLayout(dev_data, pCreateInfo->pSetLayouts[i]);
-        if (set_layouts[i]->IsPushDescriptor()) ++push_descriptor_set_count;
-    }
-    lock.unlock();
+    {
+        unique_lock_t lock(global_lock);  // Lock while accessing global state
+        for (i = 0; i < pCreateInfo->setLayoutCount; ++i) {
+            set_layouts[i] = GetDescriptorSetLayout(dev_data, pCreateInfo->pSetLayouts[i]);
+            if (set_layouts[i]->IsPushDescriptor()) ++push_descriptor_set_count;
+        }
+    }  // Unlock
+
     if (push_descriptor_set_count > 1) {
-        skip |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0,
-                        __LINE__, VALIDATION_ERROR_0fe0024a, "DS",
-                        "vkCreatePipelineLayout() Multiple push descriptor sets found. %s",
+        skip |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
+                        VALIDATION_ERROR_0fe0024a, "DS", "vkCreatePipelineLayout() Multiple push descriptor sets found. %s",
                         validation_error_map[VALIDATION_ERROR_0fe0024a]);
     }
+
+    std::valarray<uint32_t> max_descriptors_per_stage(0u, DSL_NUM_DESCRIPTOR_TYPES);
+    max_descriptors_per_stage = GetDescriptorCountMaxPerStage(dev_data, set_layouts);
+    // Samplers
+    if (max_descriptors_per_stage[DSL_TYPE_SAMPLERS] > dev_data->phys_dev_props.limits.maxPerStageDescriptorSamplers) {
+        skip |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
+                        VALIDATION_ERROR_0fe0023e, "DS",
+                        "vkCreatePipelineLayout(): max per-stage sampler bindings count (%d) exceeds device "
+                        "maxPerStageDescriptorSamplers limit (%d). %s",
+                        max_descriptors_per_stage[DSL_TYPE_SAMPLERS], dev_data->phys_dev_props.limits.maxPerStageDescriptorSamplers,
+                        validation_error_map[VALIDATION_ERROR_0fe0023e]);
+    }
+
+    // Uniform buffers
+    if (max_descriptors_per_stage[DSL_TYPE_UNIFORM_BUFFERS] > dev_data->phys_dev_props.limits.maxPerStageDescriptorUniformBuffers) {
+        skip |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
+                        VALIDATION_ERROR_0fe00240, "DS",
+                        "vkCreatePipelineLayout(): max per-stage uniform buffer bindings count (%d) exceeds device "
+                        "maxPerStageDescriptorUniformBuffers limit (%d). %s",
+                        max_descriptors_per_stage[DSL_TYPE_UNIFORM_BUFFERS],
+                        dev_data->phys_dev_props.limits.maxPerStageDescriptorUniformBuffers,
+                        validation_error_map[VALIDATION_ERROR_0fe00240]);
+    }
+
+    // Storage buffers
+    if (max_descriptors_per_stage[DSL_TYPE_STORAGE_BUFFERS] > dev_data->phys_dev_props.limits.maxPerStageDescriptorStorageBuffers) {
+        skip |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
+                        VALIDATION_ERROR_0fe00242, "DS",
+                        "vkCreatePipelineLayout(): max per-stage storage buffer bindings count (%d) exceeds device "
+                        "maxPerStageDescriptorStorageBuffers limit (%d). %s",
+                        max_descriptors_per_stage[DSL_TYPE_STORAGE_BUFFERS],
+                        dev_data->phys_dev_props.limits.maxPerStageDescriptorStorageBuffers,
+                        validation_error_map[VALIDATION_ERROR_0fe00242]);
+    }
+
+    // Sampled images
+    if (max_descriptors_per_stage[DSL_TYPE_SAMPLED_IMAGES] > dev_data->phys_dev_props.limits.maxPerStageDescriptorSampledImages) {
+        skip |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
+                        VALIDATION_ERROR_0fe00244, "DS",
+                        "vkCreatePipelineLayout(): max per-stage sampled image bindings count (%d) exceeds device "
+                        "maxPerStageDescriptorSampledImages limit (%d). %s",
+                        max_descriptors_per_stage[DSL_TYPE_SAMPLED_IMAGES],
+                        dev_data->phys_dev_props.limits.maxPerStageDescriptorSampledImages,
+                        validation_error_map[VALIDATION_ERROR_0fe00244]);
+    }
+
+    // Storage images
+    if (max_descriptors_per_stage[DSL_TYPE_STORAGE_IMAGES] > dev_data->phys_dev_props.limits.maxPerStageDescriptorStorageImages) {
+        skip |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
+                        VALIDATION_ERROR_0fe00246, "DS",
+                        "vkCreatePipelineLayout(): max per-stage storage image bindings count (%d) exceeds device "
+                        "maxPerStageDescriptorStorageImages limit (%d). %s",
+                        max_descriptors_per_stage[DSL_TYPE_STORAGE_IMAGES],
+                        dev_data->phys_dev_props.limits.maxPerStageDescriptorStorageImages,
+                        validation_error_map[VALIDATION_ERROR_0fe00246]);
+    }
+
+    return skip;
+}
+
+static void PostCallRecordCreatePipelineLayout(layer_data *dev_data, const VkPipelineLayoutCreateInfo *pCreateInfo,
+                                               const VkPipelineLayout *pPipelineLayout) {
+    unique_lock_t lock(global_lock);  // Lock while accessing state
+
+    PIPELINE_LAYOUT_NODE &plNode = dev_data->pipelineLayoutMap[*pPipelineLayout];
+    plNode.layout = *pPipelineLayout;
+    plNode.set_layouts.resize(pCreateInfo->setLayoutCount);
+    for (uint32_t i = 0; i < pCreateInfo->setLayoutCount; ++i) {
+        plNode.set_layouts[i] = GetDescriptorSetLayout(dev_data, pCreateInfo->pSetLayouts[i]);
+    }
+    plNode.push_constant_ranges.resize(pCreateInfo->pushConstantRangeCount);
+    for (uint32_t i = 0; i < pCreateInfo->pushConstantRangeCount; ++i) {
+        plNode.push_constant_ranges[i] = pCreateInfo->pPushConstantRanges[i];
+    }
+    // Implicit unlock
+};
+
+VKAPI_ATTR VkResult VKAPI_CALL CreatePipelineLayout(VkDevice device, const VkPipelineLayoutCreateInfo *pCreateInfo,
+                                                    const VkAllocationCallbacks *pAllocator, VkPipelineLayout *pPipelineLayout) {
+    layer_data *dev_data = GetLayerDataPtr(get_dispatch_key(device), layer_data_map);
+
+    bool skip = PreCallValiateCreatePipelineLayout(dev_data, pCreateInfo);
     if (skip) return VK_ERROR_VALIDATION_FAILED_EXT;
 
     VkResult result = dev_data->dispatch_table.CreatePipelineLayout(device, pCreateInfo, pAllocator, pPipelineLayout);
+
     if (VK_SUCCESS == result) {
-        lock.lock();
-        PIPELINE_LAYOUT_NODE &plNode = dev_data->pipelineLayoutMap[*pPipelineLayout];
-        plNode.layout = *pPipelineLayout;
-        plNode.set_layouts.resize(pCreateInfo->setLayoutCount);
-        plNode.set_layouts.swap(set_layouts);
-        plNode.push_constant_ranges.resize(pCreateInfo->pushConstantRangeCount);
-        for (i = 0; i < pCreateInfo->pushConstantRangeCount; ++i) {
-            plNode.push_constant_ranges[i] = pCreateInfo->pPushConstantRanges[i];
-        }
-        lock.unlock();
+        PostCallRecordCreatePipelineLayout(dev_data, pCreateInfo, pPipelineLayout);
     }
     return result;
 }
@@ -5196,25 +5360,12 @@ VKAPI_ATTR VkResult VKAPI_CALL BeginCommandBuffer(VkCommandBuffer commandBuffer,
             cb_node->inheritanceInfo = *(cb_node->beginInfo.pInheritanceInfo);
             cb_node->beginInfo.pInheritanceInfo = &cb_node->inheritanceInfo;
             // If we are a secondary command-buffer and inheriting.  Update the items we should inherit.
-            if (cb_node->createInfo.level != VK_COMMAND_BUFFER_LEVEL_PRIMARY) {
-                if (cb_node->beginInfo.flags & VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT) {
-                    cb_node->activeRenderPass = GetRenderPassState(dev_data, cb_node->beginInfo.pInheritanceInfo->renderPass);
-                    cb_node->activeSubpass = cb_node->beginInfo.pInheritanceInfo->subpass;
-                    cb_node->activeFramebuffer = cb_node->beginInfo.pInheritanceInfo->framebuffer;
-                    cb_node->framebuffers.insert(cb_node->beginInfo.pInheritanceInfo->framebuffer);
-                } else if (VK_NULL_HANDLE != cb_node->beginInfo.pInheritanceInfo->renderPass) {
-                    // This is a user-requested warning. This is a likely case where user forgot to set RP continue bit
-                    //  but only warn if renderPass actually exists, indicating this was intentional vs just uninitialized junk
-                    if (GetRenderPassState(dev_data, cb_node->beginInfo.pInheritanceInfo->renderPass)) {
-                        skip |= log_msg(
-                            dev_data->report_data, VK_DEBUG_REPORT_WARNING_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_RENDER_PASS_EXT,
-                            HandleToUint64(cb_node->beginInfo.pInheritanceInfo->renderPass), __LINE__, VALIDATION_ERROR_0280006a,
-                            "CORE",
-                            "vkBeginCommandBuffer(): Secondary command buffer with a non-null pInheritanceInfo->renderPass "
-                            "does not have VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT. If you intend to draw from this "
-                            "command buffer you must set VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT in pBeginInfo->flags.");
-                    }
-                }
+            if ((cb_node->createInfo.level != VK_COMMAND_BUFFER_LEVEL_PRIMARY) &&
+                (cb_node->beginInfo.flags & VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT)) {
+                cb_node->activeRenderPass = GetRenderPassState(dev_data, cb_node->beginInfo.pInheritanceInfo->renderPass);
+                cb_node->activeSubpass = cb_node->beginInfo.pInheritanceInfo->subpass;
+                cb_node->activeFramebuffer = cb_node->beginInfo.pInheritanceInfo->framebuffer;
+                cb_node->framebuffers.insert(cb_node->beginInfo.pInheritanceInfo->framebuffer);
             }
         }
     }
