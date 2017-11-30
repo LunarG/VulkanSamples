@@ -232,14 +232,14 @@ struct Demo {
     void prepare_descriptor_pool();
     void prepare_descriptor_set();
     void prepare_framebuffers();
+    vk::ShaderModule prepare_shader_module(const uint32_t *, size_t);
+    vk::ShaderModule prepare_vs();
     vk::ShaderModule prepare_fs();
     void prepare_pipeline();
     void prepare_render_pass();
-    vk::ShaderModule prepare_shader_module(const void *, size_t);
     void prepare_texture_image(const char *, texture_object *, vk::ImageTiling, vk::ImageUsageFlags, vk::MemoryPropertyFlags);
     void prepare_textures();
-    vk::ShaderModule prepare_vs();
-    char *read_spv(const char *, size_t *);
+
     void resize();
     void set_image_layout(vk::Image, vk::ImageAspectFlags, vk::ImageLayout, vk::ImageLayout, vk::AccessFlags,
                           vk::PipelineStageFlags, vk::PipelineStageFlags);
@@ -1858,15 +1858,11 @@ Demo::Demo()
     }
 
     vk::ShaderModule Demo::prepare_fs() {
-        size_t size = 0;
-        void *fragShaderCode = read_spv("cube-frag.spv", &size);
-        if (!fragShaderCode) {
-            ERR_EXIT("Failed to load cube-frag.spv", "Load Shader Failure");
-        }
+        const uint32_t fragShaderCode[] = {
+#include "cube.frag.inc"
+        };
 
-        frag_shader_module = prepare_shader_module(fragShaderCode, size);
-
-        free(fragShaderCode);
+        frag_shader_module = prepare_shader_module(fragShaderCode, sizeof(fragShaderCode));
 
         return frag_shader_module;
     }
@@ -2004,8 +2000,8 @@ Demo::Demo()
         VERIFY(result == vk::Result::eSuccess);
     }
 
-    vk::ShaderModule Demo::prepare_shader_module(const void *code, size_t size) {
-        auto const moduleCreateInfo = vk::ShaderModuleCreateInfo().setCodeSize(size).setPCode((uint32_t const *)code);
+    vk::ShaderModule Demo::prepare_shader_module(const uint32_t *code, size_t size) {
+        const auto moduleCreateInfo = vk::ShaderModuleCreateInfo().setCodeSize(size).setPCode(code);
 
         vk::ShaderModule module;
         auto result = device.createShaderModule(&moduleCreateInfo, nullptr, &module);
@@ -2167,39 +2163,13 @@ Demo::Demo()
     }
 
     vk::ShaderModule Demo::prepare_vs() {
-        size_t size = 0;
-        void *vertShaderCode = read_spv("cube-vert.spv", &size);
-        if (!vertShaderCode) {
-            ERR_EXIT("Failed to load cube-vert.spv", "Load Shader Failure");
-        }
+        const uint32_t vertShaderCode[] = {
+#include "cube.vert.inc"
+        };
 
-        vert_shader_module = prepare_shader_module(vertShaderCode, size);
-
-        free(vertShaderCode);
+        vert_shader_module = prepare_shader_module(vertShaderCode, sizeof(vertShaderCode));
 
         return vert_shader_module;
-    }
-
-    char *Demo::read_spv(const char *filename, size_t *psize) {
-        FILE *fp = fopen(filename, "rb");
-        if (!fp) {
-            return nullptr;
-        }
-
-        fseek(fp, 0L, SEEK_END);
-        long int size = ftell(fp);
-
-        fseek(fp, 0L, SEEK_SET);
-
-        void *shader_code = malloc(size);
-        size_t retval = fread(shader_code, size, 1, fp);
-        VERIFY(retval == 1);
-
-        *psize = size;
-
-        fclose(fp);
-
-        return (char *)shader_code;
     }
 
     void Demo::resize() {
