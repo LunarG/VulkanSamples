@@ -25,6 +25,7 @@
 #ifdef ANDROID
 #include "vulkan_wrapper.h"
 #else
+#define NOMINMAX
 #include <vulkan/vulkan.h>
 #endif
 
@@ -50,40 +51,23 @@
 #include <memory>
 #include <unordered_set>
 
-#define GLM_FORCE_RADIANS
-#include "glm/glm.hpp"
-#include <glm/gtc/matrix_transform.hpp>
-
 //--------------------------------------------------------------------------------------
 // Mesh and VertexFormat Data
 //--------------------------------------------------------------------------------------
-struct Vertex {
-    float posX, posY, posZ, posW;  // Position data
-    float r, g, b, a;              // Color
-};
 
-#define XYZ1(_x_, _y_, _z_) (_x_), (_y_), (_z_), 1.f
-
-typedef enum _BsoFailSelect {
-    BsoFailNone = 0x00000000,
-    BsoFailLineWidth = 0x00000001,
-    BsoFailDepthBias = 0x00000002,
-    BsoFailViewport = 0x00000004,
-    BsoFailScissor = 0x00000008,
-    BsoFailBlend = 0x00000010,
-    BsoFailDepthBounds = 0x00000020,
-    BsoFailStencilReadMask = 0x00000040,
-    BsoFailStencilWriteMask = 0x00000080,
-    BsoFailStencilReference = 0x00000100,
-    BsoFailCmdClearAttachments = 0x00000200,
-    BsoFailIndexBuffer = 0x00000400,
-} BsoFailSelect;
-
-struct vktriangle_vs_uniform {
-    // Must start with MVP
-    float mvp[4][4];
-    float position[3][4];
-    float color[3][4];
+enum BsoFailSelect {
+    BsoFailNone,
+    BsoFailLineWidth,
+    BsoFailDepthBias,
+    BsoFailViewport,
+    BsoFailScissor,
+    BsoFailBlend,
+    BsoFailDepthBounds,
+    BsoFailStencilReadMask,
+    BsoFailStencilWriteMask,
+    BsoFailStencilReference,
+    BsoFailCmdClearAttachments,
+    BsoFailIndexBuffer
 };
 
 static const char bindStateVertShaderText[] =
@@ -121,7 +105,7 @@ VkFormat FindSupportedDepthStencilFormat(VkPhysicalDevice phy) {
             return ds_formats[i];
         }
     }
-    return (VkFormat)0;
+    return VK_FORMAT_UNDEFINED;
 }
 
 // Returns true if *any* requested features are available.
@@ -430,9 +414,9 @@ static VKAPI_ATTR VkBool32 VKAPI_CALL myDbgFunc(VkFlags msgFlags, VkDebugReportO
 
 class VkLayerTest : public VkRenderFramework {
    public:
-    void VKTriangleTest(const char *vertShaderText, const char *fragShaderText, BsoFailSelect failMask);
+    void VKTriangleTest(BsoFailSelect failCase);
     void GenericDrawPreparation(VkCommandBufferObj *commandBuffer, VkPipelineObj &pipelineobj, VkDescriptorSetObj &descriptorSet,
-                                BsoFailSelect failMask);
+                                BsoFailSelect failCase);
 
     void Init(VkPhysicalDeviceFeatures *features = nullptr, const VkCommandPoolCreateFlags flags = 0) {
         InitFramework(myDbgFunc, m_errorMonitor);
@@ -538,107 +522,114 @@ class VkLayerTest : public VkRenderFramework {
     VkLayerTest() { m_enableWSI = false; }
 };
 
-void VkLayerTest::VKTriangleTest(const char *vertShaderText, const char *fragShaderText, BsoFailSelect failMask) {
-    // Create identity matrix
-    int i;
-    struct vktriangle_vs_uniform data;
-
-    glm::mat4 Projection = glm::mat4(1.0f);
-    glm::mat4 View = glm::mat4(1.0f);
-    glm::mat4 Model = glm::mat4(1.0f);
-    glm::mat4 MVP = Projection * View * Model;
-    const int matrixSize = sizeof(MVP);
-
-    memcpy(&data.mvp, &MVP[0][0], matrixSize);
-
-    static const Vertex tri_data[] = {
-        {XYZ1(-1, -1, 0), XYZ1(1.f, 0.f, 0.f)}, {XYZ1(1, -1, 0), XYZ1(0.f, 1.f, 0.f)}, {XYZ1(0, 1, 0), XYZ1(0.f, 0.f, 1.f)},
-    };
-
-    for (i = 0; i < 3; i++) {
-        data.position[i][0] = tri_data[i].posX;
-        data.position[i][1] = tri_data[i].posY;
-        data.position[i][2] = tri_data[i].posZ;
-        data.position[i][3] = tri_data[i].posW;
-        data.color[i][0] = tri_data[i].r;
-        data.color[i][1] = tri_data[i].g;
-        data.color[i][2] = tri_data[i].b;
-        data.color[i][3] = tri_data[i].a;
-    }
+void VkLayerTest::VKTriangleTest(BsoFailSelect failCase) {
+    ASSERT_TRUE(m_device && m_device->initialized());  // VKTriangleTest assumes Init() has finished
 
     ASSERT_NO_FATAL_FAILURE(InitViewport());
 
-    VkConstantBufferObj constantBuffer(m_device, sizeof(vktriangle_vs_uniform), (const void *)&data,
-                                       VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT);
-
-    VkShaderObj vs(m_device, vertShaderText, VK_SHADER_STAGE_VERTEX_BIT, this);
-    VkShaderObj ps(m_device, fragShaderText, VK_SHADER_STAGE_FRAGMENT_BIT, this);
+    VkShaderObj vs(m_device, bindStateVertShaderText, VK_SHADER_STAGE_VERTEX_BIT, this);
+    VkShaderObj ps(m_device, bindStateFragShaderText, VK_SHADER_STAGE_FRAGMENT_BIT, this);
 
     VkPipelineObj pipelineobj(m_device);
-    pipelineobj.AddColorAttachment();
+    pipelineobj.AddDefaultColorAttachment();
     pipelineobj.AddShader(&vs);
     pipelineobj.AddShader(&ps);
-    if (failMask & BsoFailLineWidth) {
-        pipelineobj.MakeDynamic(VK_DYNAMIC_STATE_LINE_WIDTH);
-        VkPipelineInputAssemblyStateCreateInfo ia_state = {};
-        ia_state.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
-        ia_state.topology = VK_PRIMITIVE_TOPOLOGY_LINE_LIST;
-        pipelineobj.SetInputAssembly(&ia_state);
-    }
-    if (failMask & BsoFailDepthBias) {
-        pipelineobj.MakeDynamic(VK_DYNAMIC_STATE_DEPTH_BIAS);
-        VkPipelineRasterizationStateCreateInfo rs_state = {};
-        rs_state.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
-        rs_state.depthBiasEnable = VK_TRUE;
-        rs_state.lineWidth = 1.0f;
-        pipelineobj.SetRasterization(&rs_state);
-    }
-    // Viewport and scissors must stay in sync or other errors will occur than
-    // the ones we want
-    if (failMask & BsoFailViewport) {
-        pipelineobj.MakeDynamic(VK_DYNAMIC_STATE_VIEWPORT);
-    }
-    if (failMask & BsoFailScissor) {
-        pipelineobj.MakeDynamic(VK_DYNAMIC_STATE_SCISSOR);
-    }
-    if (failMask & BsoFailBlend) {
-        pipelineobj.MakeDynamic(VK_DYNAMIC_STATE_BLEND_CONSTANTS);
-        VkPipelineColorBlendAttachmentState att_state = {};
-        att_state.dstAlphaBlendFactor = VK_BLEND_FACTOR_CONSTANT_COLOR;
-        att_state.blendEnable = VK_TRUE;
-        pipelineobj.AddColorAttachment(0, &att_state);
-    }
-    if (failMask & BsoFailDepthBounds) {
-        pipelineobj.MakeDynamic(VK_DYNAMIC_STATE_DEPTH_BOUNDS);
-    }
-    if (failMask & BsoFailStencilReadMask) {
-        pipelineobj.MakeDynamic(VK_DYNAMIC_STATE_STENCIL_COMPARE_MASK);
-    }
-    if (failMask & BsoFailStencilWriteMask) {
-        pipelineobj.MakeDynamic(VK_DYNAMIC_STATE_STENCIL_WRITE_MASK);
-    }
-    if (failMask & BsoFailStencilReference) {
-        pipelineobj.MakeDynamic(VK_DYNAMIC_STATE_STENCIL_REFERENCE);
+
+    bool failcase_needs_depth = false;  // to mark cases that need depth attachment
+
+    switch (failCase) {
+        case BsoFailLineWidth: {
+            pipelineobj.MakeDynamic(VK_DYNAMIC_STATE_LINE_WIDTH);
+            VkPipelineInputAssemblyStateCreateInfo ia_state = {};
+            ia_state.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
+            ia_state.topology = VK_PRIMITIVE_TOPOLOGY_LINE_LIST;
+            pipelineobj.SetInputAssembly(&ia_state);
+            break;
+        }
+        case BsoFailDepthBias: {
+            pipelineobj.MakeDynamic(VK_DYNAMIC_STATE_DEPTH_BIAS);
+            VkPipelineRasterizationStateCreateInfo rs_state = {};
+            rs_state.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
+            rs_state.depthBiasEnable = VK_TRUE;
+            rs_state.lineWidth = 1.0f;
+            pipelineobj.SetRasterization(&rs_state);
+            break;
+        }
+        case BsoFailViewport: {
+            pipelineobj.MakeDynamic(VK_DYNAMIC_STATE_VIEWPORT);
+            break;
+        }
+        case BsoFailScissor: {
+            pipelineobj.MakeDynamic(VK_DYNAMIC_STATE_SCISSOR);
+            break;
+        }
+        case BsoFailBlend: {
+            pipelineobj.MakeDynamic(VK_DYNAMIC_STATE_BLEND_CONSTANTS);
+            VkPipelineColorBlendAttachmentState att_state = {};
+            att_state.dstAlphaBlendFactor = VK_BLEND_FACTOR_CONSTANT_COLOR;
+            att_state.blendEnable = VK_TRUE;
+            pipelineobj.AddColorAttachment(0, att_state);
+            break;
+        }
+        case BsoFailDepthBounds: {
+            failcase_needs_depth = true;
+            pipelineobj.MakeDynamic(VK_DYNAMIC_STATE_DEPTH_BOUNDS);
+            break;
+        }
+        case BsoFailStencilReadMask: {
+            failcase_needs_depth = true;
+            pipelineobj.MakeDynamic(VK_DYNAMIC_STATE_STENCIL_COMPARE_MASK);
+            break;
+        }
+        case BsoFailStencilWriteMask: {
+            failcase_needs_depth = true;
+            pipelineobj.MakeDynamic(VK_DYNAMIC_STATE_STENCIL_WRITE_MASK);
+            break;
+        }
+        case BsoFailStencilReference: {
+            failcase_needs_depth = true;
+            pipelineobj.MakeDynamic(VK_DYNAMIC_STATE_STENCIL_REFERENCE);
+            break;
+        }
+
+        case BsoFailIndexBuffer:
+            break;
+        case BsoFailCmdClearAttachments:
+            break;
+        case BsoFailNone:
+            break;
+        default:
+            break;
     }
 
     VkDescriptorSetObj descriptorSet(m_device);
-    descriptorSet.AppendBuffer(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, constantBuffer);
 
-    ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
+    VkImageView *depth_attachment = nullptr;
+    if (failcase_needs_depth) {
+        m_depth_stencil_fmt = FindSupportedDepthStencilFormat(gpu());
+        ASSERT_TRUE(m_depth_stencil_fmt != VK_FORMAT_UNDEFINED);
+
+        m_depthStencil->Init(m_device, static_cast<uint32_t>(m_width), static_cast<uint32_t>(m_height), m_depth_stencil_fmt,
+                             VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT);
+        depth_attachment = m_depthStencil->BindInfo();
+    }
+
+    ASSERT_NO_FATAL_FAILURE(InitRenderTarget(1, depth_attachment));
     m_commandBuffer->begin();
+
+    GenericDrawPreparation(m_commandBuffer, pipelineobj, descriptorSet, failCase);
+
     m_commandBuffer->BeginRenderPass(m_renderPassBeginInfo);
 
-    GenericDrawPreparation(m_commandBuffer, pipelineobj, descriptorSet, failMask);
-
     // render triangle
-    if (failMask & BsoFailIndexBuffer) {
+    if (failCase == BsoFailIndexBuffer) {
         // Use DrawIndexed w/o an index buffer bound
         m_commandBuffer->DrawIndexed(3, 1, 0, 0, 0);
     } else {
         m_commandBuffer->Draw(3, 1, 0, 0);
     }
 
-    if (failMask & BsoFailCmdClearAttachments) {
+    if (failCase == BsoFailCmdClearAttachments) {
         VkClearAttachment color_attachment = {};
         color_attachment.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
         color_attachment.colorAttachment = 1;  // Someone who knew what they were doing would use 0 for the index;
@@ -655,13 +646,9 @@ void VkLayerTest::VKTriangleTest(const char *vertShaderText, const char *fragSha
 
 void VkLayerTest::GenericDrawPreparation(VkCommandBufferObj *commandBuffer, VkPipelineObj &pipelineobj,
                                          VkDescriptorSetObj &descriptorSet, BsoFailSelect failMask) {
-    if (m_depthStencil->Initialized()) {
-        commandBuffer->ClearAllBuffers(m_clear_color, m_depth_clear_color, m_stencil_clear_color, m_depthStencil);
-    } else {
-        commandBuffer->ClearAllBuffers(m_clear_color, m_depth_clear_color, m_stencil_clear_color, NULL);
-    }
+    commandBuffer->ClearAllBuffers(m_renderTargets, m_clear_color, m_depthStencil, m_depth_clear_color, m_stencil_clear_color);
 
-    commandBuffer->PrepareAttachments();
+    commandBuffer->PrepareAttachments(m_renderTargets, m_depthStencil);
     // Make sure depthWriteEnable is set so that Depth fail test will work
     // correctly
     // Make sure stencilTestEnable is set so that Stencil fail test will work
@@ -1732,7 +1719,7 @@ TEST_F(VkLayerTest, PSOPolygonModeInvalid) {
         VkPipelineObj pipe(&test_device);
         pipe.AddShader(&vs);
         pipe.AddShader(&fs);
-        pipe.AddColorAttachment();
+        pipe.AddDefaultColorAttachment();
         // Introduce failure by setting unsupported polygon mode
         rs_ci.polygonMode = VK_POLYGON_MODE_POINT;
         pipe.SetRasterization(&rs_ci);
@@ -1747,7 +1734,7 @@ TEST_F(VkLayerTest, PSOPolygonModeInvalid) {
         VkPipelineObj pipe(&test_device);
         pipe.AddShader(&vs);
         pipe.AddShader(&fs);
-        pipe.AddColorAttachment();
+        pipe.AddDefaultColorAttachment();
         // Introduce failure by setting unsupported polygon mode
         rs_ci.polygonMode = VK_POLYGON_MODE_LINE;
         pipe.SetRasterization(&rs_ci);
@@ -2338,7 +2325,7 @@ TEST_F(VkLayerTest, SubmitSignaledFence) {
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
 
     m_commandBuffer->begin();
-    m_commandBuffer->ClearAllBuffers(m_clear_color, m_depth_clear_color, m_stencil_clear_color, NULL);
+    m_commandBuffer->ClearAllBuffers(m_renderTargets, m_clear_color, nullptr, m_depth_clear_color, m_stencil_clear_color);
     m_commandBuffer->end();
 
     testFence.init(*m_device, fenceInfo);
@@ -3184,7 +3171,7 @@ TEST_F(VkLayerTest, CreatePipelineBadVertexAttributeFormat) {
     VkShaderObj fs(m_device, fsSource, VK_SHADER_STAGE_FRAGMENT_BIT, this);
 
     VkPipelineObj pipe(m_device);
-    pipe.AddColorAttachment();
+    pipe.AddDefaultColorAttachment();
     pipe.AddShader(&vs);
     pipe.AddShader(&fs);
 
@@ -4246,7 +4233,7 @@ TEST_F(VkLayerTest, RenderPassPipelineSubpassMismatch) {
     VkShaderObj vs(m_device, vsSource, VK_SHADER_STAGE_VERTEX_BIT, this);
     VkShaderObj fs(m_device, fsSource, VK_SHADER_STAGE_FRAGMENT_BIT, this);
     VkPipelineObj pipe(m_device);
-    pipe.AddColorAttachment();
+    pipe.AddDefaultColorAttachment();
     pipe.AddShader(&vs);
     pipe.AddShader(&fs);
     VkViewport view_port = {};
@@ -5103,8 +5090,8 @@ TEST_F(VkLayerTest, DisabledIndependentBlend) {
     att_state1.blendEnable = VK_TRUE;
     att_state2.dstAlphaBlendFactor = VK_BLEND_FACTOR_CONSTANT_COLOR;
     att_state2.blendEnable = VK_FALSE;
-    pipeline.AddColorAttachment(0, &att_state1);
-    pipeline.AddColorAttachment(1, &att_state2);
+    pipeline.AddColorAttachment(0, att_state1);
+    pipeline.AddColorAttachment(1, att_state2);
     pipeline.CreateVKPipeline(descriptorSet.GetPipelineLayout(), renderpass);
     m_errorMonitor->VerifyFound();
     vkDestroyRenderPass(m_device->device(), renderpass, NULL);
@@ -5133,7 +5120,7 @@ TEST_F(VkLayerTest, PipelineRenderpassCompatibility) {
         m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_096005e2);
         VkPipelineObj pipeline(m_device);
         pipeline.AddShader(&vs_obj);
-        pipeline.AddColorAttachment(0, &att_state1);
+        pipeline.AddColorAttachment(0, att_state1);
 
         VkGraphicsPipelineCreateInfo info = {};
         pipeline.InitGraphicsPipelineCreateInfo(&info);
@@ -5606,7 +5593,7 @@ TEST_F(VkLayerTest, DynamicDepthBiasNotBound) {
     ASSERT_NO_FATAL_FAILURE(Init());
     // Dynamic depth bias
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, "Dynamic depth bias state not set for this command buffer");
-    VKTriangleTest(bindStateVertShaderText, bindStateFragShaderText, BsoFailDepthBias);
+    VKTriangleTest(BsoFailDepthBias);
     m_errorMonitor->VerifyFound();
 }
 
@@ -5618,7 +5605,7 @@ TEST_F(VkLayerTest, DynamicLineWidthNotBound) {
     ASSERT_NO_FATAL_FAILURE(Init());
     // Dynamic line width
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, "Dynamic line width state not set for this command buffer");
-    VKTriangleTest(bindStateVertShaderText, bindStateFragShaderText, BsoFailLineWidth);
+    VKTriangleTest(BsoFailLineWidth);
     m_errorMonitor->VerifyFound();
 }
 
@@ -5631,7 +5618,7 @@ TEST_F(VkLayerTest, DynamicViewportNotBound) {
     // Dynamic viewport state
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
                                          "Dynamic viewport(s) 0 are used by pipeline state object, but were not provided");
-    VKTriangleTest(bindStateVertShaderText, bindStateFragShaderText, BsoFailViewport);
+    VKTriangleTest(BsoFailViewport);
     m_errorMonitor->VerifyFound();
 }
 
@@ -5644,7 +5631,7 @@ TEST_F(VkLayerTest, DynamicScissorNotBound) {
     // Dynamic scissor state
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
                                          "Dynamic scissor(s) 0 are used by pipeline state object, but were not provided");
-    VKTriangleTest(bindStateVertShaderText, bindStateFragShaderText, BsoFailScissor);
+    VKTriangleTest(BsoFailScissor);
     m_errorMonitor->VerifyFound();
 }
 
@@ -5657,7 +5644,7 @@ TEST_F(VkLayerTest, DynamicBlendConstantsNotBound) {
     // Dynamic blend constant state
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
                                          "Dynamic blend constants state not set for this command buffer");
-    VKTriangleTest(bindStateVertShaderText, bindStateFragShaderText, BsoFailBlend);
+    VKTriangleTest(BsoFailBlend);
     m_errorMonitor->VerifyFound();
 }
 
@@ -5674,7 +5661,7 @@ TEST_F(VkLayerTest, DynamicDepthBoundsNotBound) {
     // Dynamic depth bounds
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
                                          "Dynamic depth bounds state not set for this command buffer");
-    VKTriangleTest(bindStateVertShaderText, bindStateFragShaderText, BsoFailDepthBounds);
+    VKTriangleTest(BsoFailDepthBounds);
     m_errorMonitor->VerifyFound();
 }
 
@@ -5687,7 +5674,7 @@ TEST_F(VkLayerTest, DynamicStencilReadNotBound) {
     // Dynamic stencil read mask
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
                                          "Dynamic stencil read mask state not set for this command buffer");
-    VKTriangleTest(bindStateVertShaderText, bindStateFragShaderText, BsoFailStencilReadMask);
+    VKTriangleTest(BsoFailStencilReadMask);
     m_errorMonitor->VerifyFound();
 }
 
@@ -5700,7 +5687,7 @@ TEST_F(VkLayerTest, DynamicStencilWriteNotBound) {
     // Dynamic stencil write mask
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
                                          "Dynamic stencil write mask state not set for this command buffer");
-    VKTriangleTest(bindStateVertShaderText, bindStateFragShaderText, BsoFailStencilWriteMask);
+    VKTriangleTest(BsoFailStencilWriteMask);
     m_errorMonitor->VerifyFound();
 }
 
@@ -5713,7 +5700,7 @@ TEST_F(VkLayerTest, DynamicStencilRefNotBound) {
     // Dynamic stencil reference
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
                                          "Dynamic stencil reference state not set for this command buffer");
-    VKTriangleTest(bindStateVertShaderText, bindStateFragShaderText, BsoFailStencilReference);
+    VKTriangleTest(BsoFailStencilReference);
     m_errorMonitor->VerifyFound();
 }
 
@@ -5723,7 +5710,7 @@ TEST_F(VkLayerTest, IndexBufferNotBound) {
     ASSERT_NO_FATAL_FAILURE(Init());
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
                                          "Index buffer object not bound to this command buffer when Indexed ");
-    VKTriangleTest(bindStateVertShaderText, bindStateFragShaderText, BsoFailIndexBuffer);
+    VKTriangleTest(BsoFailIndexBuffer);
     m_errorMonitor->VerifyFound();
 }
 
@@ -5739,7 +5726,7 @@ TEST_F(VkLayerTest, CommandBufferTwoSubmits) {
     // We luck out b/c by default the framework creates CB w/ the
     // VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT set
     m_commandBuffer->begin();
-    m_commandBuffer->ClearAllBuffers(m_clear_color, m_depth_clear_color, m_stencil_clear_color, NULL);
+    m_commandBuffer->ClearAllBuffers(m_renderTargets, m_clear_color, nullptr, m_depth_clear_color, m_stencil_clear_color);
     m_commandBuffer->end();
 
     // Bypass framework since it does the waits automatically
@@ -6224,7 +6211,7 @@ TEST_F(VkLayerTest, WriteDescriptorSetConsecutiveUpdates) {
 
         pipe.AddShader(&vs);
         pipe.AddShader(&fs);
-        pipe.AddColorAttachment();
+        pipe.AddDefaultColorAttachment();
 
         err = pipe.CreateVKPipeline(pipeline_layout, renderPass());
         ASSERT_VK_SUCCESS(err);
@@ -6634,7 +6621,7 @@ TEST_F(VkLayerTest, InvalidCmdBufferBufferViewDestroyed) {
     VkPipelineObj pipe(m_device);
     pipe.AddShader(&vs);
     pipe.AddShader(&fs);
-    pipe.AddColorAttachment();
+    pipe.AddDefaultColorAttachment();
     pipe.CreateVKPipeline(pipeline_layout, renderPass());
 
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, " that is invalid because bound BufferView ");
@@ -7340,7 +7327,7 @@ TEST_F(VkPositiveLayerTest, DestroyPipelineRenderPass) {
     VkShaderObj fs(m_device, bindStateFragShaderText, VK_SHADER_STAGE_FRAGMENT_BIT, this);
 
     VkPipelineObj pipe(m_device);
-    pipe.AddColorAttachment();
+    pipe.AddDefaultColorAttachment();
     pipe.AddShader(&vs);
     pipe.AddShader(&fs);
     VkViewport view_port = {};
@@ -7506,7 +7493,7 @@ TEST_F(VkLayerTest, InvalidCmdBufferDescriptorSetBufferDestroyed) {
     VkPipelineObj pipe(m_device);
     pipe.AddShader(&vs);
     pipe.AddShader(&fs);
-    pipe.AddColorAttachment();
+    pipe.AddDefaultColorAttachment();
     pipe.CreateVKPipeline(pipeline_layout, renderPass());
 
     m_commandBuffer->begin();
@@ -7713,7 +7700,7 @@ TEST_F(VkLayerTest, InvalidCmdBufferDescriptorSetImageSamplerDestroyed) {
     VkPipelineObj pipe(m_device);
     pipe.AddShader(&vs);
     pipe.AddShader(&fs);
-    pipe.AddColorAttachment();
+    pipe.AddDefaultColorAttachment();
     pipe.CreateVKPipeline(pipeline_layout, renderPass());
 
     // First error case is destroying sampler prior to cmd buffer submission
@@ -7974,7 +7961,7 @@ TEST_F(VkLayerTest, ImageDescriptorLayoutMismatch) {
     VkPipelineObj pipe(m_device);
     pipe.AddShader(&vs);
     pipe.AddShader(&fs);
-    pipe.AddColorAttachment();
+    pipe.AddDefaultColorAttachment();
     pipe.CreateVKPipeline(pipeline_layout, renderPass());
 
     VkCommandBufferObj cmd_buf(m_device, m_commandPool);
@@ -8118,7 +8105,7 @@ TEST_F(VkLayerTest, DescriptorPoolInUseDestroyedSignaled) {
     VkPipelineObj pipe(m_device);
     pipe.AddShader(&vs);
     pipe.AddShader(&fs);
-    pipe.AddColorAttachment();
+    pipe.AddDefaultColorAttachment();
     pipe.CreateVKPipeline(pipeline_layout, renderPass());
 
     m_commandBuffer->begin();
@@ -8397,7 +8384,7 @@ TEST_F(VkLayerTest, DescriptorSetNotUpdated) {
     VkPipelineObj pipe(m_device);
     pipe.AddShader(&vs);
     pipe.AddShader(&fs);
-    pipe.AddColorAttachment();
+    pipe.AddDefaultColorAttachment();
     pipe.CreateVKPipeline(pipeline_layout, renderPass());
 
     m_commandBuffer->begin();
@@ -8715,7 +8702,7 @@ TEST_F(VkLayerTest, InvalidDynamicOffsetCases) {
     VkPipelineObj pipe(m_device);
     pipe.AddShader(&vs);
     pipe.AddShader(&fs);
-    pipe.AddColorAttachment();
+    pipe.AddDefaultColorAttachment();
     pipe.CreateVKPipeline(pipeline_layout, renderPass());
 
     VkViewport viewport = {0, 0, 16, 16, 0, 1};
@@ -9181,7 +9168,7 @@ TEST_F(VkLayerTest, DescriptorSetCompatibility) {
     VkPipelineObj pipe(m_device);
     pipe.AddShader(&vs);
     pipe.AddShader(&fs);
-    pipe.AddColorAttachment();
+    pipe.AddDefaultColorAttachment();
     pipe.CreateVKPipeline(pipe_layout_fs_only, renderPass());
 
     m_commandBuffer->begin();
@@ -9992,7 +9979,7 @@ TEST_F(VkLayerTest, DynViewportAndScissorUndefinedDrawState) {
     VkPipelineObj pipeline_dyn_vp(m_device);
     pipeline_dyn_vp.AddShader(&vs);
     pipeline_dyn_vp.AddShader(&fs);
-    pipeline_dyn_vp.AddColorAttachment();
+    pipeline_dyn_vp.AddDefaultColorAttachment();
     pipeline_dyn_vp.MakeDynamic(VK_DYNAMIC_STATE_VIEWPORT);
     pipeline_dyn_vp.SetScissor(m_scissors);
     ASSERT_VK_SUCCESS(pipeline_dyn_vp.CreateVKPipeline(pipeline_layout, m_renderPass));
@@ -10000,7 +9987,7 @@ TEST_F(VkLayerTest, DynViewportAndScissorUndefinedDrawState) {
     VkPipelineObj pipeline_dyn_sc(m_device);
     pipeline_dyn_sc.AddShader(&vs);
     pipeline_dyn_sc.AddShader(&fs);
-    pipeline_dyn_sc.AddColorAttachment();
+    pipeline_dyn_sc.AddDefaultColorAttachment();
     pipeline_dyn_sc.SetViewport(m_viewports);
     pipeline_dyn_sc.MakeDynamic(VK_DYNAMIC_STATE_SCISSOR);
     ASSERT_VK_SUCCESS(pipeline_dyn_sc.CreateVKPipeline(pipeline_layout, m_renderPass));
@@ -12900,7 +12887,7 @@ TEST_F(VkLayerTest, NumSamplesMismatch) {
     VkPipelineObj pipe(m_device);
     pipe.AddShader(&vs);
     pipe.AddShader(&fs);
-    pipe.AddColorAttachment();
+    pipe.AddDefaultColorAttachment();
     pipe.SetMSAA(&pipe_ms_state_ci);
     pipe.CreateVKPipeline(pipeline_layout, renderPass());
 
@@ -12978,7 +12965,7 @@ TEST_F(VkLayerTest, RenderPassIncompatible) {
     VkPipelineObj pipe(m_device);
     pipe.AddShader(&vs);
     pipe.AddShader(&fs);
-    pipe.AddColorAttachment();
+    pipe.AddDefaultColorAttachment();
     VkViewport view_port = {};
     m_viewports.push_back(view_port);
     pipe.SetViewport(m_viewports);
@@ -13128,7 +13115,7 @@ TEST_F(VkLayerTest, MissingClearAttachment) {
     ASSERT_NO_FATAL_FAILURE(Init());
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_1860001e);
 
-    VKTriangleTest(bindStateVertShaderText, bindStateFragShaderText, BsoFailCmdClearAttachments);
+    VKTriangleTest(BsoFailCmdClearAttachments);
     m_errorMonitor->VerifyFound();
 }
 
@@ -13169,7 +13156,7 @@ TEST_F(VkLayerTest, CmdClearAttachmentTests) {
     VkPipelineObj pipe(m_device);
     pipe.AddShader(&vs);
     pipe.AddShader(&fs);
-    pipe.AddColorAttachment();
+    pipe.AddDefaultColorAttachment();
     pipe.SetMSAA(&pipe_ms_state_ci);
     pipe.CreateVKPipeline(pipeline_layout, renderPass());
 
@@ -13257,7 +13244,7 @@ TEST_F(VkLayerTest, VtxBufferBadIndex) {
     VkPipelineObj pipe(m_device);
     pipe.AddShader(&vs);
     pipe.AddShader(&fs);
-    pipe.AddColorAttachment();
+    pipe.AddDefaultColorAttachment();
     pipe.SetMSAA(&pipe_ms_state_ci);
     pipe.SetViewport(m_viewports);
     pipe.SetScissor(m_scissors);
@@ -13494,7 +13481,7 @@ TEST_F(VkLayerTest, VertexBufferInvalid) {
     VkPipelineObj pipe(m_device);
     pipe.AddShader(&vs);
     pipe.AddShader(&fs);
-    pipe.AddColorAttachment();
+    pipe.AddDefaultColorAttachment();
     pipe.SetMSAA(&pipe_ms_state_ci);
     pipe.SetViewport(m_viewports);
     pipe.SetScissor(m_scissors);
@@ -14231,7 +14218,7 @@ TEST_F(VkLayerTest, InUseDestroyedSignaled) {
     VkShaderObj fs(m_device, bindStateFragShaderText, VK_SHADER_STAGE_FRAGMENT_BIT, this);
 
     VkPipelineObj pipe(m_device);
-    pipe.AddColorAttachment();
+    pipe.AddDefaultColorAttachment();
     pipe.AddShader(&vs);
     pipe.AddShader(&fs);
 
@@ -14363,7 +14350,7 @@ TEST_F(VkLayerTest, PipelineInUseDestroyedSignaled) {
         VkPipelineObj pipe(m_device);
         pipe.AddShader(&vs);
         pipe.AddShader(&fs);
-        pipe.AddColorAttachment();
+        pipe.AddDefaultColorAttachment();
         pipe.CreateVKPipeline(pipeline_layout, renderPass());
         delete_this_pipeline = pipe.handle();
 
@@ -14839,7 +14826,7 @@ TEST_F(VkLayerTest, ImageViewInUseDestroyedSignaled) {
     VkPipelineObj pipe(m_device);
     pipe.AddShader(&vs);
     pipe.AddShader(&fs);
-    pipe.AddColorAttachment();
+    pipe.AddDefaultColorAttachment();
     pipe.CreateVKPipeline(pipeline_layout, renderPass());
 
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_25400804);
@@ -14968,7 +14955,7 @@ TEST_F(VkLayerTest, BufferViewInUseDestroyedSignaled) {
     VkPipelineObj pipe(m_device);
     pipe.AddShader(&vs);
     pipe.AddShader(&fs);
-    pipe.AddColorAttachment();
+    pipe.AddDefaultColorAttachment();
     pipe.CreateVKPipeline(pipeline_layout, renderPass());
 
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_23e00750);
@@ -15086,7 +15073,7 @@ TEST_F(VkLayerTest, SamplerInUseDestroyedSignaled) {
     VkPipelineObj pipe(m_device);
     pipe.AddShader(&vs);
     pipe.AddShader(&fs);
-    pipe.AddColorAttachment();
+    pipe.AddDefaultColorAttachment();
     pipe.CreateVKPipeline(pipeline_layout, renderPass());
 
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_26600874);
@@ -15482,7 +15469,7 @@ TEST_F(VkLayerTest, CreatePipelineVertexOutputNotConsumed) {
     VkShaderObj fs(m_device, fsSource, VK_SHADER_STAGE_FRAGMENT_BIT, this);
 
     VkPipelineObj pipe(m_device);
-    pipe.AddColorAttachment();
+    pipe.AddDefaultColorAttachment();
     pipe.AddShader(&vs);
     pipe.AddShader(&fs);
 
@@ -15545,7 +15532,7 @@ TEST_F(VkPositiveLayerTest, CreatePipelineComplexTypes) {
 
     VkPipelineObj pipe(m_device);
 
-    pipe.AddColorAttachment();
+    pipe.AddDefaultColorAttachment();
     pipe.AddShader(&vs);
     pipe.AddShader(&tcs);
     pipe.AddShader(&tes);
@@ -15718,7 +15705,7 @@ TEST_F(VkLayerTest, CreatePipelineCheckShaderDescriptorTypeMismatch) {
     ASSERT_VK_SUCCESS(vkCreatePipelineLayout(m_device->device(), &pipeline_layout_create_info, nullptr, &pipeline_layout));
 
     VkPipelineObj pipe(m_device);
-    pipe.AddColorAttachment();
+    pipe.AddDefaultColorAttachment();
     pipe.AddShader(&vs);
     pipe.AddShader(&fs);
 
@@ -15772,7 +15759,7 @@ TEST_F(VkLayerTest, CreatePipelineCheckShaderDescriptorNotAccessible) {
     ASSERT_VK_SUCCESS(vkCreatePipelineLayout(m_device->device(), &pipeline_layout_create_info, nullptr, &pipeline_layout));
 
     VkPipelineObj pipe(m_device);
-    pipe.AddColorAttachment();
+    pipe.AddDefaultColorAttachment();
     pipe.AddShader(&vs);
     pipe.AddShader(&fs);
 
@@ -15829,7 +15816,7 @@ TEST_F(VkLayerTest, CreatePipelineCheckShaderPushConstantNotAccessible) {
     ASSERT_VK_SUCCESS(vkCreatePipelineLayout(m_device->device(), &pipeline_layout_create_info, nullptr, &pipeline_layout));
 
     VkPipelineObj pipe(m_device);
-    pipe.AddColorAttachment();
+    pipe.AddDefaultColorAttachment();
     pipe.AddShader(&vs);
     pipe.AddShader(&fs);
 
@@ -15879,7 +15866,7 @@ TEST_F(VkLayerTest, CreatePipelineCheckShaderNotEnabled) {
     VkRenderpassObj render_pass(&test_device);
 
     VkPipelineObj pipe(&test_device);
-    pipe.AddColorAttachment();
+    pipe.AddDefaultColorAttachment();
     pipe.AddShader(&vs);
     pipe.AddShader(&fs);
 
@@ -15956,7 +15943,7 @@ TEST_F(VkLayerTest, CreatePipelineFragmentInputNotProvided) {
     VkShaderObj fs(m_device, fsSource, VK_SHADER_STAGE_FRAGMENT_BIT, this);
 
     VkPipelineObj pipe(m_device);
-    pipe.AddColorAttachment();
+    pipe.AddDefaultColorAttachment();
     pipe.AddShader(&vs);
     pipe.AddShader(&fs);
 
@@ -15998,7 +15985,7 @@ TEST_F(VkLayerTest, CreatePipelineFragmentInputNotProvidedInBlock) {
     VkShaderObj fs(m_device, fsSource, VK_SHADER_STAGE_FRAGMENT_BIT, this);
 
     VkPipelineObj pipe(m_device);
-    pipe.AddColorAttachment();
+    pipe.AddDefaultColorAttachment();
     pipe.AddShader(&vs);
     pipe.AddShader(&fs);
 
@@ -16044,7 +16031,7 @@ TEST_F(VkLayerTest, CreatePipelineVsFsTypeMismatchArraySize) {
     VkShaderObj fs(m_device, fsSource, VK_SHADER_STAGE_FRAGMENT_BIT, this);
 
     VkPipelineObj pipe(m_device);
-    pipe.AddColorAttachment();
+    pipe.AddDefaultColorAttachment();
     pipe.AddShader(&vs);
     pipe.AddShader(&fs);
 
@@ -16087,7 +16074,7 @@ TEST_F(VkLayerTest, CreatePipelineVsFsTypeMismatch) {
     VkShaderObj fs(m_device, fsSource, VK_SHADER_STAGE_FRAGMENT_BIT, this);
 
     VkPipelineObj pipe(m_device);
-    pipe.AddColorAttachment();
+    pipe.AddDefaultColorAttachment();
     pipe.AddShader(&vs);
     pipe.AddShader(&fs);
 
@@ -16131,7 +16118,7 @@ TEST_F(VkLayerTest, CreatePipelineVsFsTypeMismatchInBlock) {
     VkShaderObj fs(m_device, fsSource, VK_SHADER_STAGE_FRAGMENT_BIT, this);
 
     VkPipelineObj pipe(m_device);
-    pipe.AddColorAttachment();
+    pipe.AddDefaultColorAttachment();
     pipe.AddShader(&vs);
     pipe.AddShader(&fs);
 
@@ -16175,7 +16162,7 @@ TEST_F(VkLayerTest, CreatePipelineVsFsMismatchByLocation) {
     VkShaderObj fs(m_device, fsSource, VK_SHADER_STAGE_FRAGMENT_BIT, this);
 
     VkPipelineObj pipe(m_device);
-    pipe.AddColorAttachment();
+    pipe.AddDefaultColorAttachment();
     pipe.AddShader(&vs);
     pipe.AddShader(&fs);
 
@@ -16219,7 +16206,7 @@ TEST_F(VkLayerTest, CreatePipelineVsFsMismatchByComponent) {
     VkShaderObj fs(m_device, fsSource, VK_SHADER_STAGE_FRAGMENT_BIT, this);
 
     VkPipelineObj pipe(m_device);
-    pipe.AddColorAttachment();
+    pipe.AddDefaultColorAttachment();
     pipe.AddShader(&vs);
     pipe.AddShader(&fs);
 
@@ -16252,7 +16239,7 @@ TEST_F(VkLayerTest, CreatePipelineVsFsMismatchByPrecision) {
     VkShaderObj fs(m_device, fsSource, VK_SHADER_STAGE_FRAGMENT_BIT, this);
 
     VkPipelineObj pipe(m_device);
-    pipe.AddColorAttachment();
+    pipe.AddDefaultColorAttachment();
     pipe.AddShader(&vs);
     pipe.AddShader(&fs);
 
@@ -16287,7 +16274,7 @@ TEST_F(VkLayerTest, CreatePipelineVsFsMismatchByPrecisionBlock) {
     VkShaderObj fs(m_device, fsSource, VK_SHADER_STAGE_FRAGMENT_BIT, this);
 
     VkPipelineObj pipe(m_device);
-    pipe.AddColorAttachment();
+    pipe.AddDefaultColorAttachment();
     pipe.AddShader(&vs);
     pipe.AddShader(&fs);
 
@@ -16336,7 +16323,7 @@ TEST_F(VkLayerTest, CreatePipelineAttribNotConsumed) {
     VkShaderObj fs(m_device, fsSource, VK_SHADER_STAGE_FRAGMENT_BIT, this);
 
     VkPipelineObj pipe(m_device);
-    pipe.AddColorAttachment();
+    pipe.AddDefaultColorAttachment();
     pipe.AddShader(&vs);
     pipe.AddShader(&fs);
 
@@ -16387,7 +16374,7 @@ TEST_F(VkLayerTest, CreatePipelineAttribLocationMismatch) {
     VkShaderObj fs(m_device, fsSource, VK_SHADER_STAGE_FRAGMENT_BIT, this);
 
     VkPipelineObj pipe(m_device);
-    pipe.AddColorAttachment();
+    pipe.AddDefaultColorAttachment();
     pipe.AddShader(&vs);
     pipe.AddShader(&fs);
 
@@ -16433,7 +16420,7 @@ TEST_F(VkLayerTest, CreatePipelineAttribNotProvided) {
     VkShaderObj fs(m_device, fsSource, VK_SHADER_STAGE_FRAGMENT_BIT, this);
 
     VkPipelineObj pipe(m_device);
-    pipe.AddColorAttachment();
+    pipe.AddDefaultColorAttachment();
     pipe.AddShader(&vs);
     pipe.AddShader(&fs);
 
@@ -16482,7 +16469,7 @@ TEST_F(VkLayerTest, CreatePipelineAttribTypeMismatch) {
     VkShaderObj fs(m_device, fsSource, VK_SHADER_STAGE_FRAGMENT_BIT, this);
 
     VkPipelineObj pipe(m_device);
-    pipe.AddColorAttachment();
+    pipe.AddDefaultColorAttachment();
     pipe.AddShader(&vs);
     pipe.AddShader(&fs);
 
@@ -16526,7 +16513,7 @@ TEST_F(VkLayerTest, CreatePipelineDuplicateStage) {
     VkShaderObj fs(m_device, fsSource, VK_SHADER_STAGE_FRAGMENT_BIT, this);
 
     VkPipelineObj pipe(m_device);
-    pipe.AddColorAttachment();
+    pipe.AddDefaultColorAttachment();
     pipe.AddShader(&vs);
     pipe.AddShader(&vs);  // intentionally duplicate vertex shader attachment
     pipe.AddShader(&fs);
@@ -16563,7 +16550,7 @@ TEST_F(VkLayerTest, CreatePipelineMissingEntrypoint) {
     VkShaderObj fs(m_device, fsSource, VK_SHADER_STAGE_FRAGMENT_BIT, this, "foo");
 
     VkPipelineObj pipe(m_device);
-    pipe.AddColorAttachment();
+    pipe.AddDefaultColorAttachment();
     pipe.AddShader(&vs);
     pipe.AddShader(&fs);
 
@@ -16599,7 +16586,7 @@ TEST_F(VkLayerTest, CreatePipelineDepthStencilRequired) {
     VkShaderObj fs(m_device, fsSource, VK_SHADER_STAGE_FRAGMENT_BIT, this);
 
     VkPipelineObj pipe(m_device);
-    pipe.AddColorAttachment();
+    pipe.AddDefaultColorAttachment();
     pipe.AddShader(&vs);
     pipe.AddShader(&fs);
 
@@ -16692,7 +16679,7 @@ TEST_F(VkLayerTest, CreatePipelineTessPatchDecorationMismatch) {
     VkPipelineObj pipe(m_device);
     pipe.SetInputAssembly(&iasci);
     pipe.SetTessellation(&tsci);
-    pipe.AddColorAttachment();
+    pipe.AddDefaultColorAttachment();
     pipe.AddShader(&vs);
     pipe.AddShader(&tcs);
     pipe.AddShader(&tes);
@@ -16761,7 +16748,7 @@ TEST_F(VkLayerTest, CreatePipelineTessErrors) {
         VkPipelineInputAssemblyStateCreateInfo iasci_bad = iasci;
         iasci_bad.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;  // otherwise we get a failure about invalid topology
         pipe.SetInputAssembly(&iasci_bad);
-        pipe.AddColorAttachment();
+        pipe.AddDefaultColorAttachment();
         pipe.AddShader(&vs);
         pipe.AddShader(&fs);
 
@@ -16777,7 +16764,7 @@ TEST_F(VkLayerTest, CreatePipelineTessErrors) {
         VkPipelineInputAssemblyStateCreateInfo iasci_bad = iasci;
         iasci_bad.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;  // otherwise we get a failure about invalid topology
         pipe.SetInputAssembly(&iasci_bad);
-        pipe.AddColorAttachment();
+        pipe.AddDefaultColorAttachment();
         pipe.AddShader(&vs);
         pipe.AddShader(&fs);
 
@@ -16791,7 +16778,7 @@ TEST_F(VkLayerTest, CreatePipelineTessErrors) {
     {
         VkPipelineObj pipe(m_device);
         pipe.SetInputAssembly(&iasci);
-        pipe.AddColorAttachment();
+        pipe.AddDefaultColorAttachment();
         pipe.AddShader(&vs);
         pipe.AddShader(&fs);
 
@@ -16877,7 +16864,7 @@ TEST_F(VkLayerTest, CreatePipelineAttribBindingConflict) {
     VkShaderObj fs(m_device, fsSource, VK_SHADER_STAGE_FRAGMENT_BIT, this);
 
     VkPipelineObj pipe(m_device);
-    pipe.AddColorAttachment();
+    pipe.AddDefaultColorAttachment();
     pipe.AddShader(&vs);
     pipe.AddShader(&fs);
 
@@ -16921,7 +16908,7 @@ TEST_F(VkLayerTest, CreatePipelineFragmentOutputNotWritten) {
     pipe.AddShader(&fs);
 
     /* set up CB 0, not written */
-    pipe.AddColorAttachment();
+    pipe.AddDefaultColorAttachment();
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
 
     VkDescriptorSetObj descriptorSet(m_device);
@@ -16961,7 +16948,7 @@ TEST_F(VkPositiveLayerTest, CreatePipelineFragmentOutputNotWrittenButMasked) {
     pipe.AddShader(&fs);
 
     /* set up CB 0, not written, but also masked */
-    pipe.AddColorAttachment(0);
+    pipe.AddDefaultColorAttachment(0);
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
 
     VkDescriptorSetObj descriptorSet(m_device);
@@ -17006,7 +16993,7 @@ TEST_F(VkLayerTest, CreatePipelineFragmentOutputNotConsumed) {
     pipe.AddShader(&fs);
 
     /* set up CB 0, not written */
-    pipe.AddColorAttachment();
+    pipe.AddDefaultColorAttachment();
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
     /* FS writes CB 1, but we don't configure it */
 
@@ -17049,7 +17036,7 @@ TEST_F(VkLayerTest, CreatePipelineFragmentOutputTypeMismatch) {
     pipe.AddShader(&fs);
 
     /* set up CB 0; type is UNORM by default */
-    pipe.AddColorAttachment();
+    pipe.AddDefaultColorAttachment();
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
 
     VkDescriptorSetObj descriptorSet(m_device);
@@ -17092,7 +17079,7 @@ TEST_F(VkLayerTest, CreatePipelineUniformBlockNotProvided) {
     pipe.AddShader(&fs);
 
     /* set up CB 0; type is UNORM by default */
-    pipe.AddColorAttachment();
+    pipe.AddDefaultColorAttachment();
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
 
     VkDescriptorSetObj descriptorSet(m_device);
@@ -17134,7 +17121,7 @@ TEST_F(VkLayerTest, CreatePipelinePushConstantsNotInLayout) {
     pipe.AddShader(&fs);
 
     /* set up CB 0; type is UNORM by default */
-    pipe.AddColorAttachment();
+    pipe.AddDefaultColorAttachment();
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
 
     VkDescriptorSetObj descriptorSet(m_device);
@@ -17176,7 +17163,7 @@ TEST_F(VkLayerTest, CreatePipelineInputAttachmentMissing) {
     VkPipelineObj pipe(m_device);
     pipe.AddShader(&vs);
     pipe.AddShader(&fs);
-    pipe.AddColorAttachment();
+    pipe.AddDefaultColorAttachment();
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
 
     VkDescriptorSetLayoutBinding dslb = {0, VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr};
@@ -17229,7 +17216,7 @@ TEST_F(VkLayerTest, CreatePipelineInputAttachmentTypeMismatch) {
     VkPipelineObj pipe(m_device);
     pipe.AddShader(&vs);
     pipe.AddShader(&fs);
-    pipe.AddColorAttachment();
+    pipe.AddDefaultColorAttachment();
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
 
     VkDescriptorSetLayoutBinding dslb = {0, VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr};
@@ -17304,7 +17291,7 @@ TEST_F(VkLayerTest, CreatePipelineInputAttachmentMissingArray) {
     VkPipelineObj pipe(m_device);
     pipe.AddShader(&vs);
     pipe.AddShader(&fs);
-    pipe.AddColorAttachment();
+    pipe.AddDefaultColorAttachment();
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
 
     VkDescriptorSetLayoutBinding dslb = {0, VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT, 2, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr};
@@ -17448,7 +17435,7 @@ TEST_F(VkLayerTest, DrawTimeImageViewTypeMismatchWithPipeline) {
     VkPipelineObj pipe(m_device);
     pipe.AddShader(&vs);
     pipe.AddShader(&fs);
-    pipe.AddColorAttachment();
+    pipe.AddDefaultColorAttachment();
 
     VkTextureObj texture(m_device, nullptr);
     VkSamplerObj sampler(m_device);
@@ -17508,7 +17495,7 @@ TEST_F(VkLayerTest, DrawTimeImageMultisampleMismatchWithPipeline) {
     VkPipelineObj pipe(m_device);
     pipe.AddShader(&vs);
     pipe.AddShader(&fs);
-    pipe.AddColorAttachment();
+    pipe.AddDefaultColorAttachment();
 
     VkTextureObj texture(m_device, nullptr);
     VkSamplerObj sampler(m_device);
@@ -21556,7 +21543,7 @@ TEST_F(VkPositiveLayerTest, PushDescriptorUnboundSetTest) {
     pipe.SetScissor(m_scissors);
     pipe.AddShader(&vs);
     pipe.AddShader(&fs);
-    pipe.AddColorAttachment();
+    pipe.AddDefaultColorAttachment();
     pipe.CreateVKPipeline(pipeline_layout, renderPass());
 
     static const float bo_data[1] = {1.f};
@@ -22058,7 +22045,7 @@ TEST_F(VkPositiveLayerTest, DynamicOffsetWithInactiveBinding) {
     pipe.SetScissor(m_scissors);
     pipe.AddShader(&vs);
     pipe.AddShader(&fs);
-    pipe.AddColorAttachment();
+    pipe.AddDefaultColorAttachment();
     pipe.CreateVKPipeline(pipeline_layout, renderPass());
 
     vkCmdBindPipeline(m_commandBuffer->handle(), VK_PIPELINE_BIND_POINT_GRAPHICS, pipe.handle());
@@ -24544,7 +24531,7 @@ TEST_F(VkPositiveLayerTest, CreatePipelineAttribMatrixType) {
     VkShaderObj fs(m_device, fsSource, VK_SHADER_STAGE_FRAGMENT_BIT, this);
 
     VkPipelineObj pipe(m_device);
-    pipe.AddColorAttachment();
+    pipe.AddDefaultColorAttachment();
     pipe.AddShader(&vs);
     pipe.AddShader(&fs);
 
@@ -24597,7 +24584,7 @@ TEST_F(VkPositiveLayerTest, CreatePipelineAttribArrayType) {
     VkShaderObj fs(m_device, fsSource, VK_SHADER_STAGE_FRAGMENT_BIT, this);
 
     VkPipelineObj pipe(m_device);
-    pipe.AddColorAttachment();
+    pipe.AddDefaultColorAttachment();
     pipe.AddShader(&vs);
     pipe.AddShader(&fs);
 
@@ -24656,7 +24643,7 @@ TEST_F(VkPositiveLayerTest, CreatePipelineAttribComponents) {
     VkShaderObj fs(m_device, fsSource, VK_SHADER_STAGE_FRAGMENT_BIT, this);
 
     VkPipelineObj pipe(m_device);
-    pipe.AddColorAttachment();
+    pipe.AddDefaultColorAttachment();
     pipe.AddShader(&vs);
     pipe.AddShader(&fs);
 
@@ -24695,7 +24682,7 @@ TEST_F(VkPositiveLayerTest, CreatePipelineSimplePositive) {
     VkShaderObj fs(m_device, fsSource, VK_SHADER_STAGE_FRAGMENT_BIT, this);
 
     VkPipelineObj pipe(m_device);
-    pipe.AddColorAttachment();
+    pipe.AddDefaultColorAttachment();
     pipe.AddShader(&vs);
     pipe.AddShader(&fs);
 
@@ -24744,7 +24731,7 @@ TEST_F(VkPositiveLayerTest, CreatePipelineRelaxedTypeMatch) {
     VkShaderObj fs(m_device, fsSource, VK_SHADER_STAGE_FRAGMENT_BIT, this);
 
     VkPipelineObj pipe(m_device);
-    pipe.AddColorAttachment();
+    pipe.AddDefaultColorAttachment();
     pipe.AddShader(&vs);
     pipe.AddShader(&fs);
 
@@ -24813,7 +24800,7 @@ TEST_F(VkPositiveLayerTest, CreatePipelineTessPerVertex) {
     VkPipelineObj pipe(m_device);
     pipe.SetInputAssembly(&iasci);
     pipe.SetTessellation(&tsci);
-    pipe.AddColorAttachment();
+    pipe.AddDefaultColorAttachment();
     pipe.AddShader(&vs);
     pipe.AddShader(&tcs);
     pipe.AddShader(&tes);
@@ -24871,7 +24858,7 @@ TEST_F(VkPositiveLayerTest, CreatePipelineGeometryInputBlockPositive) {
     VkShaderObj fs(m_device, fsSource, VK_SHADER_STAGE_FRAGMENT_BIT, this);
 
     VkPipelineObj pipe(m_device);
-    pipe.AddColorAttachment();
+    pipe.AddDefaultColorAttachment();
     pipe.AddShader(&vs);
     pipe.AddShader(&gs);
     pipe.AddShader(&fs);
@@ -24952,7 +24939,7 @@ TEST_F(VkPositiveLayerTest, CreatePipeline64BitAttributesPositive) {
     VkShaderObj fs(m_device, fsSource, VK_SHADER_STAGE_FRAGMENT_BIT, this);
 
     VkPipelineObj pipe(m_device);
-    pipe.AddColorAttachment();
+    pipe.AddDefaultColorAttachment();
     pipe.AddShader(&vs);
     pipe.AddShader(&fs);
 
@@ -24995,7 +24982,7 @@ TEST_F(VkPositiveLayerTest, CreatePipelineInputAttachmentPositive) {
     VkPipelineObj pipe(m_device);
     pipe.AddShader(&vs);
     pipe.AddShader(&fs);
-    pipe.AddColorAttachment();
+    pipe.AddDefaultColorAttachment();
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
 
     VkDescriptorSetLayoutBinding dslb = {0, VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr};
@@ -25421,7 +25408,7 @@ TEST_F(VkPositiveLayerTest, PSOPolygonModeValid) {
         VkPipelineObj pipe(&test_device);
         pipe.AddShader(&vs);
         pipe.AddShader(&fs);
-        pipe.AddColorAttachment();
+        pipe.AddDefaultColorAttachment();
         // Set polygonMode to a good value
         rs_ci.polygonMode = VK_POLYGON_MODE_FILL;
         pipe.SetRasterization(&rs_ci);
@@ -26120,7 +26107,7 @@ TEST_F(VkLayerTest, AMDMixedAttachmentSamplesValidateGraphicsPipeline) {
     VkPipelineObj pipe(m_device);
     pipe.AddShader(&vs);
     pipe.AddShader(&fs);
-    pipe.AddColorAttachment();
+    pipe.AddDefaultColorAttachment();
     pipe.SetMSAA(&ms_state_ci);
 
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_09600bc2);

@@ -385,10 +385,12 @@ void VkRenderFramework::InitRenderTarget(uint32_t targets, VkImageView *dsBindin
 
         if (props.linearTilingFeatures & VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT) {
             img->Init((uint32_t)m_width, (uint32_t)m_height, 1, m_render_target_fmt,
-                      VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT, VK_IMAGE_TILING_LINEAR);
+                      VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT,
+                      VK_IMAGE_TILING_LINEAR);
         } else if (props.optimalTilingFeatures & VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT) {
             img->Init((uint32_t)m_width, (uint32_t)m_height, 1, m_render_target_fmt,
-                      VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT, VK_IMAGE_TILING_OPTIMAL);
+                      VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT,
+                      VK_IMAGE_TILING_OPTIMAL);
         } else {
             FAIL() << "Neither Linear nor Optimal allowed for render target";
         }
@@ -585,7 +587,12 @@ int VkDescriptorSetObj::AppendSamplerTexture(VkSamplerObj *sampler, VkTextureObj
 
 VkPipelineLayout VkDescriptorSetObj::GetPipelineLayout() const { return m_pipeline_layout.handle(); }
 
-VkDescriptorSet VkDescriptorSetObj::GetDescriptorSetHandle() const { return m_set->handle(); }
+VkDescriptorSet VkDescriptorSetObj::GetDescriptorSetHandle() const {
+    if (m_set)
+        return m_set->handle();
+    else
+        return VK_NULL_HANDLE;
+}
 
 void VkDescriptorSetObj::CreateVKDescriptorSet(VkCommandBufferObj *commandBuffer) {
     if (m_type_counts.size()) {
@@ -692,7 +699,8 @@ void VkImageObj::ImageMemoryBarrier(VkCommandBufferObj *cmd_buf, VkImageAspectFl
             VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT |
             VK_MEMORY_INPUT_COPY_BIT*/,
                                     VkImageLayout image_layout) {
-    const VkImageSubresourceRange subresourceRange = subresource_range(aspect, 0, 1, 0, 1);
+    const VkImageSubresourceRange subresourceRange =
+        subresource_range(aspect, 0, VK_REMAINING_MIP_LEVELS, 0, VK_REMAINING_ARRAY_LAYERS);
     VkImageMemoryBarrier barrier;
     barrier = image_memory_barrier(output_mask, input_mask, Layout(), image_layout, subresourceRange);
 
@@ -1138,21 +1146,32 @@ VkShaderObj::VkShaderObj(VkDeviceObj *device, const char *shader_code, VkShaderS
 VkPipelineObj::VkPipelineObj(VkDeviceObj *device) {
     m_device = device;
 
-    m_vi_state.pNext = VK_NULL_HANDLE;
+    m_vi_state.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
+    m_vi_state.pNext = nullptr;
     m_vi_state.flags = 0;
     m_vi_state.vertexBindingDescriptionCount = 0;
-    m_vi_state.pVertexBindingDescriptions = VK_NULL_HANDLE;
+    m_vi_state.pVertexBindingDescriptions = nullptr;
     m_vi_state.vertexAttributeDescriptionCount = 0;
-    m_vi_state.pVertexAttributeDescriptions = VK_NULL_HANDLE;
+    m_vi_state.pVertexAttributeDescriptions = nullptr;
 
     m_ia_state.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
-    m_ia_state.pNext = VK_NULL_HANDLE;
+    m_ia_state.pNext = nullptr;
     m_ia_state.flags = 0;
     m_ia_state.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
     m_ia_state.primitiveRestartEnable = VK_FALSE;
 
+    m_te_state = nullptr;
+
+    m_vp_state.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
+    m_vp_state.pNext = VK_NULL_HANDLE;
+    m_vp_state.flags = 0;
+    m_vp_state.viewportCount = 1;
+    m_vp_state.scissorCount = 1;
+    m_vp_state.pViewports = nullptr;
+    m_vp_state.pScissors = nullptr;
+
     m_rs_state.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
-    m_rs_state.pNext = VK_NULL_HANDLE;
+    m_rs_state.pNext = nullptr;
     m_rs_state.flags = 0;
     m_rs_state.depthClampEnable = VK_FALSE;
     m_rs_state.rasterizerDiscardEnable = VK_FALSE;
@@ -1160,41 +1179,29 @@ VkPipelineObj::VkPipelineObj(VkDeviceObj *device) {
     m_rs_state.cullMode = VK_CULL_MODE_BACK_BIT;
     m_rs_state.frontFace = VK_FRONT_FACE_CLOCKWISE;
     m_rs_state.depthBiasEnable = VK_FALSE;
-    m_rs_state.lineWidth = 1.0f;
     m_rs_state.depthBiasConstantFactor = 0.0f;
     m_rs_state.depthBiasClamp = 0.0f;
     m_rs_state.depthBiasSlopeFactor = 0.0f;
+    m_rs_state.lineWidth = 1.0f;
+
+    m_ms_state.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
+    m_ms_state.pNext = nullptr;
+    m_ms_state.flags = 0;
+    m_ms_state.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
+    m_ms_state.sampleShadingEnable = VK_FALSE;
+    m_ms_state.minSampleShading = 0.0f;
+    m_ms_state.pSampleMask = nullptr;
+    m_ms_state.alphaToCoverageEnable = VK_FALSE;
+    m_ms_state.alphaToOneEnable = VK_FALSE;
+
+    m_ds_state = nullptr;
 
     memset(&m_cb_state, 0, sizeof(m_cb_state));
     m_cb_state.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
-    m_cb_state.pNext = VK_NULL_HANDLE;
-    m_cb_state.logicOp = VK_LOGIC_OP_COPY;
     m_cb_state.blendConstants[0] = 1.0f;
     m_cb_state.blendConstants[1] = 1.0f;
     m_cb_state.blendConstants[2] = 1.0f;
     m_cb_state.blendConstants[3] = 1.0f;
-
-    m_ms_state.pNext = VK_NULL_HANDLE;
-    m_ms_state.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
-    m_ms_state.flags = 0;
-    m_ms_state.pSampleMask = NULL;
-    m_ms_state.alphaToCoverageEnable = VK_FALSE;
-    m_ms_state.alphaToOneEnable = VK_FALSE;
-    m_ms_state.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
-    m_ms_state.minSampleShading = 0;
-    m_ms_state.sampleShadingEnable = 0;
-
-    m_vp_state.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
-    m_vp_state.pNext = VK_NULL_HANDLE;
-    m_vp_state.flags = 0;
-    m_vp_state.viewportCount = 1;
-    m_vp_state.scissorCount = 1;
-    m_vp_state.pViewports = NULL;
-    m_vp_state.pScissors = NULL;
-
-    m_ds_state = nullptr;
-
-    m_te_state = nullptr;
 
     memset(&m_pd_state, 0, sizeof(m_pd_state));
 }
@@ -1213,11 +1220,11 @@ void VkPipelineObj::AddVertexInputBindings(VkVertexInputBindingDescription *vi_b
     m_vi_state.vertexBindingDescriptionCount = count;
 }
 
-void VkPipelineObj::AddColorAttachment(uint32_t binding, const VkPipelineColorBlendAttachmentState *att) {
+void VkPipelineObj::AddColorAttachment(uint32_t binding, const VkPipelineColorBlendAttachmentState &att) {
     if (binding + 1 > m_colorAttachments.size()) {
         m_colorAttachments.resize(binding + 1);
     }
-    m_colorAttachments[binding] = *att;
+    m_colorAttachments[binding] = att;
 }
 
 void VkPipelineObj::SetDepthStencil(const VkPipelineDepthStencilStateCreateInfo *ds_state) { m_ds_state = ds_state; }
@@ -1335,67 +1342,36 @@ void VkCommandBufferObj::PipelineBarrier(VkPipelineStageFlags src_stages, VkPipe
                          bufferMemoryBarrierCount, pBufferMemoryBarriers, imageMemoryBarrierCount, pImageMemoryBarriers);
 }
 
-void VkCommandBufferObj::ClearAllBuffers(VkClearColorValue clear_color, float depth_clear_color, uint32_t stencil_clear_color,
-                                         VkDepthStencilObj *depthStencilObj) {
-    uint32_t i;
-    const VkFlags output_mask = VK_ACCESS_HOST_WRITE_BIT | VK_ACCESS_SHADER_WRITE_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT |
-                                VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT | VK_ACCESS_TRANSFER_WRITE_BIT;
-    const VkFlags input_mask = 0;
-
+void VkCommandBufferObj::ClearAllBuffers(const vector<VkImageObj *> &color_objs, VkClearColorValue clear_color,
+                                         VkDepthStencilObj *depth_stencil_obj, float depth_clear_value,
+                                         uint32_t stencil_clear_value) {
     // whatever we want to do, we do it to the whole buffer
-    VkImageSubresourceRange srRange = {};
-    srRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-    srRange.baseMipLevel = 0;
-    srRange.levelCount = VK_REMAINING_MIP_LEVELS;
-    srRange.baseArrayLayer = 0;
-    srRange.layerCount = VK_REMAINING_ARRAY_LAYERS;
+    VkImageSubresourceRange subrange = {};
+    // srRange.aspectMask to be set later
+    subrange.baseMipLevel = 0;
+    subrange.levelCount = VK_REMAINING_MIP_LEVELS;
+    subrange.baseArrayLayer = 0;
+    subrange.layerCount = VK_REMAINING_ARRAY_LAYERS;
 
-    VkImageMemoryBarrier memory_barrier = {};
-    memory_barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-    memory_barrier.srcAccessMask = output_mask;
-    memory_barrier.dstAccessMask = input_mask;
-    memory_barrier.newLayout = VK_IMAGE_LAYOUT_GENERAL;
-    memory_barrier.subresourceRange = srRange;
-    VkImageMemoryBarrier *pmemory_barrier = &memory_barrier;
+    const VkImageLayout clear_layout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
 
-    VkPipelineStageFlags src_stages = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
-    VkPipelineStageFlags dest_stages = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
-
-    for (i = 0; i < m_renderTargets.size(); i++) {
-        memory_barrier.image = m_renderTargets[i]->image();
-        memory_barrier.oldLayout = m_renderTargets[i]->Layout();
-        vkCmdPipelineBarrier(handle(), src_stages, dest_stages, 0, 0, NULL, 0, NULL, 1, pmemory_barrier);
-        m_renderTargets[i]->Layout(memory_barrier.newLayout);
-
-        vkCmdClearColorImage(handle(), m_renderTargets[i]->image(), VK_IMAGE_LAYOUT_GENERAL, &clear_color, 1, &srRange);
+    for (const auto &color_obj : color_objs) {
+        subrange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+        color_obj->Layout(VK_IMAGE_LAYOUT_UNDEFINED);
+        color_obj->SetLayout(this, subrange.aspectMask, clear_layout);
+        ClearColorImage(color_obj->image(), clear_layout, &clear_color, 1, &subrange);
     }
 
-    if (depthStencilObj) {
-        VkImageSubresourceRange dsRange = {};
-        dsRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
-        dsRange.baseMipLevel = 0;
-        dsRange.levelCount = VK_REMAINING_MIP_LEVELS;
-        dsRange.baseArrayLayer = 0;
-        dsRange.layerCount = VK_REMAINING_ARRAY_LAYERS;
+    if (depth_stencil_obj && depth_stencil_obj->Initialized()) {
+        subrange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT;
+        if (FormatIsDepthOnly(depth_stencil_obj->format())) subrange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
+        if (FormatIsStencilOnly(depth_stencil_obj->format())) subrange.aspectMask = VK_IMAGE_ASPECT_STENCIL_BIT;
 
-        // prepare the depth buffer for clear
+        depth_stencil_obj->Layout(VK_IMAGE_LAYOUT_UNDEFINED);
+        depth_stencil_obj->SetLayout(this, subrange.aspectMask, clear_layout);
 
-        memory_barrier.oldLayout = memory_barrier.newLayout;
-        memory_barrier.newLayout = VK_IMAGE_LAYOUT_GENERAL;
-        memory_barrier.image = depthStencilObj->handle();
-        memory_barrier.subresourceRange = dsRange;
-
-        vkCmdPipelineBarrier(handle(), src_stages, dest_stages, 0, 0, NULL, 0, NULL, 1, pmemory_barrier);
-
-        VkClearDepthStencilValue clear_value = {depth_clear_color, stencil_clear_color};
-        vkCmdClearDepthStencilImage(handle(), depthStencilObj->handle(), VK_IMAGE_LAYOUT_GENERAL, &clear_value, 1, &dsRange);
-
-        // prepare depth buffer for rendering
-        memory_barrier.image = depthStencilObj->handle();
-        memory_barrier.newLayout = memory_barrier.oldLayout;
-        memory_barrier.oldLayout = VK_IMAGE_LAYOUT_GENERAL;
-        memory_barrier.subresourceRange = dsRange;
-        vkCmdPipelineBarrier(handle(), src_stages, dest_stages, 0, 0, NULL, 0, NULL, 1, pmemory_barrier);
+        VkClearDepthStencilValue clear_value = {depth_clear_value, stencil_clear_value};
+        ClearDepthStencilImage(depth_stencil_obj->handle(), clear_layout, &clear_value, 1, &subrange);
     }
 }
 
@@ -1427,38 +1403,17 @@ void VkCommandBufferObj::ClearDepthStencilImage(VkImage image, VkImageLayout ima
     vkCmdClearDepthStencilImage(handle(), image, imageLayout, pColor, rangeCount, pRanges);
 }
 
-void VkCommandBufferObj::PrepareAttachments() {
-    uint32_t i;
-    const VkFlags output_mask = VK_ACCESS_HOST_WRITE_BIT | VK_ACCESS_SHADER_WRITE_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT |
-                                VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT | VK_ACCESS_TRANSFER_WRITE_BIT;
-    const VkFlags input_mask = VK_ACCESS_HOST_READ_BIT | VK_ACCESS_INDIRECT_COMMAND_READ_BIT | VK_ACCESS_INDEX_READ_BIT |
-                               VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT | VK_ACCESS_UNIFORM_READ_BIT | VK_ACCESS_SHADER_READ_BIT |
-                               VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT |
-                               VK_ACCESS_MEMORY_READ_BIT;
+void VkCommandBufferObj::PrepareAttachments(const vector<VkImageObj *> &color_atts, VkDepthStencilObj *depth_stencil_att) {
+    for (const auto &color_att : color_atts) {
+        color_att->SetLayout(this, VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
+    }
 
-    VkImageSubresourceRange srRange = {};
-    srRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-    srRange.baseMipLevel = 0;
-    srRange.levelCount = VK_REMAINING_MIP_LEVELS;
-    srRange.baseArrayLayer = 0;
-    srRange.layerCount = VK_REMAINING_ARRAY_LAYERS;
+    if (depth_stencil_att && depth_stencil_att->Initialized()) {
+        VkImageAspectFlags aspect = VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT;
+        if (FormatIsDepthOnly(depth_stencil_att->Format())) aspect = VK_IMAGE_ASPECT_DEPTH_BIT;
+        if (FormatIsStencilOnly(depth_stencil_att->Format())) aspect = VK_IMAGE_ASPECT_STENCIL_BIT;
 
-    VkImageMemoryBarrier memory_barrier = {};
-    memory_barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-    memory_barrier.srcAccessMask = output_mask;
-    memory_barrier.dstAccessMask = input_mask;
-    memory_barrier.newLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-    memory_barrier.subresourceRange = srRange;
-    VkImageMemoryBarrier *pmemory_barrier = &memory_barrier;
-
-    VkPipelineStageFlags src_stages = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
-    VkPipelineStageFlags dest_stages = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
-
-    for (i = 0; i < m_renderTargets.size(); i++) {
-        memory_barrier.image = m_renderTargets[i]->image();
-        memory_barrier.oldLayout = m_renderTargets[i]->Layout();
-        vkCmdPipelineBarrier(handle(), src_stages, dest_stages, 0, 0, NULL, 0, NULL, 1, pmemory_barrier);
-        m_renderTargets[i]->Layout(memory_barrier.newLayout);
+        depth_stencil_att->SetLayout(this, aspect, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
     }
 }
 
@@ -1522,9 +1477,11 @@ void VkCommandBufferObj::QueueCommandBuffer(VkFence fence, bool checkSuccess) {
 void VkCommandBufferObj::BindDescriptorSet(VkDescriptorSetObj &descriptorSet) {
     VkDescriptorSet set_obj = descriptorSet.GetDescriptorSetHandle();
 
-    // bind pipeline, vertex buffer (descriptor set) and WVP (dynamic buffer
-    // view)
-    vkCmdBindDescriptorSets(handle(), VK_PIPELINE_BIND_POINT_GRAPHICS, descriptorSet.GetPipelineLayout(), 0, 1, &set_obj, 0, NULL);
+    // bind pipeline, vertex buffer (descriptor set) and WVP (dynamic buffer view)
+    if (set_obj) {
+        vkCmdBindDescriptorSets(handle(), VK_PIPELINE_BIND_POINT_GRAPHICS, descriptorSet.GetPipelineLayout(), 0, 1, &set_obj, 0,
+                                NULL);
+    }
 }
 
 void VkCommandBufferObj::BindVertexBuffer(VkConstantBufferObj *vertexBuffer, VkDeviceSize offset, uint32_t binding) {
@@ -1539,6 +1496,8 @@ bool VkDepthStencilObj::Initialized() { return m_initialized; }
 VkDepthStencilObj::VkDepthStencilObj(VkDeviceObj *device) : VkImageObj(device) { m_initialized = false; }
 
 VkImageView *VkDepthStencilObj::BindInfo() { return &m_attachmentBindInfo; }
+
+VkFormat VkDepthStencilObj::Format() const { return this->m_depth_stencil_fmt; }
 
 void VkDepthStencilObj::Init(VkDeviceObj *device, int32_t width, int32_t height, VkFormat format, VkImageUsageFlags usage) {
     VkImageViewCreateInfo view_info = {};

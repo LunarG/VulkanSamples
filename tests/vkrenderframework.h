@@ -169,9 +169,9 @@ class VkCommandBufferObj : public vk_testing::CommandBuffer {
                          uint32_t memoryBarrierCount, const VkMemoryBarrier *pMemoryBarriers, uint32_t bufferMemoryBarrierCount,
                          const VkBufferMemoryBarrier *pBufferMemoryBarriers, uint32_t imageMemoryBarrierCount,
                          const VkImageMemoryBarrier *pImageMemoryBarriers);
-    void ClearAllBuffers(VkClearColorValue clear_color, float depth_clear_color, uint32_t stencil_clear_color,
-                         VkDepthStencilObj *depthStencilObj);
-    void PrepareAttachments();
+    void ClearAllBuffers(const vector<VkImageObj *> &color_objs, VkClearColorValue clear_color,
+                         VkDepthStencilObj *depth_stencil_obj, float depth_clear_value, uint32_t stencil_clear_value);
+    void PrepareAttachments(const vector<VkImageObj *> &color_atts, VkDepthStencilObj *depth_stencil_att);
     void BindDescriptorSet(VkDescriptorSetObj &descriptorSet);
     void BindVertexBuffer(VkConstantBufferObj *vertexBuffer, VkDeviceSize offset, uint32_t binding);
     void BeginRenderPass(const VkRenderPassBeginInfo &info);
@@ -196,7 +196,6 @@ class VkCommandBufferObj : public vk_testing::CommandBuffer {
 
    protected:
     VkDeviceObj *m_device;
-    vector<VkImageObj *> m_renderTargets;
 };
 
 class VkConstantBufferObj : public vk_testing::Buffer {
@@ -306,6 +305,8 @@ class VkDepthStencilObj : public VkImageObj {
     bool Initialized();
     VkImageView *BindInfo();
 
+    VkFormat Format() const;
+
    protected:
     VkDeviceObj *m_device;
     bool m_initialized;
@@ -367,14 +368,14 @@ class VkPipelineObj : public vk_testing::Pipeline {
     void AddShader(VkPipelineShaderStageCreateInfo const &createInfo);
     void AddVertexInputAttribs(VkVertexInputAttributeDescription *vi_attrib, uint32_t count);
     void AddVertexInputBindings(VkVertexInputBindingDescription *vi_binding, uint32_t count);
-    void AddColorAttachment(uint32_t binding, const VkPipelineColorBlendAttachmentState *att);
+    void AddColorAttachment(uint32_t binding, const VkPipelineColorBlendAttachmentState &att);
     void MakeDynamic(VkDynamicState state);
 
-    void AddColorAttachment(VkColorComponentFlags writeMask = 0xf) {
+    void AddDefaultColorAttachment(VkColorComponentFlags writeMask = 0xf /*=R|G|B|A*/) {
         VkPipelineColorBlendAttachmentState att = {};
         att.blendEnable = VK_FALSE;
         att.colorWriteMask = writeMask;
-        AddColorAttachment(0, &att);
+        AddColorAttachment(0, att);
     }
 
     void SetDepthStencil(const VkPipelineDepthStencilStateCreateInfo *);
