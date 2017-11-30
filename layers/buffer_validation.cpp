@@ -1100,6 +1100,26 @@ bool PreCallValidateCmdClearDepthStencilImage(layer_data *device_data, VkCommand
                             HandleToUint64(image), __LINE__, VALIDATION_ERROR_18a0001c, "IMAGE", "%s. %s", str,
                             validation_error_map[VALIDATION_ERROR_18a0001c]);
         }
+        if (VK_IMAGE_USAGE_TRANSFER_DST_BIT != (VK_IMAGE_USAGE_TRANSFER_DST_BIT & image_state->createInfo.usage)) {
+            char const str[] =
+                "vkCmdClearDepthStencilImage() called with an image that was not created with the VK_IMAGE_USAGE_TRANSFER_DST_BIT "
+                "set.";
+            skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT,
+                            HandleToUint64(image), __LINE__, VALIDATION_ERROR_18a00012, "IMAGE", "%s. %s", str,
+                            validation_error_map[VALIDATION_ERROR_18a00012]);
+        }
+        VkFormatProperties props = GetFormatProperties(device_data, image_state->createInfo.format);
+        VkImageTiling tiling = image_state->createInfo.tiling;
+        VkFormatFeatureFlags flags = (tiling == VK_IMAGE_TILING_LINEAR ? props.linearTilingFeatures : props.optimalTilingFeatures);
+        if ((GetDeviceExtensions(device_data)->vk_khr_maintenance1) &&
+            (VK_FORMAT_FEATURE_TRANSFER_DST_BIT_KHR != (flags & VK_FORMAT_FEATURE_TRANSFER_DST_BIT_KHR))) {
+            skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT,
+                            HandleToUint64(image), __LINE__, VALIDATION_ERROR_18a00010, "IMAGE",
+                            "vkCmdClearDepthStencilImage() called with an image of format %s and tiling %s that does not support "
+                            "VK_FORMAT_FEATURE_TRANSFER_DST_BIT_KHR. %s",
+                            string_VkFormat(image_state->createInfo.format), string_VkImageTiling(image_state->createInfo.tiling),
+                            validation_error_map[VALIDATION_ERROR_18a00010]);
+        }
     }
     return skip;
 }
