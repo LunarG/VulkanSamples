@@ -66,13 +66,25 @@ template <typename T>
 class Handle {
    public:
     const T &handle() const { return handle_; }
-    bool initialized() const { return (handle_ != VK_NULL_HANDLE); }
+    bool initialized() const { return (handle_ != T{}); }
 
    protected:
     typedef T handle_type;
 
-    explicit Handle() : handle_(VK_NULL_HANDLE) {}
+    explicit Handle() : handle_{} {}
     explicit Handle(T handle) : handle_(handle) {}
+
+    // handles are non-copyable
+    Handle(const Handle &) = delete;
+    Handle &operator=(const Handle &) = delete;
+
+    // handles can be moved out
+    Handle(Handle &&src) noexcept : handle_{src.handle_} { src.handle_ = {}; }
+    Handle &operator=(Handle &&src) noexcept {
+        handle_ = src.handle_;
+        src.handle_ = {};
+        return *this;
+    }
 
     void init(T handle) {
         assert(!initialized());
@@ -80,10 +92,6 @@ class Handle {
     }
 
    private:
-    // handles are non-copyable
-    Handle(const Handle &);
-    Handle &operator=(const Handle &);
-
     T handle_;
 };
 
@@ -92,6 +100,9 @@ class NonDispHandle : public Handle<T> {
    protected:
     explicit NonDispHandle() : Handle<T>(), dev_handle_(VK_NULL_HANDLE) {}
     explicit NonDispHandle(VkDevice dev, T handle) : Handle<T>(handle), dev_handle_(dev) {}
+
+    NonDispHandle(NonDispHandle &&src) = default;
+    NonDispHandle &operator=(NonDispHandle &&src) = default;
 
     const VkDevice &device() const { return dev_handle_; }
 
