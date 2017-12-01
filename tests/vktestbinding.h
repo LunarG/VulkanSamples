@@ -22,12 +22,30 @@
 #ifndef VKTESTBINDING_H
 #define VKTESTBINDING_H
 
+#include <algorithm>
 #include <assert.h>
+#include <iterator>
 #include <vector>
 
 #include "vulkan/vulkan.h"
 
 namespace vk_testing {
+
+template <class Dst, class Src>
+std::vector<Dst> MakeVkHandles(const std::vector<Src> &v) {
+    std::vector<Dst> handles;
+    handles.reserve(v.size());
+    std::transform(v.begin(), v.end(), std::back_inserter(handles), [](const Src &o) { return o.handle(); });
+    return handles;
+}
+
+template <class Dst, class Src>
+std::vector<Dst> MakeVkHandles(const std::vector<Src *> &v) {
+    std::vector<Dst> handles;
+    handles.reserve(v.size());
+    std::transform(v.begin(), v.end(), std::back_inserter(handles), [](const Src *o) { return o->handle(); });
+    return handles;
+}
 
 typedef void (*ErrorCallback)(const char *expr, const char *file, unsigned int line, const char *function);
 void set_error_callback(ErrorCallback callback);

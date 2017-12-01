@@ -55,14 +55,6 @@ bool expect_failure(const char *expr, const char *file, unsigned int line, const
     return false;
 }
 
-template <class T, class S>
-std::vector<T> make_handles(const std::vector<S> &v) {
-    std::vector<T> handles;
-    handles.reserve(v.size());
-    for (typename std::vector<S>::const_iterator it = v.begin(); it != v.end(); it++) handles.push_back((*it)->handle());
-    return handles;
-}
-
 }  // namespace
 
 namespace vk_testing {
@@ -376,7 +368,7 @@ VkFormatProperties Device::format_properties(VkFormat format) {
 void Device::wait() { EXPECT(vkDeviceWaitIdle(handle()) == VK_SUCCESS); }
 
 VkResult Device::wait(const std::vector<const Fence *> &fences, bool wait_all, uint64_t timeout) {
-    const std::vector<VkFence> fence_handles = make_handles<VkFence>(fences);
+    const std::vector<VkFence> fence_handles = MakeVkHandles<VkFence>(fences);
     VkResult err = vkWaitForFences(handle(), fence_handles.size(), fence_handles.data(), wait_all, timeout);
     EXPECT(err == VK_SUCCESS || err == VK_TIMEOUT);
 
@@ -389,7 +381,7 @@ void Device::update_descriptor_sets(const std::vector<VkWriteDescriptorSet> &wri
 }
 
 void Queue::submit(const std::vector<const CommandBuffer *> &cmds, Fence &fence) {
-    const std::vector<VkCommandBuffer> cmd_handles = make_handles<VkCommandBuffer>(cmds);
+    const std::vector<VkCommandBuffer> cmd_handles = MakeVkHandles<VkCommandBuffer>(cmds);
     VkSubmitInfo submit_info;
     submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
     submit_info.pNext = NULL;
@@ -650,7 +642,7 @@ NON_DISPATCHABLE_HANDLE_DTOR(PipelineLayout, vkDestroyPipelineLayout)
 
 void PipelineLayout::init(const Device &dev, VkPipelineLayoutCreateInfo &info,
                           const std::vector<const DescriptorSetLayout *> &layouts) {
-    const std::vector<VkDescriptorSetLayout> layout_handles = make_handles<VkDescriptorSetLayout>(layouts);
+    const std::vector<VkDescriptorSetLayout> layout_handles = MakeVkHandles<VkDescriptorSetLayout>(layouts);
     info.pSetLayouts = layout_handles.data();
 
     NON_DISPATCHABLE_HANDLE_INIT(vkCreatePipelineLayout, dev, &info);
@@ -679,7 +671,7 @@ void DescriptorPool::reset() { EXPECT(vkResetDescriptorPool(device(), handle(), 
 
 std::vector<DescriptorSet *> DescriptorPool::alloc_sets(const Device &dev,
                                                         const std::vector<const DescriptorSetLayout *> &layouts) {
-    const std::vector<VkDescriptorSetLayout> layout_handles = make_handles<VkDescriptorSetLayout>(layouts);
+    const std::vector<VkDescriptorSetLayout> layout_handles = MakeVkHandles<VkDescriptorSetLayout>(layouts);
 
     std::vector<VkDescriptorSet> set_handles;
     set_handles.resize(layout_handles.size());

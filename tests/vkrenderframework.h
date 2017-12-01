@@ -29,11 +29,22 @@ class VkImageObj;
 #include "vktestframework.h"
 #endif
 
+#include <algorithm>
 #include <array>
 #include <map>
 #include <vector>
 
 using namespace std;
+
+using vk_testing::MakeVkHandles;
+
+template <class Dst, class Src>
+std::vector<Dst *> MakeTestbindingHandles(const std::vector<Src *> &v) {
+    std::vector<Dst *> handles;
+    handles.reserve(v.size());
+    std::transform(v.begin(), v.end(), std::back_inserter(handles), [](const Src *o) { return static_cast<Dst *>(o); });
+    return handles;
+}
 
 class VkDeviceObj : public vk_testing::Device {
    public:
