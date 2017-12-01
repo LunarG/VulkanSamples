@@ -370,7 +370,7 @@ class ErrorMonitor {
                 ADD_FAILURE() << "Did not receive expected error '" << desired_msg << "'";
             }
             for (auto desired_id : desired_message_ids_) {
-                ADD_FAILURE() << "Did not receive expected error ENUM '" << desired_id << "'";
+                ADD_FAILURE() << "Did not receive expected error ENUM '0x" << std::hex << desired_id << "'";
             }
         }
         Reset();
@@ -6248,6 +6248,207 @@ TEST_F(VkLayerTest, WriteDescriptorSetConsecutiveUpdates) {
     err = vkQueueSubmit(m_device->m_queue, 1, &submit_info, VK_NULL_HANDLE);
     m_errorMonitor->VerifyFound();
     vkDestroyPipelineLayout(m_device->device(), pipeline_layout, NULL);
+}
+
+TEST_F(VkLayerTest, CreatePipelineLayoutExceedsSetLimit) {
+    TEST_DESCRIPTION("Attempt to create a pipeline layout using more than the physical limit of SetLayouts.");
+
+    ASSERT_NO_FATAL_FAILURE(Init());
+
+    VkDescriptorSetLayoutBinding layout_binding = {};
+    layout_binding.binding = 0;
+    layout_binding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    layout_binding.descriptorCount = 1;
+    layout_binding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+    layout_binding.pImmutableSamplers = NULL;
+
+    VkDescriptorSetLayoutCreateInfo ds_layout_ci = {};
+    ds_layout_ci.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+    ds_layout_ci.bindingCount = 1;
+    ds_layout_ci.pBindings = &layout_binding;
+    VkDescriptorSetLayout ds_layout = {};
+    VkResult err = vkCreateDescriptorSetLayout(m_device->device(), &ds_layout_ci, NULL, &ds_layout);
+    ASSERT_VK_SUCCESS(err);
+
+    // Create an array of DSLs, one larger than the physical limit
+    const auto excess_layouts = 1 + m_device->phy().properties().limits.maxBoundDescriptorSets;
+    std::vector<VkDescriptorSetLayout> dsl_array(excess_layouts, ds_layout);
+
+    VkPipelineLayoutCreateInfo pipeline_layout_ci = {};
+    pipeline_layout_ci.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+    pipeline_layout_ci.pNext = NULL;
+    pipeline_layout_ci.setLayoutCount = excess_layouts;
+    pipeline_layout_ci.pSetLayouts = dsl_array.data();
+
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_0fe0023c);
+    VkPipelineLayout pipeline_layout = VK_NULL_HANDLE;
+    err = vkCreatePipelineLayout(m_device->device(), &pipeline_layout_ci, NULL, &pipeline_layout);
+    m_errorMonitor->VerifyFound();
+
+    // Clean up
+    vkDestroyDescriptorSetLayout(m_device->device(), ds_layout, NULL);
+}
+
+TEST_F(VkLayerTest, CreatePipelineLayoutExcessPerStageDescriptors) {
+    TEST_DESCRIPTION("Attempt to create a pipeline layout where total descriptors exceed per-stage limits");
+
+    ASSERT_NO_FATAL_FAILURE(Init());
+
+    uint32_t max_uniform_buffers = m_device->phy().properties().limits.maxPerStageDescriptorUniformBuffers;
+    uint32_t max_storage_buffers = m_device->phy().properties().limits.maxPerStageDescriptorStorageBuffers;
+    uint32_t max_sampled_images = m_device->phy().properties().limits.maxPerStageDescriptorSampledImages;
+    uint32_t max_storage_images = m_device->phy().properties().limits.maxPerStageDescriptorStorageImages;
+    uint32_t max_samplers = m_device->phy().properties().limits.maxPerStageDescriptorSamplers;
+    uint32_t max_combined = std::min(max_samplers, max_sampled_images);
+
+    // Devices that report UINT_MAX for any of these limits can't run this test
+    if (UINT_MAX == std::max({ max_uniform_buffers, max_storage_buffers, max_sampled_images, max_storage_images, max_samplers }))
+    {
+        printf("             Physical device limits report as 2^32-1. Skipping test.\n");
+        return;
+    }
+
+    VkDescriptorSetLayoutBinding dslb = {};
+    std::vector<VkDescriptorSetLayoutBinding> dslb_vec = {};
+    VkDescriptorSetLayout ds_layout = VK_NULL_HANDLE;
+    VkDescriptorSetLayoutCreateInfo ds_layout_ci = {};
+    ds_layout_ci.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+    ds_layout_ci.pNext = NULL;
+    VkPipelineLayoutCreateInfo pipeline_layout_ci = {};
+    pipeline_layout_ci.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+    pipeline_layout_ci.pNext = NULL;
+    pipeline_layout_ci.setLayoutCount = 1;
+    pipeline_layout_ci.pSetLayouts = &ds_layout;
+    VkPipelineLayout pipeline_layout = VK_NULL_HANDLE;
+
+    // VU 0fe0023e - too many sampler type descriptors in fragment stage
+    dslb_vec.clear();
+    dslb.binding = 0;
+    dslb.descriptorType = VK_DESCRIPTOR_TYPE_SAMPLER;
+    dslb.descriptorCount = max_samplers;
+    dslb.stageFlags = VK_SHADER_STAGE_ALL_GRAPHICS;
+    dslb.pImmutableSamplers = NULL;
+    dslb_vec.push_back(dslb);
+    dslb.binding = 1;
+    dslb.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+    dslb.descriptorCount = max_combined;
+    dslb.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+    dslb_vec.push_back(dslb);
+
+    ds_layout_ci.bindingCount = dslb_vec.size();
+    ds_layout_ci.pBindings = dslb_vec.data();
+    VkResult err = vkCreateDescriptorSetLayout(m_device->device(), &ds_layout_ci, NULL, &ds_layout);
+    ASSERT_VK_SUCCESS(err);
+
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_0fe0023e);
+    err = vkCreatePipelineLayout(m_device->device(), &pipeline_layout_ci, NULL, &pipeline_layout);
+    m_errorMonitor->VerifyFound();
+    vkDestroyPipelineLayout(m_device->device(), pipeline_layout, NULL);  // Unnecessary but harmless if test passed
+    pipeline_layout = VK_NULL_HANDLE;
+    vkDestroyDescriptorSetLayout(m_device->device(), ds_layout, NULL);
+
+    // VU 0fe00240 - too many uniform buffer type descriptors in vertex stage
+    dslb_vec.clear();
+    dslb.binding = 0;
+    dslb.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    dslb.descriptorCount = 1 + (max_uniform_buffers / 2);
+    dslb.stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
+    dslb_vec.push_back(dslb);
+    dslb.binding = 1;
+    dslb.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
+    dslb.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+    dslb_vec.push_back(dslb);
+
+    ds_layout_ci.bindingCount = dslb_vec.size();
+    ds_layout_ci.pBindings = dslb_vec.data();
+    err = vkCreateDescriptorSetLayout(m_device->device(), &ds_layout_ci, NULL, &ds_layout);
+    ASSERT_VK_SUCCESS(err);
+
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_0fe00240);
+    err = vkCreatePipelineLayout(m_device->device(), &pipeline_layout_ci, NULL, &pipeline_layout);
+    m_errorMonitor->VerifyFound();
+    vkDestroyPipelineLayout(m_device->device(), pipeline_layout, NULL);  // Unnecessary but harmless if test passed
+    pipeline_layout = VK_NULL_HANDLE;
+    vkDestroyDescriptorSetLayout(m_device->device(), ds_layout, NULL);
+
+    // VU 0fe00242 - too many storage buffer type descriptors in compute stage
+    dslb_vec.clear();
+    dslb.binding = 0;
+    dslb.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+    dslb.descriptorCount = 1 + (max_storage_buffers / 3);
+    dslb.stageFlags = VK_SHADER_STAGE_ALL;
+    dslb_vec.push_back(dslb);
+    dslb.binding = 1;
+    dslb.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC;
+    dslb_vec.push_back(dslb);
+    dslb.binding = 2;
+    dslb.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+    dslb.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
+    dslb_vec.push_back(dslb);
+
+    ds_layout_ci.bindingCount = dslb_vec.size();
+    ds_layout_ci.pBindings = dslb_vec.data();
+    err = vkCreateDescriptorSetLayout(m_device->device(), &ds_layout_ci, NULL, &ds_layout);
+    ASSERT_VK_SUCCESS(err);
+
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_0fe00242);
+    err = vkCreatePipelineLayout(m_device->device(), &pipeline_layout_ci, NULL, &pipeline_layout);
+    m_errorMonitor->VerifyFound();
+    vkDestroyPipelineLayout(m_device->device(), pipeline_layout, NULL);  // Unnecessary but harmless if test passed
+    pipeline_layout = VK_NULL_HANDLE;
+    vkDestroyDescriptorSetLayout(m_device->device(), ds_layout, NULL);
+
+    // VU 0fe00244 - too many sampled image type descriptors in multiple stages
+    dslb_vec.clear();
+    dslb.binding = 0;
+    dslb.descriptorType = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
+    dslb.descriptorCount = max_sampled_images / 2;
+    dslb.stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
+    dslb_vec.push_back(dslb);
+    dslb.binding = 1;
+    dslb.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER;
+    dslb.stageFlags = VK_SHADER_STAGE_ALL_GRAPHICS;
+    dslb_vec.push_back(dslb);
+    dslb.binding = 2;
+    dslb.descriptorCount = max_combined;
+    dslb.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+    dslb_vec.push_back(dslb);
+
+    ds_layout_ci.bindingCount = dslb_vec.size();
+    ds_layout_ci.pBindings = dslb_vec.data();
+    err = vkCreateDescriptorSetLayout(m_device->device(), &ds_layout_ci, NULL, &ds_layout);
+    ASSERT_VK_SUCCESS(err);
+
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_0fe00244);
+    err = vkCreatePipelineLayout(m_device->device(), &pipeline_layout_ci, NULL, &pipeline_layout);
+    m_errorMonitor->VerifyFound();
+    vkDestroyPipelineLayout(m_device->device(), pipeline_layout, NULL);  // Unnecessary but harmless if test passed
+    pipeline_layout = VK_NULL_HANDLE;
+    vkDestroyDescriptorSetLayout(m_device->device(), ds_layout, NULL);
+
+    // VU 0fe00246 - too many storage image type descriptors in fragment stage
+    dslb_vec.clear();
+    dslb.binding = 0;
+    dslb.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+    dslb.descriptorCount = 1 + (max_storage_images / 2);
+    dslb.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+    dslb_vec.push_back(dslb);
+    dslb.binding = 1;
+    dslb.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER;
+    dslb.stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_COMPUTE_BIT;
+    dslb_vec.push_back(dslb);
+
+    ds_layout_ci.bindingCount = dslb_vec.size();
+    ds_layout_ci.pBindings = dslb_vec.data();
+    err = vkCreateDescriptorSetLayout(m_device->device(), &ds_layout_ci, NULL, &ds_layout);
+    ASSERT_VK_SUCCESS(err);
+
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_0fe00246);
+    err = vkCreatePipelineLayout(m_device->device(), &pipeline_layout_ci, NULL, &pipeline_layout);
+    m_errorMonitor->VerifyFound();
+    vkDestroyPipelineLayout(m_device->device(), pipeline_layout, NULL);  // Unnecessary but harmless if test passed
+    pipeline_layout = VK_NULL_HANDLE;
+    vkDestroyDescriptorSetLayout(m_device->device(), ds_layout, NULL);
 }
 
 TEST_F(VkLayerTest, InvalidCmdBufferBufferDestroyed) {
