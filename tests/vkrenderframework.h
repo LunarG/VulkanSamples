@@ -334,6 +334,17 @@ class VkSamplerObj : public vk_testing::Sampler {
     VkDeviceObj *m_device;
 };
 
+class VkDescriptorSetLayoutObj : public vk_testing::DescriptorSetLayout {
+   public:
+    VkDescriptorSetLayoutObj() = default;
+    VkDescriptorSetLayoutObj(const VkDeviceObj *device,
+                             const std::vector<VkDescriptorSetLayoutBinding> &descriptor_set_bindings = {},
+                             VkDescriptorSetLayoutCreateFlags flags = 0);
+
+    VkDescriptorSetLayoutObj(VkDescriptorSetLayoutObj &&src) = default;
+    VkDescriptorSetLayoutObj &operator=(VkDescriptorSetLayoutObj &&src) = default;
+};
+
 class VkDescriptorSetObj : public vk_testing::DescriptorPool {
    public:
     VkDescriptorSetObj(VkDeviceObj *device);

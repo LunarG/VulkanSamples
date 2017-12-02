@@ -558,7 +558,15 @@ class Sampler : public internal::NonDispHandle<VkSampler> {
 
 class DescriptorSetLayout : public internal::NonDispHandle<VkDescriptorSetLayout> {
    public:
+    DescriptorSetLayout() noexcept : NonDispHandle(){};
     ~DescriptorSetLayout();
+
+    DescriptorSetLayout(DescriptorSetLayout &&src) = default;
+    DescriptorSetLayout &operator=(DescriptorSetLayout &&src) noexcept {
+        this->~DescriptorSetLayout();
+        this->NonDispHandle::operator=(std::move(src));
+        return *this;
+    }
 
     // vkCreateDescriptorSetLayout()
     void init(const Device &dev, const VkDescriptorSetLayoutCreateInfo &info);
