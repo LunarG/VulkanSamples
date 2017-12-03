@@ -383,6 +383,18 @@ class VkShaderObj : public vk_testing::ShaderModule {
     VkDeviceObj *m_device;
 };
 
+class VkPipelineLayoutObj : public vk_testing::PipelineLayout {
+   public:
+    VkPipelineLayoutObj() = default;
+    VkPipelineLayoutObj(VkDeviceObj *device, const std::vector<const VkDescriptorSetLayoutObj *> &descriptor_layouts = {},
+                        const std::vector<VkPushConstantRange> &push_constant_ranges = {});
+
+    VkPipelineLayoutObj(VkPipelineLayoutObj &&src) = default;
+    VkPipelineLayoutObj &operator=(VkPipelineLayoutObj &&src) = default;
+
+    void Reset();
+};
+
 class VkPipelineObj : public vk_testing::Pipeline {
    public:
     VkPipelineObj(VkDeviceObj *device);

@@ -1156,6 +1156,21 @@ VkShaderObj::VkShaderObj(VkDeviceObj *device, const char *shader_code, VkShaderS
     assert(VK_SUCCESS == err);
 }
 
+VkPipelineLayoutObj::VkPipelineLayoutObj(VkDeviceObj *device,
+                                         const std::vector<const VkDescriptorSetLayoutObj *> &descriptor_layouts,
+                                         const std::vector<VkPushConstantRange> &push_constant_ranges) {
+    VkPipelineLayoutCreateInfo pl_ci = {};
+    pl_ci.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+    pl_ci.pushConstantRangeCount = static_cast<uint32_t>(push_constant_ranges.size());
+    pl_ci.pPushConstantRanges = push_constant_ranges.data();
+
+    auto descriptor_layouts_unwrapped = MakeTestbindingHandles<const vk_testing::DescriptorSetLayout>(descriptor_layouts);
+
+    init(*device, pl_ci, descriptor_layouts_unwrapped);
+}
+
+void VkPipelineLayoutObj::Reset() { *this = VkPipelineLayoutObj(); }
+
 VkPipelineObj::VkPipelineObj(VkDeviceObj *device) {
     m_device = device;
 

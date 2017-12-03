@@ -542,7 +542,15 @@ class Pipeline : public internal::NonDispHandle<VkPipeline> {
 
 class PipelineLayout : public internal::NonDispHandle<VkPipelineLayout> {
    public:
+    PipelineLayout() noexcept : NonDispHandle(){};
     ~PipelineLayout();
+
+    PipelineLayout(PipelineLayout &&src) = default;
+    PipelineLayout &operator=(PipelineLayout &&src) {
+        this->~PipelineLayout();
+        this->NonDispHandle::operator=(std::move(src));
+        return *this;
+    };
 
     // vCreatePipelineLayout()
     void init(const Device &dev, VkPipelineLayoutCreateInfo &info, const std::vector<const DescriptorSetLayout *> &layouts);
