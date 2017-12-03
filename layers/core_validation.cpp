@@ -104,10 +104,6 @@ static const VkDeviceMemory MEMTRACKER_SWAP_CHAIN_IMAGE_KEY = (VkDeviceMemory)(-
 // 2nd special memory handle used to flag object as unbound from memory
 static const VkDeviceMemory MEMORY_UNBOUND = VkDeviceMemory(~((uint64_t)(0)) - 1);
 
-// A special value of (0xFFFFFFFF, 0xFFFFFFFF) indicates that the surface size will be determined
-// by the extent of a swapchain targeting the surface.
-static const uint32_t kSurfaceSizeFromSwapchain = 0xFFFFFFFFu;
-
 struct instance_layer_data {
     VkInstance instance = VK_NULL_HANDLE;
     debug_report_data *report_data = nullptr;
