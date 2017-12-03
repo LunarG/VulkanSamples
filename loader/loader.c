@@ -514,7 +514,7 @@ bool loaderGetDeviceRegistryEntry(const struct loader_instance *inst, char **reg
         } else {
             (void)snprintf(*reg_data + strlen(*reg_data), requiredSize + 2, "%c%s", PATH_SEPARATOR, curr_filename);
         }
-        loader_log(inst, VK_DEBUG_REPORT_INFORMATION_BIT_EXT, 0, __FUNCTION__ ": Located json file \"%s\" from PnP registry: %s", curr_filename, value_name);
+        loader_log(inst, VK_DEBUG_REPORT_INFORMATION_BIT_EXT, 0, "%s: Located json file \"%s\" from PnP registry: %s", __FUNCTION__, curr_filename, value_name);
 
         if (data_type == REG_SZ) {
             break;
