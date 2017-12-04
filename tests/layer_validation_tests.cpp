@@ -11005,10 +11005,10 @@ TEST_F(VkLayerTest, ClearColorImageWithinRenderPass) {
     m_errorMonitor->VerifyFound();
 }
 
-TEST_F(VkLayerTest, ClearDepthStencilImageWithinRenderPass) {
-    // Call CmdClearDepthStencilImage within an active RenderPass
-    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
-                                         "It is invalid to issue this call inside an active render pass");
+TEST_F(VkLayerTest, ClearDepthStencilImageErrors) {
+    // Hit errors related to vkCmdClearDepthStencilImage()
+    // 1. Use an image that doesn't have VK_IMAGE_USAGE_TRANSFER_DST_BIT set
+    // 2. Call CmdClearDepthStencilImage within an active RenderPass
 
     ASSERT_NO_FATAL_FAILURE(Init());
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
@@ -11030,12 +11030,13 @@ TEST_F(VkLayerTest, ClearDepthStencilImageWithinRenderPass) {
     image_create_info.extent.width = 64;
     image_create_info.extent.height = 64;
     image_create_info.tiling = VK_IMAGE_TILING_OPTIMAL;
-    image_create_info.usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
+    image_create_info.usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
 
     vk_testing::Image dstImage;
     dstImage.init(*m_device, (const VkImageCreateInfo &)image_create_info, reqs);
 
     const VkImageSubresourceRange range = vk_testing::Image::subresource_range(image_create_info, VK_IMAGE_ASPECT_DEPTH_BIT);
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_18a00017);
 
     vkCmdClearDepthStencilImage(m_commandBuffer->handle(), dstImage.handle(), VK_IMAGE_LAYOUT_GENERAL, &clear_value, 1, &range);
 
