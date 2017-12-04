@@ -11750,6 +11750,7 @@ TEST_F(VkLayerTest, ValidationCacheTestBadMerge) {
     validationCacheCreateInfo.flags = 0;
     VkValidationCacheEXT validationCache = VK_NULL_HANDLE;
     VkResult res = fpCreateValidationCache(m_device->device(), &validationCacheCreateInfo, nullptr, &validationCache);
+    ASSERT_VK_SUCCESS(res);
 
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_3e600c00);
     res = fpMergeValidationCaches(m_device->device(), validationCache, 1, &validationCache);
