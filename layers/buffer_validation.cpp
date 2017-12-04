@@ -2793,6 +2793,32 @@ bool ValidateLayouts(core_validation::layer_data *device_data, VkDevice device, 
     const debug_report_data *report_data = core_validation::GetReportData(device_data);
     bool skip = false;
 
+    for (uint32_t i = 0; i < pCreateInfo->attachmentCount; ++i) {
+        VkFormat format = pCreateInfo->pAttachments[i].format;
+        if (pCreateInfo->pAttachments[i].initialLayout == VK_IMAGE_LAYOUT_UNDEFINED) {
+            if ((FormatIsColor(format) || FormatHasDepth(format)) &&
+                pCreateInfo->pAttachments[i].loadOp == VK_ATTACHMENT_LOAD_OP_LOAD) {
+                skip |= log_msg(report_data, VK_DEBUG_REPORT_WARNING_BIT_EXT,
+                                VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0,
+                                __LINE__, DRAWSTATE_INVALID_RENDERPASS, "DS",
+                                "Render pass has an attachment with loadOp == VK_ATTACHMENT_LOAD_OP_LOAD and "
+                                "initialLayout == VK_IMAGE_LAYOUT_UNDEFINED.  This is probably not what you "
+                                "intended.  Consider using VK_ATTACHMENT_LOAD_OP_DONT_CARE instead if the "
+                                "image truely is undefined at the start of the render pass.");
+            }
+            if (FormatHasStencil(format) &&
+                pCreateInfo->pAttachments[i].stencilLoadOp == VK_ATTACHMENT_LOAD_OP_LOAD) {
+                skip |= log_msg(report_data, VK_DEBUG_REPORT_WARNING_BIT_EXT,
+                                VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0,
+                                __LINE__, DRAWSTATE_INVALID_RENDERPASS, "DS",
+                                "Render pass has an attachment with stencilLoadOp == VK_ATTACHMENT_LOAD_OP_LOAD "
+                                "and initialLayout == VK_IMAGE_LAYOUT_UNDEFINED.  This is probably not what you "
+                                "intended.  Consider using VK_ATTACHMENT_LOAD_OP_DONT_CARE instead if the "
+                                "image truely is undefined at the start of the render pass.");
+            }
+        }
+    }
+
     // Track when we're observing the first use of an attachment
     std::vector<bool> attach_first_use(pCreateInfo->attachmentCount, true);
     for (uint32_t i = 0; i < pCreateInfo->subpassCount; ++i) {
