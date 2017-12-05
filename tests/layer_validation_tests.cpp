@@ -4135,32 +4135,39 @@ TEST_F(VkLayerTest, MismatchedQueueFamiliesOnSubmit) {
         "attempt to submit them on a queue created in a different "
         "queue family.");
 
-    ASSERT_NO_FATAL_FAILURE(Init());
+    ASSERT_NO_FATAL_FAILURE(Init());  // assumes it initializes all queue families on vkCreateDevice
 
     // This test is meaningless unless we have multiple queue families
     auto queue_family_properties = m_device->phy().queue_properties();
-    if (queue_family_properties.size() < 2) {
+    std::vector<uint32_t> queue_families;
+    for (uint32_t i = 0; i < queue_family_properties.size(); ++i)
+        if (queue_family_properties[i].queueCount > 0) queue_families.push_back(i);
+
+    if (queue_families.size() < 2) {
+        printf("             Device only has one queue family; skipped.\n");
         return;
     }
-    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, " is being submitted on queue ");
-    // Get safe index of another queue family
-    uint32_t other_queue_family = (m_device->graphics_queue_node_index_ == 0) ? 1 : 0;
+
+    const uint32_t queue_family = queue_families[0];
+
+    const uint32_t other_queue_family = queue_families[1];
     VkQueue other_queue;
     vkGetDeviceQueue(m_device->device(), other_queue_family, 0, &other_queue);
 
-    // Record an empty cmd buffer
-    VkCommandBufferBeginInfo cmdBufBeginDesc = {};
-    cmdBufBeginDesc.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-    vkBeginCommandBuffer(m_commandBuffer->handle(), &cmdBufBeginDesc);
-    vkEndCommandBuffer(m_commandBuffer->handle());
+    VkCommandPoolObj cmd_pool(m_device, queue_family);
+    VkCommandBufferObj cmd_buff(m_device, &cmd_pool);
 
-    // And submit on the wrong queue
+    cmd_buff.begin();
+    cmd_buff.end();
+
+    // Submit on the wrong queue
     VkSubmitInfo submit_info = {};
     submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
     submit_info.commandBufferCount = 1;
-    submit_info.pCommandBuffers = &m_commandBuffer->handle();
-    vkQueueSubmit(other_queue, 1, &submit_info, VK_NULL_HANDLE);
+    submit_info.pCommandBuffers = &cmd_buff.handle();
 
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_31a00094);
+    vkQueueSubmit(other_queue, 1, &submit_info, VK_NULL_HANDLE);
     m_errorMonitor->VerifyFound();
 }
 
