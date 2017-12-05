@@ -9763,6 +9763,7 @@ TEST_F(VkLayerTest, PSOViewportStateMultiViewportTests) {
     rs_state_ci.polygonMode = VK_POLYGON_MODE_FILL;
     rs_state_ci.cullMode = VK_CULL_MODE_BACK_BIT;
     rs_state_ci.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
+    rs_state_ci.lineWidth = 1.0f;
 
     VkPipelineMultisampleStateCreateInfo pipe_ms_state_ci = {};
     pipe_ms_state_ci.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
@@ -9979,7 +9980,7 @@ TEST_F(VkLayerTest, DynViewportAndScissorMismatch) {
 
     VkPipelineRasterizationStateCreateInfo rs_ci = {};
     rs_ci.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
-    rs_ci.lineWidth = m_device->props.limits.lineWidthRange[0];
+    rs_ci.lineWidth = 1.0f;
 
     VkPipelineColorBlendAttachmentState att = {};
     att.blendEnable = VK_FALSE;
@@ -10194,6 +10195,7 @@ TEST_F(VkLayerTest, VALIDATION_ERROR_14c004d4) {
     rasterization_state.depthClampEnable = VK_FALSE;
     rasterization_state.rasterizerDiscardEnable = VK_FALSE;
     rasterization_state.depthBiasEnable = VK_FALSE;
+    rasterization_state.lineWidth = 1.0f;
 
     VkPipelineLayout pipeline_layout;
     {
@@ -10294,6 +10296,7 @@ TEST_F(VkLayerTest, VALIDATION_ERROR_14c004d6) {
     rasterization_state.depthClampEnable = VK_FALSE;
     rasterization_state.rasterizerDiscardEnable = VK_FALSE;
     rasterization_state.depthBiasEnable = VK_FALSE;
+    rasterization_state.lineWidth = 1.0f;
 
     VkPipelineLayout pipeline_layout;
     {
@@ -10393,6 +10396,7 @@ TEST_F(VkLayerTest, VALIDATION_ERROR_14a004d8) {
     rasterization_state.depthClampEnable = VK_FALSE;
     rasterization_state.rasterizerDiscardEnable = VK_FALSE;
     rasterization_state.depthBiasEnable = VK_FALSE;
+    rasterization_state.lineWidth = 1.0f;
 
     VkPipelineLayout pipeline_layout;
     {
@@ -10492,6 +10496,7 @@ TEST_F(VkLayerTest, VALIDATION_ERROR_14a004da) {
     rasterization_state.depthClampEnable = VK_FALSE;
     rasterization_state.rasterizerDiscardEnable = VK_FALSE;
     rasterization_state.depthBiasEnable = VK_FALSE;
+    rasterization_state.lineWidth = 1.0f;
 
     VkPipelineLayout pipeline_layout;
     {
@@ -10611,6 +10616,7 @@ TEST_F(VkLayerTest, VALIDATION_ERROR_14a004dc) {
     rasterization_state.depthClampEnable = VK_FALSE;
     rasterization_state.rasterizerDiscardEnable = VK_TRUE;
     rasterization_state.depthBiasEnable = VK_FALSE;
+    rasterization_state.lineWidth = 1.0f;
 
     VkPipelineLayout pipeline_layout;
     {
