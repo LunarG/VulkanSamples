@@ -104,6 +104,12 @@ static const char bindStateFragShaderText[] =
     "   uFragColor = vec4(0,1,0,1);\n"
     "}\n";
 
+// Static arrays helper
+template <class ElementT, size_t array_size>
+constexpr size_t size(ElementT (&)[array_size]) {
+    return array_size;
+}
+
 // Format search helper
 VkFormat FindSupportedDepthStencilFormat(VkPhysicalDevice phy) {
     VkFormat ds_formats[] = {VK_FORMAT_D16_UNORM_S8_UINT, VK_FORMAT_D24_UNORM_S8_UINT, VK_FORMAT_D32_SFLOAT_S8_UINT};
@@ -15272,107 +15278,33 @@ TEST_F(VkLayerTest, FramebufferIncompatible) {
     vkDestroyFramebuffer(m_device->device(), fb, NULL);
 }
 
-TEST_F(VkLayerTest, ColorBlendLogicOpTests) {
-    TEST_DESCRIPTION(
-        "If logicOp is available on the device, set it to an "
-        "invalid value. If logicOp is not available, attempt to "
-        "use it and verify that we see the correct error.");
-    ASSERT_NO_FATAL_FAILURE(Init());
+TEST_F(VkLayerTest, ColorBlendInvalidLogicOp) {
+    TEST_DESCRIPTION("Attempt to use invalid VkPipelineColorBlendStateCreateInfo::logicOp value.");
+
+    ASSERT_NO_FATAL_FAILURE(Init());  // enables all supported features
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
 
-    auto features = m_device->phy().features();
-    // Set the expected error depending on whether or not logicOp available
-    if (VK_FALSE == features.logicOp) {
-        m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
-                                             "If logic operations feature not "
-                                             "enabled, logicOpEnable must be "
-                                             "VK_FALSE");
-    } else {
-        m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, "pColorBlendState->logicOp (16)");
+    if (!m_device->phy().features().logicOp) {
+        printf("             Device does not support logicOp feature; skipped.\n");
+        return;
     }
-    // Create a pipeline using logicOp
-    VkResult err;
 
-    VkPipelineLayoutCreateInfo pipeline_layout_ci = {};
-    pipeline_layout_ci.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+    const auto set_shading_enable = [](CreatePipelineHelper &helper) {
+        helper.cb_ci_.logicOpEnable = VK_TRUE;
+        helper.cb_ci_.logicOp = static_cast<VkLogicOp>(VK_LOGIC_OP_END_RANGE + 1);  // invalid logicOp to be tested
+    };
+    CreatePipelineHelper::OneshotTest(*this, set_shading_enable, VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_0f4004be);
+}
 
-    VkPipelineLayout pipeline_layout;
-    err = vkCreatePipelineLayout(m_device->device(), &pipeline_layout_ci, NULL, &pipeline_layout);
-    ASSERT_VK_SUCCESS(err);
+TEST_F(VkLayerTest, ColorBlendUnsupportedLogicOp) {
+    TEST_DESCRIPTION("Attempt enabling VkPipelineColorBlendStateCreateInfo::logicOpEnable when logicOp feature is disabled.");
 
-    VkViewport viewport = {0.0f, 0.0f, 64.0f, 64.0f, 0.0f, 1.0f};
-    VkRect2D scissor = {{0, 0}, {64, 64}};
-    VkPipelineViewportStateCreateInfo vp_state_ci{};
-    vp_state_ci.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
-    vp_state_ci.viewportCount = 1;
-    vp_state_ci.pViewports = &viewport;
-    vp_state_ci.scissorCount = 1;
-    vp_state_ci.pScissors = &scissor;
+    VkPhysicalDeviceFeatures features{};
+    ASSERT_NO_FATAL_FAILURE(Init(&features));
+    ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
 
-    VkPipelineShaderStageCreateInfo shaderStages[2];
-    memset(&shaderStages, 0, 2 * sizeof(VkPipelineShaderStageCreateInfo));
-
-    VkShaderObj vs(m_device, bindStateVertShaderText, VK_SHADER_STAGE_VERTEX_BIT, this);
-    VkShaderObj fs(m_device, bindStateFragShaderText, VK_SHADER_STAGE_FRAGMENT_BIT, this);
-    shaderStages[0] = vs.GetStageCreateInfo();
-    shaderStages[1] = fs.GetStageCreateInfo();
-
-    VkPipelineVertexInputStateCreateInfo vi_ci = {};
-    vi_ci.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
-
-    VkPipelineInputAssemblyStateCreateInfo ia_ci = {};
-    ia_ci.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
-    ia_ci.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP;
-
-    VkPipelineRasterizationStateCreateInfo rs_ci = {};
-    rs_ci.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
-    rs_ci.lineWidth = 1.0f;
-
-    VkPipelineColorBlendAttachmentState att = {};
-    att.blendEnable = VK_FALSE;
-    att.colorWriteMask = 0xf;
-
-    VkPipelineColorBlendStateCreateInfo cb_ci = {};
-    cb_ci.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
-    // Enable logicOp & set logicOp to value 1 beyond allowed entries
-    cb_ci.logicOpEnable = VK_TRUE;
-    cb_ci.logicOp = VK_LOGIC_OP_RANGE_SIZE;  // This should cause an error
-    cb_ci.attachmentCount = 1;
-    cb_ci.pAttachments = &att;
-
-    VkPipelineMultisampleStateCreateInfo ms_ci = {};
-    ms_ci.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
-    ms_ci.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
-
-    VkGraphicsPipelineCreateInfo gp_ci = {};
-    gp_ci.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
-    gp_ci.stageCount = 2;
-    gp_ci.pStages = shaderStages;
-    gp_ci.pVertexInputState = &vi_ci;
-    gp_ci.pInputAssemblyState = &ia_ci;
-    gp_ci.pViewportState = &vp_state_ci;
-    gp_ci.pRasterizationState = &rs_ci;
-    gp_ci.pColorBlendState = &cb_ci;
-    gp_ci.pMultisampleState = &ms_ci;
-    gp_ci.flags = VK_PIPELINE_CREATE_DISABLE_OPTIMIZATION_BIT;
-    gp_ci.layout = pipeline_layout;
-    gp_ci.renderPass = renderPass();
-
-    VkPipelineCacheCreateInfo pc_ci = {};
-    pc_ci.sType = VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO;
-
-    VkPipeline pipeline;
-    VkPipelineCache pipelineCache;
-    err = vkCreatePipelineCache(m_device->device(), &pc_ci, NULL, &pipelineCache);
-    ASSERT_VK_SUCCESS(err);
-
-    err = vkCreateGraphicsPipelines(m_device->device(), pipelineCache, 1, &gp_ci, NULL, &pipeline);
-    m_errorMonitor->VerifyFound();
-    if (VK_SUCCESS == err) {
-        vkDestroyPipeline(m_device->device(), pipeline, NULL);
-    }
-    vkDestroyPipelineCache(m_device->device(), pipelineCache, NULL);
-    vkDestroyPipelineLayout(m_device->device(), pipeline_layout, NULL);
+    const auto set_shading_enable = [](CreatePipelineHelper &helper) { helper.cb_ci_.logicOpEnable = VK_TRUE; };
+    CreatePipelineHelper::OneshotTest(*this, set_shading_enable, VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_0f4004bc);
 }
 
 #if GTEST_IS_THREADSAFE
