@@ -4140,30 +4140,27 @@ TEST_F(VkLayerTest, MismatchedQueueFamiliesOnSubmit) {
     // This test is meaningless unless we have multiple queue families
     auto queue_family_properties = m_device->phy().queue_properties();
     if (queue_family_properties.size() < 2) {
-        printf("             Device only has one queue family; skipped.\n");
         return;
     }
-
-    const uint32_t queue_family = 0;
-
-    const uint32_t other_queue_family = 1;
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, " is being submitted on queue ");
+    // Get safe index of another queue family
+    uint32_t other_queue_family = (m_device->graphics_queue_node_index_ == 0) ? 1 : 0;
     VkQueue other_queue;
     vkGetDeviceQueue(m_device->device(), other_queue_family, 0, &other_queue);
 
-    VkCommandPoolObj cmd_pool(m_device, queue_family);
-    VkCommandBufferObj cmd_buff(m_device, &cmd_pool);
+    // Record an empty cmd buffer
+    VkCommandBufferBeginInfo cmdBufBeginDesc = {};
+    cmdBufBeginDesc.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+    vkBeginCommandBuffer(m_commandBuffer->handle(), &cmdBufBeginDesc);
+    vkEndCommandBuffer(m_commandBuffer->handle());
 
-    cmd_buff.begin();
-    cmd_buff.end();
-
-    // Submit on the wrong queue
+    // And submit on the wrong queue
     VkSubmitInfo submit_info = {};
     submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
     submit_info.commandBufferCount = 1;
-    submit_info.pCommandBuffers = &cmd_buff.handle();
-
-    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_31a00094);
+    submit_info.pCommandBuffers = &m_commandBuffer->handle();
     vkQueueSubmit(other_queue, 1, &submit_info, VK_NULL_HANDLE);
+
     m_errorMonitor->VerifyFound();
 }
 
