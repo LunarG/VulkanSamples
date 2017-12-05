@@ -61,9 +61,11 @@ else()
     endif()
 endif()
 # For ICD with a direct dependency on a project with the same name, use it.
-foreach (config_file ${ICD_JSON_FILES})
-    add_dependencies(${config_file}-json ${config_file})
-endforeach(config_file)
+if (NOT (CMAKE_CURRENT_SOURCE_DIR STREQUAL CMAKE_CURRENT_BINARY_DIR))
+    foreach (config_file ${ICD_JSON_FILES})
+        add_dependencies(${config_file}-json ${config_file})
+    endforeach(config_file)
+endif()
 
 add_custom_target(generate_icd_files DEPENDS
     mock_icd.h
