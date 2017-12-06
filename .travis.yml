@@ -28,38 +28,61 @@ matrix:
 
 cache: ccache
 
+# Use set -e so that the build fails when a command fails.
+# The default action for Travis-CI is to continue running even if a command fails.
+# See https://github.com/travis-ci/travis-ci/issues/1066.
+# Use the YAML block scalar header (|) to allow easier multiline script coding.
+
 before_install:
-  # Install the appropriate Linux packages.
-  - if [[ "$VULKAN_BUILD_TARGET" == "LINUX" ]]; then sudo apt-get -y install libxkbcommon-dev libwayland-dev libmirclient-dev libxrandr-dev libx11-xcb-dev; fi
-
-  # Install the Android NDK.
-  - if [[ "$VULKAN_BUILD_TARGET" == "ANDROID" ]]; then export ARCH=`uname -m`; fi
-  - if [[ "$VULKAN_BUILD_TARGET" == "ANDROID" ]]; then wget http://dl.google.com/android/repository/android-ndk-r13b-linux-${ARCH}.zip; fi
-  - if [[ "$VULKAN_BUILD_TARGET" == "ANDROID" ]]; then unzip -u -q android-ndk-r13b-linux-${ARCH}.zip; fi
-  - if [[ "$VULKAN_BUILD_TARGET" == "ANDROID" ]]; then export ANDROID_NDK_HOME=`pwd`/android-ndk-r13b; fi
-  - if [[ "$VULKAN_BUILD_TARGET" == "ANDROID" ]]; then export JAVA_HOME="/usr/lib/jvm/java-8-oracle"; fi
-  - if [[ "$VULKAN_BUILD_TARGET" == "ANDROID" ]]; then export PATH="$ANDROID_NDK_HOME:$PATH"; fi
-
+  - set -e
+  - |
+    # Install the appropriate Linux packages.
+    if [[ "$VULKAN_BUILD_TARGET" == "LINUX" ]]; then
+      sudo apt-get -qq update
+      sudo apt-get -y install libxkbcommon-dev libwayland-dev libmirclient-dev libxrandr-dev libx11-xcb-dev
+    fi
+  - |
+    # Install the Android NDK.
+    if [[ "$VULKAN_BUILD_TARGET" == "ANDROID" ]]; then
+      export ARCH=`uname -m`
+      wget http://dl.google.com/android/repository/android-ndk-r13b-linux-${ARCH}.zip
+      unzip -u -q android-ndk-r13b-linux-${ARCH}.zip
+      export ANDROID_NDK_HOME=`pwd`/android-ndk-r13b
+      export JAVA_HOME="/usr/lib/jvm/java-8-oracle"
+      export PATH="$ANDROID_NDK_HOME:$PATH"
+    fi
   - export core_count=$(nproc || echo 4) && echo core_count = $core_count
+  - set +e
 
 script:
-  - if [[ "$VULKAN_BUILD_TARGET" == "LINUX" ]]; then ./update_external_sources.sh; fi
-  - if [[ "$VULKAN_BUILD_TARGET" == "LINUX" ]]; then cmake -H. -Bdbuild -DCMAKE_BUILD_TYPE=Debug; fi
-  - if [[ "$VULKAN_BUILD_TARGET" == "LINUX" ]]; then make -C dbuild -j $core_count; fi
-  - if [[ "$VULKAN_BUILD_TARGET" == "LINUX" ]]; then ( cd dbuild/tests; ./vkvalidatelayerdoc.sh); fi
-  - if [[ "$VULKAN_BUILD_TARGET" == "LINUX" ]]; then LD_LIBRARY_PATH=dbuild/loader:$LD_LIBRARY_PATH VK_LAYER_PATH=dbuild/layers VK_ICD_FILENAMES=dbuild/icd/VkICD_mock_icd.json dbuild/tests/vk_layer_validation_tests; fi
-  - if [[ "$VULKAN_BUILD_TARGET" == "LINUX" ]]; then LD_LIBRARY_PATH=dbuild/loader:$LD_LIBRARY_PATH VK_LAYER_PATH=dbuild/layers VK_ICD_FILENAMES=dbuild/icd/VkICD_mock_icd.json VK_DEVSIM_FILENAME=tests/device_profiles/adreno_540.json dbuild/tests/vk_layer_validation_tests --devsim; fi
-  - if [[ "$VULKAN_BUILD_TARGET" == "LINUX" ]]; then LD_LIBRARY_PATH=dbuild/loader:$LD_LIBRARY_PATH VK_LAYER_PATH=dbuild/layers VK_ICD_FILENAMES=dbuild/icd/VkICD_mock_icd.json VK_DEVSIM_FILENAME=tests/device_profiles/amd_radv_polaris10.json dbuild/tests/vk_layer_validation_tests --devsim; fi
-  - if [[ "$VULKAN_BUILD_TARGET" == "LINUX" ]]; then LD_LIBRARY_PATH=dbuild/loader:$LD_LIBRARY_PATH VK_LAYER_PATH=dbuild/layers VK_ICD_FILENAMES=dbuild/icd/VkICD_mock_icd.json VK_DEVSIM_FILENAME=tests/device_profiles/geforce_940m.json dbuild/tests/vk_layer_validation_tests --devsim; fi
-  - if [[ "$VULKAN_BUILD_TARGET" == "LINUX" ]]; then LD_LIBRARY_PATH=dbuild/loader:$LD_LIBRARY_PATH VK_LAYER_PATH=dbuild/layers VK_ICD_FILENAMES=dbuild/icd/VkICD_mock_icd.json VK_DEVSIM_FILENAME=tests/device_profiles/intel_hd_graphics_520_skylake_gt2.json dbuild/tests/vk_layer_validation_tests --devsim; fi
-  - if [[ "$VULKAN_BUILD_TARGET" == "LINUX" ]]; then LD_LIBRARY_PATH=dbuild/loader:$LD_LIBRARY_PATH VK_LAYER_PATH=dbuild/layers VK_ICD_FILENAMES=dbuild/icd/VkICD_mock_icd.json VK_DEVSIM_FILENAME=tests/device_profiles/mali-t760.json dbuild/tests/vk_layer_validation_tests --devsim; fi
-  - if [[ "$VULKAN_BUILD_TARGET" == "LINUX" ]]; then LD_LIBRARY_PATH=dbuild/loader:$LD_LIBRARY_PATH VK_LAYER_PATH=dbuild/layers VK_ICD_FILENAMES=dbuild/icd/VkICD_mock_icd.json VK_DEVSIM_FILENAME=tests/device_profiles/nvidia_tegra_x1.json dbuild/tests/vk_layer_validation_tests --devsim; fi
-  - if [[ "$VULKAN_BUILD_TARGET" == "LINUX" ]]; then LD_LIBRARY_PATH=dbuild/loader:$LD_LIBRARY_PATH VK_LAYER_PATH=dbuild/layers VK_ICD_FILENAMES=dbuild/icd/VkICD_mock_icd.json VK_DEVSIM_FILENAME=tests/device_profiles/powervr_rogue_ge8300.json dbuild/tests/vk_layer_validation_tests --devsim; fi
-  - if [[ "$VULKAN_BUILD_TARGET" == "ANDROID" ]]; then pushd build-android; fi
-  - if [[ "$VULKAN_BUILD_TARGET" == "ANDROID" ]]; then ./update_external_sources_android.sh --abi $ANDROID_ABI --no-build; fi
-  - if [[ "$VULKAN_BUILD_TARGET" == "ANDROID" ]]; then ./android-generate.sh; fi
-  - if [[ "$VULKAN_BUILD_TARGET" == "ANDROID" ]]; then USE_CCACHE=1 NDK_CCACHE=ccache ndk-build APP_ABI=$ANDROID_ABI -j $core_count; fi
-  - if [[ "$VULKAN_BUILD_TARGET" == "ANDROID" ]]; then popd; fi
+  - set -e
+  - |
+    if [[ "$VULKAN_BUILD_TARGET" == "LINUX" ]]; then
+      ./update_external_sources.sh
+      cmake -H. -Bdbuild -DCMAKE_BUILD_TYPE=Debug
+      make -C dbuild -j $core_count
+      (cd dbuild/tests; ./vkvalidatelayerdoc.sh)
+      export LD_LIBRARY_PATH=dbuild/loader:$LD_LIBRARY_PATH
+      export VK_LAYER_PATH=dbuild/layers
+      export VK_ICD_FILENAMES=dbuild/icd/VkICD_mock_icd.json
+      dbuild/tests/vk_layer_validation_tests
+      VK_DEVSIM_FILENAME=tests/device_profiles/adreno_540.json dbuild/tests/vk_layer_validation_tests --devsim
+      VK_DEVSIM_FILENAME=tests/device_profiles/amd_radv_polaris10.json dbuild/tests/vk_layer_validation_tests --devsim
+      VK_DEVSIM_FILENAME=tests/device_profiles/geforce_940m.json dbuild/tests/vk_layer_validation_tests --devsim
+      VK_DEVSIM_FILENAME=tests/device_profiles/intel_hd_graphics_520_skylake_gt2.json dbuild/tests/vk_layer_validation_tests --devsim
+      VK_DEVSIM_FILENAME=tests/device_profiles/mali-t760.json dbuild/tests/vk_layer_validation_tests --devsim
+      VK_DEVSIM_FILENAME=tests/device_profiles/nvidia_tegra_x1.json dbuild/tests/vk_layer_validation_tests --devsim
+      VK_DEVSIM_FILENAME=tests/device_profiles/powervr_rogue_ge8300.json dbuild/tests/vk_layer_validation_tests --devsim
+    fi
+  - |
+    if [[ "$VULKAN_BUILD_TARGET" == "ANDROID" ]]; then
+      pushd build-android
+      ./update_external_sources_android.sh --abi $ANDROID_ABI --no-build
+      ./android-generate.sh
+      USE_CCACHE=1 NDK_CCACHE=ccache ndk-build APP_ABI=$ANDROID_ABI -j $core_count
+      popd
+    fi
+  - set +e
 
 notifications:
   email:
