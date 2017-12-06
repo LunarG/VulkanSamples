@@ -577,17 +577,17 @@ void VkLayerTest::VKTriangleTest(BsoFailSelect failCase) {
             break;
         }
         case BsoFailStencilReadMask: {
-            failcase_needs_depth = true;
+            // failcase_needs_depth = true; // Mali driver failing if DS gets cleared
             pipelineobj.MakeDynamic(VK_DYNAMIC_STATE_STENCIL_COMPARE_MASK);
             break;
         }
         case BsoFailStencilWriteMask: {
-            failcase_needs_depth = true;
+            // failcase_needs_depth = true; // Mali driver failing if DS gets cleared
             pipelineobj.MakeDynamic(VK_DYNAMIC_STATE_STENCIL_WRITE_MASK);
             break;
         }
         case BsoFailStencilReference: {
-            failcase_needs_depth = true;
+            // failcase_needs_depth = true; // Mali driver failing if DS gets cleared
             pipelineobj.MakeDynamic(VK_DYNAMIC_STATE_STENCIL_REFERENCE);
             break;
         }
@@ -6633,7 +6633,7 @@ TEST_F(VkLayerTest, InvalidCmdBufferBufferViewDestroyed) {
     vkCmdSetViewport(m_commandBuffer->handle(), 0, 1, &viewport);
     VkRect2D scissor = {{0, 0}, {16, 16}};
     vkCmdSetScissor(m_commandBuffer->handle(), 0, 1, &scissor);
-    // Bind pipeline to cmd buffer
+    // Bind pipeline to cmd buffer - This causes crash on Mali
     vkCmdBindPipeline(m_commandBuffer->handle(), VK_PIPELINE_BIND_POINT_GRAPHICS, pipe.handle());
     vkCmdBindDescriptorSets(m_commandBuffer->handle(), VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_layout, 0, 1, &descriptor_set, 0,
                             nullptr);
@@ -17497,7 +17497,7 @@ TEST_F(VkLayerTest, DrawTimeImageMultisampleMismatchWithPipeline) {
     pipe.AddShader(&fs);
     pipe.AddDefaultColorAttachment();
 
-    VkTextureObj texture(m_device, nullptr);
+    VkTextureObj texture(m_device, nullptr); // THIS LINE CAUSES CRASH ON MALI
     VkSamplerObj sampler(m_device);
 
     VkDescriptorSetObj descriptorSet(m_device);
