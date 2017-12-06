@@ -1170,11 +1170,11 @@ bool pv_vkCreateGraphicsPipelines(VkDevice device, VkPipelineCache pipelineCache
                                     "is VK_FALSE, pCreateInfos[%d].pMultisampleState must not be NULL. %s",
                                     i, i, validation_error_map[VALIDATION_ERROR_096005de]);
                 } else {
-                    constexpr const VkStructureType valid_next_stypes[] = {
+                    const VkStructureType valid_next_stypes[] = {
                         LvlTypeMap<VkPipelineCoverageModulationStateCreateInfoNV>::kSType,
                         LvlTypeMap<VkPipelineCoverageToColorStateCreateInfoNV>::kSType,
                         LvlTypeMap<VkPipelineSampleLocationsStateCreateInfoEXT>::kSType};
-                    constexpr const char *valid_struct_names =
+                    const char *valid_struct_names =
                         "VkPipelineCoverageModulationStateCreateInfoNV, "
                         "VkPipelineCoverageToColorStateCreateInfoNV, "
                         "VkPipelineSampleLocationsStateCreateInfoEXT";

@@ -106,7 +106,7 @@ static const char bindStateFragShaderText[] =
 
 // Static arrays helper
 template <class ElementT, size_t array_size>
-constexpr size_t size(ElementT (&)[array_size]) {
+size_t size(ElementT (&)[array_size]) {
     return array_size;
 }
 
@@ -954,8 +954,6 @@ struct OneOffDescriptorSet {
             pool_, 1, &layout_};
         err = vkAllocateDescriptorSets(device_, &alloc_info, &set_);
     }
-    OneOffDescriptorSet(VkDevice device, std::initializer_list<VkDescriptorSetLayoutBinding> bindings)
-        : OneOffDescriptorSet(device, Bindings(bindings)){};
 
     ~OneOffDescriptorSet() {
         // No need to destroy set-- it's going away with the pool.
@@ -9367,7 +9365,7 @@ TEST_F(VkLayerTest, InvalidPipelineSampleRateFeatureEnable) {
     ASSERT_NO_FATAL_FAILURE(InitState(&device_features));
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
 
-    auto range_test = [this](float value, bool positive_test = false) {
+    auto range_test = [this](float value, bool positive_test) {
         auto info_override = [value](CreatePipelineHelper &helper) {
             helper.pipe_ms_state_ci_.sampleShadingEnable = VK_TRUE;
             helper.pipe_ms_state_ci_.minSampleShading = value;
@@ -9376,8 +9374,8 @@ TEST_F(VkLayerTest, InvalidPipelineSampleRateFeatureEnable) {
                                           positive_test);
     };
 
-    range_test(NextAfterLess(0.0F));
-    range_test(NextAfterGreater(1.0F));
+    range_test(NextAfterLess(0.0F), false);
+    range_test(NextAfterGreater(1.0F), false);
     range_test(0.0, /* positive_test= */ true);
     range_test(1.0, /* positive_test= */ true);
 }
@@ -9563,7 +9561,7 @@ TEST_F(VkLayerTest, PSOViewportStateTests) {
 
     VkShaderObj vs(m_device, bindStateVertShaderText, VK_SHADER_STAGE_VERTEX_BIT, this);
     VkShaderObj fs(m_device, bindStateFragShaderText, VK_SHADER_STAGE_FRAGMENT_BIT, this);
-    constexpr size_t shader_stages_size = 2;
+    const size_t shader_stages_size = 2;
     VkPipelineShaderStageCreateInfo shaderStages[shader_stages_size] = {shaderStages[0] = vs.GetStageCreateInfo(),
                                                                         shaderStages[1] = fs.GetStageCreateInfo()};
 
@@ -9698,7 +9696,7 @@ TEST_F(VkLayerTest, PSOViewportStateTests) {
         {0, nullptr, 0, nullptr, {VALIDATION_ERROR_10c00980, VALIDATION_ERROR_10c00982}},
     };
 
-    constexpr size_t dyn_states_count = 2;
+    const size_t dyn_states_count = 2;
     const VkDynamicState dyn_states[dyn_states_count] = {VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR};
     VkPipelineDynamicStateCreateInfo dyn_state_ci = {};
     dyn_state_ci.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
@@ -9738,7 +9736,7 @@ TEST_F(VkLayerTest, PSOViewportStateMultiViewportTests) {
 
     VkShaderObj vs(m_device, bindStateVertShaderText, VK_SHADER_STAGE_VERTEX_BIT, this);
     VkShaderObj fs(m_device, bindStateFragShaderText, VK_SHADER_STAGE_FRAGMENT_BIT, this);
-    constexpr size_t shader_stages_size = 2;
+    const size_t shader_stages_size = 2;
     VkPipelineShaderStageCreateInfo shaderStages[shader_stages_size] = {shaderStages[0] = vs.GetStageCreateInfo(),
                                                                         shaderStages[1] = fs.GetStageCreateInfo()};
 
@@ -9882,7 +9880,7 @@ TEST_F(VkLayerTest, PSOViewportStateMultiViewportTests) {
             {too_much_viewports, nullptr, too_much_viewports, nullptr, {VALIDATION_ERROR_10c00984, VALIDATION_ERROR_10c00986}});
     }
 
-    constexpr size_t dyn_states_count = 2;
+    const size_t dyn_states_count = 2;
     const VkDynamicState dyn_states[dyn_states_count] = {VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR};
     VkPipelineDynamicStateCreateInfo dyn_state_ci = {};
     dyn_state_ci.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
@@ -9967,7 +9965,7 @@ TEST_F(VkLayerTest, DynViewportAndScissorMismatch) {
     VkShaderObj vs(m_device, bindStateVertShaderText, VK_SHADER_STAGE_VERTEX_BIT, this);
     // We shouldn't need a fragment shader but add it to be able to run on more devices
     VkShaderObj fs(m_device, bindStateFragShaderText, VK_SHADER_STAGE_FRAGMENT_BIT, this);
-    constexpr size_t shader_stages_size = 2;
+    const size_t shader_stages_size = 2;
     VkPipelineShaderStageCreateInfo shaderStages[shader_stages_size] = {shaderStages[0] = vs.GetStageCreateInfo(),
                                                                         shaderStages[1] = fs.GetStageCreateInfo()};
 

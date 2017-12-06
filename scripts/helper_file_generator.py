@@ -920,12 +920,9 @@ class HelperFileOutputGenerator(OutputGenerator):
         fprefix = 'lvl_'
         typemap = prefix + 'TypeMap'
         idmap = prefix + 'STypeMap'
-        name_member = 'kName'
         type_member = 'Type'
         id_member = 'kSType'
-        decl_prefix ='constexpr static'
-        char_decl = decl_prefix + ' const char *'
-        id_decl = decl_prefix + ' const VkStructureType '
+        id_decl = 'static const VkStructureType '
         generic_header = prefix + 'GenericHeader'
         typename_func = fprefix + 'typename'
         idname_func = fprefix + 'stype_name'
@@ -934,11 +931,10 @@ class HelperFileOutputGenerator(OutputGenerator):
         explanatory_comment = '\n'.join((
                 '// These empty generic templates are specialized for each type with sType',
                 '// members and for each sType -- providing a two way map between structure',
-                '// types and sTypes as well as a kName stringification for convenience'))
+                '// types and sTypes'))
 
         empty_typemap = 'template <typename T> struct ' + typemap + ' {};'
         typemap_format  = 'template <> struct {template}<{typename}> {{\n'
-        typemap_format += '    {char_decl}{name} = "{typename}";\n'
         typemap_format += '    {id_decl}{id_member} = {id_value};\n'
         typemap_format += '}};\n'
 
@@ -946,7 +942,6 @@ class HelperFileOutputGenerator(OutputGenerator):
         idmap_format = ''.join((
             'template <> struct {template}<{id_value}> {{\n',
             '    typedef {typename} {typedef};\n',
-            '    {char_decl}{name} = "{id_value}";\n',
             '}};\n'))
 
         # Define the utilities (here so any renaming stays consistent), if this grows large, refactor to a fixed .h file
@@ -971,14 +966,7 @@ class HelperFileOutputGenerator(OutputGenerator):
             '    }}',
             '    return found;',
             '}}',
-            '',
-            '// Convenience functions for accessing the other mapped objects name field',
-            'template <typename T> constexpr const char *{idname_func}() {{',
-            '    return {id_map}<{type_map}<T>::{id_member}>::{name_member};',
-            '}}',
-            'template <VkStructureType s_type> constexpr const char *{typename_func}() {{',
-            '    return {type_map}<typename {id_map}<s_type>::{type_member}>::{name_member};',
-            '}}'))
+            ''))
 
         code = []
         code.append('\n'.join((
@@ -987,7 +975,7 @@ class HelperFileOutputGenerator(OutputGenerator):
             explanatory_comment, '',
             empty_idmap,
             empty_typemap, '',
-            utilities_format.format(name_member=name_member, id_member=id_member, id_map=idmap, type_map=typemap,
+            utilities_format.format(id_member=id_member, id_map=idmap, type_map=typemap,
                 type_member=type_member, header=generic_header, typename_func=typename_func, idname_func=idname_func,
                 find_func=find_func), ''
             )))
@@ -1005,17 +993,11 @@ class HelperFileOutputGenerator(OutputGenerator):
 
             code.append('// Map type {} to id {}'.format(typename, info.value))
             code.append(typemap_format.format(template=typemap, typename=typename, id_value=info.value,
-                char_decl=char_decl, id_decl=id_decl, name=name_member, id_member=id_member))
-            code.append(idmap_format.format(template=idmap, typename=typename, id_value=info.value, char_decl=char_decl, typedef=type_member, name=name_member))
+                id_decl=id_decl, id_member=id_member))
+            code.append(idmap_format.format(template=idmap, typename=typename, id_value=info.value, typedef=type_member))
 
             if item.ifdef_protect != None:
                 code.append('#endif // %s' % item.ifdef_protect)
-
-        #for typename, info in self.structTypes.items():
-        #    code.append("// Map type {} to id {}".format(typename, info.value))
-        #    code.append(typemap_format.format(template=typemap, typename=typename, id_value=info.value,
-        #        char_decl=char_decl, id_decl=id_decl, name=name_member, id_member=id_member))
-        #    code.append(idmap_format.format(template=idmap, typename=typename, id_value=info.value, char_decl=char_decl, typedef=type_member, name=name_member))
 
         return "\n".join(code)
 
