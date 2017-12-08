@@ -697,20 +697,7 @@ int update_system_file(FILE* log, const char* name, const char* extension, const
         snprintf(output_filename, out_size, outPattern, path, name, extension);
     }
     
-    // Remove any older version of the output file
-    if(remove(output_filename) == 0) {
-        fprintf(log, "Removed file %s\n", output_filename);
-    } else {
-        fprintf(log, "Did not remove file %s\n", output_filename);
-    }
-    
-    fprintf(log, "Attempting to copy file %s to %s\n", latest_filename, output_filename);
-    if(CopyFile(latest_filename, output_filename, false) == 0) {
-        free(latest_filename);
-        free(output_filename);
-        return 215;
-    }
-    
+    fprintf(stdout, "%s>%s;", latest_filename, output_filename);
     free(latest_filename);
     free(output_filename);
     return 0;
