@@ -365,13 +365,12 @@ bool ValidateImageAspectLayout(layer_data *device_data, GLOBAL_CB_NODE const *pC
     if (mem_barrier->oldLayout == VK_IMAGE_LAYOUT_UNDEFINED) {
         // TODO: Set memory invalid which is in mem_tracker currently
     } else if (node.layout != mem_barrier->oldLayout) {
-        skip |=
-            log_msg(core_validation::GetReportData(device_data), VK_DEBUG_REPORT_ERROR_BIT_EXT,
-                    VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, HandleToUint64(pCB->commandBuffer), __LINE__,
-                    DRAWSTATE_INVALID_IMAGE_LAYOUT, "DS",
-                    "For image 0x%" PRIxLEAST64 " you cannot transition the layout of aspect %d from %s when current layout is %s.",
-                    HandleToUint64(mem_barrier->image), aspect, string_VkImageLayout(mem_barrier->oldLayout),
-                    string_VkImageLayout(node.layout));
+        skip |= log_msg(core_validation::GetReportData(device_data), VK_DEBUG_REPORT_ERROR_BIT_EXT,
+                        VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, HandleToUint64(pCB->commandBuffer), __LINE__,
+                        DRAWSTATE_INVALID_IMAGE_LAYOUT, "DS",
+                        "For image 0x%" PRIx64 " you cannot transition the layout of aspect %d from %s when current layout is %s.",
+                        HandleToUint64(mem_barrier->image), aspect, string_VkImageLayout(mem_barrier->oldLayout),
+                        string_VkImageLayout(node.layout));
     }
     return skip;
 }
@@ -471,8 +470,8 @@ bool ValidateBarrierLayoutToImageUsage(layer_data *device_data, const VkImageMem
             log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT,
                     HandleToUint64(img_barrier->image), __LINE__, msg_code, "DS",
                     "%s: Image barrier 0x%p %sLayout=%s is not compatible with image 0x%" PRIx64 " usage flags 0x%" PRIx32 ". %s",
-                    func_name, img_barrier, ((new_not_old) ? "new" : "old"), string_VkImageLayout(layout),
-                    HandleToUint64(img_barrier->image), usage_flags, validation_error_map[msg_code]);
+                    func_name, static_cast<const void *>(img_barrier), ((new_not_old) ? "new" : "old"),
+                    string_VkImageLayout(layout), HandleToUint64(img_barrier->image), usage_flags, validation_error_map[msg_code]);
     }
     return skip;
 }
@@ -498,9 +497,9 @@ bool ValidateBarriersToImages(layer_data *device_data, GLOBAL_CB_NODE const *cb_
                 skip |= log_msg(
                     core_validation::GetReportData(device_data), VK_DEBUG_REPORT_ERROR_BIT_EXT,
                     VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__, 0, "DS",
-                    "Attempting to transition shared presentable image 0x%" PRIxLEAST64
+                    "Attempting to transition shared presentable image 0x%" PRIx64
                     " from layout %s to layout %s, but image has already been presented and cannot have its layout transitioned.",
-                    reinterpret_cast<const uint64_t &>(img_barrier->image), string_VkImageLayout(img_barrier->oldLayout),
+                    HandleToUint64(img_barrier->image), string_VkImageLayout(img_barrier->oldLayout),
                     string_VkImageLayout(img_barrier->newLayout));
             }
         }
@@ -511,15 +510,14 @@ bool ValidateBarriersToImages(layer_data *device_data, GLOBAL_CB_NODE const *cb_
             auto const aspect_mask = img_barrier->subresourceRange.aspectMask;
             auto const ds_mask = VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT;
             if ((aspect_mask & ds_mask) != (ds_mask)) {
-                skip |=
-                    log_msg(core_validation::GetReportData(device_data), VK_DEBUG_REPORT_ERROR_BIT_EXT,
-                            VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT, HandleToUint64(img_barrier->image), __LINE__,
-                            VALIDATION_ERROR_0a00096e, "DS",
-                            "%s: Image barrier 0x%p references image 0x%" PRIx64
-                            " of format %s that must have the depth and stencil aspects set, but its "
-                            "aspectMask is 0x%" PRIx32 ". %s",
-                            func_name, img_barrier, HandleToUint64(img_barrier->image), string_VkFormat(image_create_info->format),
-                            aspect_mask, validation_error_map[VALIDATION_ERROR_0a00096e]);
+                skip |= log_msg(
+                    core_validation::GetReportData(device_data), VK_DEBUG_REPORT_ERROR_BIT_EXT,
+                    VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT, HandleToUint64(img_barrier->image), __LINE__, VALIDATION_ERROR_0a00096e,
+                    "DS", "%s: Image barrier 0x%p references image 0x%" PRIx64
+                          " of format %s that must have the depth and stencil aspects set, but its "
+                          "aspectMask is 0x%" PRIx32 ". %s",
+                    func_name, static_cast<const void *>(img_barrier), HandleToUint64(img_barrier->image),
+                    string_VkFormat(image_create_info->format), aspect_mask, validation_error_map[VALIDATION_ERROR_0a00096e]);
             }
         }
         uint32_t level_count = ResolveRemainingLevels(&img_barrier->subresourceRange, image_create_info->mipLevels);
@@ -579,12 +577,11 @@ bool VerifyImageLayout(layer_data const *device_data, GLOBAL_CB_NODE const *cb_n
             if (node.layout != explicit_layout) {
                 *error = true;
                 // TODO: Improve log message in the next pass
-                skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
-                                HandleToUint64(cb_node->commandBuffer), __LINE__, DRAWSTATE_INVALID_IMAGE_LAYOUT, "DS",
-                                "%s: Cannot use image 0x%" PRIxLEAST64
-                                " with specific layout %s that doesn't match the actual current layout %s.",
-                                caller, HandleToUint64(image), string_VkImageLayout(explicit_layout),
-                                string_VkImageLayout(node.layout));
+                skip |= log_msg(
+                    report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
+                    HandleToUint64(cb_node->commandBuffer), __LINE__, DRAWSTATE_INVALID_IMAGE_LAYOUT, "DS",
+                    "%s: Cannot use image 0x%" PRIx64 " with specific layout %s that doesn't match the actual current layout %s.",
+                    caller, HandleToUint64(image), string_VkImageLayout(explicit_layout), string_VkImageLayout(node.layout));
             }
         }
     }
@@ -596,8 +593,8 @@ bool VerifyImageLayout(layer_data const *device_data, GLOBAL_CB_NODE const *cb_n
                 skip |= log_msg(report_data, VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT,
                                 VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, HandleToUint64(cb_node->commandBuffer), __LINE__,
                                 DRAWSTATE_INVALID_IMAGE_LAYOUT, "DS",
-                                "%s: For optimal performance image 0x%" PRIxLEAST64 " layout should be %s instead of GENERAL.",
-                                caller, HandleToUint64(image), string_VkImageLayout(optimal_layout));
+                                "%s: For optimal performance image 0x%" PRIx64 " layout should be %s instead of GENERAL.", caller,
+                                HandleToUint64(image), string_VkImageLayout(optimal_layout));
             }
         } else if (GetDeviceExtensions(device_data)->vk_khr_shared_presentable_image) {
             if (image_state->shared_presentable) {
@@ -613,9 +610,9 @@ bool VerifyImageLayout(layer_data const *device_data, GLOBAL_CB_NODE const *cb_n
             *error = true;
             skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
                             HandleToUint64(cb_node->commandBuffer), __LINE__, msg_code, "DS",
-                            "%s: Layout for image 0x%" PRIxLEAST64 " is %s but can only be %s or VK_IMAGE_LAYOUT_GENERAL. %s",
-                            caller, HandleToUint64(image), string_VkImageLayout(explicit_layout),
-                            string_VkImageLayout(optimal_layout), validation_error_map[msg_code]);
+                            "%s: Layout for image 0x%" PRIx64 " is %s but can only be %s or VK_IMAGE_LAYOUT_GENERAL. %s", caller,
+                            HandleToUint64(image), string_VkImageLayout(explicit_layout), string_VkImageLayout(optimal_layout),
+                            validation_error_map[msg_code]);
         }
     }
     return skip;
@@ -1469,7 +1466,7 @@ bool ValidateImageCopyData(const layer_data *device_data, const debug_report_dat
             if ((0 != image_copy.srcOffset.y) || (1 != image_copy.extent.height)) {
                 skip |=
                     log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT,
-                            reinterpret_cast<const uint64_t &>(src_state->image), __LINE__, VALIDATION_ERROR_09c00124, "IMAGE",
+                            HandleToUint64(src_state->image), __LINE__, VALIDATION_ERROR_09c00124, "IMAGE",
                             "vkCmdCopyImage(): pRegion[%d] srcOffset.y is %d and extent.height is %d. For 1D images these must "
                             "be 0 and 1, respectively. %s",
                             i, image_copy.srcOffset.y, image_copy.extent.height, validation_error_map[VALIDATION_ERROR_09c00124]);
@@ -1480,7 +1477,7 @@ bool ValidateImageCopyData(const layer_data *device_data, const debug_report_dat
             if ((0 != image_copy.srcOffset.z) || (1 != image_copy.extent.depth)) {
                 skip |=
                     log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT,
-                            reinterpret_cast<const uint64_t &>(src_state->image), __LINE__, VALIDATION_ERROR_09c00128, "IMAGE",
+                            HandleToUint64(src_state->image), __LINE__, VALIDATION_ERROR_09c00128, "IMAGE",
                             "vkCmdCopyImage(): pRegion[%d] srcOffset.z is %d and extent.depth is %d. For 1D and 2D images "
                             "these must be 0 and 1, respectively. %s",
                             i, image_copy.srcOffset.z, image_copy.extent.depth, validation_error_map[VALIDATION_ERROR_09c00128]);
@@ -1493,7 +1490,7 @@ bool ValidateImageCopyData(const layer_data *device_data, const debug_report_dat
                 if ((0 != image_copy.srcSubresource.baseArrayLayer) || (1 != image_copy.srcSubresource.layerCount)) {
                     skip |=
                         log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT,
-                                reinterpret_cast<const uint64_t &>(src_state->image), __LINE__, VALIDATION_ERROR_09c0011a, "IMAGE",
+                                HandleToUint64(src_state->image), __LINE__, VALIDATION_ERROR_09c0011a, "IMAGE",
                                 "vkCmdCopyImage(): pRegion[%d] srcSubresource.baseArrayLayer is %d and srcSubresource.layerCount "
                                 "is %d. For VK_IMAGE_TYPE_3D images these must be 0 and 1, respectively. %s",
                                 i, image_copy.srcSubresource.baseArrayLayer, image_copy.srcSubresource.layerCount,
@@ -1503,14 +1500,13 @@ bool ValidateImageCopyData(const layer_data *device_data, const debug_report_dat
         } else {  // Pre maint 1
             if (src_state->createInfo.imageType == VK_IMAGE_TYPE_3D || dst_state->createInfo.imageType == VK_IMAGE_TYPE_3D) {
                 if ((0 != image_copy.srcSubresource.baseArrayLayer) || (1 != image_copy.srcSubresource.layerCount)) {
-                    skip |=
-                        log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT,
-                                reinterpret_cast<const uint64_t &>(src_state->image), __LINE__, VALIDATION_ERROR_09c0011a, "IMAGE",
-                                "vkCmdCopyImage(): pRegion[%d] srcSubresource.baseArrayLayer is %d and "
-                                "srcSubresource.layerCount is %d. For copies with either source or dest of type "
-                                "VK_IMAGE_TYPE_3D, these must be 0 and 1, respectively. %s",
-                                i, image_copy.srcSubresource.baseArrayLayer, image_copy.srcSubresource.layerCount,
-                                validation_error_map[VALIDATION_ERROR_09c0011a]);
+                    skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT,
+                                    HandleToUint64(src_state->image), __LINE__, VALIDATION_ERROR_09c0011a, "IMAGE",
+                                    "vkCmdCopyImage(): pRegion[%d] srcSubresource.baseArrayLayer is %d and "
+                                    "srcSubresource.layerCount is %d. For copies with either source or dest of type "
+                                    "VK_IMAGE_TYPE_3D, these must be 0 and 1, respectively. %s",
+                                    i, image_copy.srcSubresource.baseArrayLayer, image_copy.srcSubresource.layerCount,
+                                    validation_error_map[VALIDATION_ERROR_09c0011a]);
                 }
             }
         }
@@ -1519,7 +1515,7 @@ bool ValidateImageCopyData(const layer_data *device_data, const debug_report_dat
         if ((image_copy.srcSubresource.baseArrayLayer >= src_state->createInfo.arrayLayers) ||
             (image_copy.srcSubresource.baseArrayLayer + image_copy.srcSubresource.layerCount > src_state->createInfo.arrayLayers)) {
             skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT,
-                            reinterpret_cast<const uint64_t &>(src_state->image), __LINE__, VALIDATION_ERROR_09c0012a, "IMAGE",
+                            HandleToUint64(src_state->image), __LINE__, VALIDATION_ERROR_09c0012a, "IMAGE",
                             "vkCmdCopyImage(): pRegion[%d] srcSubresource.baseArrayLayer (%d) must be less than the source image's "
                             "arrayLayers (%d), and the sum of baseArrayLayer and srcSubresource.layerCount (%d) must be less than "
                             "or equal to the source image's arrayLayers. %s",
@@ -1536,7 +1532,7 @@ bool ValidateImageCopyData(const layer_data *device_data, const debug_report_dat
                 (SafeModulo(image_copy.srcOffset.y, block_size.height) != 0) ||
                 (SafeModulo(image_copy.srcOffset.z, block_size.depth) != 0)) {
                 skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT,
-                                reinterpret_cast<const uint64_t &>(src_state->image), __LINE__, VALIDATION_ERROR_09c0013a, "IMAGE",
+                                HandleToUint64(src_state->image), __LINE__, VALIDATION_ERROR_09c0013a, "IMAGE",
                                 "vkCmdCopyImage(): pRegion[%d] srcOffset (%d, %d) must be multiples of the compressed image's "
                                 "texel width & height (%d, %d). %s.",
                                 i, image_copy.srcOffset.x, image_copy.srcOffset.y, block_size.width, block_size.height,
@@ -1556,7 +1552,7 @@ bool ValidateImageCopyData(const layer_data *device_data, const debug_report_dat
                 (adj_extent.width + image_copy.srcOffset.x != mip_extent.width)) {
                 skip |=
                     log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT,
-                            reinterpret_cast<const uint64_t &>(src_state->image), __LINE__, VALIDATION_ERROR_09c0013c, "IMAGE",
+                            HandleToUint64(src_state->image), __LINE__, VALIDATION_ERROR_09c0013c, "IMAGE",
                             "vkCmdCopyImage(): pRegion[%d] extent width (%d) must be a multiple of the compressed texture block "
                             "width (%d), or when added to srcOffset.x (%d) must equal the image subresource width (%d). %s.",
                             i, adj_extent.width, block_size.width, image_copy.srcOffset.x, mip_extent.width,
@@ -1568,7 +1564,7 @@ bool ValidateImageCopyData(const layer_data *device_data, const debug_report_dat
                 (adj_extent.height + image_copy.srcOffset.y != mip_extent.height)) {
                 skip |=
                     log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT,
-                            reinterpret_cast<const uint64_t &>(src_state->image), __LINE__, VALIDATION_ERROR_09c0013e, "IMAGE",
+                            HandleToUint64(src_state->image), __LINE__, VALIDATION_ERROR_09c0013e, "IMAGE",
                             "vkCmdCopyImage(): pRegion[%d] extent height (%d) must be a multiple of the compressed texture block "
                             "height (%d), or when added to srcOffset.y (%d) must equal the image subresource height (%d). %s.",
                             i, adj_extent.height, block_size.height, image_copy.srcOffset.y, mip_extent.height,
@@ -1580,7 +1576,7 @@ bool ValidateImageCopyData(const layer_data *device_data, const debug_report_dat
             if ((SafeModulo(copy_depth, block_size.depth) != 0) && (copy_depth + image_copy.srcOffset.z != mip_extent.depth)) {
                 skip |=
                     log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT,
-                            reinterpret_cast<const uint64_t &>(src_state->image), __LINE__, VALIDATION_ERROR_09c00140, "IMAGE",
+                            HandleToUint64(src_state->image), __LINE__, VALIDATION_ERROR_09c00140, "IMAGE",
                             "vkCmdCopyImage(): pRegion[%d] extent width (%d) must be a multiple of the compressed texture block "
                             "depth (%d), or when added to srcOffset.z (%d) must equal the image subresource depth (%d). %s.",
                             i, image_copy.extent.depth, block_size.depth, image_copy.srcOffset.z, mip_extent.depth,
@@ -1594,7 +1590,7 @@ bool ValidateImageCopyData(const layer_data *device_data, const debug_report_dat
             if ((0 != image_copy.dstOffset.y) || (1 != image_copy.extent.height)) {
                 skip |=
                     log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT,
-                            reinterpret_cast<const uint64_t &>(dst_state->image), __LINE__, VALIDATION_ERROR_09c00130, "IMAGE",
+                            HandleToUint64(dst_state->image), __LINE__, VALIDATION_ERROR_09c00130, "IMAGE",
                             "vkCmdCopyImage(): pRegion[%d] dstOffset.y is %d and extent.height is %d. For 1D images these must "
                             "be 0 and 1, respectively. %s",
                             i, image_copy.dstOffset.y, image_copy.extent.height, validation_error_map[VALIDATION_ERROR_09c00130]);
@@ -1605,7 +1601,7 @@ bool ValidateImageCopyData(const layer_data *device_data, const debug_report_dat
             if ((0 != image_copy.dstOffset.z) || (1 != image_copy.extent.depth)) {
                 skip |=
                     log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT,
-                            reinterpret_cast<const uint64_t &>(dst_state->image), __LINE__, VALIDATION_ERROR_09c00134, "IMAGE",
+                            HandleToUint64(dst_state->image), __LINE__, VALIDATION_ERROR_09c00134, "IMAGE",
                             "vkCmdCopyImage(): pRegion[%d] dstOffset.z is %d and extent.depth is %d. For 1D and 2D images "
                             "these must be 0 and 1, respectively. %s",
                             i, image_copy.dstOffset.z, image_copy.extent.depth, validation_error_map[VALIDATION_ERROR_09c00134]);
@@ -1615,7 +1611,7 @@ bool ValidateImageCopyData(const layer_data *device_data, const debug_report_dat
         if (dst_state->createInfo.imageType == VK_IMAGE_TYPE_3D) {
             if ((0 != image_copy.dstSubresource.baseArrayLayer) || (1 != image_copy.dstSubresource.layerCount)) {
                 skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT,
-                                reinterpret_cast<const uint64_t &>(dst_state->image), __LINE__, VALIDATION_ERROR_09c0011a, "IMAGE",
+                                HandleToUint64(dst_state->image), __LINE__, VALIDATION_ERROR_09c0011a, "IMAGE",
                                 "vkCmdCopyImage(): pRegion[%d] dstSubresource.baseArrayLayer is %d and dstSubresource.layerCount "
                                 "is %d. For VK_IMAGE_TYPE_3D images these must be 0 and 1, respectively. %s",
                                 i, image_copy.dstSubresource.baseArrayLayer, image_copy.dstSubresource.layerCount,
@@ -1628,7 +1624,7 @@ bool ValidateImageCopyData(const layer_data *device_data, const debug_report_dat
                 if ((0 != image_copy.dstSubresource.baseArrayLayer) || (1 != image_copy.dstSubresource.layerCount)) {
                     skip |=
                         log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT,
-                                reinterpret_cast<const uint64_t &>(dst_state->image), __LINE__, VALIDATION_ERROR_09c0011a, "IMAGE",
+                                HandleToUint64(dst_state->image), __LINE__, VALIDATION_ERROR_09c0011a, "IMAGE",
                                 "vkCmdCopyImage(): pRegion[%d] dstSubresource.baseArrayLayer is %d and dstSubresource.layerCount "
                                 "is %d. For VK_IMAGE_TYPE_3D images these must be 0 and 1, respectively. %s",
                                 i, image_copy.dstSubresource.baseArrayLayer, image_copy.dstSubresource.layerCount,
@@ -1638,14 +1634,13 @@ bool ValidateImageCopyData(const layer_data *device_data, const debug_report_dat
         } else {  // Pre maint 1
             if (src_state->createInfo.imageType == VK_IMAGE_TYPE_3D || dst_state->createInfo.imageType == VK_IMAGE_TYPE_3D) {
                 if ((0 != image_copy.dstSubresource.baseArrayLayer) || (1 != image_copy.dstSubresource.layerCount)) {
-                    skip |=
-                        log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT,
-                                reinterpret_cast<const uint64_t &>(dst_state->image), __LINE__, VALIDATION_ERROR_09c0011a, "IMAGE",
-                                "vkCmdCopyImage(): pRegion[%d] dstSubresource.baseArrayLayer is %d and "
-                                "dstSubresource.layerCount is %d. For copies with either source or dest of type "
-                                "VK_IMAGE_TYPE_3D, these must be 0 and 1, respectively. %s",
-                                i, image_copy.dstSubresource.baseArrayLayer, image_copy.dstSubresource.layerCount,
-                                validation_error_map[VALIDATION_ERROR_09c0011a]);
+                    skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT,
+                                    HandleToUint64(dst_state->image), __LINE__, VALIDATION_ERROR_09c0011a, "IMAGE",
+                                    "vkCmdCopyImage(): pRegion[%d] dstSubresource.baseArrayLayer is %d and "
+                                    "dstSubresource.layerCount is %d. For copies with either source or dest of type "
+                                    "VK_IMAGE_TYPE_3D, these must be 0 and 1, respectively. %s",
+                                    i, image_copy.dstSubresource.baseArrayLayer, image_copy.dstSubresource.layerCount,
+                                    validation_error_map[VALIDATION_ERROR_09c0011a]);
                 }
             }
         }
@@ -1654,7 +1649,7 @@ bool ValidateImageCopyData(const layer_data *device_data, const debug_report_dat
         if ((image_copy.dstSubresource.baseArrayLayer >= dst_state->createInfo.arrayLayers) ||
             (image_copy.dstSubresource.baseArrayLayer + image_copy.dstSubresource.layerCount > dst_state->createInfo.arrayLayers)) {
             skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT,
-                            reinterpret_cast<const uint64_t &>(dst_state->image), __LINE__, VALIDATION_ERROR_09c00136, "IMAGE",
+                            HandleToUint64(dst_state->image), __LINE__, VALIDATION_ERROR_09c00136, "IMAGE",
                             "vkCmdCopyImage(): pRegion[%d] dstSubresource.baseArrayLayer (%d) must be less than the dest image's "
                             "arrayLayers (%d), and the sum of baseArrayLayer and dstSubresource.layerCount (%d) must be less than "
                             "or equal to the dest image's arrayLayers. %s",
@@ -1671,7 +1666,7 @@ bool ValidateImageCopyData(const layer_data *device_data, const debug_report_dat
                 (SafeModulo(image_copy.dstOffset.y, block_size.height) != 0) ||
                 (SafeModulo(image_copy.dstOffset.z, block_size.depth) != 0)) {
                 skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT,
-                                reinterpret_cast<const uint64_t &>(dst_state->image), __LINE__, VALIDATION_ERROR_09c00144, "IMAGE",
+                                HandleToUint64(dst_state->image), __LINE__, VALIDATION_ERROR_09c00144, "IMAGE",
                                 "vkCmdCopyImage(): pRegion[%d] dstOffset (%d, %d) must be multiples of the compressed image's "
                                 "texel width & height (%d, %d). %s.",
                                 i, image_copy.dstOffset.x, image_copy.dstOffset.y, block_size.width, block_size.height,
@@ -1691,7 +1686,7 @@ bool ValidateImageCopyData(const layer_data *device_data, const debug_report_dat
                 (adj_extent.width + image_copy.dstOffset.x != mip_extent.width)) {
                 skip |=
                     log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT,
-                            reinterpret_cast<const uint64_t &>(dst_state->image), __LINE__, VALIDATION_ERROR_09c00146, "IMAGE",
+                            HandleToUint64(dst_state->image), __LINE__, VALIDATION_ERROR_09c00146, "IMAGE",
                             "vkCmdCopyImage(): pRegion[%d] extent width (%d) must be a multiple of the compressed texture block "
                             "width (%d), or when added to dstOffset.x (%d) must equal the image subresource width (%d). %s.",
                             i, adj_extent.width, block_size.width, image_copy.dstOffset.x, mip_extent.width,
@@ -1703,7 +1698,7 @@ bool ValidateImageCopyData(const layer_data *device_data, const debug_report_dat
                 (adj_extent.height + image_copy.dstOffset.y != mip_extent.height)) {
                 skip |=
                     log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT,
-                            reinterpret_cast<const uint64_t &>(dst_state->image), __LINE__, VALIDATION_ERROR_09c00148, "IMAGE",
+                            HandleToUint64(dst_state->image), __LINE__, VALIDATION_ERROR_09c00148, "IMAGE",
                             "vkCmdCopyImage(): pRegion[%d] extent height (%d) must be a multiple of the compressed texture block "
                             "height (%d), or when added to dstOffset.y (%d) must equal the image subresource height (%d). %s.",
                             i, adj_extent.height, block_size.height, image_copy.dstOffset.y, mip_extent.height,
@@ -1715,7 +1710,7 @@ bool ValidateImageCopyData(const layer_data *device_data, const debug_report_dat
             if ((SafeModulo(copy_depth, block_size.depth) != 0) && (copy_depth + image_copy.dstOffset.z != mip_extent.depth)) {
                 skip |=
                     log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT,
-                            reinterpret_cast<const uint64_t &>(dst_state->image), __LINE__, VALIDATION_ERROR_09c0014a, "IMAGE",
+                            HandleToUint64(dst_state->image), __LINE__, VALIDATION_ERROR_09c0014a, "IMAGE",
                             "vkCmdCopyImage(): pRegion[%d] extent width (%d) must be a multiple of the compressed texture block "
                             "depth (%d), or when added to dstOffset.z (%d) must equal the image subresource depth (%d). %s.",
                             i, image_copy.extent.depth, block_size.depth, image_copy.dstOffset.z, mip_extent.depth,
@@ -1783,8 +1778,8 @@ bool PreCallValidateCmdCopyImage(layer_data *device_data, GLOBAL_CB_NODE *cb_nod
                     ss << "vkCmdCopyImage: number of depth slices in source and destination subresources for pRegions[" << i
                        << "] do not match";
                     skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
-                                    reinterpret_cast<uint64_t &>(command_buffer), __LINE__, VALIDATION_ERROR_09c00118, "IMAGE",
-                                    "%s. %s", ss.str().c_str(), validation_error_map[VALIDATION_ERROR_09c00118]);
+                                    HandleToUint64(command_buffer), __LINE__, VALIDATION_ERROR_09c00118, "IMAGE", "%s. %s",
+                                    ss.str().c_str(), validation_error_map[VALIDATION_ERROR_09c00118]);
                 }
             }
         } else {
@@ -2090,9 +2085,10 @@ bool PreCallValidateCmdClearAttachments(layer_data *device_data, VkCommandBuffer
             skip |=
                 log_msg(report_data, VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
                         HandleToUint64(commandBuffer), 0, DRAWSTATE_CLEAR_CMD_BEFORE_DRAW, "DS",
-                        "vkCmdClearAttachments() issued on command buffer object 0x%p prior to any Draw Cmds."
+                        "vkCmdClearAttachments() issued on command buffer object 0x%" PRIx64
+                        " prior to any Draw Cmds."
                         " It is recommended you use RenderPass LOAD_OP_CLEAR on Attachments prior to any Draw.",
-                        commandBuffer);
+                        HandleToUint64(commandBuffer));
         }
         skip |= outsideRenderPass(device_data, cb_node, "vkCmdClearAttachments()", VALIDATION_ERROR_18600017);
     }
@@ -3035,16 +3031,15 @@ static bool validate_usage_flags(layer_data *device_data, VkFlags actual, VkFlag
         if (msgCode == -1) {
             // TODO: Fix callers with msgCode == -1 to use correct validation checks.
             skip = log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, get_debug_report_enum[obj_type], obj_handle, __LINE__,
-                           MEMTRACK_INVALID_USAGE_FLAG, "MEM",
-                           "Invalid usage flag for %s 0x%" PRIxLEAST64
-                           " used by %s. In this case, %s should have %s set during creation.",
+                           MEMTRACK_INVALID_USAGE_FLAG, "MEM", "Invalid usage flag for %s 0x%" PRIx64
+                                                               " used by %s. In this case, %s should have %s set during creation.",
                            type_str, obj_handle, func_name, type_str, usage_str);
         } else {
             const char *valid_usage = (msgCode == -1) ? "" : validation_error_map[msgCode];
-            skip = log_msg(
-                report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, get_debug_report_enum[obj_type], obj_handle, __LINE__, msgCode, "MEM",
-                "Invalid usage flag for %s 0x%" PRIxLEAST64 " used by %s. In this case, %s should have %s set during creation. %s",
-                type_str, obj_handle, func_name, type_str, usage_str, valid_usage);
+            skip = log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, get_debug_report_enum[obj_type], obj_handle, __LINE__,
+                           msgCode, "MEM", "Invalid usage flag for %s 0x%" PRIx64
+                                           " used by %s. In this case, %s should have %s set during creation. %s",
+                           type_str, obj_handle, func_name, type_str, usage_str, valid_usage);
         }
     }
     return skip;
@@ -3573,13 +3568,13 @@ static bool validateIdleBuffer(layer_data *device_data, VkBuffer buffer) {
     auto buffer_state = GetBufferState(device_data, buffer);
     if (!buffer_state) {
         skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT, HandleToUint64(buffer),
-                        __LINE__, DRAWSTATE_DOUBLE_DESTROY, "DS",
-                        "Cannot free buffer 0x%" PRIxLEAST64 " that has not been allocated.", HandleToUint64(buffer));
+                        __LINE__, DRAWSTATE_DOUBLE_DESTROY, "DS", "Cannot free buffer 0x%" PRIx64 " that has not been allocated.",
+                        HandleToUint64(buffer));
     } else {
         if (buffer_state->in_use.load()) {
             skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT,
                             HandleToUint64(buffer), __LINE__, VALIDATION_ERROR_23c00734, "DS",
-                            "Cannot free buffer 0x%" PRIxLEAST64 " that is in use by a command buffer. %s", HandleToUint64(buffer),
+                            "Cannot free buffer 0x%" PRIx64 " that is in use by a command buffer. %s", HandleToUint64(buffer),
                             validation_error_map[VALIDATION_ERROR_23c00734]);
         }
     }

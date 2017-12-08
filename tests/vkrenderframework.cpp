@@ -87,7 +87,7 @@ bool VkRenderFramework::InstanceLayerSupported(const char *name, uint32_t spec, 
         }
     }
     return false;
-};
+}
 
 // Enable device profile as last layer on stack overriding devsim if there, or return if not available
 bool VkRenderFramework::EnableDeviceProfileLayer() {
@@ -124,7 +124,7 @@ bool VkRenderFramework::InstanceExtensionSupported(const char *ext_name, uint32_
         }
     }
     return false;
-};
+}
 
 // Return true if extension name is found and spec value is >= requested spec value
 bool VkRenderFramework::DeviceExtensionSupported(VkPhysicalDevice dev, const char *layer, const char *ext_name, uint32_t spec) {
@@ -148,7 +148,7 @@ bool VkRenderFramework::DeviceExtensionSupported(VkPhysicalDevice dev, const cha
         }
     }
     return false;
-};
+}
 
 void VkRenderFramework::InitFramework(PFN_vkDebugReportCallbackEXT dbgFunction, void *userData) {
     // Only enable device profile layer by default if devsim is not enabled
@@ -1197,7 +1197,7 @@ VkPipelineObj::VkPipelineObj(VkDeviceObj *device) {
     m_te_state = nullptr;
 
     memset(&m_pd_state, 0, sizeof(m_pd_state));
-};
+}
 
 void VkPipelineObj::AddShader(VkShaderObj *shader) { m_shaderStages.push_back(shader->GetStageCreateInfo()); }
 

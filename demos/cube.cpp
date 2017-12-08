@@ -25,6 +25,7 @@
 #endif
 
 #include <cassert>
+#include <cinttypes>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
@@ -920,7 +921,7 @@ Demo::Demo()
                 continue;
             }
             if (strcmp(argv[i], "--c") == 0 && frameCount == UINT32_MAX && i < argc - 1 &&
-                sscanf(argv[i + 1], "%d", &frameCount) == 1) {
+                sscanf(argv[i + 1], "%" SCNu32, &frameCount) == 1) {
                 i++;
                 continue;
             }
@@ -2350,7 +2351,7 @@ Demo::Demo()
             }
         } while (!strncmp(header, "#", 1));
 
-        sscanf(header, "%u %u", width, height);
+        sscanf(header, "%" SCNd32 " %" SCNd32, width, height);
         if (rgba_data == nullptr) {
             fclose(fPtr);
             return true;

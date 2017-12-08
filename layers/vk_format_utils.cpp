@@ -471,7 +471,7 @@ VK_LAYER_EXPORT bool FormatIsNorm(VkFormat format) {
     }
 
     return is_norm;
-};
+}
 
 // Return true if format is of type UNORM
 VK_LAYER_EXPORT bool FormatIsUNorm(VkFormat format) {
@@ -529,7 +529,7 @@ VK_LAYER_EXPORT bool FormatIsUNorm(VkFormat format) {
     }
 
     return is_unorm;
-};
+}
 
 // Return true if format is of type SNORM
 VK_LAYER_EXPORT bool FormatIsSNorm(VkFormat format) {
@@ -560,7 +560,7 @@ VK_LAYER_EXPORT bool FormatIsSNorm(VkFormat format) {
     }
 
     return is_snorm;
-};
+}
 
 // Return true if format is an integer format
 VK_LAYER_EXPORT bool FormatIsInt(VkFormat format) { return (FormatIsSInt(format) || FormatIsUInt(format)); }

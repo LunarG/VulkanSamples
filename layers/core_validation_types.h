@@ -66,7 +66,7 @@
 namespace cvdescriptorset {
 class DescriptorSetLayout;
 class DescriptorSet;
-};
+}
 
 struct GLOBAL_CB_NODE;
 

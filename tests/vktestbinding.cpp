@@ -770,4 +770,4 @@ void CommandBuffer::end() { EXPECT(vkEndCommandBuffer(handle()) == VK_SUCCESS); 
 
 void CommandBuffer::reset(VkCommandBufferResetFlags flags) { EXPECT(vkResetCommandBuffer(handle(), flags) == VK_SUCCESS); }
 
-};  // namespace vk_testing
+}  // namespace vk_testing

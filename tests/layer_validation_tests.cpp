@@ -1194,7 +1194,7 @@ struct CreatePipelineHelper {
         } else {
             test.Monitor()->VerifyFound();
         }
-    };
+    }
 };
 namespace chain_util {
 template <typename T>
@@ -1226,7 +1226,7 @@ class ExtensionChain {
     }
     const void *Head() const { return head_; }
 };
-};  // namespace chain_util
+}  // namespace chain_util
 
 // ********************************************************************************************************************
 // ********************************************************************************************************************
