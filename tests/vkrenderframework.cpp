@@ -509,7 +509,7 @@ VkDeviceObj::VkDeviceObj(uint32_t id, VkPhysicalDevice obj, std::vector<const ch
 uint32_t VkDeviceObj::QueueFamilyWithoutCapabilities(VkQueueFlags capabilities) {
     // Find a queue family without desired capabilities
     for (uint32_t i = 0; i < queue_props.size(); i++) {
-        if ((queue_props[i].queueFlags & capabilities) == 0) {
+        if ((queue_props[i].queueFlags & capabilities) == 0 && (queue_props[i].queueCount > 0)) {
             return i;
         }
     }

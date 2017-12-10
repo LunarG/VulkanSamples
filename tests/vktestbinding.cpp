@@ -227,15 +227,17 @@ std::vector<VkLayerProperties> PhysicalDevice::layers() const {
 QueueCreateInfoArray::QueueCreateInfoArray(const std::vector<VkQueueFamilyProperties> &queue_props) : queue_info_(), queue_priorities_() {
     queue_info_.reserve(queue_props.size());
 
-    for (uint32_t i = 0; i < (uint32_t)queue_props.size(); i++) {
-        VkDeviceQueueCreateInfo qi = {};
-        qi.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
-        qi.pNext = NULL;
-        qi.queueFamilyIndex = i;
-        qi.queueCount = queue_props[i].queueCount;
-        queue_priorities_.emplace_back(qi.queueCount, 0.0f);
-        qi.pQueuePriorities = queue_priorities_[i].data();
-        queue_info_.push_back(qi);
+    for (uint32_t i = 0; i < (uint32_t)queue_props.size(); ++i) {
+        if (queue_props[i].queueCount > 0) {
+            VkDeviceQueueCreateInfo qi = {};
+            qi.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
+            qi.pNext = NULL;
+            qi.queueFamilyIndex = i;
+            qi.queueCount = queue_props[i].queueCount;
+            queue_priorities_.emplace_back(qi.queueCount, 0.0f);
+            qi.pQueuePriorities = queue_priorities_[i].data();
+            queue_info_.push_back(qi);
+        }
     }
 }
 

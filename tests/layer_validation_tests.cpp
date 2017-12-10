@@ -13330,10 +13330,9 @@ TEST_F(VkLayerTest, MismatchCountQueueCreateRequestedFeature) {
     vkCreateDevice(gpu(), &device_create_info, nullptr, &testDevice);
     m_errorMonitor->VerifyFound();
 
-    queue_create_info.queueFamilyIndex = 1;
-    if (m_device->phy().queue_properties().size() < 2) {
-        queue_create_info.queueFamilyIndex = 0;
-    }
+    vk_testing::QueueCreateInfoArray queue_info_obj(m_device->queue_props);
+    device_create_info.queueCreateInfoCount = queue_info_obj.size();
+    device_create_info.pQueueCreateInfos = queue_info_obj.data();
 
     unsigned feature_count = sizeof(VkPhysicalDeviceFeatures) / sizeof(VkBool32);
     VkBool32 *feature_array = reinterpret_cast<VkBool32 *>(&features);
