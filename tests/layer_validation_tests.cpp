@@ -20358,10 +20358,6 @@ TEST_F(VkLayerTest, ClearImageErrors) {
         "ClearDepthStencilImage with a color image.");
 
     ASSERT_NO_FATAL_FAILURE(Init());
-    auto depth_format = FindSupportedDepthStencilFormat(gpu());
-    if (!depth_format) {
-        return;
-    }
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
 
     m_commandBuffer->begin();
@@ -20385,10 +20381,14 @@ TEST_F(VkLayerTest, ClearImageErrors) {
     image_create_info.arrayLayers = 1;
     image_create_info.samples = VK_SAMPLE_COUNT_1_BIT;
     image_create_info.tiling = VK_IMAGE_TILING_LINEAR;
-    image_create_info.usage = VK_IMAGE_USAGE_SAMPLED_BIT;
 
+    image_create_info.usage = VK_IMAGE_USAGE_SAMPLED_BIT;
+    vk_testing::Image color_image_no_transfer;
+    color_image_no_transfer.init(*m_device, image_create_info, reqs);
+
+    image_create_info.usage = VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
     vk_testing::Image color_image;
-    color_image.init(*m_device, (const VkImageCreateInfo &)image_create_info, reqs);
+    color_image.init(*m_device, image_create_info, reqs);
 
     const VkImageSubresourceRange color_range = vk_testing::Image::subresource_range(image_create_info, VK_IMAGE_ASPECT_COLOR_BIT);
 
@@ -20397,14 +20397,14 @@ TEST_F(VkLayerTest, ClearImageErrors) {
     reqs = 0;  // don't need HOST_VISIBLE DS image
     VkImageCreateInfo ds_image_create_info = vk_testing::Image::create_info();
     ds_image_create_info.imageType = VK_IMAGE_TYPE_2D;
-    ds_image_create_info.format = depth_format;
+    ds_image_create_info.format = VK_FORMAT_D16_UNORM;
     ds_image_create_info.extent.width = 64;
     ds_image_create_info.extent.height = 64;
     ds_image_create_info.tiling = VK_IMAGE_TILING_OPTIMAL;
     ds_image_create_info.usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
 
     vk_testing::Image ds_image;
-    ds_image.init(*m_device, (const VkImageCreateInfo &)ds_image_create_info, reqs);
+    ds_image.init(*m_device, ds_image_create_info, reqs);
 
     const VkImageSubresourceRange ds_range = vk_testing::Image::subresource_range(ds_image_create_info, VK_IMAGE_ASPECT_DEPTH_BIT);
 
@@ -20419,7 +20419,8 @@ TEST_F(VkLayerTest, ClearImageErrors) {
                                          "image created without "
                                          "VK_IMAGE_USAGE_TRANSFER_DST_BIT");
 
-    vkCmdClearColorImage(m_commandBuffer->handle(), color_image.handle(), VK_IMAGE_LAYOUT_GENERAL, &clear_color, 1, &color_range);
+    vkCmdClearColorImage(m_commandBuffer->handle(), color_image_no_transfer.handle(), VK_IMAGE_LAYOUT_GENERAL, &clear_color, 1,
+                         &color_range);
 
     m_errorMonitor->VerifyFound();
 
