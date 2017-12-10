@@ -13678,7 +13678,7 @@ TEST_F(VkLayerTest, InvalidImageLayout) {
     image_create_info.usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT;
     err = vkCreateImage(m_device->device(), &image_create_info, NULL, &dst_image);
     ASSERT_VK_SUCCESS(err);
-    image_create_info.format = VK_FORMAT_D32_SFLOAT;
+    image_create_info.format = VK_FORMAT_D16_UNORM;
     image_create_info.usage |= VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
     err = vkCreateImage(m_device->device(), &image_create_info, NULL, &depth_image);
     ASSERT_VK_SUCCESS(err);
