@@ -226,7 +226,7 @@ class VkRenderpassObj {
 class VkImageObj : public vk_testing::Image {
    public:
     VkImageObj(VkDeviceObj *dev);
-    bool IsCompatible(VkFlags usage, VkFlags features);
+    bool IsCompatible(VkImageUsageFlags usages, VkFormatFeatureFlags features);
 
    public:
     void Init(uint32_t const width, uint32_t const height, uint32_t const mipLevels, VkFormat const format, VkFlags const usage,

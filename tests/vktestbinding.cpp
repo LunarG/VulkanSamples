@@ -20,6 +20,7 @@
  */
 
 #include "vktestbinding.h"
+#include <algorithm>
 #include <assert.h>
 #include <iostream>
 #include <stdarg.h>
@@ -270,6 +271,8 @@ void Device::init(std::vector<const char *> &extensions, VkPhysicalDeviceFeature
         }
     }
 
+    enabled_extensions_ = extensions;
+
     VkDeviceCreateInfo dev_info = {};
     dev_info.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
     dev_info.pNext = NULL;
@@ -356,6 +359,11 @@ void Device::init_formats() {
     }
 
     EXPECT(!formats_.empty());
+}
+
+bool Device::IsEnbledExtension(const char *extension) {
+    const auto is_x = [&extension](const char *enabled_extension) { return strcmp(extension, enabled_extension) == 0; };
+    return std::any_of(enabled_extensions_.begin(), enabled_extensions_.end(), is_x);
 }
 
 VkFormatProperties Device::format_properties(VkFormat format) {

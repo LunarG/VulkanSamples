@@ -786,8 +786,53 @@ void VkImageObj::SetLayout(VkImageAspectFlags aspect, VkImageLayout image_layout
     cmd_buf.QueueCommandBuffer();
 }
 
-bool VkImageObj::IsCompatible(VkFlags const usage, VkFlags const features) {
-    if ((usage & VK_IMAGE_USAGE_SAMPLED_BIT) && !(features & VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT)) return false;
+bool VkImageObj::IsCompatible(const VkImageUsageFlags usages, const VkFormatFeatureFlags features) {
+    VkFormatFeatureFlags all_feature_flags =
+        VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT | VK_FORMAT_FEATURE_STORAGE_IMAGE_BIT | VK_FORMAT_FEATURE_STORAGE_IMAGE_ATOMIC_BIT |
+        VK_FORMAT_FEATURE_UNIFORM_TEXEL_BUFFER_BIT | VK_FORMAT_FEATURE_STORAGE_TEXEL_BUFFER_BIT |
+        VK_FORMAT_FEATURE_STORAGE_TEXEL_BUFFER_ATOMIC_BIT | VK_FORMAT_FEATURE_VERTEX_BUFFER_BIT |
+        VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT | VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BLEND_BIT |
+        VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_FORMAT_FEATURE_BLIT_SRC_BIT | VK_FORMAT_FEATURE_BLIT_DST_BIT |
+        VK_FORMAT_FEATURE_SAMPLED_IMAGE_FILTER_LINEAR_BIT;
+    if (m_device->IsEnbledExtension(VK_IMG_FILTER_CUBIC_EXTENSION_NAME)) {
+        all_feature_flags |= VK_FORMAT_FEATURE_SAMPLED_IMAGE_FILTER_CUBIC_BIT_IMG;
+    }
+
+    if (m_device->IsEnbledExtension(VK_KHR_MAINTENANCE1_EXTENSION_NAME)) {
+        all_feature_flags |= VK_FORMAT_FEATURE_TRANSFER_SRC_BIT_KHR | VK_FORMAT_FEATURE_TRANSFER_DST_BIT_KHR;
+    }
+
+    if (m_device->IsEnbledExtension(VK_EXT_SAMPLER_FILTER_MINMAX_EXTENSION_NAME)) {
+        all_feature_flags |= VK_FORMAT_FEATURE_SAMPLED_IMAGE_FILTER_MINMAX_BIT_EXT;
+    }
+
+    if (m_device->IsEnbledExtension(VK_KHR_SAMPLER_YCBCR_CONVERSION_EXTENSION_NAME)) {
+        all_feature_flags |= VK_FORMAT_FEATURE_MIDPOINT_CHROMA_SAMPLES_BIT_KHR |
+                             VK_FORMAT_FEATURE_SAMPLED_IMAGE_YCBCR_CONVERSION_LINEAR_FILTER_BIT_KHR |
+                             VK_FORMAT_FEATURE_SAMPLED_IMAGE_YCBCR_CONVERSION_SEPARATE_RECONSTRUCTION_FILTER_BIT_KHR |
+                             VK_FORMAT_FEATURE_SAMPLED_IMAGE_YCBCR_CONVERSION_CHROMA_RECONSTRUCTION_EXPLICIT_BIT_KHR |
+                             VK_FORMAT_FEATURE_SAMPLED_IMAGE_YCBCR_CONVERSION_CHROMA_RECONSTRUCTION_EXPLICIT_FORCEABLE_BIT_KHR |
+                             VK_FORMAT_FEATURE_DISJOINT_BIT_KHR | VK_FORMAT_FEATURE_COSITED_CHROMA_SAMPLES_BIT_KHR;
+    }
+
+    if ((features & all_feature_flags) == 0) return false;  // whole format unsupported
+
+    if ((usages & VK_IMAGE_USAGE_SAMPLED_BIT) && !(features & VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT)) return false;
+    if ((usages & VK_IMAGE_USAGE_STORAGE_BIT) && !(features & VK_FORMAT_FEATURE_STORAGE_IMAGE_BIT)) return false;
+    if ((usages & VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT) && !(features & VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT)) return false;
+    if ((usages & VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT) && !(features & VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT))
+        return false;
+
+    if (m_device->IsEnbledExtension(VK_KHR_MAINTENANCE1_EXTENSION_NAME)) {
+        // WORKAROUND: for DevSim not reporting extended enums, and possibly some drivers too
+        const auto all_nontransfer_feature_flags =
+            all_feature_flags ^ (VK_FORMAT_FEATURE_TRANSFER_SRC_BIT_KHR | VK_FORMAT_FEATURE_TRANSFER_DST_BIT_KHR);
+        const bool transfer_probably_supported_anyway = (features & all_nontransfer_feature_flags) > 0;
+        if (!transfer_probably_supported_anyway) {
+            if ((usages & VK_IMAGE_USAGE_TRANSFER_SRC_BIT) && !(features & VK_FORMAT_FEATURE_TRANSFER_SRC_BIT_KHR)) return false;
+            if ((usages & VK_IMAGE_USAGE_TRANSFER_DST_BIT) && !(features & VK_FORMAT_FEATURE_TRANSFER_DST_BIT_KHR)) return false;
+        }
+    }
 
     return true;
 }
@@ -805,14 +850,16 @@ void VkImageObj::InitNoLayout(uint32_t const width, uint32_t const height, uint3
         } else if (IsCompatible(usage, image_fmt.optimalTilingFeatures)) {
             tiling = VK_IMAGE_TILING_OPTIMAL;
         } else {
-            ASSERT_TRUE(false) << "Error: Cannot find requested tiling configuration";
+            FAIL() << "VkImageObj::init() error: unsupported tiling configuration. Usage: " << std::hex << std::showbase << usage
+                   << ", supported linear features: " << image_fmt.linearTilingFeatures;
         }
     } else if (IsCompatible(usage, image_fmt.optimalTilingFeatures)) {
         tiling = VK_IMAGE_TILING_OPTIMAL;
     } else if (IsCompatible(usage, image_fmt.linearTilingFeatures)) {
         tiling = VK_IMAGE_TILING_LINEAR;
     } else {
-        ASSERT_TRUE(false) << "Error: Cannot find requested tiling configuration";
+        FAIL() << "VkImageObj::init() error: unsupported tiling configuration. Usage: " << std::hex << std::showbase << usage
+               << ", supported optimal features: " << image_fmt.optimalTilingFeatures;
     }
 
     VkImageCreateInfo imageCreateInfo = vk_testing::Image::create_info();
@@ -862,12 +909,14 @@ void VkImageObj::init(const VkImageCreateInfo *create_info) {
     switch (create_info->tiling) {
         case VK_IMAGE_TILING_OPTIMAL:
             if (!IsCompatible(create_info->usage, image_fmt.optimalTilingFeatures)) {
-                ASSERT_TRUE(false) << "VkImageObj::init() error: unsupported tiling configuration";
+                FAIL() << "VkImageObj::init() error: unsupported tiling configuration. Usage: " << std::hex << std::showbase
+                       << create_info->usage << ", supported optimal features: " << image_fmt.optimalTilingFeatures;
             }
             break;
         case VK_IMAGE_TILING_LINEAR:
-            if (!IsCompatible(create_info->usage, image_fmt.optimalTilingFeatures)) {
-                ASSERT_TRUE(false) << "VkImageObj::init() error: unsupported tiling configuration";
+            if (!IsCompatible(create_info->usage, image_fmt.linearTilingFeatures)) {
+                FAIL() << "VkImageObj::init() error: unsupported tiling configuration. Usage: " << std::hex << std::showbase
+                       << create_info->usage << ", supported linear features: " << image_fmt.linearTilingFeatures;
             }
             break;
         default:
