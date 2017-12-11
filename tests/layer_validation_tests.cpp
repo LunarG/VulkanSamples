@@ -1180,13 +1180,14 @@ struct CreatePipelineHelper {
     // info_override can be any callable that takes a CreatePipelineHeper &
     // flags, error can be any args accepted by "SetDesiredFailure".
     template <typename Test, typename OverrideFunc, typename Error>
-    static void OneshotTest(Test &test, OverrideFunc &info_override, const VkFlags flags, Error error, bool positive_test = false) {
+    static void OneshotTest(Test &test, OverrideFunc &info_override, const VkFlags flags, const std::vector<Error> &errors,
+                            bool positive_test = false) {
         CreatePipelineHelper helper(test);
         helper.InitInfo();
         info_override(helper);
         helper.InitState();
 
-        test.Monitor()->SetDesiredFailureMsg(flags, error);
+        for (const auto &error : errors) test.Monitor()->SetDesiredFailureMsg(flags, error);
         helper.CreateGraphicsPipeline();
 
         if (positive_test) {
@@ -1194,6 +1195,11 @@ struct CreatePipelineHelper {
         } else {
             test.Monitor()->VerifyFound();
         }
+    }
+
+    template <typename Test, typename OverrideFunc, typename Error>
+    static void OneshotTest(Test &test, OverrideFunc &info_override, const VkFlags flags, Error error, bool positive_test = false) {
+        OneshotTest(test, info_override, flags, std::vector<Error>(1, error), positive_test);
     }
 };
 namespace chain_util {
@@ -9760,85 +9766,16 @@ TEST_F(VkLayerTest, PSOViewportStateTests) {
     ASSERT_NO_FATAL_FAILURE(Init(&features));
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
 
-    VkShaderObj vs(m_device, bindStateVertShaderText, VK_SHADER_STAGE_VERTEX_BIT, this);
-    VkShaderObj fs(m_device, bindStateFragShaderText, VK_SHADER_STAGE_FRAGMENT_BIT, this);
-    const size_t shader_stages_size = 2;
-    VkPipelineShaderStageCreateInfo shaderStages[shader_stages_size] = {shaderStages[0] = vs.GetStageCreateInfo(),
-                                                                        shaderStages[1] = fs.GetStageCreateInfo()};
-
-    VkPipelineVertexInputStateCreateInfo vi_ci = {};
-    vi_ci.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
-
-    VkPipelineInputAssemblyStateCreateInfo ia_ci = {};
-    ia_ci.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
-    ia_ci.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP;
+    const auto break_vp_state = [](CreatePipelineHelper &helper) {
+        helper.rs_state_ci_.rasterizerDiscardEnable = VK_FALSE;
+        helper.gp_ci_.pViewportState = nullptr;
+    };
+    CreatePipelineHelper::OneshotTest(*this, break_vp_state, VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_096005dc);
 
     VkViewport viewport = {0.0f, 0.0f, 64.0f, 64.0f, 0.0f, 1.0f};
     VkViewport viewports[] = {viewport, viewport};
     VkRect2D scissor = {{0, 0}, {64, 64}};
     VkRect2D scissors[] = {scissor, scissor};
-    VkPipelineViewportStateCreateInfo vp_state_ci = {};
-    vp_state_ci.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
-    // vp_state_ci to be set by test cases
-
-    VkPipelineRasterizationStateCreateInfo rs_state_ci = {};
-    rs_state_ci.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
-    rs_state_ci.rasterizerDiscardEnable = VK_FALSE;
-    rs_state_ci.polygonMode = VK_POLYGON_MODE_FILL;
-    rs_state_ci.cullMode = VK_CULL_MODE_BACK_BIT;
-    rs_state_ci.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
-    rs_state_ci.lineWidth = 1.0f;
-
-    VkPipelineMultisampleStateCreateInfo pipe_ms_state_ci = {};
-    pipe_ms_state_ci.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
-    pipe_ms_state_ci.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
-
-    VkPipelineLayout pipeline_layout;
-    {
-        VkDescriptorSetLayout ds_layout;
-        {
-            VkDescriptorSetLayoutCreateInfo ds_layout_ci = {};
-            ds_layout_ci.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-
-            VkResult err = vkCreateDescriptorSetLayout(m_device->device(), &ds_layout_ci, nullptr, &ds_layout);
-            ASSERT_VK_SUCCESS(err);
-        }
-
-        VkPipelineLayoutCreateInfo pipeline_layout_ci = {};
-        pipeline_layout_ci.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-        pipeline_layout_ci.setLayoutCount = 1;
-        pipeline_layout_ci.pSetLayouts = &ds_layout;
-
-        VkResult err = vkCreatePipelineLayout(m_device->device(), &pipeline_layout_ci, nullptr, &pipeline_layout);
-        ASSERT_VK_SUCCESS(err);
-
-        vkDestroyDescriptorSetLayout(m_device->device(), ds_layout, nullptr);
-    }
-
-    VkGraphicsPipelineCreateInfo gp_ci = {};
-    gp_ci.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
-    gp_ci.flags = VK_PIPELINE_CREATE_DISABLE_OPTIMIZATION_BIT;
-    gp_ci.stageCount = shader_stages_size;
-    gp_ci.pStages = shaderStages;
-    gp_ci.pVertexInputState = &vi_ci;
-    gp_ci.pInputAssemblyState = &ia_ci;
-    gp_ci.pViewportState = &vp_state_ci;
-    gp_ci.pRasterizationState = &rs_state_ci;
-    gp_ci.pMultisampleState = &pipe_ms_state_ci;
-    gp_ci.layout = pipeline_layout;
-    gp_ci.renderPass = renderPass();
-    gp_ci.subpass = 0;
-
-    // test pViewportState = NULL && rasterizerDiscardEnable = VK_FALSE
-    {
-        VkGraphicsPipelineCreateInfo gp_ci_null_vp = gp_ci;
-        gp_ci_null_vp.pViewportState = nullptr;
-
-        m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_096005dc);
-        VkPipeline pipeline;
-        vkCreateGraphicsPipelines(m_device->device(), VK_NULL_HANDLE, 1, &gp_ci_null_vp, nullptr, &pipeline);
-        m_errorMonitor->VerifyFound();
-    }
 
     // test viewport and scissor arrays
     using std::vector;
@@ -9873,15 +9810,13 @@ TEST_F(VkLayerTest, PSOViewportStateTests) {
     };
 
     for (const auto &test_case : test_cases) {
-        vp_state_ci.viewportCount = test_case.viewport_count;
-        vp_state_ci.pViewports = test_case.viewports;
-        vp_state_ci.scissorCount = test_case.scissor_count;
-        vp_state_ci.pScissors = test_case.scissors;
-
-        for (const auto vuid : test_case.vuids) m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, vuid);
-        VkPipeline pipeline;
-        vkCreateGraphicsPipelines(m_device->device(), VK_NULL_HANDLE, 1, &gp_ci, nullptr, &pipeline);
-        m_errorMonitor->VerifyFound();
+        const auto break_vp = [&test_case](CreatePipelineHelper &helper) {
+            helper.vp_state_ci_.viewportCount = test_case.viewport_count;
+            helper.vp_state_ci_.pViewports = test_case.viewports;
+            helper.vp_state_ci_.scissorCount = test_case.scissor_count;
+            helper.vp_state_ci_.pScissors = test_case.scissors;
+        };
+        CreatePipelineHelper::OneshotTest(*this, break_vp, VK_DEBUG_REPORT_ERROR_BIT_EXT, test_case.vuids);
     }
 
     vector<TestCase> dyn_test_cases = {
@@ -9897,29 +9832,23 @@ TEST_F(VkLayerTest, PSOViewportStateTests) {
         {0, nullptr, 0, nullptr, {VALIDATION_ERROR_10c00980, VALIDATION_ERROR_10c00982}},
     };
 
-    const size_t dyn_states_count = 2;
-    const VkDynamicState dyn_states[dyn_states_count] = {VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR};
-    VkPipelineDynamicStateCreateInfo dyn_state_ci = {};
-    dyn_state_ci.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
-    dyn_state_ci.dynamicStateCount = dyn_states_count;
-    dyn_state_ci.pDynamicStates = dyn_states;
-
-    VkGraphicsPipelineCreateInfo dyn_gp_ci = gp_ci;
-    dyn_gp_ci.pDynamicState = &dyn_state_ci;
+    const VkDynamicState dyn_states[] = {VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR};
 
     for (const auto &test_case : dyn_test_cases) {
-        vp_state_ci.viewportCount = test_case.viewport_count;
-        vp_state_ci.pViewports = test_case.viewports;
-        vp_state_ci.scissorCount = test_case.scissor_count;
-        vp_state_ci.pScissors = test_case.scissors;
+        const auto break_vp = [&](CreatePipelineHelper &helper) {
+            VkPipelineDynamicStateCreateInfo dyn_state_ci = {};
+            dyn_state_ci.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
+            dyn_state_ci.dynamicStateCount = size(dyn_states);
+            dyn_state_ci.pDynamicStates = dyn_states;
+            helper.dyn_state_ci_ = dyn_state_ci;
 
-        for (const auto vuid : test_case.vuids) m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, vuid);
-        VkPipeline pipeline;
-        vkCreateGraphicsPipelines(m_device->device(), VK_NULL_HANDLE, 1, &dyn_gp_ci, nullptr, &pipeline);
-        m_errorMonitor->VerifyFound();
+            helper.vp_state_ci_.viewportCount = test_case.viewport_count;
+            helper.vp_state_ci_.pViewports = test_case.viewports;
+            helper.vp_state_ci_.scissorCount = test_case.scissor_count;
+            helper.vp_state_ci_.pScissors = test_case.scissors;
+        };
+        CreatePipelineHelper::OneshotTest(*this, break_vp, VK_DEBUG_REPORT_ERROR_BIT_EXT, test_case.vuids);
     }
-
-    vkDestroyPipelineLayout(m_device->device(), pipeline_layout, nullptr);
 }
 
 TEST_F(VkLayerTest, PSOViewportStateMultiViewportTests) {
@@ -9931,78 +9860,14 @@ TEST_F(VkLayerTest, PSOViewportStateMultiViewportTests) {
         printf("             VkPhysicalDeviceFeatures::multiViewport is not supported -- skipping test.\n");
         return;
     }
-    // at least 16 viewports supported here
+    // at least 16 viewports supported from here on
 
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
-
-    VkShaderObj vs(m_device, bindStateVertShaderText, VK_SHADER_STAGE_VERTEX_BIT, this);
-    VkShaderObj fs(m_device, bindStateFragShaderText, VK_SHADER_STAGE_FRAGMENT_BIT, this);
-    const size_t shader_stages_size = 2;
-    VkPipelineShaderStageCreateInfo shaderStages[shader_stages_size] = {shaderStages[0] = vs.GetStageCreateInfo(),
-                                                                        shaderStages[1] = fs.GetStageCreateInfo()};
-
-    VkPipelineVertexInputStateCreateInfo vi_ci = {};
-    vi_ci.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
-
-    VkPipelineInputAssemblyStateCreateInfo ia_ci = {};
-    ia_ci.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
-    ia_ci.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP;
 
     VkViewport viewport = {0.0f, 0.0f, 64.0f, 64.0f, 0.0f, 1.0f};
     VkViewport viewports[] = {viewport, viewport};
     VkRect2D scissor = {{0, 0}, {64, 64}};
     VkRect2D scissors[] = {scissor, scissor};
-    VkPipelineViewportStateCreateInfo vp_state_ci = {};
-    vp_state_ci.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
-    // vp_state_ci to be set by test cases
-
-    VkPipelineRasterizationStateCreateInfo rs_state_ci = {};
-    rs_state_ci.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
-    rs_state_ci.rasterizerDiscardEnable = VK_FALSE;
-    rs_state_ci.polygonMode = VK_POLYGON_MODE_FILL;
-    rs_state_ci.cullMode = VK_CULL_MODE_BACK_BIT;
-    rs_state_ci.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
-    rs_state_ci.lineWidth = 1.0f;
-
-    VkPipelineMultisampleStateCreateInfo pipe_ms_state_ci = {};
-    pipe_ms_state_ci.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
-    pipe_ms_state_ci.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
-
-    VkPipelineLayout pipeline_layout;
-    {
-        VkDescriptorSetLayout ds_layout;
-        {
-            VkDescriptorSetLayoutCreateInfo ds_layout_ci = {};
-            ds_layout_ci.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-
-            VkResult err = vkCreateDescriptorSetLayout(m_device->device(), &ds_layout_ci, nullptr, &ds_layout);
-            ASSERT_VK_SUCCESS(err);
-        }
-
-        VkPipelineLayoutCreateInfo pipeline_layout_ci = {};
-        pipeline_layout_ci.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-        pipeline_layout_ci.setLayoutCount = 1;
-        pipeline_layout_ci.pSetLayouts = &ds_layout;
-
-        VkResult err = vkCreatePipelineLayout(m_device->device(), &pipeline_layout_ci, nullptr, &pipeline_layout);
-        ASSERT_VK_SUCCESS(err);
-
-        vkDestroyDescriptorSetLayout(m_device->device(), ds_layout, nullptr);
-    }
-
-    VkGraphicsPipelineCreateInfo gp_ci = {};
-    gp_ci.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
-    gp_ci.flags = VK_PIPELINE_CREATE_DISABLE_OPTIMIZATION_BIT;
-    gp_ci.stageCount = shader_stages_size;
-    gp_ci.pStages = shaderStages;
-    gp_ci.pVertexInputState = &vi_ci;
-    gp_ci.pInputAssemblyState = &ia_ci;
-    gp_ci.pViewportState = &vp_state_ci;
-    gp_ci.pRasterizationState = &rs_state_ci;
-    gp_ci.pMultisampleState = &pipe_ms_state_ci;
-    gp_ci.layout = pipeline_layout;
-    gp_ci.renderPass = renderPass();
-    gp_ci.subpass = 0;
 
     using std::vector;
     struct TestCase {
@@ -10052,15 +9917,13 @@ TEST_F(VkLayerTest, PSOViewportStateMultiViewportTests) {
     }
 
     for (const auto &test_case : test_cases) {
-        vp_state_ci.viewportCount = test_case.viewport_count;
-        vp_state_ci.pViewports = test_case.viewports;
-        vp_state_ci.scissorCount = test_case.scissor_count;
-        vp_state_ci.pScissors = test_case.scissors;
-
-        for (const auto vuid : test_case.vuids) m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, vuid);
-        VkPipeline pipeline;
-        vkCreateGraphicsPipelines(m_device->device(), VK_NULL_HANDLE, 1, &gp_ci, nullptr, &pipeline);
-        m_errorMonitor->VerifyFound();
+        const auto break_vp = [&test_case](CreatePipelineHelper &helper) {
+            helper.vp_state_ci_.viewportCount = test_case.viewport_count;
+            helper.vp_state_ci_.pViewports = test_case.viewports;
+            helper.vp_state_ci_.scissorCount = test_case.scissor_count;
+            helper.vp_state_ci_.pScissors = test_case.scissors;
+        };
+        CreatePipelineHelper::OneshotTest(*this, break_vp, VK_DEBUG_REPORT_ERROR_BIT_EXT, test_case.vuids);
     }
 
     vector<TestCase> dyn_test_cases = {
@@ -10081,165 +9944,86 @@ TEST_F(VkLayerTest, PSOViewportStateMultiViewportTests) {
             {too_much_viewports, nullptr, too_much_viewports, nullptr, {VALIDATION_ERROR_10c00984, VALIDATION_ERROR_10c00986}});
     }
 
-    const size_t dyn_states_count = 2;
-    const VkDynamicState dyn_states[dyn_states_count] = {VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR};
-    VkPipelineDynamicStateCreateInfo dyn_state_ci = {};
-    dyn_state_ci.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
-    dyn_state_ci.dynamicStateCount = dyn_states_count;
-    dyn_state_ci.pDynamicStates = dyn_states;
-
-    VkGraphicsPipelineCreateInfo dyn_gp_ci = gp_ci;
-    dyn_gp_ci.pDynamicState = &dyn_state_ci;
+    const VkDynamicState dyn_states[] = {VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR};
 
     for (const auto &test_case : dyn_test_cases) {
-        vp_state_ci.viewportCount = test_case.viewport_count;
-        vp_state_ci.pViewports = test_case.viewports;
-        vp_state_ci.scissorCount = test_case.scissor_count;
-        vp_state_ci.pScissors = test_case.scissors;
+        const auto break_vp = [&](CreatePipelineHelper &helper) {
+            VkPipelineDynamicStateCreateInfo dyn_state_ci = {};
+            dyn_state_ci.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
+            dyn_state_ci.dynamicStateCount = size(dyn_states);
+            dyn_state_ci.pDynamicStates = dyn_states;
+            helper.dyn_state_ci_ = dyn_state_ci;
 
-        for (const auto vuid : test_case.vuids) m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, vuid);
-        VkPipeline pipeline;
-        vkCreateGraphicsPipelines(m_device->device(), VK_NULL_HANDLE, 1, &dyn_gp_ci, nullptr, &pipeline);
-        m_errorMonitor->VerifyFound();
+            helper.vp_state_ci_.viewportCount = test_case.viewport_count;
+            helper.vp_state_ci_.pViewports = test_case.viewports;
+            helper.vp_state_ci_.scissorCount = test_case.scissor_count;
+            helper.vp_state_ci_.pScissors = test_case.scissors;
+        };
+        CreatePipelineHelper::OneshotTest(*this, break_vp, VK_DEBUG_REPORT_ERROR_BIT_EXT, test_case.vuids);
     }
-
-    vkDestroyPipelineLayout(m_device->device(), pipeline_layout, nullptr);
 }
 
-TEST_F(VkLayerTest, DynViewportAndScissorMismatch) {
-    TEST_DESCRIPTION("Test dynamic viewport and scissor count that does not match count in PSO ");
+TEST_F(VkLayerTest, DynViewportAndScissorUndefinedDrawState) {
+    TEST_DESCRIPTION("Test viewport and scissor dynamic state that is not set before draw");
 
     ASSERT_NO_FATAL_FAILURE(Init());
 
+    // TODO: should also test on !multiViewport
     if (!m_device->phy().features().multiViewport) {
         printf("             Device does not support multiple viewports/scissors; skipped.\n");
         return;
     }
 
+    ASSERT_NO_FATAL_FAILURE(InitViewport());
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
 
-    VkDescriptorSetLayout ds_layout;
+    VkShaderObj vs(m_device, bindStateVertShaderText, VK_SHADER_STAGE_VERTEX_BIT, this);
+    VkShaderObj fs(m_device, bindStateFragShaderText, VK_SHADER_STAGE_FRAGMENT_BIT, this);
+
     VkPipelineLayout pipeline_layout;
     {
-        {
-            VkDescriptorSetLayoutCreateInfo ds_layout_ci = {};
-            ds_layout_ci.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-
-            VkResult err = vkCreateDescriptorSetLayout(m_device->device(), &ds_layout_ci, nullptr, &ds_layout);
-            ASSERT_VK_SUCCESS(err);
-        }
-
         VkPipelineLayoutCreateInfo pipeline_layout_ci = {};
         pipeline_layout_ci.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-        pipeline_layout_ci.setLayoutCount = 1;
-        pipeline_layout_ci.pSetLayouts = &ds_layout;
 
         VkResult err = vkCreatePipelineLayout(m_device->device(), &pipeline_layout_ci, nullptr, &pipeline_layout);
         ASSERT_VK_SUCCESS(err);
     }
 
-    VkViewport viewport = {0.0f, 0.0f, 64.0f, 64.0f, 0.0f, 1.0f};
-    VkRect2D scissor = {{0, 0}, {64, 64}};
-    VkPipelineViewportStateCreateInfo vp_state_ci = {};
-    vp_state_ci.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
-    vp_state_ci.viewportCount = 1;
-    vp_state_ci.pViewports = &viewport;  // ignored if dynamic
-    vp_state_ci.scissorCount = 1;
-    vp_state_ci.pScissors = &scissor;  // ignored if dynamic
+    VkPipelineObj pipeline_dyn_vp(m_device);
+    pipeline_dyn_vp.AddShader(&vs);
+    pipeline_dyn_vp.AddShader(&fs);
+    pipeline_dyn_vp.AddColorAttachment();
+    pipeline_dyn_vp.MakeDynamic(VK_DYNAMIC_STATE_VIEWPORT);
+    pipeline_dyn_vp.SetScissor(m_scissors);
+    ASSERT_VK_SUCCESS(pipeline_dyn_vp.CreateVKPipeline(pipeline_layout, m_renderPass));
 
-    VkDynamicState vp_dyn_state = VK_DYNAMIC_STATE_VIEWPORT;
-    VkDynamicState sc_dyn_state = VK_DYNAMIC_STATE_SCISSOR;
-    // Set scissor as dynamic to avoid that error
-    VkPipelineDynamicStateCreateInfo dyn_state_ci = {};
-    dyn_state_ci.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
-    dyn_state_ci.dynamicStateCount = 1;
-    // pDynamicStates to be set by test cases
-
-    VkPipelineMultisampleStateCreateInfo pipe_ms_state_ci = {};
-    pipe_ms_state_ci.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
-    pipe_ms_state_ci.pNext = NULL;
-    pipe_ms_state_ci.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
-    pipe_ms_state_ci.sampleShadingEnable = 0;
-    pipe_ms_state_ci.minSampleShading = 1.0;
-    pipe_ms_state_ci.pSampleMask = NULL;
-
-    VkShaderObj vs(m_device, bindStateVertShaderText, VK_SHADER_STAGE_VERTEX_BIT, this);
-    // We shouldn't need a fragment shader but add it to be able to run on more devices
-    VkShaderObj fs(m_device, bindStateFragShaderText, VK_SHADER_STAGE_FRAGMENT_BIT, this);
-    const size_t shader_stages_size = 2;
-    VkPipelineShaderStageCreateInfo shaderStages[shader_stages_size] = {shaderStages[0] = vs.GetStageCreateInfo(),
-                                                                        shaderStages[1] = fs.GetStageCreateInfo()};
-
-    VkPipelineVertexInputStateCreateInfo vi_ci = {};
-    vi_ci.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
-
-    VkPipelineInputAssemblyStateCreateInfo ia_ci = {};
-    ia_ci.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
-    ia_ci.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP;
-
-    VkPipelineRasterizationStateCreateInfo rs_ci = {};
-    rs_ci.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
-    rs_ci.lineWidth = 1.0f;
-
-    VkPipelineColorBlendAttachmentState att = {};
-    att.blendEnable = VK_FALSE;
-    att.colorWriteMask = 0xf;
-
-    VkPipelineColorBlendStateCreateInfo cb_ci = {};
-    cb_ci.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
-    cb_ci.pNext = nullptr;
-    cb_ci.attachmentCount = 1;
-    cb_ci.pAttachments = &att;
-
-    VkGraphicsPipelineCreateInfo gp_ci = {};
-    gp_ci.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
-    gp_ci.stageCount = shader_stages_size;
-    gp_ci.pStages = shaderStages;
-    gp_ci.pVertexInputState = &vi_ci;
-    gp_ci.pInputAssemblyState = &ia_ci;
-    gp_ci.pViewportState = &vp_state_ci;
-    gp_ci.pRasterizationState = &rs_ci;
-    gp_ci.pColorBlendState = &cb_ci;
-    gp_ci.pDynamicState = &dyn_state_ci;
-    gp_ci.pMultisampleState = &pipe_ms_state_ci;
-    gp_ci.flags = VK_PIPELINE_CREATE_DISABLE_OPTIMIZATION_BIT;
-    gp_ci.layout = pipeline_layout;
-    gp_ci.renderPass = renderPass();
-
-    dyn_state_ci.pDynamicStates = &vp_dyn_state;
-    VkPipeline pipeline_dyn_vp;
-    {
-        VkResult err = vkCreateGraphicsPipelines(m_device->device(), VK_NULL_HANDLE, 1, &gp_ci, nullptr, &pipeline_dyn_vp);
-        ASSERT_VK_SUCCESS(err);
-    }
-
-    dyn_state_ci.pDynamicStates = &sc_dyn_state;
-    VkPipeline pipeline_dyn_sc;
-    {
-        VkResult err = vkCreateGraphicsPipelines(m_device->device(), VK_NULL_HANDLE, 1, &gp_ci, nullptr, &pipeline_dyn_sc);
-        ASSERT_VK_SUCCESS(err);
-    }
+    VkPipelineObj pipeline_dyn_sc(m_device);
+    pipeline_dyn_sc.AddShader(&vs);
+    pipeline_dyn_sc.AddShader(&fs);
+    pipeline_dyn_sc.AddColorAttachment();
+    pipeline_dyn_sc.SetViewport(m_viewports);
+    pipeline_dyn_sc.MakeDynamic(VK_DYNAMIC_STATE_SCISSOR);
+    ASSERT_VK_SUCCESS(pipeline_dyn_sc.CreateVKPipeline(pipeline_layout, m_renderPass));
 
     m_commandBuffer->begin();
     m_commandBuffer->BeginRenderPass(m_renderPassBeginInfo);
 
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
                                          "Dynamic viewport(s) 0 are used by pipeline state object, ");
-    vkCmdBindPipeline(m_commandBuffer->handle(), VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_dyn_vp);
-    vkCmdSetViewport(m_commandBuffer->handle(), 1, 1, &viewport);  // Count of 2 doesn't match PSO count of 1
+    vkCmdBindPipeline(m_commandBuffer->handle(), VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_dyn_vp.handle());
+    vkCmdSetViewport(m_commandBuffer->handle(), 1, 1,
+                     &m_viewports[0]);  // Forgetting to set needed 0th viweport (PSO viewportCount == 1)
     m_commandBuffer->Draw(1, 0, 0, 0);
     m_errorMonitor->VerifyFound();
 
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, "Dynamic scissor(s) 0 are used by pipeline state object, ");
-    vkCmdBindPipeline(m_commandBuffer->handle(), VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_dyn_sc);
-    vkCmdSetScissor(m_commandBuffer->handle(), 1, 1, &scissor);  // Count of 2 doesn't match PSO count of 1
+    vkCmdBindPipeline(m_commandBuffer->handle(), VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_dyn_sc.handle());
+    vkCmdSetScissor(m_commandBuffer->handle(), 1, 1,
+                    &m_scissors[0]);  // Forgetting to set needed 0th scissor (PSO scissorCount == 1)
     m_commandBuffer->Draw(1, 0, 0, 0);
     m_errorMonitor->VerifyFound();
 
-    vkDestroyPipeline(m_device->device(), pipeline_dyn_vp, nullptr);
-    vkDestroyPipeline(m_device->device(), pipeline_dyn_sc, nullptr);
     vkDestroyPipelineLayout(m_device->device(), pipeline_layout, nullptr);
-    vkDestroyDescriptorSetLayout(m_device->device(), ds_layout, nullptr);
 }
 
 TEST_F(VkLayerTest, PSOLineWidthInvalid) {
