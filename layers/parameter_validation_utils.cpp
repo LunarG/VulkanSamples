@@ -587,7 +587,7 @@ bool pv_vkCreateBuffer(VkDevice device, const VkBufferCreateInfo *pCreateInfo, c
     if (pCreateInfo != nullptr) {
         // Buffer size must be greater than 0 (error 00663)
         skip |=
-            ValidateGreaterThan(report_data, "vkCreateBuffer", "pCreateInfo->size", static_cast<uint32_t>(pCreateInfo->size), 0u);
+            ValidateGreaterThan(report_data, "vkCreateBuffer", "pCreateInfo->size", pCreateInfo->size, static_cast<VkDeviceSize>(0));
 
         // Validation for parameters excluded from the generated validation code due to a 'noautovalidity' tag in vk.xml
         if (pCreateInfo->sharingMode == VK_SHARING_MODE_CONCURRENT) {
