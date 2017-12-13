@@ -20,8 +20,11 @@
 
 #include "gravitydeviceextif.hpp"
 
-GravityDeviceExtIf::GravityDeviceExtIf(VkDevice device) {
-    m_device = device;
+GravityDeviceExtIf::GravityDeviceExtIf(VkPhysicalDevice physical_device, VkDevice device, GravityQueue graphics_queue, GravityQueue present_queue) {
+    m_vk_physical_device = physical_device;
+    m_vk_device = device;
+    m_vk_graphics_queue = graphics_queue;
+    m_vk_present_queue = present_queue;
     if (VK_NULL_HANDLE != device) {
         // ---- VK_KHR_descriptor_update_template extension commands
         CreateDescriptorUpdateTemplateKHR = (PFN_vkCreateDescriptorUpdateTemplateKHR)vkGetDeviceProcAddr(device, "vkCreateDescriptorUpdateTemplateKHR");
@@ -120,6 +123,7 @@ void GravityDeviceExtIf::ClearCalls() {
 }
 
 GravityDeviceExtIf::~GravityDeviceExtIf() {
-    m_device = VK_NULL_HANDLE;
+    m_vk_physical_device = VK_NULL_HANDLE;
+    m_vk_device = VK_NULL_HANDLE;
     ClearCalls();
 }

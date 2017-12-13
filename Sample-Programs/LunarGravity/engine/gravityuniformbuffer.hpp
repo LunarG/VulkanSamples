@@ -32,7 +32,7 @@ class GravityUniformBuffer {
    public:
     // Create a protected constructor
     GravityUniformBuffer(GravityInstanceExtIf *inst_ext_if, GravityDeviceExtIf *dev_ext_if, GravityDeviceMemoryManager *dev_memory,
-                         uint32_t size);
+                         uint32_t total_reserved_size_bytes);
 
     // We don't want any copy constructors
     GravityUniformBuffer(const GravityUniformBuffer &uniform_buffer) = delete;
@@ -41,19 +41,21 @@ class GravityUniformBuffer {
     // Make the destructor public
     virtual ~GravityUniformBuffer();
 
-    bool Load();
-    void *Map(uint64_t offset, uint64_t size);
+    bool Load(uint32_t data_stride_bytes);
+    void *Map(uint32_t index, uint64_t map_mem_size_bytes);
     void Unmap();
-    bool Bind(uint32_t offset);
+    bool Bind();
+    VkDescriptorBufferInfo GetDescriptorInfo(uint32_t index);
     bool Unload();
-    uint32_t Size() { return m_size; }
+    uint32_t Size() { return m_total_reserved_size_bytes; }
 
    protected:
     GravityInstanceExtIf *m_inst_ext_if;
     GravityDeviceExtIf *m_dev_ext_if;
     GravityDeviceMemoryManager *m_dev_memory_mgr;
 
-    uint32_t m_size;
+    uint32_t m_total_reserved_size_bytes;
+    uint32_t m_data_stride_bytes;
     VkBuffer m_vk_buffer;
     GravityDeviceMemory m_memory;
     void *m_cpu_addr;

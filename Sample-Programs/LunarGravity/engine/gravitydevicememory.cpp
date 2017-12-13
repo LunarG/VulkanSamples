@@ -88,7 +88,7 @@ bool GravityDeviceMemoryManager::AllocateMemory(GravityDeviceMemory &memory, con
     m_vk_dev_mem_props.memoryHeaps[memory.vk_memory_heap_index].size -= memory.vk_mem_reqs.size;
 
     // Allocate memory for the depth/stencil buffer
-    vk_result = vkAllocateMemory(m_dev_ext_if->m_device, &mem_alloc_info, nullptr, &memory.vk_device_memory);
+    vk_result = vkAllocateMemory(m_dev_ext_if->m_vk_device, &mem_alloc_info, nullptr, &memory.vk_device_memory);
     if (VK_SUCCESS != vk_result) {
         std::string error_msg = "GravityDeviceMemory::AllocateMemory failed to allocate device memory with error ";
         error_msg += vk_result;
@@ -109,7 +109,7 @@ bool GravityDeviceMemoryManager::MapMemory(GravityDeviceMemory &memory, VkDevice
         logger.LogError(error_msg);
         return false;
     }
-    VkResult vk_result = vkMapMemory(m_dev_ext_if->m_device, memory.vk_device_memory, offset, size, 0, ppData);
+    VkResult vk_result = vkMapMemory(m_dev_ext_if->m_vk_device, memory.vk_device_memory, offset, size, 0, ppData);
     if (VK_SUCCESS != vk_result) {
         std::string error_msg = "GravityDeviceMemory::MapMemory failed to map device memory with error ";
         error_msg += vk_result;
@@ -120,12 +120,12 @@ bool GravityDeviceMemoryManager::MapMemory(GravityDeviceMemory &memory, VkDevice
 }
 
 void GravityDeviceMemoryManager::UnmapMemory(GravityDeviceMemory &memory) {
-    vkUnmapMemory(m_dev_ext_if->m_device, memory.vk_device_memory);
+    vkUnmapMemory(m_dev_ext_if->m_vk_device, memory.vk_device_memory);
 }
 
 bool GravityDeviceMemoryManager::FreeMemory(GravityDeviceMemory &memory) {
     if (VK_NULL_HANDLE != memory.vk_device_memory) {
-        vkFreeMemory(m_dev_ext_if->m_device, memory.vk_device_memory, NULL);
+        vkFreeMemory(m_dev_ext_if->m_vk_device, memory.vk_device_memory, NULL);
 
         // Re-add the memory back to the heap size
         m_vk_dev_mem_props.memoryHeaps[memory.vk_memory_heap_index].size += memory.vk_mem_reqs.size;

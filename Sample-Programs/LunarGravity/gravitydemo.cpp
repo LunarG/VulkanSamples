@@ -96,16 +96,6 @@ bool GravityDemo::ProcessEvents(void) {
     return success;
 }
 
-bool GravityDemo::Init(std::vector<std::string> &arguments) {
-    // Call the parent and do all the necessary setup
-    if (!GravityEngine::Init(arguments)) {
-        return false;
-    }
-    
-    // Load the initial scene here
-    return m_cur_scene->Start(m_frames[m_frame_index].vk_render_pass);
-}
-
 bool GravityDemo::BeginDrawFrame() {
     if (!GravityEngine::BeginDrawFrame()) {
         return false;

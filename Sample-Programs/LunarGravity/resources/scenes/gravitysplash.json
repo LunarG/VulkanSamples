@@ -18,7 +18,7 @@
         "prefix" : "splash_shader"
       },
       "vertices" : {
-        "vertex components" : 3,
+        "position components" : 3,
         "texture coord groups" : 1,
         "texture coord components" : 2,
         "data" : [

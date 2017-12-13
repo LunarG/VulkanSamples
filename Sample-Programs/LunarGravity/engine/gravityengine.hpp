@@ -48,11 +48,6 @@ enum GravitySystemBatteryStatus {
 
 #define MAX_NUM_BACK_BUFFERS 4
 
-struct GravityQueue {
-    VkQueue vk_queue;
-    uint32_t family_index;
-};
-
 struct GravityCmdBuffer {
     bool recording;
     VkCommandBuffer vk_cmd_buf;

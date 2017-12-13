@@ -32,7 +32,7 @@ struct SplashTexture {
     std::string name;
     std::string file;
     uint8_t index;
-    GravityTexture *texture;
+    GravityTexture *gravity_texture;
 };
 
 struct SplashShader {
@@ -42,7 +42,7 @@ struct SplashShader {
 };
 
 struct SplashShaderVerts {
-    uint8_t num_vert_comps;
+    uint8_t num_pos_comps;
     uint8_t num_tex_coords;
     uint8_t num_tex_coord_comps;
     std::vector<float> data;
@@ -63,7 +63,7 @@ class GravitySceneSplash : public GravityScene {
     virtual ~GravitySceneSplash();
 
     virtual bool Load(GravityDeviceExtIf *dev_ext_if, GravityDeviceMemoryManager *dev_memory_mgr, VkFormat rt_color_format, VkFormat rt_depth_stencil_format);
-    virtual bool Start(VkRenderPass render_pass);
+    virtual bool Start(VkRenderPass render_pass, VkCommandBuffer &cmd_buf);
     virtual bool Update(float comp_time, float game_time);
     virtual bool Draw(VkCommandBuffer &cmd_buf);
     virtual bool End();
@@ -75,7 +75,7 @@ class GravitySceneSplash : public GravityScene {
     GravitySceneSplash &operator=(const GravitySceneSplash &scene) = delete;
 
     SplashShader m_shader;
-    SplashTexture m_texture;
+    SplashTexture m_splash_texture;
     SplashUniformBuffer m_uniform_buffer;
     SplashShaderVerts m_vertices;
 
@@ -84,4 +84,6 @@ class GravitySceneSplash : public GravityScene {
     VkRenderPass m_vk_render_pass;
     VkPipelineCache m_vk_pipeline_cache;
     VkPipeline m_vk_pipeline;
+    VkDescriptorPool m_vk_desc_pool;
+    std::vector<VkDescriptorSet> m_framebuffer_desc_set;
 };

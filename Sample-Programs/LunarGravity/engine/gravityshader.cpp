@@ -50,7 +50,7 @@ GravityShader::~GravityShader() {
 void GravityShader::Cleanup() {
     for (uint8_t shader = 0; shader < GRAVITY_SHADER_NUM_STAGES; shader++) {
         if (VK_NULL_HANDLE != m_shader_data[shader].vk_shader_module) {
-            vkDestroyShaderModule(m_dev_ext_if->m_device, m_shader_data[shader].vk_shader_module, NULL);
+            vkDestroyShaderModule(m_dev_ext_if->m_vk_device, m_shader_data[shader].vk_shader_module, NULL);
             m_shader_data[shader].vk_shader_module = VK_NULL_HANDLE;
         }
         m_shader_data[shader].valid = false;
@@ -116,7 +116,7 @@ bool GravityShader::Read(std::string const &shader_prefix) {
         shader_module_create_info.codeSize = shader_spv_size;
         shader_module_create_info.pCode = reinterpret_cast<const uint32_t*>(shader_spv_content);
         shader_module_create_info.flags = 0;
-        VkResult vk_result = vkCreateShaderModule(m_dev_ext_if->m_device, &shader_module_create_info, NULL, &m_shader_data[shader].vk_shader_module);
+        VkResult vk_result = vkCreateShaderModule(m_dev_ext_if->m_vk_device, &shader_module_create_info, NULL, &m_shader_data[shader].vk_shader_module);
         if (VK_SUCCESS != vk_result) {
             m_shader_data[shader].valid = false;
             std::string error_msg = "GravityTexture::Read failed to read shader ";

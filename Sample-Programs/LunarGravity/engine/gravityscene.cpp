@@ -114,5 +114,7 @@ bool GravityScene::Load(GravityDeviceExtIf *dev_ext_if, GravityDeviceMemoryManag
     m_dev_memory_mgr = dev_memory_mgr;
     m_rt_color_format = rt_color_format;
     m_rt_depth_stencil_format = rt_depth_stencil_format;
+    m_cur_framebuffer = 0;
+
     return true;
 }

@@ -41,8 +41,13 @@ class GravityTexture {
     virtual ~GravityTexture();
 
     bool Read(std::string const &filename);
-    bool Load();
+    bool Load(VkCommandBuffer &cmd_buf);
     bool Unload();
+
+    VkImage GetVkImage() { return m_vk_image; }
+    VkImageView GetVkImageView() { return m_vk_image_view; }
+    VkSampler GetVkSampler() { return m_vk_sampler; }
+    VkDescriptorImageInfo GetVkDescriptorImageInfo();
 
    protected:
     GravityInstanceExtIf *m_inst_ext_if;
@@ -57,9 +62,16 @@ class GravityTexture {
     uint8_t m_comp_bytes;
     uint8_t *m_cpu_data;
     VkFormat m_vk_format;
+    bool m_requires_staging_texture;
+    VkImage m_staging_vk_image;
+    GravityDeviceMemory m_staging_memory;
     VkImage m_vk_image;
     GravityDeviceMemory m_memory;
+    VkSampler m_vk_sampler;
+    VkImageView m_vk_image_view;
 
     bool ReadPPM(std::string const &filename);
+    bool CreateVkImage(VkImageTiling image_tiling, VkImageUsageFlags image_usage, VkImage &vk_image);
+    void FreeStagingData();
     void Cleanup();
 };

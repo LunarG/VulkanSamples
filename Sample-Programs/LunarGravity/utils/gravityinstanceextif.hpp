@@ -27,7 +27,7 @@ class GravityInstanceExtIf {
     GravityInstanceExtIf(VkInstance instance);
     ~GravityInstanceExtIf();
 
-    VkInstance m_instance;
+    VkInstance m_vk_instance;
 
     // ---- VK_KHR_android_surface extension commands
 #ifdef VK_USE_PLATFORM_ANDROID_KHR

@@ -314,14 +314,17 @@ out:
             logger.LogError("Failed to read scene!");
             return false;
         }
-
         if (!SetupInitialGraphicsDevice()) {
             logger.LogError("Failed to initialize graphics device!");
             return false;
         }
-        m_cur_scene->SetDimensions(m_window->GetWidth(), m_window->GetHeight());
+        m_cur_scene->SetFramebufferInfo(m_window->GetWidth(), m_window->GetHeight(), m_num_backbuffers);
         if (!m_cur_scene->Load(m_dev_ext_if, m_dev_memory_mgr, m_swapchain_surface.vk_format, m_depth_stencil_surface.vk_format)) {
             logger.LogError("Failed to load scene!");
+            return false;
+        }
+        if (!m_cur_scene->Start(m_frames[m_frame_index].vk_render_pass, m_frames[m_frame_index].cmd_buf.vk_cmd_buf)) {
+            logger.LogError("Failed to start initial scene scene!");
             return false;
         }
     }
@@ -1150,7 +1153,7 @@ bool GravityEngine::SetupInitialGraphicsDevice() {
         vkGetDeviceQueue(m_vk_device, m_present_queue.family_index, 0, &m_present_queue.vk_queue);
     }
 
-    m_dev_ext_if = new GravityDeviceExtIf(m_vk_device);
+    m_dev_ext_if = new GravityDeviceExtIf(m_vk_phys_dev, m_vk_device, m_graphics_queue, m_present_queue);
     if (NULL == m_dev_ext_if) {
         logger.LogError("GravityEngine::SetupInitialGraphicsDevice failed allocating GravityDeviceExtIf");
         return false;
@@ -1962,30 +1965,6 @@ bool GravityEngine::BeginDrawFrame() {
     render_pass_begin_info.pClearValues = clear_values;
 
     vkCmdBeginRenderPass(m_frames[m_frame_index].cmd_buf.vk_cmd_buf, &render_pass_begin_info, VK_SUBPASS_CONTENTS_INLINE);
-#if 0 // Brainpain
-    vkCmdBindPipeline(cmd_buf, VK_PIPELINE_BIND_POINT_GRAPHICS, demo->pipeline);
-    vkCmdBindDescriptorSets(cmd_buf, VK_PIPELINE_BIND_POINT_GRAPHICS, demo->pipeline_layout, 0, 1,
-                            &demo->swapchain_image_resources[demo->current_buffer].descriptor_set, 0, NULL);
-    VkViewport viewport;
-    memset(&viewport, 0, sizeof(viewport));
-    viewport.height = (float)demo->height;
-    viewport.width = (float)demo->width;
-    viewport.minDepth = (float)0.0f;
-    viewport.maxDepth = (float)1.0f;
-    vkCmdSetViewport(cmd_buf, 0, 1, &viewport);
-
-    VkRect2D scissor;
-    memset(&scissor, 0, sizeof(scissor));
-    scissor.extent.width = demo->width;
-    scissor.extent.height = demo->height;
-    scissor.offset.x = 0;
-    scissor.offset.y = 0;
-    vkCmdSetScissor(cmd_buf, 0, 1, &scissor);
-    vkCmdDraw(cmd_buf, 12 * 3, 1, 0, 0);
-    // Note that ending the renderpass changes the image's layout from
-    // COLOR_ATTACHMENT_OPTIMAL to PRESENT_SRC_KHR
-    vkCmdEndRenderPass(cmd_buf);
-#endif // Brainpain
     return true;
 }
 

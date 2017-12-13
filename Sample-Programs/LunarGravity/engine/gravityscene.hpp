@@ -48,12 +48,12 @@ class GravityScene {
     virtual ~GravityScene() { ; }
     
     virtual bool Load(GravityDeviceExtIf *dev_ext_if, GravityDeviceMemoryManager *dev_memory_mgr, VkFormat rt_color_format, VkFormat rt_depth_stencil_format);
-    virtual bool Start(VkRenderPass render_pass) = 0;
+    virtual bool Start(VkRenderPass render_pass, VkCommandBuffer &cmd_buf) = 0;
     virtual bool Update(float comp_time, float game_time) = 0;
     virtual bool Draw(VkCommandBuffer &cmd_buf) = 0;
     virtual bool End() = 0;
     virtual bool Unload() = 0;
-    void SetDimensions(uint32_t width, uint32_t height) { m_width = width; m_height = height; }
+    void SetFramebufferInfo(uint32_t width, uint32_t height, uint32_t num_framebuffers) { m_width = width; m_height = height; m_num_framebuffers = num_framebuffers; }
     bool HasClearColor() { return m_has_clear_color; }
     const float* GetClearColor() { return m_clear_color; }
     bool HasClearDepth() { return m_has_clear_depth; }
@@ -71,6 +71,8 @@ class GravityScene {
     GravityDeviceMemoryManager *m_dev_memory_mgr;
     uint32_t m_width;
     uint32_t m_height;
+    uint32_t m_num_framebuffers;
+    uint32_t m_cur_framebuffer;
     VkFormat m_rt_color_format;
     VkFormat m_rt_depth_stencil_format;
     bool m_has_clear_color;

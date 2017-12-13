@@ -34,7 +34,6 @@ class GravityDemo : public GravityEngine {
     // Make the destructor public
     virtual ~GravityDemo();
 
-    virtual bool Init(std::vector<std::string> &arguments);
     virtual void AppendUsageString(std::string &usage);
 
     virtual bool ProcessEvents();

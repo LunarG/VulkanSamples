@@ -86,10 +86,10 @@ GravitySceneSplash::GravitySceneSplash(std::string &scene_file, Json::Value &roo
         logger.LogError(error_msg);
         exit(-1);
     }
-    m_texture.name = texture["name"].asString();
-    m_texture.file = texture["file"].asString();
-    m_texture.index = static_cast<uint8_t>(texture["index"].asUInt());
-    m_texture.texture = nullptr;
+    m_splash_texture.name = texture["name"].asString();
+    m_splash_texture.file = texture["file"].asString();
+    m_splash_texture.index = static_cast<uint8_t>(texture["index"].asUInt());
+    m_splash_texture.gravity_texture = nullptr;
 
     // Read the shader data
     Json::Value shader_node = root["shader"];
@@ -106,7 +106,7 @@ GravitySceneSplash::GravitySceneSplash(std::string &scene_file, Json::Value &roo
 
     // Read the vertex data
     Json::Value vertices = root["vertices"];
-    if (vertices["vertex components"].isNull() || vertices["texture coord groups"].isNull() ||
+    if (vertices["position components"].isNull() || vertices["texture coord groups"].isNull() ||
         vertices["texture coord components"].isNull() || vertices["data"].isNull() || !vertices["data"].isArray()) {
         std::string error_msg = "GravitySceneSplash::GravitySceneSplash - vertices in scene file ";
         error_msg += m_scene_file.c_str();
@@ -114,7 +114,7 @@ GravitySceneSplash::GravitySceneSplash(std::string &scene_file, Json::Value &roo
         logger.LogError(error_msg);
         exit(-1);
     }
-    m_vertices.num_vert_comps = static_cast<uint8_t>(vertices["vertex components"].asUInt());
+    m_vertices.num_pos_comps = static_cast<uint8_t>(vertices["position components"].asUInt());
     m_vertices.num_tex_coords = static_cast<uint8_t>(vertices["texture coord groups"].asUInt());
     m_vertices.num_tex_coord_comps = static_cast<uint8_t>(vertices["texture coord components"].asUInt());
 
@@ -138,6 +138,7 @@ GravitySceneSplash::GravitySceneSplash(std::string &scene_file, Json::Value &roo
     m_vk_desc_set_layout = VK_NULL_HANDLE;
     m_vk_pipeline_cache = VK_NULL_HANDLE;
     m_vk_pipeline = VK_NULL_HANDLE;
+    m_vk_desc_pool = VK_NULL_HANDLE;
 }
 
 GravitySceneSplash::~GravitySceneSplash() {}
@@ -157,12 +158,11 @@ bool GravitySceneSplash::Load(GravityDeviceExtIf *dev_ext_if, GravityDeviceMemor
         logger.LogError("GravitySceneSplash::Load - failed to allocate GravityTexture");
         return false;
     }
-    if (!texture->Read(m_texture.file)) {
+    if (!texture->Read(m_splash_texture.file)) {
         logger.LogError("GravitySceneSplash::Load - failed to read GravityTexture");
         return false;
     }
-
-    m_texture.texture = texture;
+    m_splash_texture.gravity_texture = texture;
 
     // Create and read the shader contents.  Again, don't actually load anything
     GravityShader *shader = new GravityShader(m_inst_ext_if, m_dev_ext_if, m_dev_memory_mgr);
@@ -191,50 +191,79 @@ bool GravitySceneSplash::Load(GravityDeviceExtIf *dev_ext_if, GravityDeviceMemor
     return true;
 }
 
-bool GravitySceneSplash::Start(VkRenderPass render_pass) {
+bool GravitySceneSplash::Start(VkRenderPass render_pass, VkCommandBuffer &cmd_buf) {
     GravityLogger &logger = GravityLogger::getInstance();
-    if (!m_texture.texture->Load()) {
+
+    // Load the texture onto the HW
+    if (!m_splash_texture.gravity_texture->Load(cmd_buf)) {
         logger.LogError("GravitySceneSplash::Start - failed to load GravityTexture");
-        return false;
-    }
-    if (!m_uniform_buffer.uniform_buffer->Load()) {
-        logger.LogError("GravitySceneSplash::Start - failed to load GravityUniformBuffer");
         return false;
     }
 
     m_vk_render_pass = render_pass;
 
     // Fill in the uniform buffer first with an identify MVP, then the vertex data
-    uint32_t stride = m_vertices.num_vert_comps + (m_vertices.num_tex_coords * m_vertices.num_tex_coord_comps);
+    uint32_t stride = m_vertices.num_pos_comps + (m_vertices.num_tex_coords * m_vertices.num_tex_coord_comps);
     uint64_t num_verts = m_vertices.data.size() / stride;
-    uint64_t data_size = sizeof(float) * (16 + num_verts * (m_vertices.num_vert_comps + (m_vertices.num_tex_coords * 4)));
-    float *uni_buf_data = reinterpret_cast<float *>(m_uniform_buffer.uniform_buffer->Map(0, data_size));
-    *uni_buf_data++ = 1.0f;
-    *uni_buf_data++ = 0.0f;
-    *uni_buf_data++ = 0.0f;
-    *uni_buf_data++ = 0.0f;
-    *uni_buf_data++ = 0.0f;
-    *uni_buf_data++ = 1.0f;
-    *uni_buf_data++ = 0.0f;
-    *uni_buf_data++ = 0.0f;
-    *uni_buf_data++ = 0.0f;
-    *uni_buf_data++ = 0.0f;
-    *uni_buf_data++ = 1.0f;
-    *uni_buf_data++ = 0.0f;
-    *uni_buf_data++ = 0.0f;
-    *uni_buf_data++ = 0.0f;
-    *uni_buf_data++ = 0.0f;
-    *uni_buf_data++ = 1.0f;
+    uint64_t stride_bytes = sizeof(float) * (16 + num_verts * (m_vertices.num_pos_comps + (m_vertices.num_tex_coords * 4)));
+    uint64_t total_data_size_bytes = stride_bytes * m_num_framebuffers;
+    if (!m_uniform_buffer.uniform_buffer->Load(static_cast<uint32_t>(stride_bytes))) {
+        logger.LogError("GravitySceneSplash::Start - failed to load GravityUniformBuffer");
+        return false;
+    }
+    float *uni_buf_data = reinterpret_cast<float *>(m_uniform_buffer.uniform_buffer->Map(0, total_data_size_bytes));
+    // Make a copy per framebuffer to render as fast as possible.
+    for (uint32_t copy = 0; copy < m_num_framebuffers; ++copy) {
+        // Identity MVP Matrix
+        *uni_buf_data++ = 1.0f;
+        *uni_buf_data++ = 0.0f;
+        *uni_buf_data++ = 0.0f;
+        *uni_buf_data++ = 0.0f;
+        *uni_buf_data++ = 0.0f;
+        *uni_buf_data++ = 1.0f;
+        *uni_buf_data++ = 0.0f;
+        *uni_buf_data++ = 0.0f;
+        *uni_buf_data++ = 0.0f;
+        *uni_buf_data++ = 0.0f;
+        *uni_buf_data++ = 1.0f;
+        *uni_buf_data++ = 0.0f;
+        *uni_buf_data++ = 0.0f;
+        *uni_buf_data++ = 0.0f;
+        *uni_buf_data++ = 0.0f;
+        *uni_buf_data++ = 1.0f;
 
-    // Fill in vertex data
-    for (uint32_t vert = 0; vert < m_vertices.data.size(); vert++) {
-        for (uint32_t comp = 0; comp < 6; comp++) {
-            if (comp < m_vertices.num_vert_comps + m_vertices.num_tex_coord_comps) {
+        // Fill in vertex data
+        for (uint32_t vert = 0; vert < num_verts; ++vert) {
+            // Put in the position info
+            for (uint32_t comp = 0; comp < m_vertices.num_pos_comps; ++comp) {
                 *uni_buf_data++ = m_vertices.data[(vert * stride) + comp];
+            }
+            // Write out each texture coordinate.
+            for (uint32_t tc = 0; tc < m_vertices.num_tex_coords; ++tc) {
+                uint32_t comp = 0;
+                uint32_t tc_offset = (vert * stride) + m_vertices.num_pos_comps + (tc * m_vertices.num_tex_coord_comps);
+                // Write out each texture coordinate component.  We always write out 4 per
+                // Texture coordinate since it makes strides easier to use.
+                for (comp = 0; comp < m_vertices.num_tex_coord_comps; comp++) {
+                    *uni_buf_data++ = m_vertices.data[tc_offset + comp];
+                }
+                for (; comp < 4; ++comp) {
+                    *uni_buf_data++ = 0;
+                }
             }
         }
     }
     m_uniform_buffer.uniform_buffer->Unmap();
+
+    // Bind the Vulkan uniform buffer to the memory we just wrote to
+    if (!m_uniform_buffer.uniform_buffer->Bind()) {
+        logger.LogError("GravitySceneSplash::Start - failed to bind uniform buffer");
+        return false;
+    }
+
+    // Setup a descriptor set per framebuffer, so we can allow rendering a framebuffer while
+    // simultaneously building the next one, and freeing the previous one.
+    m_framebuffer_desc_set.resize(m_num_framebuffers);
 
     // Fill out a descriptor set layout binding.  The layout is kind of like defining
     // the form and organization of the contents of the descriptor set, but not the
@@ -258,9 +287,9 @@ bool GravitySceneSplash::Start(VkRenderPass render_pass) {
     descriptor_layout.pBindings = layout_bindings;
 
     // Create the descriptor set layout for this scene
-    VkResult vk_result = vkCreateDescriptorSetLayout(m_dev_ext_if->m_device, &descriptor_layout, nullptr, &m_vk_desc_set_layout);
+    VkResult vk_result = vkCreateDescriptorSetLayout(m_dev_ext_if->m_vk_device, &descriptor_layout, nullptr, &m_vk_desc_set_layout);
     if (VK_SUCCESS != vk_result) {
-        std::string error_msg = "GravitySceneSplash::Start failed vkCreateDescriptorSetLayout with error ";
+        std::string error_msg = "GravitySceneSplash::Start failed vk3riptorSetLayout with error ";
         error_msg += vk_result;
         logger.LogError(error_msg);
         return false;
@@ -275,7 +304,7 @@ bool GravitySceneSplash::Start(VkRenderPass render_pass) {
     pipeline_create_info.pSetLayouts = &m_vk_desc_set_layout;
 
     // Create the pipeline layout for this scene
-    vk_result = vkCreatePipelineLayout(m_dev_ext_if->m_device, &pipeline_create_info, nullptr, &m_vk_pipeline_layout);
+    vk_result = vkCreatePipelineLayout(m_dev_ext_if->m_vk_device, &pipeline_create_info, nullptr, &m_vk_pipeline_layout);
     if (VK_SUCCESS != vk_result) {
         std::string error_msg = "GravitySceneSplash::Start failed vkCreatePipelineLayout with error ";
         error_msg += vk_result;
@@ -287,7 +316,7 @@ bool GravitySceneSplash::Start(VkRenderPass render_pass) {
     pipeline_cache_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO;
 
     // Create a pipeline cache
-    vk_result = vkCreatePipelineCache(m_dev_ext_if->m_device, &pipeline_cache_create_info, nullptr, &m_vk_pipeline_cache);
+    vk_result = vkCreatePipelineCache(m_dev_ext_if->m_vk_device, &pipeline_cache_create_info, nullptr, &m_vk_pipeline_cache);
     if (VK_SUCCESS != vk_result) {
         std::string error_msg = "GravitySceneSplash::Start failed vkCreatePipelineCache with error ";
         error_msg += vk_result;
@@ -390,7 +419,7 @@ bool GravitySceneSplash::Start(VkRenderPass render_pass) {
     graphics_pipeline_create_info.basePipelineIndex = 0;
     
     // Create the graphics pipeline
-    vk_result = vkCreateGraphicsPipelines(m_dev_ext_if->m_device, m_vk_pipeline_cache, 1,
+    vk_result = vkCreateGraphicsPipelines(m_dev_ext_if->m_vk_device, m_vk_pipeline_cache, 1,
                                           &graphics_pipeline_create_info, nullptr, &m_vk_pipeline);
     if (VK_SUCCESS != vk_result) {
         std::string error_msg = "GravitySceneSplash::Start failed vkCreateGraphicsPipelines with error ";
@@ -399,100 +428,65 @@ bool GravitySceneSplash::Start(VkRenderPass render_pass) {
         return false;
     }
 
-#if 0
+    VkDescriptorPoolSize desc_pool_size_info[2];
+    desc_pool_size_info[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    desc_pool_size_info[0].descriptorCount = m_num_framebuffers;
+    desc_pool_size_info[1].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+    desc_pool_size_info[1].descriptorCount = m_num_framebuffers;
 
-    const VkDescriptorPoolSize type_counts[2] = {
-            [0] =
-                {
-                 .type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-                 .descriptorCount = demo->swapchainImageCount,
-                },
-            [1] =
-                {
-                 .type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-                 .descriptorCount = demo->swapchainImageCount * DEMO_TEXTURE_COUNT,
-                },
-    };
-    const VkDescriptorPoolCreateInfo descriptor_pool = {
-        .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
-        .pNext = NULL,
-        .maxSets = demo->swapchainImageCount,
-        .poolSizeCount = 2,
-        .pPoolSizes = type_counts,
-    };
-    VkResult U_ASSERT_ONLY err;
+    VkDescriptorPoolCreateInfo descriptor_pool_create_info = {};
+    descriptor_pool_create_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+    descriptor_pool_create_info.pNext = NULL;
+    descriptor_pool_create_info.maxSets = m_num_framebuffers;
+    descriptor_pool_create_info.poolSizeCount = 2;
+    descriptor_pool_create_info.pPoolSizes = desc_pool_size_info;
 
-    err = vkCreateDescriptorPool(demo->device, &descriptor_pool, NULL,
-                                 &demo->desc_pool);
-    assert(!err);
-    VkDescriptorImageInfo tex_descs[DEMO_TEXTURE_COUNT];
-    VkWriteDescriptorSet writes[2];
-    VkResult U_ASSERT_ONLY err;
-
-    VkDescriptorSetAllocateInfo alloc_info = {
-        .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
-        .pNext = NULL,
-        .descriptorPool = demo->desc_pool,
-        .descriptorSetCount = 1,
-        .pSetLayouts = &demo->desc_layout};
-
-    VkDescriptorBufferInfo buffer_info;
-    buffer_info.offset = 0;
-    buffer_info.range = sizeof(struct vktexcube_vs_uniform);
-
-    memset(&tex_descs, 0, sizeof(tex_descs));
-    for (unsigned int i = 0; i < DEMO_TEXTURE_COUNT; i++) {
-        tex_descs[i].sampler = demo->textures[i].sampler;
-        tex_descs[i].imageView = demo->textures[i].view;
-        tex_descs[i].imageLayout = VK_IMAGE_LAYOUT_GENERAL;
+    // Create a descriptor pool to create the descriptor sets out of.
+    vk_result = vkCreateDescriptorPool(m_dev_ext_if->m_vk_device, &descriptor_pool_create_info, nullptr,
+                                       &m_vk_desc_pool);
+    if (VK_SUCCESS != vk_result) {
+        std::string error_msg = "GravitySceneSplash::Start failed vkCreateDescriptorPool with error ";
+        error_msg += vk_result;
+        logger.LogError(error_msg);
+        return false;
     }
 
-    memset(&writes, 0, sizeof(writes));
+    // We want to allocate one descriptor set for now.
+    VkDescriptorSetAllocateInfo desc_set_alloc_info = {};
+    desc_set_alloc_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+    desc_set_alloc_info.pNext = nullptr;
+    desc_set_alloc_info.descriptorPool = m_vk_desc_pool;
+    desc_set_alloc_info.descriptorSetCount = 1;
+    desc_set_alloc_info.pSetLayouts = &m_vk_desc_set_layout;
 
-    writes[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-    writes[0].descriptorCount = 1;
-    writes[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-    writes[0].pBufferInfo = &buffer_info;
+    VkDescriptorImageInfo descriptor_image_info = m_splash_texture.gravity_texture->GetVkDescriptorImageInfo();
 
-    writes[1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-    writes[1].dstBinding = 1;
-    writes[1].descriptorCount = DEMO_TEXTURE_COUNT;
-    writes[1].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-    writes[1].pImageInfo = tex_descs;
+    VkWriteDescriptorSet write_descriptor_sets[2];
+    write_descriptor_sets[0] = {};
+    write_descriptor_sets[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+    write_descriptor_sets[0].descriptorCount = 1;
+    write_descriptor_sets[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    write_descriptor_sets[1] = {};
+    write_descriptor_sets[1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+    write_descriptor_sets[1].dstBinding = 1;
+    write_descriptor_sets[1].descriptorCount = 1;
+    write_descriptor_sets[1].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+    write_descriptor_sets[1].pImageInfo = &descriptor_image_info;
 
-    for (unsigned int i = 0; i < demo->swapchainImageCount; i++) {
-        err = vkAllocateDescriptorSets(demo->device, &alloc_info, &demo->swapchain_image_resources[i].descriptor_set);
-        assert(!err);
-        buffer_info.buffer = demo->swapchain_image_resources[i].uniform_buffer;
-        writes[0].dstSet = demo->swapchain_image_resources[i].descriptor_set;
-        writes[1].dstSet = demo->swapchain_image_resources[i].descriptor_set;
-        vkUpdateDescriptorSets(demo->device, 2, writes, 0, NULL);
+    for (uint32_t i = 0; i < m_num_framebuffers; i++) {
+        VkDescriptorBufferInfo desc_buf_info = m_uniform_buffer.uniform_buffer->GetDescriptorInfo(m_cur_framebuffer);
+        write_descriptor_sets[0].pBufferInfo = &desc_buf_info;
+        vk_result = vkAllocateDescriptorSets(m_dev_ext_if->m_vk_device, &desc_set_alloc_info, &m_framebuffer_desc_set[i]);
+        if (VK_SUCCESS != vk_result) {
+            std::string error_msg = "GravitySceneSplash::Start failed vkAllocateDescriptorSets with error ";
+            error_msg += vk_result;
+            logger.LogError(error_msg);
+            return false;
+        }
+        write_descriptor_sets[0].dstSet = m_framebuffer_desc_set[i];
+        write_descriptor_sets[1].dstSet = m_framebuffer_desc_set[i];
+        vkUpdateDescriptorSets(m_dev_ext_if->m_vk_device, 2, write_descriptor_sets, 0, NULL);
     }
-
-    VkImageView attachments[2];
-    attachments[1] = demo->depth.view;
-
-    const VkFramebufferCreateInfo fb_info = {
-        .sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO,
-        .pNext = NULL,
-        .renderPass = m_vk_render_pass,
-        .attachmentCount = 2,
-        .pAttachments = attachments,
-        .width = demo->width,
-        .height = demo->height,
-        .layers = 1,
-    };
-    VkResult U_ASSERT_ONLY err;
-    uint32_t i;
-
-    for (i = 0; i < demo->swapchainImageCount; i++) {
-        attachments[0] = demo->swapchain_image_resources[i].view;
-        err = vkCreateFramebuffer(demo->device, &fb_info, NULL,
-                                  &demo->swapchain_image_resources[i].framebuffer);
-        assert(!err);
-    }
-
-#endif
 
     return true;
 }
@@ -504,41 +498,32 @@ bool GravitySceneSplash::Update(float comp_time, float game_time) {
 
 bool GravitySceneSplash::Draw(VkCommandBuffer &cmd_buf) {
     bool success = true;
+    vkCmdBindPipeline(cmd_buf, VK_PIPELINE_BIND_POINT_GRAPHICS, m_vk_pipeline);
+    vkCmdBindDescriptorSets(cmd_buf, VK_PIPELINE_BIND_POINT_GRAPHICS, m_vk_pipeline_layout, 0, 1,
+                            &m_framebuffer_desc_set[m_cur_framebuffer], 0, nullptr);
 
 #if 0
-    rp_begin.framebuffer = demo->swapchain_image_resources[demo->current_buffer].framebuffer, rp_begin.renderArea.offset.x = 0;
-    rp_begin.renderArea.offset.y = 0;
-    rp_begin.renderArea.extent.width = demo->width;
-    rp_begin.renderArea.extent.height = demo->height;
-    rp_begin.clearValueCount = 2;
-    rp_begin.pClearValues = clear_values;
-
-    err = vkBeginCommandBuffer(cmd_buf, &cmd_buf_info);
-    assert(!err);
-    vkCmdBeginRenderPass(cmd_buf, &rp_begin, VK_SUBPASS_CONTENTS_INLINE);
-    vkCmdBindPipeline(cmd_buf, VK_PIPELINE_BIND_POINT_GRAPHICS, demo->pipeline);
-    vkCmdBindDescriptorSets(cmd_buf, VK_PIPELINE_BIND_POINT_GRAPHICS, demo->pipeline_layout, 0, 1,
-                            &demo->swapchain_image_resources[demo->current_buffer].descriptor_set, 0, NULL);
-    VkViewport viewport;
-    memset(&viewport, 0, sizeof(viewport));
-    viewport.height = (float)demo->height;
-    viewport.width = (float)demo->width;
+    // Set a full render area viewport/scissor
+    VkViewport viewport = {};
+    VkRect2D scissor = {};
+    viewport.height = (float)m_height;
+    viewport.width = (float)m_width;
     viewport.minDepth = (float)0.0f;
     viewport.maxDepth = (float)1.0f;
     vkCmdSetViewport(cmd_buf, 0, 1, &viewport);
-
-    VkRect2D scissor;
-    memset(&scissor, 0, sizeof(scissor));
-    scissor.extent.width = demo->width;
-    scissor.extent.height = demo->height;
+    scissor.extent.width = m_width;
+    scissor.extent.height = m_height;
     scissor.offset.x = 0;
     scissor.offset.y = 0;
     vkCmdSetScissor(cmd_buf, 0, 1, &scissor);
+
+    // Do the draw
     vkCmdDraw(cmd_buf, 12 * 3, 1, 0, 0);
-    // Note that ending the renderpass changes the image's layout from
-    // COLOR_ATTACHMENT_OPTIMAL to PRESENT_SRC_KHR
-    vkCmdEndRenderPass(cmd_buf);
-#endif
+#endif // Brainpain
+
+    if (++m_cur_framebuffer >= m_num_framebuffers) {
+        m_cur_framebuffer = 0;
+    }
     return success;
 }
 
@@ -552,7 +537,7 @@ bool GravitySceneSplash::End() {
         logger.LogError("GravitySceneSplash::End - failed to unload GravityUniformBuffer");
         return false;
     }
-    if (!m_texture.texture->Unload()) {
+    if (!m_splash_texture.gravity_texture->Unload()) {
         logger.LogError("GravitySceneSplash::End - failed to unload GravityTexture");
         return false;
     }
@@ -561,19 +546,23 @@ bool GravitySceneSplash::End() {
 
 bool GravitySceneSplash::Unload() {
     if (VK_NULL_HANDLE != m_vk_pipeline) {
-        vkDestroyPipeline(m_dev_ext_if->m_device, m_vk_pipeline, nullptr);
+        vkDestroyDescriptorPool(m_dev_ext_if->m_vk_device, m_vk_desc_pool, nullptr);
+        m_vk_desc_pool = VK_NULL_HANDLE;
+    }
+    if (VK_NULL_HANDLE != m_vk_pipeline) {
+        vkDestroyPipeline(m_dev_ext_if->m_vk_device, m_vk_pipeline, nullptr);
         m_vk_pipeline = VK_NULL_HANDLE;
     }
     if (VK_NULL_HANDLE != m_vk_pipeline_cache) {
-        vkDestroyPipelineCache(m_dev_ext_if->m_device, m_vk_pipeline_cache, nullptr);
+        vkDestroyPipelineCache(m_dev_ext_if->m_vk_device, m_vk_pipeline_cache, nullptr);
         m_vk_pipeline_cache = VK_NULL_HANDLE;
     }
     if (VK_NULL_HANDLE != m_vk_pipeline_layout) {
-        vkDestroyPipelineLayout(m_dev_ext_if->m_device, m_vk_pipeline_layout, nullptr);
+        vkDestroyPipelineLayout(m_dev_ext_if->m_vk_device, m_vk_pipeline_layout, nullptr);
         m_vk_pipeline_layout = VK_NULL_HANDLE;
     }
     if (VK_NULL_HANDLE != m_vk_desc_set_layout) {
-        vkDestroyDescriptorSetLayout(m_dev_ext_if->m_device, m_vk_desc_set_layout, nullptr);
+        vkDestroyDescriptorSetLayout(m_dev_ext_if->m_vk_device, m_vk_desc_set_layout, nullptr);
         m_vk_desc_set_layout = VK_NULL_HANDLE;
     }
     if (nullptr != m_shader.shader) {
@@ -584,9 +573,9 @@ bool GravitySceneSplash::Unload() {
         delete m_uniform_buffer.uniform_buffer;
         m_uniform_buffer.uniform_buffer = nullptr;
     }
-    if (nullptr != m_texture.texture) {
-        delete m_texture.texture;
-        m_texture.texture = nullptr;
+    if (nullptr != m_splash_texture.gravity_texture) {
+        delete m_splash_texture.gravity_texture;
+        m_splash_texture.gravity_texture = nullptr;
     }
     return true;
 }

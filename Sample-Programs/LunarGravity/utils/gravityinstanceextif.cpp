@@ -21,7 +21,7 @@
 #include "gravityinstanceextif.hpp"
 
 GravityInstanceExtIf::GravityInstanceExtIf(VkInstance instance) {
-    m_instance = instance;
+    m_vk_instance = instance;
     if (VK_NULL_HANDLE != instance) {
         // ---- VK_KHR_android_surface extension commands
 #ifdef VK_USE_PLATFORM_ANDROID_KHR
@@ -180,6 +180,6 @@ void GravityInstanceExtIf::ClearCalls() {
 }
 
 GravityInstanceExtIf::~GravityInstanceExtIf() {
-    m_instance = VK_NULL_HANDLE;
+    m_vk_instance = VK_NULL_HANDLE;
     ClearCalls();
 }

@@ -22,12 +22,20 @@
 
 #include <vulkan/vulkan.h>
 
+struct GravityQueue {
+    VkQueue vk_queue;
+    uint32_t family_index;
+};
+
 class GravityDeviceExtIf {
    public:
-    GravityDeviceExtIf(VkDevice device);
+    GravityDeviceExtIf(VkPhysicalDevice physical_device, VkDevice device, GravityQueue graphics_queue, GravityQueue present_queue);
     ~GravityDeviceExtIf();
 
-    VkDevice m_device;
+    VkPhysicalDevice m_vk_physical_device;
+    VkDevice m_vk_device;
+    GravityQueue m_vk_graphics_queue;
+    GravityQueue m_vk_present_queue;
 
     // ---- VK_KHR_descriptor_update_template extension commands
     PFN_vkCreateDescriptorUpdateTemplateKHR CreateDescriptorUpdateTemplateKHR;
