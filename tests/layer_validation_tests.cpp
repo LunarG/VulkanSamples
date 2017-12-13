@@ -12220,115 +12220,98 @@ TEST_F(VkLayerTest, DSBufferLimitErrors) {
 
     ASSERT_NO_FATAL_FAILURE(Init());
 
-    // Create layout with single uniform buffer & single storage buffer descriptor
-    OneOffDescriptorSet ds(m_device->device(), {
-        { 0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1, VK_SHADER_STAGE_ALL, nullptr },
-        { 1, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_ALL, nullptr },
-    });
+    struct TestCase {
+        VkDescriptorType descriptor_type;
+        VkBufferUsageFlagBits buffer_usage;
+        VkDeviceSize max_range;
+        UNIQUE_VALIDATION_ERROR_CODE max_range_vu;
+        VkDeviceSize min_align;
+        UNIQUE_VALIDATION_ERROR_CODE min_align_vu;
+    };
 
-    // Create a buffer to be used for invalid updates
-    auto max_ub_range = m_device->props.limits.maxUniformBufferRange;
-    auto min_ub_align = m_device->props.limits.minUniformBufferOffsetAlignment;
-    auto max_sb_range = m_device->props.limits.maxStorageBufferRange;
-    auto min_sb_align = m_device->props.limits.minStorageBufferOffsetAlignment;
-    VkBufferCreateInfo ub_ci = {};
-    ub_ci.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-    ub_ci.usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
-    ub_ci.size = max_ub_range + 128;  // Make buffer bigger than range limit
-    ub_ci.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-    VkBuffer uniform_buffer;
-    err = vkCreateBuffer(m_device->device(), &ub_ci, NULL, &uniform_buffer);
-    ASSERT_VK_SUCCESS(err);
-    VkBufferCreateInfo sb_ci = {};
-    sb_ci.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-    sb_ci.usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
-    sb_ci.size = max_sb_range + 128;  // Make buffer bigger than range limit
-    sb_ci.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-    VkBuffer storage_buffer;
-    err = vkCreateBuffer(m_device->device(), &sb_ci, NULL, &storage_buffer);
-    ASSERT_VK_SUCCESS(err);
-    // Have to bind memory to buffer before descriptor update
-    VkMemoryAllocateInfo mem_alloc = {};
-    mem_alloc.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-    mem_alloc.pNext = NULL;
-    mem_alloc.allocationSize = ub_ci.size + sb_ci.size + 1024;  // additional buffer for offset
-    mem_alloc.memoryTypeIndex = 0;
+    for (const auto &test_case : {
+             TestCase({VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+                       m_device->props.limits.maxUniformBufferRange, VALIDATION_ERROR_15c00298,
+                       m_device->props.limits.minUniformBufferOffsetAlignment, VALIDATION_ERROR_15c0028e}),
+             TestCase({VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
+                       m_device->props.limits.maxStorageBufferRange, VALIDATION_ERROR_15c0029a,
+                       m_device->props.limits.minStorageBufferOffsetAlignment, VALIDATION_ERROR_15c00290}),
+         }) {
+        // Create layout with single buffer
+        OneOffDescriptorSet ds(m_device->device(),
+                               {
+                                   {0, test_case.descriptor_type, 1, VK_SHADER_STAGE_ALL, nullptr},
+                               });
 
-    VkMemoryRequirements ub_mem_reqs, sb_mem_reqs;
-    vkGetBufferMemoryRequirements(m_device->device(), uniform_buffer, &ub_mem_reqs);
-    bool pass = m_device->phy().set_memory_type(ub_mem_reqs.memoryTypeBits, &mem_alloc, 0);
-    vkGetBufferMemoryRequirements(m_device->device(), storage_buffer, &sb_mem_reqs);
-    pass &= m_device->phy().set_memory_type(sb_mem_reqs.memoryTypeBits, &mem_alloc, 0);
-    if (!pass) {
-        vkDestroyBuffer(m_device->device(), uniform_buffer, NULL);
-        vkDestroyBuffer(m_device->device(), storage_buffer, NULL);
-        return;
+        // Create a buffer to be used for invalid updates
+        VkBufferCreateInfo bci = {};
+        bci.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+        bci.usage = test_case.buffer_usage;
+        bci.size = test_case.max_range + test_case.min_align;  // Make buffer bigger than range limit
+        bci.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+        VkBuffer buffer;
+        err = vkCreateBuffer(m_device->device(), &bci, NULL, &buffer);
+        ASSERT_VK_SUCCESS(err);
+
+        // Have to bind memory to buffer before descriptor update
+        VkMemoryRequirements mem_reqs;
+        vkGetBufferMemoryRequirements(m_device->device(), buffer, &mem_reqs);
+
+        VkMemoryAllocateInfo mem_alloc = {};
+        mem_alloc.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+        mem_alloc.pNext = NULL;
+        mem_alloc.allocationSize = mem_reqs.size;
+        bool pass = m_device->phy().set_memory_type(mem_reqs.memoryTypeBits, &mem_alloc, 0);
+        if (!pass) {
+            printf("             Failed to allocate memory in DSBufferLimitErrors; skipped.\n");
+            vkDestroyBuffer(m_device->device(), buffer, NULL);
+            continue;
+        }
+
+        VkDeviceMemory mem;
+        err = vkAllocateMemory(m_device->device(), &mem_alloc, NULL, &mem);
+        if (VK_SUCCESS != err) {
+            printf("             Failed to allocate memory in DSBufferLimitErrors; skipped.\n");
+            vkDestroyBuffer(m_device->device(), buffer, NULL);
+            continue;
+        }
+        err = vkBindBufferMemory(m_device->device(), buffer, mem, 0);
+        ASSERT_VK_SUCCESS(err);
+
+        VkDescriptorBufferInfo buff_info = {};
+        buff_info.buffer = buffer;
+        VkWriteDescriptorSet descriptor_write = {};
+        descriptor_write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+        descriptor_write.dstBinding = 0;
+        descriptor_write.descriptorCount = 1;
+        descriptor_write.pTexelBufferView = nullptr;
+        descriptor_write.pBufferInfo = &buff_info;
+        descriptor_write.pImageInfo = nullptr;
+        descriptor_write.descriptorType = test_case.descriptor_type;
+        descriptor_write.dstSet = ds.set_;
+
+        // Exceed range limit
+        if (test_case.max_range != UINT32_MAX) {
+            buff_info.range = test_case.max_range + 1;
+            buff_info.offset = 0;
+            m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, test_case.max_range_vu);
+            vkUpdateDescriptorSets(m_device->device(), 1, &descriptor_write, 0, NULL);
+            m_errorMonitor->VerifyFound();
+        }
+
+        // Reduce size of range to acceptable limit and cause offset error
+        if (test_case.min_align > 1) {
+            buff_info.range = test_case.max_range;
+            buff_info.offset = test_case.min_align - 1;
+            m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, test_case.min_align_vu);
+            vkUpdateDescriptorSets(m_device->device(), 1, &descriptor_write, 0, NULL);
+            m_errorMonitor->VerifyFound();
+        }
+
+        // Cleanup
+        vkFreeMemory(m_device->device(), mem, NULL);
+        vkDestroyBuffer(m_device->device(), buffer, NULL);
     }
-
-    VkDeviceMemory mem;
-    err = vkAllocateMemory(m_device->device(), &mem_alloc, NULL, &mem);
-    if (VK_SUCCESS != err) {
-        printf("             Failed to allocate memory in DSBufferLimitErrors; skipped.\n");
-        vkDestroyBuffer(m_device->device(), uniform_buffer, NULL);
-        vkDestroyBuffer(m_device->device(), storage_buffer, NULL);
-        return;
-    }
-    ASSERT_VK_SUCCESS(err);
-    err = vkBindBufferMemory(m_device->device(), uniform_buffer, mem, 0);
-    ASSERT_VK_SUCCESS(err);
-    // TODO: This was failing on mock w/ 256 offsetAlignment. Update to work for all values.
-    auto sb_offset = (ub_ci.size + sb_mem_reqs.alignment - 1) & ~(sb_mem_reqs.alignment - 1);
-    err = vkBindBufferMemory(m_device->device(), storage_buffer, mem, sb_offset);
-    ASSERT_VK_SUCCESS(err);
-
-    VkDescriptorBufferInfo buff_info = {};
-    buff_info.buffer = uniform_buffer;
-    buff_info.range = ub_ci.size;  // This will exceed limit
-    VkWriteDescriptorSet descriptor_write = {};
-    descriptor_write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-    descriptor_write.dstBinding = 0;
-    descriptor_write.descriptorCount = 1;
-    descriptor_write.pTexelBufferView = nullptr;
-    descriptor_write.pBufferInfo = &buff_info;
-    descriptor_write.pImageInfo = nullptr;
-
-    descriptor_write.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-    descriptor_write.dstSet = ds.set_;
-    if (max_ub_range != UINT32_MAX) {
-        m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_15c00298);
-        vkUpdateDescriptorSets(m_device->device(), 1, &descriptor_write, 0, NULL);
-        m_errorMonitor->VerifyFound();
-    }
-    // Reduce size of range to acceptable limit & cause offset error
-    buff_info.range = max_ub_range;
-    buff_info.offset = min_ub_align - 1;
-    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_15c0028e);
-    vkUpdateDescriptorSets(m_device->device(), 1, &descriptor_write, 0, NULL);
-    m_errorMonitor->VerifyFound();
-
-    // Now break storage updates
-    buff_info.buffer = storage_buffer;
-    buff_info.range = sb_ci.size;  // This will exceed limit
-    buff_info.offset = 0;          // Reset offset for this update
-
-    descriptor_write.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-    descriptor_write.dstBinding = 1;
-    if (max_ub_range != UINT32_MAX) {
-        m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_15c0029a);
-        vkUpdateDescriptorSets(m_device->device(), 1, &descriptor_write, 0, NULL);
-        m_errorMonitor->VerifyFound();
-    }
-
-    // Reduce size of range to acceptable limit & cause offset error
-    buff_info.range = max_sb_range;
-    buff_info.offset = min_sb_align - 1;
-    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_15c00290);
-    vkUpdateDescriptorSets(m_device->device(), 1, &descriptor_write, 0, NULL);
-    m_errorMonitor->VerifyFound();
-
-    vkFreeMemory(m_device->device(), mem, NULL);
-    vkDestroyBuffer(m_device->device(), uniform_buffer, NULL);
-    vkDestroyBuffer(m_device->device(), storage_buffer, NULL);
 }
 
 TEST_F(VkLayerTest, DSAspectBitsErrors) {
