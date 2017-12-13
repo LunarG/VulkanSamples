@@ -2435,10 +2435,10 @@ int main(int argc, char **argv) {
     int present_mode_count = 0;
 
 #if defined(VK_USE_PLATFORM_XCB_KHR) || defined(VK_USE_PLATFORM_XLIB_KHR)
+    bool has_display = true;
     if (getenv("DISPLAY") == NULL) {
-        printf("'DISPLAY' environment variable not set... Exiting!\n");
-        fflush(stdout);
-        exit(1);
+        printf("'DISPLAY' environment variable not set... skipping surface info\n");
+        has_display = false;
     }
 #endif
 
@@ -2466,7 +2466,7 @@ int main(int argc, char **argv) {
     }
 //--XCB--
 #elif VK_USE_PLATFORM_XCB_KHR
-    if (CheckExtensionEnabled(VK_KHR_XCB_SURFACE_EXTENSION_NAME, inst.inst_extensions, inst.inst_extensions_count)) {
+    if (has_display && CheckExtensionEnabled(VK_KHR_XCB_SURFACE_EXTENSION_NAME, inst.inst_extensions, inst.inst_extensions_count)) {
         AppCreateXcbWindow(&inst);
         for (uint32_t i = 0; i < gpu_count; i++) {
             AppCreateXcbSurface(&inst);
@@ -2488,7 +2488,7 @@ int main(int argc, char **argv) {
     }
 //--XLIB--
 #elif VK_USE_PLATFORM_XLIB_KHR
-    if (CheckExtensionEnabled(VK_KHR_XLIB_SURFACE_EXTENSION_NAME, inst.inst_extensions, inst.inst_extensions_count)) {
+    if (has_display && CheckExtensionEnabled(VK_KHR_XLIB_SURFACE_EXTENSION_NAME, inst.inst_extensions, inst.inst_extensions_count)) {
         AppCreateXlibWindow(&inst);
         for (uint32_t i = 0; i < gpu_count; i++) {
             AppCreateXlibSurface(&inst);
