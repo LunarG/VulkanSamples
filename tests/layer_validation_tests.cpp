@@ -645,7 +645,7 @@ void VkLayerTest::VKTriangleTest(BsoFailSelect failCase) {
 }
 
 void VkLayerTest::GenericDrawPreparation(VkCommandBufferObj *commandBuffer, VkPipelineObj &pipelineobj,
-                                         VkDescriptorSetObj &descriptorSet, BsoFailSelect failMask) {
+                                         VkDescriptorSetObj &descriptorSet, BsoFailSelect failCase) {
     commandBuffer->ClearAllBuffers(m_renderTargets, m_clear_color, m_depthStencil, m_depth_clear_color, m_stencil_clear_color);
 
     commandBuffer->PrepareAttachments(m_renderTargets, m_depthStencil);
@@ -666,7 +666,7 @@ void VkLayerTest::GenericDrawPreparation(VkCommandBufferObj *commandBuffer, VkPi
     ds_ci.depthWriteEnable = VK_TRUE;
     ds_ci.depthCompareOp = VK_COMPARE_OP_NEVER;
     ds_ci.depthBoundsTestEnable = VK_FALSE;
-    if (failMask & BsoFailDepthBounds) {
+    if (failCase == BsoFailDepthBounds) {
         ds_ci.depthBoundsTestEnable = VK_TRUE;
         ds_ci.maxDepthBounds = 0.0f;
         ds_ci.minDepthBounds = 0.0f;
