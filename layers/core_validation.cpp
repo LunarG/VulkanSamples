@@ -1452,9 +1452,10 @@ static bool ValidatePipelineUnlocked(layer_data *dev_data, std::vector<std::uniq
                            (!dev_data->enabled_features.depthBounds)) {
                     skip |= log_msg(
                         dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_PIPELINE_EXT,
-                        HandleToUint64(pPipeline->pipeline), __LINE__, DRAWSTATE_INVALID_FEATURE, "DS",
+                        HandleToUint64(pPipeline->pipeline), __LINE__, VALIDATION_ERROR_0f6004ac, "DS",
                         "vkCreateGraphicsPipelines(): the depthBounds device feature is disabled: the depthBoundsTestEnable "
-                        "member of the VkPipelineDepthStencilStateCreateInfo structure must be set to VK_FALSE.");
+                        "member of the VkPipelineDepthStencilStateCreateInfo structure must be set to VK_FALSE. %s",
+                        validation_error_map[VALIDATION_ERROR_0f6004ac]);
                 }
             }
 
