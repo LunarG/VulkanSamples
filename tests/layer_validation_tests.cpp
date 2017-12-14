@@ -577,17 +577,17 @@ void VkLayerTest::VKTriangleTest(BsoFailSelect failCase) {
             break;
         }
         case BsoFailStencilReadMask: {
-            // failcase_needs_depth = true; // Mali driver failing if DS gets cleared
+            failcase_needs_depth = true;
             pipelineobj.MakeDynamic(VK_DYNAMIC_STATE_STENCIL_COMPARE_MASK);
             break;
         }
         case BsoFailStencilWriteMask: {
-            // failcase_needs_depth = true; // Mali driver failing if DS gets cleared
+            failcase_needs_depth = true;
             pipelineobj.MakeDynamic(VK_DYNAMIC_STATE_STENCIL_WRITE_MASK);
             break;
         }
         case BsoFailStencilReference: {
-            // failcase_needs_depth = true; // Mali driver failing if DS gets cleared
+            failcase_needs_depth = true;
             pipelineobj.MakeDynamic(VK_DYNAMIC_STATE_STENCIL_REFERENCE);
             break;
         }
