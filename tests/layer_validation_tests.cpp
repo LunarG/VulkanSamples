@@ -25755,6 +25755,269 @@ TEST_F(VkPositiveLayerTest, ClearDepthStencilWithValidRange) {
     }
 }
 
+TEST_F(VkPositiveLayerTest, CreateGraphicsPipelineWithIgnoredPointers) {
+    TEST_DESCRIPTION("Create Graphics Pipeline with pointers that must be ignored by layers");
+
+    ASSERT_NO_FATAL_FAILURE(Init());
+
+    m_depth_stencil_fmt = FindSupportedDepthStencilFormat(gpu());
+    ASSERT_TRUE(m_depth_stencil_fmt != 0);
+
+    m_depthStencil->Init(m_device, static_cast<int32_t>(m_width), static_cast<int32_t>(m_height), m_depth_stencil_fmt);
+
+    ASSERT_NO_FATAL_FAILURE(InitRenderTarget(m_depthStencil->BindInfo()));
+
+    const uint64_t fake_address_64 = 0xCDCDCDCDCDCDCDCD;
+    const uint64_t fake_address_32 = 0xCDCDCDCD;
+    void *hopefully_undereferencable_pointer =
+        sizeof(void *) == 8 ? reinterpret_cast<void *>(fake_address_64) : reinterpret_cast<void *>(fake_address_32);
+
+    VkShaderObj vs(m_device, "#version 450\nvoid main(){gl_Position = vec4(0.0, 0.0, 0.0, 1.0);}\n", VK_SHADER_STAGE_VERTEX_BIT,
+                   this);
+
+    const VkPipelineVertexInputStateCreateInfo pipeline_vertex_input_state_create_info{
+        VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO,
+        nullptr,  // pNext
+        0,        // flags
+        0,
+        nullptr,  // bindings
+        0,
+        nullptr  // attributes
+    };
+
+    const VkPipelineInputAssemblyStateCreateInfo pipeline_input_assembly_state_create_info{
+        VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO,
+        nullptr,  // pNext
+        0,        // flags
+        VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST,
+        VK_FALSE  // primitive restart
+    };
+
+    const VkPipelineRasterizationStateCreateInfo pipeline_rasterization_state_create_info_template{
+        VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO,
+        nullptr,   // pNext
+        0,         // flags
+        VK_FALSE,  // depthClamp
+        VK_FALSE,  // rasterizerDiscardEnable
+        VK_POLYGON_MODE_FILL,
+        VK_CULL_MODE_NONE,
+        VK_FRONT_FACE_COUNTER_CLOCKWISE,
+        VK_FALSE,  // depthBias
+        0.0f,
+        0.0f,
+        0.0f,  // depthBias params
+        1.0f   // lineWidth
+    };
+
+    VkPipelineLayout pipeline_layout;
+    {
+        VkPipelineLayoutCreateInfo pipeline_layout_create_info{
+            VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
+            nullptr,  // pNext
+            0,        // flags
+            0,
+            nullptr,  // layouts
+            0,
+            nullptr  // push constants
+        };
+
+        VkResult err = vkCreatePipelineLayout(m_device->device(), &pipeline_layout_create_info, nullptr, &pipeline_layout);
+        ASSERT_VK_SUCCESS(err);
+    }
+
+    // try disabled rasterizer and no tessellation
+    {
+        m_errorMonitor->ExpectSuccess();
+
+        VkPipelineRasterizationStateCreateInfo pipeline_rasterization_state_create_info =
+            pipeline_rasterization_state_create_info_template;
+        pipeline_rasterization_state_create_info.rasterizerDiscardEnable = VK_TRUE;
+
+        VkGraphicsPipelineCreateInfo graphics_pipeline_create_info{
+            VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO,
+            nullptr,  // pNext
+            0,        // flags
+            1,        // stageCount
+            &vs.GetStageCreateInfo(),
+            &pipeline_vertex_input_state_create_info,
+            &pipeline_input_assembly_state_create_info,
+            reinterpret_cast<const VkPipelineTessellationStateCreateInfo *>(hopefully_undereferencable_pointer),
+            reinterpret_cast<const VkPipelineViewportStateCreateInfo *>(hopefully_undereferencable_pointer),
+            &pipeline_rasterization_state_create_info,
+            reinterpret_cast<const VkPipelineMultisampleStateCreateInfo *>(hopefully_undereferencable_pointer),
+            reinterpret_cast<const VkPipelineDepthStencilStateCreateInfo *>(hopefully_undereferencable_pointer),
+            reinterpret_cast<const VkPipelineColorBlendStateCreateInfo *>(hopefully_undereferencable_pointer),
+            nullptr,  // dynamic states
+            pipeline_layout,
+            m_renderPass,
+            0,  // subpass
+            VK_NULL_HANDLE,
+            0};
+
+        VkPipeline pipeline;
+        vkCreateGraphicsPipelines(m_device->handle(), VK_NULL_HANDLE, 1, &graphics_pipeline_create_info, nullptr, &pipeline);
+
+        m_errorMonitor->VerifyNotFound();
+
+        vkDestroyPipeline(m_device->handle(), pipeline, nullptr);
+    }
+
+    const VkPipelineMultisampleStateCreateInfo pipeline_multisample_state_create_info{
+        VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO,
+        nullptr,  // pNext
+        0,        // flags
+        VK_SAMPLE_COUNT_1_BIT,
+        VK_FALSE,  // sample shading
+        0.0f,      // minSampleShading
+        nullptr,   // pSampleMask
+        VK_FALSE,  // alphaToCoverageEnable
+        VK_FALSE   // alphaToOneEnable
+    };
+
+    // try enabled rasterizer but no subpass attachments
+    {
+        m_errorMonitor->ExpectSuccess();
+
+        VkPipelineRasterizationStateCreateInfo pipeline_rasterization_state_create_info =
+            pipeline_rasterization_state_create_info_template;
+        pipeline_rasterization_state_create_info.rasterizerDiscardEnable = VK_FALSE;
+
+        VkViewport viewport = {0.0f, 0.0f, 1.0f, 1.0f, 0.0f, 1.0f};
+        VkRect2D scissor = {{0, 0}, {static_cast<uint32_t>(m_width), static_cast<uint32_t>(m_height)}};
+
+        const VkPipelineViewportStateCreateInfo pipeline_viewport_state_create_info{
+            VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO,
+            nullptr,  // pNext
+            0,        // flags
+            1,
+            &viewport,
+            1,
+            &scissor};
+
+        VkRenderPass render_pass;
+        {
+            VkSubpassDescription subpass_desc = {};
+
+            VkRenderPassCreateInfo render_pass_create_info{
+                VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO,
+                nullptr,  // pNext
+                0,        // flags
+                0,
+                nullptr,  // attachments
+                1,
+                &subpass_desc,
+                0,
+                nullptr  // subpass dependencies
+            };
+
+            VkResult err = vkCreateRenderPass(m_device->handle(), &render_pass_create_info, nullptr, &render_pass);
+            ASSERT_VK_SUCCESS(err);
+        }
+
+        VkGraphicsPipelineCreateInfo graphics_pipeline_create_info{
+            VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO,
+            nullptr,  // pNext
+            0,        // flags
+            1,        // stageCount
+            &vs.GetStageCreateInfo(),
+            &pipeline_vertex_input_state_create_info,
+            &pipeline_input_assembly_state_create_info,
+            nullptr,
+            &pipeline_viewport_state_create_info,
+            &pipeline_rasterization_state_create_info,
+            &pipeline_multisample_state_create_info,
+            reinterpret_cast<const VkPipelineDepthStencilStateCreateInfo *>(hopefully_undereferencable_pointer),
+            reinterpret_cast<const VkPipelineColorBlendStateCreateInfo *>(hopefully_undereferencable_pointer),
+            nullptr,  // dynamic states
+            pipeline_layout,
+            render_pass,
+            0,  // subpass
+            VK_NULL_HANDLE,
+            0};
+
+        VkPipeline pipeline;
+        vkCreateGraphicsPipelines(m_device->handle(), VK_NULL_HANDLE, 1, &graphics_pipeline_create_info, nullptr, &pipeline);
+
+        m_errorMonitor->VerifyNotFound();
+
+        vkDestroyPipeline(m_device->handle(), pipeline, nullptr);
+        vkDestroyRenderPass(m_device->handle(), render_pass, nullptr);
+    }
+
+    // try dynamic viewport and scissor
+    {
+        m_errorMonitor->ExpectSuccess();
+
+        VkPipelineRasterizationStateCreateInfo pipeline_rasterization_state_create_info =
+            pipeline_rasterization_state_create_info_template;
+        pipeline_rasterization_state_create_info.rasterizerDiscardEnable = VK_FALSE;
+
+        const VkPipelineViewportStateCreateInfo pipeline_viewport_state_create_info{
+            VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO,
+            nullptr,  // pNext
+            0,        // flags
+            1,
+            reinterpret_cast<const VkViewport *>(hopefully_undereferencable_pointer),
+            1,
+            reinterpret_cast<const VkRect2D *>(hopefully_undereferencable_pointer)};
+
+        const VkPipelineDepthStencilStateCreateInfo pipeline_depth_stencil_state_create_info{
+            VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO,
+            nullptr,  // pNext
+            0,        // flags
+        };
+
+        const VkPipelineColorBlendAttachmentState pipeline_color_blend_attachment_state = {};
+
+        const VkPipelineColorBlendStateCreateInfo pipeline_color_blend_state_create_info{
+            VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO,
+            nullptr,  // pNext
+            0,        // flags
+            VK_FALSE,
+            VK_LOGIC_OP_CLEAR,
+            1,
+            &pipeline_color_blend_attachment_state,
+            {0.0f, 0.0f, 0.0f, 0.0f}};
+
+        const VkDynamicState dynamic_states[2] = {VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR};
+
+        const VkPipelineDynamicStateCreateInfo pipeline_dynamic_state_create_info{
+            VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO,
+            nullptr,  // pNext
+            0,        // flags
+            2, dynamic_states};
+
+        VkGraphicsPipelineCreateInfo graphics_pipeline_create_info{VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO,
+                                                                   nullptr,  // pNext
+                                                                   0,        // flags
+                                                                   1,        // stageCount
+                                                                   &vs.GetStageCreateInfo(),
+                                                                   &pipeline_vertex_input_state_create_info,
+                                                                   &pipeline_input_assembly_state_create_info,
+                                                                   nullptr,
+                                                                   &pipeline_viewport_state_create_info,
+                                                                   &pipeline_rasterization_state_create_info,
+                                                                   &pipeline_multisample_state_create_info,
+                                                                   &pipeline_depth_stencil_state_create_info,
+                                                                   &pipeline_color_blend_state_create_info,
+                                                                   &pipeline_dynamic_state_create_info,  // dynamic states
+                                                                   pipeline_layout,
+                                                                   m_renderPass,
+                                                                   0,  // subpass
+                                                                   VK_NULL_HANDLE,
+                                                                   0};
+
+        VkPipeline pipeline;
+        vkCreateGraphicsPipelines(m_device->handle(), VK_NULL_HANDLE, 1, &graphics_pipeline_create_info, nullptr, &pipeline);
+
+        m_errorMonitor->VerifyNotFound();
+
+        vkDestroyPipeline(m_device->handle(), pipeline, nullptr);
+    }
+
+    vkDestroyPipelineLayout(m_device->handle(), pipeline_layout, nullptr);
+}
+
 TEST_F(VkPositiveLayerTest, ExternalMemory) {
     TEST_DESCRIPTION("Perform a copy through a pair of buffers linked by external memory");
 

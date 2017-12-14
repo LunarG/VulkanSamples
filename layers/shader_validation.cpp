@@ -771,7 +771,7 @@ static bool validate_vi_against_vs_inputs(debug_report_data const *report_data, 
 static bool validate_fs_outputs_against_render_pass(debug_report_data const *report_data, shader_module const *fs,
                                                     spirv_inst_iter entrypoint, PIPELINE_STATE const *pipeline,
                                                     uint32_t subpass_index) {
-    auto rpci = pipeline->render_pass_ci.ptr();
+    auto rpci = pipeline->rp_state->createInfo.ptr();
 
     std::map<uint32_t, VkFormat> color_attachments;
     auto subpass = rpci->pSubpasses[subpass_index];
@@ -1356,7 +1356,7 @@ static bool validate_pipeline_shader_stage(
     if (pStage->stage == VK_SHADER_STAGE_FRAGMENT_BIT) {
         auto input_attachment_uses = collect_interface_by_input_attachment_index(module, accessible_ids);
 
-        auto rpci = pipeline->render_pass_ci.ptr();
+        auto rpci = pipeline->rp_state->createInfo.ptr();
         auto subpass = pipeline->graphicsPipelineCI.subpass;
 
         for (auto use : input_attachment_uses) {

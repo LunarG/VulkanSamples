@@ -83,6 +83,10 @@ extern bool parameter_validation_vkDestroyDebugReportCallbackEXT(VkInstance inst
                                                                  const VkAllocationCallbacks *pAllocator);
 extern bool parameter_validation_vkCreateCommandPool(VkDevice device, const VkCommandPoolCreateInfo *pCreateInfo,
                                                      const VkAllocationCallbacks *pAllocator, VkCommandPool *pCommandPool);
+extern bool parameter_validation_vkCreateRenderPass(VkDevice device, const VkRenderPassCreateInfo *pCreateInfo,
+                                                    const VkAllocationCallbacks *pAllocator, VkRenderPass *pRenderPass);
+extern bool parameter_validation_vkDestroyRenderPass(VkDevice device, VkRenderPass renderPass,
+                                                     const VkAllocationCallbacks *pAllocator);
 
 // TODO : This can be much smarter, using separate locks for separate global data
 std::mutex global_lock;
@@ -576,6 +580,76 @@ VKAPI_ATTR VkResult VKAPI_CALL vkCreateQueryPool(VkDevice device, const VkQueryP
         result = device_data->dispatch_table.CreateQueryPool(device, pCreateInfo, pAllocator, pQueryPool);
     }
     return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL vkCreateRenderPass(VkDevice device, const VkRenderPassCreateInfo *pCreateInfo,
+                                                  const VkAllocationCallbacks *pAllocator, VkRenderPass *pRenderPass) {
+    layer_data *device_data = GetLayerDataPtr(get_dispatch_key(device), layer_data_map);
+    bool skip = false;
+    VkResult result = VK_ERROR_VALIDATION_FAILED_EXT;
+
+    {
+        std::unique_lock<std::mutex> lock(global_lock);
+        skip |= parameter_validation_vkCreateRenderPass(device, pCreateInfo, pAllocator, pRenderPass);
+
+        typedef bool (*PFN_manual_vkCreateRenderPass)(VkDevice device, const VkRenderPassCreateInfo* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkRenderPass* pRenderPass);
+        PFN_manual_vkCreateRenderPass custom_func = (PFN_manual_vkCreateRenderPass)custom_functions["vkCreateRenderPass"];
+        if (custom_func != nullptr) {
+            skip |= custom_func(device, pCreateInfo, pAllocator, pRenderPass);
+        }
+    }
+
+    if (!skip) {
+        result = device_data->dispatch_table.CreateRenderPass(device, pCreateInfo, pAllocator, pRenderPass);
+
+        // track the state necessary for checking vkCreateGraphicsPipeline (subpass usage of depth and color attachments)
+        if (result == VK_SUCCESS) {
+            std::unique_lock<std::mutex> lock(global_lock);
+            const auto renderPass = *pRenderPass;
+            auto &renderpass_state = device_data->renderpasses_states[renderPass];
+
+            for (uint32_t subpass = 0; subpass < pCreateInfo->subpassCount; ++subpass) {
+                bool uses_color = false;
+                for (uint32_t i = 0; i < pCreateInfo->pSubpasses[subpass].colorAttachmentCount && !uses_color; ++i)
+                    if (pCreateInfo->pSubpasses[subpass].pColorAttachments[i].attachment != VK_ATTACHMENT_UNUSED) uses_color = true;
+
+                bool uses_depthstencil = false;
+                if (pCreateInfo->pSubpasses[subpass].pDepthStencilAttachment)
+                    if (pCreateInfo->pSubpasses[subpass].pDepthStencilAttachment->attachment != VK_ATTACHMENT_UNUSED)
+                        uses_depthstencil = true;
+
+                if (uses_color) renderpass_state.subpasses_using_color_attachment.insert(subpass);
+                if (uses_depthstencil) renderpass_state.subpasses_using_depthstencil_attachment.insert(subpass);
+            }
+        }
+    }
+    return result;
+}
+
+VKAPI_ATTR void VKAPI_CALL vkDestroyRenderPass(VkDevice device, VkRenderPass renderPass, const VkAllocationCallbacks *pAllocator) {
+    layer_data *device_data = GetLayerDataPtr(get_dispatch_key(device), layer_data_map);
+    bool skip = false;
+
+    {
+        std::unique_lock<std::mutex> lock(global_lock);
+        skip |= parameter_validation_vkDestroyRenderPass(device, renderPass, pAllocator);
+
+        typedef bool (*PFN_manual_vkDestroyRenderPass)(VkDevice device, VkRenderPass renderPass, const VkAllocationCallbacks* pAllocator);
+        PFN_manual_vkDestroyRenderPass custom_func = (PFN_manual_vkDestroyRenderPass)custom_functions["vkDestroyRenderPass"];
+        if (custom_func != nullptr) {
+            skip |= custom_func(device, renderPass, pAllocator);
+        }
+    }
+
+    if (!skip) {
+        device_data->dispatch_table.DestroyRenderPass(device, renderPass, pAllocator);
+
+        // track the state necessary for checking vkCreateGraphicsPipeline (subpass usage of depth and color attachments)
+        {
+            std::unique_lock<std::mutex> lock(global_lock);
+            device_data->renderpasses_states.erase(renderPass);
+        }
+    }
 }
 
 bool pv_vkCreateBuffer(VkDevice device, const VkBufferCreateInfo *pCreateInfo, const VkAllocationCallbacks *pAllocator,
@@ -1238,8 +1312,20 @@ bool pv_vkCreateGraphicsPipelines(VkDevice device, VkPipelineCache pipelineCache
                     }
                 }
 
-                // TODO: Conditional NULL check based on subpass depth/stencil attachment
-                if (pCreateInfos[i].pDepthStencilState != nullptr) {
+                bool uses_color_attachment = false;
+                bool uses_depthstencil_attachment = false;
+                {
+                    const auto subpasses_uses_it = device_data->renderpasses_states.find(pCreateInfos[i].renderPass);
+                    if (subpasses_uses_it != device_data->renderpasses_states.end()) {
+                        const auto &subpasses_uses = subpasses_uses_it->second;
+                        if (subpasses_uses.subpasses_using_color_attachment.count(pCreateInfos[i].subpass))
+                            uses_color_attachment = true;
+                        if (subpasses_uses.subpasses_using_depthstencil_attachment.count(pCreateInfos[i].subpass))
+                            uses_depthstencil_attachment = true;
+                    }
+                }
+
+                if (pCreateInfos[i].pDepthStencilState != nullptr && uses_depthstencil_attachment) {
                     skip |= validate_struct_pnext(
                         report_data, "vkCreateGraphicsPipelines",
                         ParameterName("pCreateInfos[%i].pDepthStencilState->pNext", ParameterName::IndexVector{i}), NULL,
@@ -1333,8 +1419,7 @@ bool pv_vkCreateGraphicsPipelines(VkDevice device, VkPipelineCache pipelineCache
                     }
                 }
 
-                // TODO: Conditional NULL check based on subpass color attachment
-                if (pCreateInfos[i].pColorBlendState != nullptr) {
+                if (pCreateInfos[i].pColorBlendState != nullptr && uses_color_attachment) {
                     skip |= validate_struct_pnext(
                         report_data, "vkCreateGraphicsPipelines",
                         ParameterName("pCreateInfos[%i].pColorBlendState->pNext", ParameterName::IndexVector{i}), NULL,

@@ -1287,13 +1287,13 @@ static bool ValidatePipelineUnlocked(layer_data *dev_data, std::vector<std::uniq
     // Ensure the subpass index is valid. If not, then validate_and_capture_pipeline_shader_state
     // produces nonsense errors that confuse users. Other layers should already
     // emit errors for renderpass being invalid.
-    auto subpass_desc = &pPipeline->render_pass_ci.pSubpasses[pPipeline->graphicsPipelineCI.subpass];
-    if (pPipeline->graphicsPipelineCI.subpass >= pPipeline->render_pass_ci.subpassCount) {
+    auto subpass_desc = &pPipeline->rp_state->createInfo.pSubpasses[pPipeline->graphicsPipelineCI.subpass];
+    if (pPipeline->graphicsPipelineCI.subpass >= pPipeline->rp_state->createInfo.subpassCount) {
         skip |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_PIPELINE_EXT,
                         HandleToUint64(pPipeline->pipeline), __LINE__, VALIDATION_ERROR_096005ee, "DS",
                         "Invalid Pipeline CreateInfo State: Subpass index %u "
                             "is out of range for this renderpass (0..%u). %s",
-                        pPipeline->graphicsPipelineCI.subpass, pPipeline->render_pass_ci.subpassCount - 1,
+                        pPipeline->graphicsPipelineCI.subpass, pPipeline->rp_state->createInfo.subpassCount - 1,
                         validation_error_map[VALIDATION_ERROR_096005ee]);
         subpass_desc = nullptr;
     }
@@ -1500,11 +1500,11 @@ static bool ValidatePipelineUnlocked(layer_data *dev_data, std::vector<std::uniq
         VkSampleCountFlagBits max_sample_count = static_cast<VkSampleCountFlagBits>(0);
         for (uint32_t i = 0; i < subpass_desc->colorAttachmentCount; ++i) {
             if (subpass_desc->pColorAttachments[i].attachment != VK_ATTACHMENT_UNUSED) {
-                max_sample_count = std::max(max_sample_count, pPipeline->render_pass_ci.pAttachments[subpass_desc->pColorAttachments[i].attachment].samples);
+                max_sample_count = std::max(max_sample_count, pPipeline->rp_state->createInfo.pAttachments[subpass_desc->pColorAttachments[i].attachment].samples);
             }
         }
         if (subpass_desc->pDepthStencilAttachment && subpass_desc->pDepthStencilAttachment->attachment != VK_ATTACHMENT_UNUSED) {
-            max_sample_count = std::max(max_sample_count, pPipeline->render_pass_ci.pAttachments[subpass_desc->pDepthStencilAttachment->attachment].samples);
+            max_sample_count = std::max(max_sample_count, pPipeline->rp_state->createInfo.pAttachments[subpass_desc->pDepthStencilAttachment->attachment].samples);
         }
         if (pPipeline->graphicsPipelineCI.pMultisampleState->rasterizationSamples != max_sample_count) {
             skip |=
@@ -4613,7 +4613,6 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateGraphicsPipelines(VkDevice device, VkPipeli
     for (i = 0; i < count; i++) {
         pipe_state.push_back(std::unique_ptr<PIPELINE_STATE>(new PIPELINE_STATE));
         pipe_state[i]->initGraphicsPipeline(&pCreateInfos[i], GetRenderPassStateSharedPtr(dev_data, pCreateInfos[i].renderPass));
-        pipe_state[i]->render_pass_ci.initialize(GetRenderPassState(dev_data, pCreateInfos[i].renderPass)->createInfo.ptr());
         pipe_state[i]->pipeline_layout = *getPipelineLayout(dev_data, pCreateInfos[i].layout);
     }
 
