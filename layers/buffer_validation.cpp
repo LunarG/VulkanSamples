@@ -1433,7 +1433,7 @@ bool ValidateCopyImageTransferGranularityRequirements(layer_data *device_data, c
     VkExtent3D granularity = GetScaledItg(device_data, cb_node, src_img);
     skip |= CheckItgOffset(device_data, cb_node, &region->srcOffset, &granularity, i, function, "srcOffset");
     VkExtent3D subresource_extent = GetImageSubresourceExtent(src_img, &region->srcSubresource);
-    VkExtent3D extent = region->extent;
+    const VkExtent3D extent = region->extent;
     skip |= CheckItgExtent(device_data, cb_node, &extent, &region->srcOffset, &granularity, &subresource_extent,
                            src_img->createInfo.imageType, i, function, "extent");
 
@@ -1441,7 +1441,8 @@ bool ValidateCopyImageTransferGranularityRequirements(layer_data *device_data, c
     granularity = GetScaledItg(device_data, cb_node, dst_img);
     skip |= CheckItgOffset(device_data, cb_node, &region->dstOffset, &granularity, i, function, "dstOffset");
     // Adjust dest extent, if necessary
-    VkExtent3D dest_effective_extent = GetAdjustedDestImageExtent(src_img->createInfo.format, dst_img->createInfo.format, extent);
+    const VkExtent3D dest_effective_extent =
+        GetAdjustedDestImageExtent(src_img->createInfo.format, dst_img->createInfo.format, extent);
     subresource_extent = GetImageSubresourceExtent(dst_img, &region->dstSubresource);
     skip |= CheckItgExtent(device_data, cb_node, &dest_effective_extent, &region->dstOffset, &granularity, &subresource_extent,
                            dst_img->createInfo.imageType, i, function, "extent");
@@ -1454,11 +1455,11 @@ bool ValidateImageCopyData(const layer_data *device_data, const debug_report_dat
     bool skip = false;
 
     for (uint32_t i = 0; i < regionCount; i++) {
-        VkImageCopy region = ic_regions[i];
+        const VkImageCopy region = ic_regions[i];
 
         // For comp<->uncomp copies, the copy extent for the dest image must be adjusted
-        VkExtent3D src_copy_extent = region.extent;
-        VkExtent3D dst_copy_extent =
+        const VkExtent3D src_copy_extent = region.extent;
+        const VkExtent3D dst_copy_extent =
             GetAdjustedDestImageExtent(src_state->createInfo.format, dst_state->createInfo.format, region.extent);
 
         bool slice_override = false;
@@ -1537,7 +1538,7 @@ bool ValidateImageCopyData(const layer_data *device_data, const debug_report_dat
 
         // Checks that apply only to compressed images
         if (FormatIsCompressed(src_state->createInfo.format)) {
-            VkExtent3D block_size = FormatCompressedTexelBlockExtent(src_state->createInfo.format);
+            const VkExtent3D block_size = FormatCompressedTexelBlockExtent(src_state->createInfo.format);
 
             //  image offsets must be multiples of block dimensions
             if ((SafeModulo(region.srcOffset.x, block_size.width) != 0) ||
@@ -1551,7 +1552,7 @@ bool ValidateImageCopyData(const layer_data *device_data, const debug_report_dat
                                 validation_error_map[VALIDATION_ERROR_09c0013a]);
             }
 
-            VkExtent3D mip_extent = GetImageSubresourceExtent(src_state, &(region.srcSubresource));
+            const VkExtent3D mip_extent = GetImageSubresourceExtent(src_state, &(region.srcSubresource));
             if ((SafeModulo(src_copy_extent.width, block_size.width) != 0) &&
                 (src_copy_extent.width + region.srcOffset.x != mip_extent.width)) {
                 skip |=
@@ -1663,7 +1664,7 @@ bool ValidateImageCopyData(const layer_data *device_data, const debug_report_dat
 
         // Checks that apply only to compressed images
         if (FormatIsCompressed(dst_state->createInfo.format)) {
-            VkExtent3D block_size = FormatCompressedTexelBlockExtent(dst_state->createInfo.format);
+            const VkExtent3D block_size = FormatCompressedTexelBlockExtent(dst_state->createInfo.format);
 
             //  image offsets must be multiples of block dimensions
             if ((SafeModulo(region.dstOffset.x, block_size.width) != 0) ||
@@ -1677,7 +1678,7 @@ bool ValidateImageCopyData(const layer_data *device_data, const debug_report_dat
                                 validation_error_map[VALIDATION_ERROR_09c00144]);
             }
 
-            VkExtent3D mip_extent = GetImageSubresourceExtent(dst_state, &(region.dstSubresource));
+            const VkExtent3D mip_extent = GetImageSubresourceExtent(dst_state, &(region.dstSubresource));
             if ((SafeModulo(dst_copy_extent.width, block_size.width) != 0) &&
                 (dst_copy_extent.width + region.dstOffset.x != mip_extent.width)) {
                 skip |= log_msg(
@@ -1727,7 +1728,7 @@ bool PreCallValidateCmdCopyImage(layer_data *device_data, GLOBAL_CB_NODE *cb_nod
     VkCommandBuffer command_buffer = cb_node->commandBuffer;
 
     for (uint32_t i = 0; i < region_count; i++) {
-        VkImageCopy region = regions[i];
+        const VkImageCopy region = regions[i];
 
         // For comp/uncomp copies, the copy extent for the dest image must be adjusted
         VkExtent3D src_copy_extent = region.extent;
