@@ -16,6 +16,7 @@
  * limitations under the License.
  *
  * Author: Tobin Ehlis <tobine@google.com>
+ *         John Zulauf <jzulauf@lunarg.com>
  */
 
 // Allow use of STL min and max functions in Windows
@@ -74,10 +75,9 @@ cvdescriptorset::DescriptorSetLayout::DescriptorSetLayout(const VkDescriptorSetL
     for (uint32_t i = 0; i < binding_count_; ++i) {
         auto binding_num = bindings_[i].binding;
         binding_to_index_map_[binding_num] = i;
-        binding_to_global_start_index_map_[binding_num] = global_index;
-        global_index += bindings_[i].descriptorCount ? bindings_[i].descriptorCount - 1 : 0;
-        binding_to_global_end_index_map_[binding_num] = global_index;
-        global_index += bindings_[i].descriptorCount ? 1 : 0;
+        auto final_index = global_index + bindings_[i].descriptorCount;
+        binding_to_global_index_range_map_[binding_num] = IndexRange(global_index, final_index);
+        global_index = final_index;
     }
     // Now create dyn offset array mapping for any dynamic descriptors
     uint32_t dyn_array_idx = 0;
@@ -167,28 +167,20 @@ VkShaderStageFlags cvdescriptorset::DescriptorSetLayout::GetStageFlagsFromBindin
     }
     return VkShaderStageFlags(0);
 }
-// For the given binding, return start index
-uint32_t cvdescriptorset::DescriptorSetLayout::GetGlobalStartIndexFromBinding(const uint32_t binding) const {
-    assert(binding_to_global_start_index_map_.count(binding));
-    const auto &btgsi_itr = binding_to_global_start_index_map_.find(binding);
-    if (btgsi_itr != binding_to_global_start_index_map_.end()) {
-        return btgsi_itr->second;
-    }
+
+// As start and end are often needed in pairs, get both with a single hash lookup.
+const cvdescriptorset::IndexRange &cvdescriptorset::DescriptorSetLayout::GetGlobalIndexRangeFromBinding(
+    const uint32_t binding) const {
+    assert(binding_to_global_index_range_map_.count(binding));
     // In error case max uint32_t so index is out of bounds to break ASAP
-    assert(0);
-    return 0xFFFFFFFF;
-}
-// For the given binding, return end index
-uint32_t cvdescriptorset::DescriptorSetLayout::GetGlobalEndIndexFromBinding(const uint32_t binding) const {
-    assert(binding_to_global_end_index_map_.count(binding));
-    const auto &btgei_itr = binding_to_global_end_index_map_.find(binding);
-    if (btgei_itr != binding_to_global_end_index_map_.end()) {
-        return btgei_itr->second;
+    const static IndexRange kInvalidRange = {0xFFFFFFFF, 0xFFFFFFFF};
+    const auto &range_it = binding_to_global_index_range_map_.find(binding);
+    if (range_it != binding_to_global_index_range_map_.end()) {
+        return range_it->second;
     }
-    // In error case max uint32_t so index is out of bounds to break ASAP
-    assert(0);
-    return 0xFFFFFFFF;
+    return kInvalidRange;
 }
+
 // For given binding, return ptr to ImmutableSampler array
 VkSampler const *cvdescriptorset::DescriptorSetLayout::GetImmutableSamplerPtrFromBinding(const uint32_t binding) const {
     assert(binding_to_index_map_.count(binding));
@@ -416,10 +408,9 @@ bool cvdescriptorset::DescriptorSet::ValidateDrawState(const std::map<uint32_t, 
             *error = error_str.str();
             return false;
         }
-        auto start_idx = p_layout_->GetGlobalStartIndexFromBinding(binding);
-        auto end_idx = p_layout_->GetGlobalEndIndexFromBinding(binding);
+        IndexRange index_range = p_layout_->GetGlobalIndexRangeFromBinding(binding);
         auto array_idx = 0;  // Track array idx if we're dealing with array descriptors
-        for (uint32_t i = start_idx; i <= end_idx; ++i, ++array_idx) {
+        for (uint32_t i = index_range.start; i < index_range.end; ++i, ++array_idx) {
             if (!descriptors_[i]->updated) {
                 std::stringstream error_str;
                 error_str << "Descriptor in binding #" << binding << " at global descriptor index " << i
@@ -566,7 +557,7 @@ uint32_t cvdescriptorset::DescriptorSet::GetStorageUpdates(const std::map<uint32
         if (!p_layout_->HasBinding(binding)) {
             continue;
         }
-        auto start_idx = p_layout_->GetGlobalStartIndexFromBinding(binding);
+        uint32_t start_idx = p_layout_->GetGlobalIndexRangeFromBinding(binding).start;
         if (descriptors_[start_idx]->IsStorage()) {
             if (Image == descriptors_[start_idx]->descriptor_class) {
                 for (uint32_t i = 0; i < p_layout_->GetDescriptorCountFromBinding(binding); ++i) {
@@ -611,7 +602,7 @@ void cvdescriptorset::DescriptorSet::PerformWriteUpdate(const VkWriteDescriptorS
     uint32_t update_index = 0;
     while (descriptors_remaining) {
         uint32_t update_count = std::min(descriptors_remaining, GetDescriptorCountFromBinding(binding_being_updated));
-        auto global_idx = p_layout_->GetGlobalStartIndexFromBinding(binding_being_updated) + offset;
+        auto global_idx = p_layout_->GetGlobalIndexRangeFromBinding(binding_being_updated).start + offset;
         // Loop over the updates for a single binding at a time
         for (uint32_t di = 0; di < update_count; ++di, ++update_index) {
             descriptors_[global_idx + di]->WriteUpdate(update, update_index);
@@ -655,25 +646,25 @@ bool cvdescriptorset::DescriptorSet::ValidateCopyUpdate(const debug_report_data 
     }
     // src & dst set bindings are valid
     // Check bounds of src & dst
-    auto src_start_idx = src_set->GetGlobalStartIndexFromBinding(update->srcBinding) + update->srcArrayElement;
+    auto src_start_idx = src_set->GetGlobalIndexRangeFromBinding(update->srcBinding).start + update->srcArrayElement;
     if ((src_start_idx + update->descriptorCount) > src_set->GetTotalDescriptorCount()) {
         // SRC update out of bounds
         *error_code = VALIDATION_ERROR_032002b4;
         std::stringstream error_str;
         error_str << "Attempting copy update from descriptorSet " << update->srcSet << " binding#" << update->srcBinding
-                  << " with offset index of " << src_set->GetGlobalStartIndexFromBinding(update->srcBinding)
+                  << " with offset index of " << src_set->GetGlobalIndexRangeFromBinding(update->srcBinding).start
                   << " plus update array offset of " << update->srcArrayElement << " and update of " << update->descriptorCount
                   << " descriptors oversteps total number of descriptors in set: " << src_set->GetTotalDescriptorCount();
         *error_msg = error_str.str();
         return false;
     }
-    auto dst_start_idx = p_layout_->GetGlobalStartIndexFromBinding(update->dstBinding) + update->dstArrayElement;
+    auto dst_start_idx = p_layout_->GetGlobalIndexRangeFromBinding(update->dstBinding).start + update->dstArrayElement;
     if ((dst_start_idx + update->descriptorCount) > p_layout_->GetTotalDescriptorCount()) {
         // DST update out of bounds
         *error_code = VALIDATION_ERROR_032002b8;
         std::stringstream error_str;
         error_str << "Attempting copy update to descriptorSet " << set_ << " binding#" << update->dstBinding
-                  << " with offset index of " << p_layout_->GetGlobalStartIndexFromBinding(update->dstBinding)
+                  << " with offset index of " << p_layout_->GetGlobalIndexRangeFromBinding(update->dstBinding).start
                   << " plus update array offset of " << update->dstArrayElement << " and update of " << update->descriptorCount
                   << " descriptors oversteps total number of descriptors in set: " << p_layout_->GetTotalDescriptorCount();
         *error_msg = error_str.str();
@@ -708,8 +699,8 @@ bool cvdescriptorset::DescriptorSet::ValidateCopyUpdate(const debug_report_data 
 }
 // Perform Copy update
 void cvdescriptorset::DescriptorSet::PerformCopyUpdate(const VkCopyDescriptorSet *update, const DescriptorSet *src_set) {
-    auto src_start_idx = src_set->GetGlobalStartIndexFromBinding(update->srcBinding) + update->srcArrayElement;
-    auto dst_start_idx = p_layout_->GetGlobalStartIndexFromBinding(update->dstBinding) + update->dstArrayElement;
+    auto src_start_idx = src_set->GetGlobalIndexRangeFromBinding(update->srcBinding).start + update->srcArrayElement;
+    auto dst_start_idx = p_layout_->GetGlobalIndexRangeFromBinding(update->dstBinding).start + update->dstArrayElement;
     // Update parameters all look good so perform update
     for (uint32_t di = 0; di < update->descriptorCount; ++di) {
         auto src = src_set->descriptors_[src_start_idx + di].get();
@@ -740,9 +731,8 @@ void cvdescriptorset::DescriptorSet::BindCommandBuffer(GLOBAL_CB_NODE *cb_node,
     // resources
     for (auto binding_req_pair : binding_req_map) {
         auto binding = binding_req_pair.first;
-        auto start_idx = p_layout_->GetGlobalStartIndexFromBinding(binding);
-        auto end_idx = p_layout_->GetGlobalEndIndexFromBinding(binding);
-        for (uint32_t i = start_idx; i <= end_idx; ++i) {
+        auto range = p_layout_->GetGlobalIndexRangeFromBinding(binding);
+        for (uint32_t i = range.start; i < range.end; ++i) {
             descriptors_[i]->BindCommandBuffer(device_data_, cb_node);
         }
     }
@@ -1277,7 +1267,7 @@ bool cvdescriptorset::DescriptorSet::ValidateWriteUpdate(const debug_report_data
         }
     }
     // We know that binding is valid, verify update and do update on each descriptor
-    auto start_idx = p_layout_->GetGlobalStartIndexFromBinding(update->dstBinding) + update->dstArrayElement;
+    auto start_idx = p_layout_->GetGlobalIndexRangeFromBinding(update->dstBinding).start + update->dstArrayElement;
     auto type = p_layout_->GetTypeFromBinding(update->dstBinding);
     if (type != update->descriptorType) {
         *error_code = VALIDATION_ERROR_15c0027e;

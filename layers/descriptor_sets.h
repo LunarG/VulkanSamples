@@ -16,6 +16,7 @@
  * limitations under the License.
  *
  * Author: Tobin Ehlis <tobine@google.com>
+ *         John Zulauf <jzulauf@lunarg.com>
  */
 #ifndef CORE_VALIDATION_DESCRIPTOR_SETS_H_
 #define CORE_VALIDATION_DESCRIPTOR_SETS_H_
@@ -37,6 +38,15 @@
 using core_validation::layer_data;
 
 // Descriptor Data structures
+namespace cvdescriptorset {
+
+// Index range for global indices below, end is exclusive, i.e. [start,end)
+struct IndexRange {
+    IndexRange(uint32_t start_in, uint32_t end_in) : start(start_in), end(end_in) {}
+    IndexRange() = default;
+    uint32_t start;
+    uint32_t end;
+};
 
 /*
  * DescriptorSetLayout class
@@ -68,7 +78,6 @@ using core_validation::layer_data;
  *  10, then the GlobalStartIndex of the 2nd lowest binding# will be 10 where 0-9 are the
  *  global indices for the lowest binding#.
  */
-namespace cvdescriptorset {
 class DescriptorSetLayout {
    public:
     // Constructors and destructor
@@ -112,10 +121,10 @@ class DescriptorSetLayout {
         }
         return dyn_off->second;
     }
-    // For a particular binding, get the global index
-    //  These calls should be guarded by a call to "HasBinding(binding)" to verify that the given binding exists
-    uint32_t GetGlobalStartIndexFromBinding(const uint32_t) const;
-    uint32_t GetGlobalEndIndexFromBinding(const uint32_t) const;
+    // For a particular binding, get the global index range
+    //  This call should be guarded by a call to "HasBinding(binding)" to verify that the given binding exists
+    const IndexRange &GetGlobalIndexRangeFromBinding(const uint32_t) const;
+
     // Helper function to get the next valid binding for a descriptor
     uint32_t GetNextValidBinding(const uint32_t) const;
     // For a particular binding starting at offset and having update_count descriptors
@@ -126,8 +135,7 @@ class DescriptorSetLayout {
    private:
     VkDescriptorSetLayout layout_;
     std::map<uint32_t, uint32_t> binding_to_index_map_;
-    std::unordered_map<uint32_t, uint32_t> binding_to_global_start_index_map_;
-    std::unordered_map<uint32_t, uint32_t> binding_to_global_end_index_map_;
+    std::unordered_map<uint32_t, IndexRange> binding_to_global_index_range_map_;  // range is exclusive of .end
     // For a given binding map to associated index in the dynamic offset array
     std::unordered_map<uint32_t, uint32_t> binding_to_dynamic_array_idx_map_;
     VkDescriptorSetLayoutCreateFlags flags_;
@@ -354,11 +362,8 @@ class DescriptorSet : public BASE_NODE {
         return p_layout_->GetImmutableSamplerPtrFromBinding(index);
     };
     // For a particular binding, get the global index
-    uint32_t GetGlobalStartIndexFromBinding(const uint32_t binding) const {
-        return p_layout_->GetGlobalStartIndexFromBinding(binding);
-    };
-    uint32_t GetGlobalEndIndexFromBinding(const uint32_t binding) const {
-        return p_layout_->GetGlobalEndIndexFromBinding(binding);
+    const IndexRange &GetGlobalIndexRangeFromBinding(const uint32_t binding) const {
+        return p_layout_->GetGlobalIndexRangeFromBinding(binding);
     };
     // Return true if any part of set has ever been updated
     bool IsUpdated() const { return some_update_; };
