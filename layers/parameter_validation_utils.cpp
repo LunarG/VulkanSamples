@@ -442,7 +442,8 @@ VKAPI_ATTR VkResult VKAPI_CALL vkCreateDevice(VkPhysicalDevice physicalDevice, c
 
         lock.lock();
 
-        validate_result(my_instance_data->report_data, "vkCreateDevice", {}, result);
+        std::vector<VkResult> empty_vec;
+        validate_result(my_instance_data->report_data, "vkCreateDevice", empty_vec, result);
 
         if (result == VK_SUCCESS) {
             layer_data *my_device_data = GetLayerDataPtr(get_dispatch_key(*pDevice), layer_data_map);

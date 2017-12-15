@@ -9418,7 +9418,7 @@ static bool PreCallValidateCreateSwapchainKHR(layer_data *dev_data, const char *
     // to present to any native window on Android; require the
     // application to have established support on any other platform.
     if (!dev_data->instance_data->extensions.vk_khr_android_surface) {
-        auto support_predicate = [dev_data](decltype(surface_state->gpu_queue_support)::const_reference qs) -> bool {
+        auto support_predicate = [dev_data](decltype(surface_state->gpu_queue_support)::value_type qs) -> bool {
             // TODO: should restrict search only to queue families of VkDeviceQueueCreateInfos, not whole phys. device
             return (qs.first.gpu == dev_data->physical_device) && qs.second;
         };
