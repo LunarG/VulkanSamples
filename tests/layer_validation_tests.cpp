@@ -26227,13 +26227,6 @@ TEST_F(VkPositiveLayerTest, ExternalMemory) {
     m_commandBuffer->end();
     m_commandBuffer->QueueCommandBuffer();
 
-    // Verify output buffer
-    auto output_mem = (uint8_t *)buffer_output.memory().map();
-    for (uint32_t i = 0; i < buffer_size; i++) {
-        ASSERT_TRUE(output_mem[i] == (i & 0xFF));
-    }
-    buffer_output.memory().unmap();
-
     m_errorMonitor->VerifyNotFound();
 }
 
