@@ -33,7 +33,9 @@ if __name__ == '__main__':
     output_header_file = sys.argv[3]
     
     # Extract commit ID from the specified source directory
-    commit_id = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=source_dir).decode('utf-8').strip()
+    # Call git.bat on Windows for compatiblity.
+    git_binary = "git.bat" if os == "nt" else "git"
+    commit_id = subprocess.check_output([git_binary, "rev-parse", "HEAD"], cwd=source_dir).decode('utf-8').strip()
     
     # Write commit ID to output header file
     with open(output_header_file, "w") as header_file:
