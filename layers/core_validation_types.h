@@ -173,19 +173,28 @@ class BINDABLE : public BASE_NODE {
     //  There's more data for sparse bindings so need better long-term solution
     // TODO : Need to update solution to track all sparse binding data
     std::unordered_set<MEM_BINDING> sparse_bindings;
-    BINDABLE() : sparse(false), binding{}, requirements{}, memory_requirements_checked(false), sparse_bindings{} {};
-    // Return unordered set of memory objects that are bound
-    std::unordered_set<VkDeviceMemory> GetBoundMemory() {
-        std::unordered_set<VkDeviceMemory> mem_set;
+
+    std::unordered_set<VkDeviceMemory> bound_memory_set_;
+
+    BINDABLE()
+        : sparse(false), binding{}, requirements{}, memory_requirements_checked(false), sparse_bindings{}, bound_memory_set_{} {};
+
+    // Update the cached set of memory bindings.
+    // Code that changes binding.mem or sparse_bindings must call UpdateBoundMemorySet()
+    void UpdateBoundMemorySet() {
+        bound_memory_set_.clear();
         if (!sparse) {
-            mem_set.insert(binding.mem);
+            bound_memory_set_.insert(binding.mem);
         } else {
             for (auto sb : sparse_bindings) {
-                mem_set.insert(sb.mem);
+                bound_memory_set_.insert(sb.mem);
             }
         }
-        return mem_set;
     }
+
+    // Return unordered set of memory objects that are bound
+    // Instead of creating a set from scratch each query, return the cached one
+    const std::unordered_set<VkDeviceMemory> &GetBoundMemory() const { return bound_memory_set_; }
 };
 
 class BUFFER_STATE : public BINDABLE {

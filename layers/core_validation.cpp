@@ -572,17 +572,22 @@ bool ValidateMemoryIsBoundToBuffer(const layer_data *dev_data, const BUFFER_STAT
 
 // SetMemBinding is used to establish immutable, non-sparse binding between a single image/buffer object and memory object.
 // Corresponding valid usage checks are in ValidateSetMemBinding().
-static void SetMemBinding(layer_data *dev_data, VkDeviceMemory mem, uint64_t handle, VulkanObjectType type, const char *apiName) {
+static void SetMemBinding(layer_data *dev_data, VkDeviceMemory mem, BINDABLE *mem_binding, VkDeviceSize memory_offset,
+                          uint64_t handle, VulkanObjectType type, const char *apiName) {
+    assert(mem_binding);
+    mem_binding->binding.mem = mem;
+    mem_binding->UpdateBoundMemorySet();  // force recreation of cached set
+    mem_binding->binding.offset = memory_offset;
+    mem_binding->binding.size = mem_binding->requirements.size;
+
     if (mem != VK_NULL_HANDLE) {
-        BINDABLE *mem_binding = GetObjectMemBinding(dev_data, handle, type);
-        assert(mem_binding);
         DEVICE_MEM_INFO *mem_info = GetMemObjInfo(dev_data, mem);
         if (mem_info) {
             mem_info->obj_bindings.insert({handle, type});
             // For image objects, make sure default memory state is correctly set
             // TODO : What's the best/correct way to handle this?
             if (kVulkanObjectTypeImage == type) {
-                auto const image_state = GetImageState(dev_data, VkImage(handle));
+                auto const image_state = reinterpret_cast<const IMAGE_STATE *>(mem_binding);
                 if (image_state) {
                     VkImageCreateInfo ici = image_state->createInfo;
                     if (ici.usage & (VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT)) {
@@ -590,7 +595,6 @@ static void SetMemBinding(layer_data *dev_data, VkDeviceMemory mem, uint64_t han
                     }
                 }
             }
-            mem_binding->binding.mem = mem;
         }
     }
 }
@@ -673,6 +677,7 @@ static bool SetSparseMemBinding(layer_data *dev_data, MEM_BINDING binding, uint6
             mem_info->obj_bindings.insert({handle, type});
             // Need to set mem binding for this object
             mem_binding->sparse_bindings.insert(binding);
+            mem_binding->UpdateBoundMemorySet();
         }
     }
     return skip;
@@ -2890,23 +2895,22 @@ static void PostCallRecordFreeMemory(layer_data *dev_data, VkDeviceMemory mem, D
         log_msg(dev_data->report_data, VK_DEBUG_REPORT_INFORMATION_BIT_EXT, get_debug_report_enum[obj.type], obj.handle, __LINE__,
                 MEMTRACK_FREED_MEM_REF, "MEM", "VK Object 0x%" PRIx64 " still has a reference to mem obj 0x%" PRIx64,
                 HandleToUint64(obj.handle), HandleToUint64(mem_info->mem));
+        BINDABLE *bindable_state = nullptr;
         switch (obj.type) {
-            case kVulkanObjectTypeImage: {
-                auto image_state = GetImageState(dev_data, reinterpret_cast<VkImage &>(obj.handle));
-                assert(image_state);  // Any destroyed images should already be removed from bindings
-                image_state->binding.mem = MEMORY_UNBOUND;
+            case kVulkanObjectTypeImage:
+                bindable_state = GetImageState(dev_data, reinterpret_cast<VkImage &>(obj.handle));
                 break;
-            }
-            case kVulkanObjectTypeBuffer: {
-                auto buffer_state = GetBufferState(dev_data, reinterpret_cast<VkBuffer &>(obj.handle));
-                assert(buffer_state);  // Any destroyed buffers should already be removed from bindings
-                buffer_state->binding.mem = MEMORY_UNBOUND;
+            case kVulkanObjectTypeBuffer:
+                bindable_state = GetBufferState(dev_data, reinterpret_cast<VkBuffer &>(obj.handle));
                 break;
-            }
             default:
                 // Should only have buffer or image objects bound to memory
                 assert(0);
         }
+
+        assert(bindable_state);
+        bindable_state->binding.mem = MEMORY_UNBOUND;
+        bindable_state->UpdateBoundMemorySet();
     }
     // Any bound cmd buffers are now invalid
     invalidateCommandBuffers(dev_data, mem_info->cb_bindings, obj_struct);
@@ -3801,11 +3805,7 @@ static void PostCallRecordBindBufferMemory(layer_data *dev_data, VkBuffer buffer
 
         // Track objects tied to memory
         uint64_t buffer_handle = HandleToUint64(buffer);
-        SetMemBinding(dev_data, mem, buffer_handle, kVulkanObjectTypeBuffer, "vkBindBufferMemory()");
-
-        buffer_state->binding.mem = mem;
-        buffer_state->binding.offset = memoryOffset;
-        buffer_state->binding.size = buffer_state->requirements.size;
+        SetMemBinding(dev_data, mem, buffer_state, memoryOffset, buffer_handle, kVulkanObjectTypeBuffer, "vkBindBufferMemory()");
     }
 }
 
@@ -8947,11 +8947,7 @@ static void PostCallRecordBindImageMemory(layer_data *dev_data, VkImage image, I
 
         // Track objects tied to memory
         uint64_t image_handle = HandleToUint64(image);
-        SetMemBinding(dev_data, mem, image_handle, kVulkanObjectTypeImage, "vkBindImageMemory()");
-
-        image_state->binding.mem = mem;
-        image_state->binding.offset = memoryOffset;
-        image_state->binding.size = image_state->requirements.size;
+        SetMemBinding(dev_data, mem, image_state, memoryOffset, image_handle, kVulkanObjectTypeImage, "vkBindImageMemory()");
     }
 }
 
