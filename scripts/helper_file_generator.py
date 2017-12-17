@@ -817,7 +817,7 @@ class HelperFileOutputGenerator(OutputGenerator):
                     '        default:\n'
                     '        break;\n'
                     '    }\n',
-                    'VkShaderModuleCreateInfo' :
+                'VkShaderModuleCreateInfo' :
                     '    if (in_struct->pCode) {\n'
                     '        pCode = reinterpret_cast<uint32_t *>(new uint8_t[codeSize]);\n'
                     '        memcpy((void *)pCode, (void *)in_struct->pCode, codeSize);\n'
@@ -898,6 +898,15 @@ class HelperFileOutputGenerator(OutputGenerator):
                     '    }\n'
                     '    else\n'
                     '        pScissors = NULL;\n',
+                # VkDescriptorSetLayoutBinding is special case because its pImmutableSamplers pointer may be non-null but ignored
+                'VkDescriptorSetLayoutBinding' :
+                    '    const bool sampler_type = in_struct->descriptorType == VK_DESCRIPTOR_TYPE_SAMPLER || in_struct->descriptorType == VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;\n'
+                    '    if (descriptorCount && in_struct->pImmutableSamplers && sampler_type) {\n'
+                    '        pImmutableSamplers = new VkSampler[descriptorCount];\n'
+                    '        for (uint32_t i=0; i<descriptorCount; ++i) {\n'
+                    '            pImmutableSamplers[i] = in_struct->pImmutableSamplers[i];\n'
+                    '        }\n'
+                    '    }\n',
             }
 
             custom_copy_txt = {

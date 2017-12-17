@@ -695,6 +695,41 @@ VKAPI_ATTR VkResult VKAPI_CALL GetSwapchainImagesKHR(VkDevice device, VkSwapchai
     return result;
 }
 
+VKAPI_ATTR VkResult VKAPI_CALL CreateDescriptorSetLayout(VkDevice device, const VkDescriptorSetLayoutCreateInfo *pCreateInfo,
+                                                         const VkAllocationCallbacks *pAllocator,
+                                                         VkDescriptorSetLayout *pSetLayout) {
+    bool skip = false;
+    {
+        std::lock_guard<std::mutex> lock(global_lock);
+        skip |=
+            ValidateObject(device, device, kVulkanObjectTypeDevice, false, VALIDATION_ERROR_1f805601, VALIDATION_ERROR_UNDEFINED);
+        if (pCreateInfo) {
+            if (pCreateInfo->pBindings) {
+                for (uint32_t binding_index = 0; binding_index < pCreateInfo->bindingCount; ++binding_index) {
+                    const VkDescriptorSetLayoutBinding &binding = pCreateInfo->pBindings[binding_index];
+                    const bool is_sampler_type = binding.descriptorType == VK_DESCRIPTOR_TYPE_SAMPLER ||
+                                                 binding.descriptorType == VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+                    if (binding.pImmutableSamplers && is_sampler_type) {
+                        for (uint32_t index2 = 0; index2 < binding.descriptorCount; ++index2) {
+                            const VkSampler sampler = binding.pImmutableSamplers[index2];
+                            skip |= ValidateObject(device, sampler, kVulkanObjectTypeSampler, false, VALIDATION_ERROR_04e00234,
+                                                   VALIDATION_ERROR_UNDEFINED);
+                        }
+                    }
+                }
+            }
+        }
+    }
+    if (skip) return VK_ERROR_VALIDATION_FAILED_EXT;
+    VkResult result =
+        get_dispatch_table(ot_device_table_map, device)->CreateDescriptorSetLayout(device, pCreateInfo, pAllocator, pSetLayout);
+    if (VK_SUCCESS == result) {
+        std::lock_guard<std::mutex> lock(global_lock);
+        CreateObject(device, *pSetLayout, kVulkanObjectTypeDescriptorSetLayout, pAllocator);
+    }
+    return result;
+}
+
 VKAPI_ATTR void VKAPI_CALL GetPhysicalDeviceQueueFamilyProperties(VkPhysicalDevice physicalDevice,
                                                                   uint32_t *pQueueFamilyPropertyCount,
                                                                   VkQueueFamilyProperties *pQueueFamilyProperties) {
