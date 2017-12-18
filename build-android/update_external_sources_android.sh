@@ -182,9 +182,9 @@ function build_shaderc () {
    echo "Building $BASEDIR/shaderc"
    cd $BASEDIR/shaderc/android_test
    if [[ $abi ]]; then
-      ndk-build THIRD_PARTY_PATH=../third_party APP_ABI=$abi -j $cores;
+      ndk-build NDK_APPLICATION_MK=../../../jni/shaderc/Application.mk THIRD_PARTY_PATH=../third_party APP_ABI=$abi -j $cores;
    else
-      ndk-build THIRD_PARTY_PATH=../third_party -j $cores;
+      ndk-build NDK_APPLICATION_MK=../../../jni/shaderc/Application.mk THIRD_PARTY_PATH=../third_party -j $cores;
    fi
 }
 

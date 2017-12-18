@@ -50,19 +50,6 @@
 #include "parameter_name.h"
 #include "parameter_validation.h"
 
-// TODO: remove on NDK update (r15 will probably have proper STL impl)
-#ifdef __ANDROID__
-namespace std {
-
-template <typename T>
-std::string to_string(T var) {
-    std::ostringstream ss;
-    ss << var;
-    return ss.str();
-}
-}  // namespace std
-#endif
-
 namespace parameter_validation {
 
 extern std::unordered_map<std::string, void *> custom_functions;
