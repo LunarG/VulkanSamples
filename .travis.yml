@@ -25,6 +25,8 @@ matrix:
     - os: linux
       compiler: clang
       env: VULKAN_BUILD_TARGET=LINUX
+    # Check for proper clang formatting in the pull request.
+    - env: CHECK_FORMAT=ON
 
 cache: ccache
 
@@ -35,14 +37,14 @@ cache: ccache
 
 before_install:
   - set -e
+  # Install the appropriate Linux packages.
   - |
-    # Install the appropriate Linux packages.
     if [[ "$VULKAN_BUILD_TARGET" == "LINUX" ]]; then
       sudo apt-get -qq update
       sudo apt-get -y install libxkbcommon-dev libwayland-dev libmirclient-dev libxrandr-dev libx11-xcb-dev
     fi
+  # Install the Android NDK.
   - |
-    # Install the Android NDK.
     if [[ "$VULKAN_BUILD_TARGET" == "ANDROID" ]]; then
       export ARCH=`uname -m`
       wget http://dl.google.com/android/repository/android-ndk-r16b-linux-${ARCH}.zip
@@ -51,6 +53,13 @@ before_install:
       export JAVA_HOME="/usr/lib/jvm/java-8-oracle"
       export PATH="$ANDROID_NDK_HOME:$PATH"
     fi
+  # Install the clang format diff tool, but only for pull requests.
+  - |
+    if [[ "$CHECK_FORMAT" == "ON" && "$TRAVIS_PULL_REQUEST" != "false" ]]; then
+      curl -L http://llvm.org/svn/llvm-project/cfe/trunk/tools/clang-format/clang-format-diff.py -o scripts/clang-format-diff.py;
+    fi
+  # Misc setup
+  - |
   - export core_count=$(nproc || echo 4) && echo core_count = $core_count
   - set +e
 
@@ -81,6 +90,17 @@ script:
       ./android-generate.sh
       USE_CCACHE=1 NDK_CCACHE=ccache ndk-build APP_ABI=$ANDROID_ABI -j $core_count
       popd
+    fi
+  # Run the clang format check only for pull request builds because the
+  # master branch is needed to do the git diff.
+  - |
+    if [[ "$CHECK_FORMAT" == "ON" ]]; then
+      if [[ "$TRAVIS_PULL_REQUEST" != "false" ]]; then
+        echo "Checking clang-format between TRAVIS_BRANCH=$TRAVIS_BRANCH and TRAVIS_PULL_REQUEST_BRANCH=$TRAVIS_PULL_REQUEST_BRANCH"
+        ./scripts/check_code_format.sh
+      else
+        echo "Skipping clang-format check since this is not a pull request."
+      fi
     fi
   - set +e
 
