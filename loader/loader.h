@@ -137,6 +137,10 @@ struct loader_layer_properties {
     struct loader_name_value enable_env_var;
     uint32_t num_component_layers;
     char (*component_layer_names)[MAX_STRING_SIZE];
+    struct {
+        char enumerate_instance_extension_properties[MAX_STRING_SIZE];
+        char enumerate_instance_layer_properties[MAX_STRING_SIZE];
+    } pre_instance_functions;
 };
 
 struct loader_layer_list {

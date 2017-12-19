@@ -2305,6 +2305,28 @@ typedef struct {
     uint16_t patch;
 } layer_json_version;
 
+static inline bool is_valid_layer_json_version(const layer_json_version *layer_json) {
+    // Supported versions are: 1.0.0, 1.0.1, 1.1.0, 1.1.1, and 1.1.2.
+    if ((layer_json->major == 1 && layer_json->minor == 1 && layer_json->patch < 3) ||
+        (layer_json->major == 1 && layer_json->minor == 0 && layer_json->patch < 2)) {
+        return true;
+    }
+    return false;
+}
+
+static inline bool layer_json_supports_layers_tag(const layer_json_version *layer_json) {
+    // Supported versions started in 1.0.1, so anything newer
+    if ((layer_json->major > 1 || layer_json->minor > 0 || layer_json->patch > 1)) {
+        return true;
+    }
+    return false;
+}
+
+static inline bool layer_json_supports_pre_instance_tag(const layer_json_version *layer_json) {
+    // Supported versions started in 1.1.2, so anything newer
+    return layer_json->major > 1 || layer_json->minor > 1 || (layer_json->minor == 1 && layer_json->patch > 1);
+}
+
 static VkResult loader_read_json_layer(const struct loader_instance *inst, struct loader_layer_list *layer_instance_list,
                                        cJSON *layer_node, layer_json_version version, cJSON *item, cJSON *disable_environment,
                                        bool is_implicit, char *filename) {
@@ -2680,6 +2702,40 @@ static VkResult loader_read_json_layer(const struct loader_instance *inst, struc
         }
     }
 
+    // Read in the pre-instance stuff
+    cJSON *pre_instance = cJSON_GetObjectItem(layer_node, "pre_instance_functions");
+    if (pre_instance) {
+        if (!layer_json_supports_pre_instance_tag(&version)) {
+            loader_log(inst, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
+                       "Found pre_instance_functions section in layer from \"%s\". "
+                       "This section is only valid in manifest version 1.1.2 or later. The section will be ignored",
+                       filename);
+        } else if (!is_implicit) {
+            loader_log(inst, VK_DEBUG_REPORT_WARNING_BIT_EXT, 0,
+                       "Found pre_instance_functions section in explicit layer from "
+                       "\"%s\". This section is only valid in implicit layers. The section will be ignored",
+                       filename);
+        } else {
+            cJSON *inst_ext_json = cJSON_GetObjectItem(pre_instance, "vkEnumerateInstanceExtensionProperties");
+            if (inst_ext_json) {
+                char *inst_ext_name = cJSON_Print(inst_ext_json);
+                size_t len = strlen(inst_ext_name) >= MAX_STRING_SIZE ? MAX_STRING_SIZE - 3 : strlen(inst_ext_name) - 2;
+                strncpy(props->pre_instance_functions.enumerate_instance_extension_properties, inst_ext_name + 1, len);
+                props->pre_instance_functions.enumerate_instance_extension_properties[len] = '\0';
+                cJSON_Free(inst_ext_name);
+            }
+
+            cJSON *inst_layer_json = cJSON_GetObjectItem(pre_instance, "vkEnumerateInstanceLayerProperties");
+            if (inst_layer_json) {
+                char *inst_layer_name = cJSON_Print(inst_layer_json);
+                size_t len = strlen(inst_layer_name) >= MAX_STRING_SIZE ? MAX_STRING_SIZE - 3 : strlen(inst_layer_name) - 2;
+                strncpy(props->pre_instance_functions.enumerate_instance_layer_properties, inst_layer_name + 1, len);
+                props->pre_instance_functions.enumerate_instance_layer_properties[len] = '\0';
+                cJSON_Free(inst_layer_name);
+            }
+        }
+    }
+
     result = VK_SUCCESS;
 
 out:
@@ -2696,23 +2752,6 @@ out:
     }
 
     return result;
-}
-
-static inline bool is_valid_layer_json_version(const layer_json_version *layer_json) {
-    // Supported versions are: 1.0.0, 1.0.1, and 1.1.0.
-    if ((layer_json->major == 1 && layer_json->minor == 1 && layer_json->patch < 2) ||
-        (layer_json->major == 1 && layer_json->minor == 0 && layer_json->patch < 2)) {
-        return true;
-    }
-    return false;
-}
-
-static inline bool layer_json_supports_layers_tag(const layer_json_version *layer_json) {
-    // Supported versions started in 1.0.1, so anything newer
-    if ((layer_json->major > 1 || layer_json->minor > 0 || layer_json->patch > 1)) {
-        return true;
-    }
-    return false;
 }
 
 // Given a cJSON struct (json) of the top level JSON object from layer manifest
@@ -5830,5 +5869,131 @@ VkStringErrorFlags vk_string_validate(const int max_length, const char *utf8) {
             }
         }
     }
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL
+terminator_EnumerateInstanceExtensionProperties(const VkEnumerateInstanceExtensionPropertiesChain *chain, const char *pLayerName,
+                                                uint32_t *pPropertyCount, VkExtensionProperties *pProperties) {
+    struct loader_extension_list *global_ext_list = NULL;
+    struct loader_layer_list instance_layers;
+    struct loader_extension_list local_ext_list;
+    struct loader_icd_tramp_list icd_tramp_list;
+    uint32_t copy_size;
+    VkResult res = VK_SUCCESS;
+
+    // tls_instance = NULL;
+    memset(&local_ext_list, 0, sizeof(local_ext_list));
+    memset(&instance_layers, 0, sizeof(instance_layers));
+    // loader_platform_thread_once(&once_init, loader_initialize);
+
+    // Get layer libraries if needed
+    if (pLayerName && strlen(pLayerName) != 0) {
+        if (vk_string_validate(MaxLoaderStringLength, pLayerName) != VK_STRING_ERROR_NONE) {
+            assert(VK_FALSE &&
+                   "vkEnumerateInstanceExtensionProperties:  "
+                   "pLayerName is too long or is badly formed");
+            res = VK_ERROR_EXTENSION_NOT_PRESENT;
+            goto out;
+        }
+
+        loader_layer_scan(NULL, &instance_layers);
+        for (uint32_t i = 0; i < instance_layers.count; i++) {
+            struct loader_layer_properties *props = &instance_layers.list[i];
+            if (strcmp(props->info.layerName, pLayerName) == 0) {
+                global_ext_list = &props->instance_extension_list;
+                break;
+            }
+        }
+    } else {
+        // Scan/discover all ICD libraries
+        memset(&icd_tramp_list, 0, sizeof(icd_tramp_list));
+        res = loader_icd_scan(NULL, &icd_tramp_list);
+        if (VK_SUCCESS != res) {
+            goto out;
+        }
+        // Get extensions from all ICD's, merge so no duplicates
+        res = loader_get_icd_loader_instance_extensions(NULL, &icd_tramp_list, &local_ext_list);
+        if (VK_SUCCESS != res) {
+            goto out;
+        }
+        loader_scanned_icd_clear(NULL, &icd_tramp_list);
+
+        // Append enabled implicit layers.
+        loader_implicit_layer_scan(NULL, &instance_layers);
+        for (uint32_t i = 0; i < instance_layers.count; i++) {
+            if (!loader_is_implicit_layer_enabled(NULL, &instance_layers.list[i])) {
+                continue;
+            }
+            struct loader_extension_list *ext_list = &instance_layers.list[i].instance_extension_list;
+            loader_add_to_ext_list(NULL, &local_ext_list, ext_list->count, ext_list->list);
+        }
+
+        global_ext_list = &local_ext_list;
+    }
+
+    if (global_ext_list == NULL) {
+        res = VK_ERROR_LAYER_NOT_PRESENT;
+        goto out;
+    }
+
+    if (pProperties == NULL) {
+        *pPropertyCount = global_ext_list->count;
+        goto out;
+    }
+
+    copy_size = *pPropertyCount < global_ext_list->count ? *pPropertyCount : global_ext_list->count;
+    for (uint32_t i = 0; i < copy_size; i++) {
+        memcpy(&pProperties[i], &global_ext_list->list[i], sizeof(VkExtensionProperties));
+    }
+    *pPropertyCount = copy_size;
+
+    if (copy_size < global_ext_list->count) {
+        res = VK_INCOMPLETE;
+        goto out;
+    }
+
+out:
+
+    loader_destroy_generic_list(NULL, (struct loader_generic_list *)&local_ext_list);
+    loader_delete_layer_properties(NULL, &instance_layers);
+    return res;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL terminator_EnumerateInstanceLayerProperties(const VkEnumerateInstanceLayerPropertiesChain *chain,
+                                                                           uint32_t *pPropertyCount,
+                                                                           VkLayerProperties *pProperties) {
+    VkResult result = VK_SUCCESS;
+    struct loader_layer_list instance_layer_list;
+    tls_instance = NULL;
+
+    loader_platform_thread_once(&once_init, loader_initialize);
+
+    uint32_t copy_size;
+
+    // Get layer libraries
+    memset(&instance_layer_list, 0, sizeof(instance_layer_list));
+    loader_layer_scan(NULL, &instance_layer_list);
+
+    if (pProperties == NULL) {
+        *pPropertyCount = instance_layer_list.count;
+        goto out;
+    }
+
+    copy_size = (*pPropertyCount < instance_layer_list.count) ? *pPropertyCount : instance_layer_list.count;
+    for (uint32_t i = 0; i < copy_size; i++) {
+        memcpy(&pProperties[i], &instance_layer_list.list[i].info, sizeof(VkLayerProperties));
+    }
+
+    *pPropertyCount = copy_size;
+
+    if (copy_size < instance_layer_list.count) {
+        result = VK_INCOMPLETE;
+        goto out;
+    }
+
+out:
+
+    loader_delete_layer_properties(NULL, &instance_layer_list);
     return result;
 }
