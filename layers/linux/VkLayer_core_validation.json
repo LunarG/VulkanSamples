@@ -1,7 +1,7 @@
 {
-    "file_format_version" : "1.1.0",
+    "file_format_version" : "1.1.2",
     "layer" : {
-        "name": "VK_LAYER_LUNARG_core_validation",
+        "name": "VK_LAYER_LUNARG_test_core_validation",
         "type": "GLOBAL",
         "library_path": "./libVkLayer_core_validation.so",
         "api_version": "1.0.67",
@@ -33,11 +33,13 @@
                          "vkMergeValidationCachesEXT"
                         ]
              }
-         ]
+        ],
+        "pre_instance_functions": {
+            "vkEnumerateInstanceExtensionProperties": "test_EnumerateInstanceExtensionProperties",
+            "vkEnumerateInstanceLayerProperties": "test_EnumerateInstanceLayerProperties"
+        },
+        "disable_environment": {
+            "DISABLE_TEST_CORE_VALIDATION": ""
+        }
     }
 }
-
-
-
-
-

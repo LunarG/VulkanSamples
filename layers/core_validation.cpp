@@ -11426,3 +11426,37 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkNegotiateLoaderLayerInterfaceVe
 
     return VK_SUCCESS;
 }
+
+extern "C" VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL test_EnumerateInstanceExtensionProperties(VkEnumerateInstanceExtensionPropertiesChain *pChain,
+    const char *pLayerName, uint32_t *pPropertyCount, VkExtensionProperties *pProperties) {
+
+    printf("Hit test_EnumerateInstanceExtensionProperties with:\n");
+    printf("\tpLayerName: %s\n", pLayerName);
+    printf("\tpPropertyCount: %d\n", pPropertyCount ? *pPropertyCount : 0);
+    printf("\tpProperties: %p\n", pProperties);
+
+    VkResult res = pChain->CallDown(pLayerName, pPropertyCount, pProperties);
+
+    printf("Returned from test_EnumerateInstanceExtensionProperties with:\n");
+    printf("\tpLayerName: %s\n", pLayerName);
+    printf("\tpPropertyCount: %d\n", pPropertyCount ? *pPropertyCount : 0);
+    printf("\tpProperties: %p\n\n", pProperties);
+
+    return res;
+}
+
+extern "C" VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL test_EnumerateInstanceLayerProperties(VkEnumerateInstanceLayerPropertiesChain *pChain,
+    uint32_t *pPropertyCount, VkLayerProperties *pProperties) {
+
+    printf("Hit test_EnumerateInstanceLayerProperties with:\n");
+    printf("\tpPropertyCount: %d\n", pPropertyCount ? *pPropertyCount : 0);
+    printf("\tpProperties: %p\n", pProperties);
+
+    VkResult res = pChain->CallDown(pPropertyCount, pProperties);
+
+    printf("Returned from test_EnumerateInstanceLayerProperties with:\n");
+    printf("\tpPropertyCount: %d\n", pPropertyCount ? *pPropertyCount : 0);
+    printf("\tpProperties: %p\n\n", pProperties);
+
+    return res;
+}
