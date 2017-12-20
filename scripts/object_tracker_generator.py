@@ -238,6 +238,9 @@ class ObjectTrackerOutputGenerator(OutputGenerator):
         self.valid_vuids = set()       # Set of all valid VUIDs
         self.vuid_file = None
         # Cover cases where file is built from scripts directory, Lin/Win, or Android build structure
+        # Set cwd to the script directory to more easily locate the header.
+        previous_dir = os.getcwd()
+        os.chdir(os.path.dirname(sys.argv[0]))
         vuid_filename_locations = [
             './vk_validation_error_messages.h',
             '../layers/vk_validation_error_messages.h',
@@ -251,6 +254,7 @@ class ObjectTrackerOutputGenerator(OutputGenerator):
         if self.vuid_file == None:
             print("Error: Could not find vk_validation_error_messages.h")
             sys.exit(1)
+        os.chdir(previous_dir)
     #
     # Check if the parameter passed in is optional
     def paramIsOptional(self, param):
