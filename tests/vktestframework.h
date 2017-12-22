@@ -28,7 +28,6 @@
 #include "icd-spv.h"
 #include "test_common.h"
 #include "test_environment.h"
-#include "vktestbinding.h"
 
 #include <fstream>
 #include <iostream>

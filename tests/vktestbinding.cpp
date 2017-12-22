@@ -19,7 +19,8 @@
  * Author: Tony Barbour <tony@LunarG.com>
  */
 
-#include "vktestbinding.h"
+#include "test_common.h"    // NOEXCEPT macro (must precede vktestbinding.h)
+#include "vktestbinding.h"  // Left for clarity, no harm, already included via test_common.h
 #include <algorithm>
 #include <assert.h>
 #include <iostream>

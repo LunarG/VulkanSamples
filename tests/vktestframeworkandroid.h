@@ -21,7 +21,6 @@
 #define VKTESTFRAMEWORKANDROID_H
 
 #include "test_common.h"
-#include "vktestbinding.h"
 
 #if defined(NDEBUG)
 #define U_ASSERT_ONLY __attribute__((unused))

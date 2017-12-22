@@ -97,8 +97,8 @@ class Handle {
     Handle &operator=(const Handle &) = delete;
 
     // handles can be moved out
-    Handle(Handle &&src) noexcept : handle_{src.handle_} { src.handle_ = {}; }
-    Handle &operator=(Handle &&src) noexcept {
+    Handle(Handle &&src) NOEXCEPT : handle_{src.handle_} { src.handle_ = {}; }
+    Handle &operator=(Handle &&src) NOEXCEPT {
         handle_ = src.handle_;
         src.handle_ = {};
         return *this;
@@ -542,7 +542,7 @@ class Pipeline : public internal::NonDispHandle<VkPipeline> {
 
 class PipelineLayout : public internal::NonDispHandle<VkPipelineLayout> {
    public:
-    PipelineLayout() noexcept : NonDispHandle(){};
+    PipelineLayout() NOEXCEPT : NonDispHandle(){};
     ~PipelineLayout();
 
     PipelineLayout(PipelineLayout &&src) = default;
@@ -566,11 +566,11 @@ class Sampler : public internal::NonDispHandle<VkSampler> {
 
 class DescriptorSetLayout : public internal::NonDispHandle<VkDescriptorSetLayout> {
    public:
-    DescriptorSetLayout() noexcept : NonDispHandle(){};
+    DescriptorSetLayout() NOEXCEPT : NonDispHandle(){};
     ~DescriptorSetLayout();
 
     DescriptorSetLayout(DescriptorSetLayout &&src) = default;
-    DescriptorSetLayout &operator=(DescriptorSetLayout &&src) noexcept {
+    DescriptorSetLayout &operator=(DescriptorSetLayout &&src) NOEXCEPT {
         this->~DescriptorSetLayout();
         this->NonDispHandle::operator=(std::move(src));
         return *this;
