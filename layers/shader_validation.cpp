@@ -1162,7 +1162,7 @@ static bool validate_shader_capabilities(layer_data *dev_data, shader_module con
     using E = DeviceExtensions;
 
     // clang-format off
-    static const std::unordered_map<uint32_t, CapabilityInfo> capabilities = {
+    static const std::unordered_multimap<uint32_t, CapabilityInfo> capabilities = {
         // Capabilities always supported by a Vulkan 1.0 implementation -- no
         // feature bits.
         {spv::CapabilityMatrix, {nullptr}},
@@ -1206,6 +1206,7 @@ static bool validate_shader_capabilities(layer_data *dev_data, shader_module con
         {spv::CapabilityDrawParameters, {VK_KHR_SHADER_DRAW_PARAMETERS_EXTENSION_NAME, nullptr, &E::vk_khr_shader_draw_parameters}},
         {spv::CapabilityGeometryShaderPassthroughNV, {VK_NV_GEOMETRY_SHADER_PASSTHROUGH_EXTENSION_NAME, nullptr, &E::vk_nv_geometry_shader_passthrough}},
         {spv::CapabilitySampleMaskOverrideCoverageNV, {VK_NV_SAMPLE_MASK_OVERRIDE_COVERAGE_EXTENSION_NAME, nullptr, &E::vk_nv_sample_mask_override_coverage}},
+        {spv::CapabilityShaderViewportIndexLayerEXT, {VK_EXT_SHADER_VIEWPORT_INDEX_LAYER_EXTENSION_NAME, nullptr, &E::vk_ext_shader_viewport_index_layer}},
         {spv::CapabilityShaderViewportIndexLayerNV, {VK_NV_VIEWPORT_ARRAY2_EXTENSION_NAME, nullptr, &E::vk_nv_viewport_array2}},
         {spv::CapabilityShaderViewportMaskNV, {VK_NV_VIEWPORT_ARRAY2_EXTENSION_NAME, nullptr, &E::vk_nv_viewport_array2}},
         {spv::CapabilitySubgroupBallotKHR, {VK_EXT_SHADER_SUBGROUP_BALLOT_EXTENSION_NAME, nullptr, &E::vk_ext_shader_subgroup_ballot }},
@@ -1215,13 +1216,44 @@ static bool validate_shader_capabilities(layer_data *dev_data, shader_module con
 
     for (auto insn : *src) {
         if (insn.opcode() == spv::OpCapability) {
-            auto it = capabilities.find(insn.word(1));
-            if (it != capabilities.end()) {
-                if (it->second.feature) {
-                    skip |= require_feature(report_data, enabledFeatures->*(it->second.feature), it->second.name);
+            size_t n = capabilities.count(insn.word(1));
+            if (1 == n) {  // key occurs exactly once
+                auto it = capabilities.find(insn.word(1));
+                if (it != capabilities.end()) {
+                    if (it->second.feature) {
+                        skip |= require_feature(report_data, enabledFeatures->*(it->second.feature), it->second.name);
+                    }
+                    if (it->second.extension) {
+                        skip |= require_extension(report_data, extensions->*(it->second.extension), it->second.name);
+                    }
                 }
-                if (it->second.extension) {
-                    skip |= require_extension(report_data, extensions->*(it->second.extension), it->second.name);
+            } else if (1 < n) {  // key occurs multiple times, at least one must be enabled
+                bool needs_feature = false, has_feature = false;
+                bool needs_ext = false, has_ext = false;
+                std::string feature_names = "(one of) [ ";
+                std::string extension_names = feature_names;
+                auto caps = capabilities.equal_range(insn.word(1));
+                for (auto it = caps.first; it != caps.second; ++it) {
+                    if (it->second.feature) {
+                        needs_feature = true;
+                        has_feature = has_feature || enabledFeatures->*(it->second.feature);
+                        feature_names += it->second.name;
+                        feature_names += " ";
+                    }
+                    if (it->second.extension) {
+                        needs_ext = true;
+                        has_ext = has_ext || extensions->*(it->second.extension);
+                        extension_names += it->second.name;
+                        extension_names += " ";
+                    }
+                }
+                if (needs_feature) {
+                    feature_names += "]";
+                    skip |= require_feature(report_data, has_feature, feature_names.c_str());
+                }
+                if (needs_ext) {
+                    extension_names += "]";
+                    skip |= require_extension(report_data, has_ext, extension_names.c_str());
                 }
             }
         }
