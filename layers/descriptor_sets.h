@@ -31,6 +31,7 @@
 #include "vk_object_types.h"
 #include <map>
 #include <memory>
+#include <set>
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
@@ -91,8 +92,8 @@ class DescriptorSetLayout {
     VkDescriptorSetLayoutCreateFlags GetCreateFlags() const { return flags_; }
     // For a given binding, return the number of descriptors in that binding and all successive bindings
     uint32_t GetBindingCount() const { return binding_count_; };
-    // Fill passed-in set with bindings
-    void FillBindingSet(std::unordered_set<uint32_t> *) const;
+    // Non-empty binding numbers in order
+    const std::set<uint32_t> &GetSortedBindingSet() const { return non_empty_bindings_; }
     // Return true if given binding is present in this layout
     bool HasBinding(const uint32_t binding) const { return binding_to_index_map_.count(binding) > 0; };
     // Return true if this layout is compatible with passed in layout from a pipelineLayout,
@@ -100,16 +101,28 @@ class DescriptorSetLayout {
     bool IsCompatible(DescriptorSetLayout const *const, std::string *) const;
     // Return true if binding 1 beyond given exists and has same type, stageFlags & immutable sampler use
     bool IsNextBindingConsistent(const uint32_t) const;
+    uint32_t GetIndexFromBinding(uint32_t binding) const;
     // Various Get functions that can either be passed a binding#, which will
     //  be automatically translated into the appropriate index, or the index# can be passed in directly
-    VkDescriptorSetLayoutBinding const *GetDescriptorSetLayoutBindingPtrFromBinding(const uint32_t) const;
+    uint32_t GetMaxBinding() const { return bindings_[bindings_.size() - 1].binding; }
     VkDescriptorSetLayoutBinding const *GetDescriptorSetLayoutBindingPtrFromIndex(const uint32_t) const;
-    uint32_t GetDescriptorCountFromBinding(const uint32_t) const;
+    VkDescriptorSetLayoutBinding const *GetDescriptorSetLayoutBindingPtrFromBinding(uint32_t binding) const {
+        return GetDescriptorSetLayoutBindingPtrFromIndex(GetIndexFromBinding(binding));
+    }
     uint32_t GetDescriptorCountFromIndex(const uint32_t) const;
-    VkDescriptorType GetTypeFromBinding(const uint32_t) const;
+    uint32_t GetDescriptorCountFromBinding(const uint32_t binding) const {
+        return GetDescriptorCountFromIndex(GetIndexFromBinding(binding));
+    }
     VkDescriptorType GetTypeFromIndex(const uint32_t) const;
-    VkDescriptorType GetTypeFromGlobalIndex(const uint32_t) const;
-    VkShaderStageFlags GetStageFlagsFromBinding(const uint32_t) const;
+    VkDescriptorType GetTypeFromBinding(const uint32_t binding) const { return GetTypeFromIndex(GetIndexFromBinding(binding)); }
+    VkShaderStageFlags GetStageFlagsFromIndex(const uint32_t) const;
+    VkShaderStageFlags GetStageFlagsFromBinding(const uint32_t binding) const {
+        return GetStageFlagsFromIndex(GetIndexFromBinding(binding));
+    }
+    uint32_t GetIndexFromGlobalIndex(const uint32_t global_index) const;
+    VkDescriptorType GetTypeFromGlobalIndex(const uint32_t global_index) const {
+        return GetTypeFromIndex(GetIndexFromGlobalIndex(global_index));
+    }
     VkSampler const *GetImmutableSamplerPtrFromBinding(const uint32_t) const;
     VkSampler const *GetImmutableSamplerPtrFromIndex(const uint32_t) const;
     // For a given binding and array index, return the corresponding index into the dynamic offset array
@@ -134,7 +147,10 @@ class DescriptorSetLayout {
 
    private:
     VkDescriptorSetLayout layout_;
-    std::map<uint32_t, uint32_t> binding_to_index_map_;
+    std::set<uint32_t> non_empty_bindings_;  // Containing non-emtpy bindings in numerical order
+    std::unordered_map<uint32_t, uint32_t> binding_to_index_map_;
+    // The following map allows an non-iterative lookup of a binding from a global index...
+    std::map<uint32_t, uint32_t> global_start_to_index_map_;  // The index corresponding for a starting global (descriptor) index
     std::unordered_map<uint32_t, IndexRange> binding_to_global_index_range_map_;  // range is exclusive of .end
     // For a given binding map to associated index in the dynamic offset array
     std::unordered_map<uint32_t, uint32_t> binding_to_dynamic_array_idx_map_;

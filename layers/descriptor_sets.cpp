@@ -37,50 +37,53 @@ cvdescriptorset::DescriptorSetLayout::DescriptorSetLayout(const VkDescriptorSetL
       binding_count_(p_create_info->bindingCount),
       descriptor_count_(0),
       dynamic_descriptor_count_(0) {
-    // Dyn array indicies are ordered by binding # and array index of any array within the binding
-    //  so we store up bindings w/ count in ordered map in order to create dyn array mappings below
+    // Proactively reserve and resize as possible, as the reallocation was visible in profiling
+    std::set<uint32_t> sorted_bindings;
+    // Create the sorted set and unsorted map of bindings and indices
+    for (uint32_t i = 0; i < binding_count_; i++) {
+        sorted_bindings.insert(p_create_info->pBindings[i].binding);
+    }
+    uint32_t index = 0;
+    binding_to_index_map_.reserve(binding_count_);
+    for (const uint32_t binding_num : sorted_bindings) {
+        binding_to_index_map_[binding_num] = index++;
+    }
+
+    // Store the create info in the sorted order from above
     std::map<uint32_t, uint32_t> binding_to_dyn_count;
+    bindings_.resize(binding_count_);
     for (uint32_t i = 0; i < binding_count_; ++i) {
-        auto binding_num = p_create_info->pBindings[i].binding;
-        descriptor_count_ += p_create_info->pBindings[i].descriptorCount;
-        uint32_t insert_index = 0;  // Track vector index where we insert element
-        if (bindings_.empty() || binding_num > bindings_.back().binding) {
-            bindings_.push_back(safe_VkDescriptorSetLayoutBinding(&p_create_info->pBindings[i]));
-            insert_index = static_cast<uint32_t>(bindings_.size()) - 1;
-        } else {  // out-of-order binding number, need to insert into vector in-order
-            auto it = bindings_.begin();
-            // Find currently binding's spot in vector
-            while (binding_num > it->binding) {
-                assert(it != bindings_.end());
-                ++insert_index;
-                ++it;
-            }
-            bindings_.insert(it, safe_VkDescriptorSetLayoutBinding(&p_create_info->pBindings[i]));
+        const auto binding_num = p_create_info->pBindings[i].binding;
+        auto &binding_info = bindings_[binding_to_index_map_[binding_num]];
+        binding_info = std::move(safe_VkDescriptorSetLayoutBinding(&p_create_info->pBindings[i]));
+        descriptor_count_ += binding_info.descriptorCount;
+        if (binding_info.descriptorCount > 0) {
+            non_empty_bindings_.insert(binding_num);
         }
-        // In cases where we should ignore pImmutableSamplers make sure it's NULL
-        if ((p_create_info->pBindings[i].pImmutableSamplers) &&
-            ((p_create_info->pBindings[i].descriptorType != VK_DESCRIPTOR_TYPE_SAMPLER) &&
-             (p_create_info->pBindings[i].descriptorType != VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER))) {
-            bindings_[insert_index].pImmutableSamplers = nullptr;
-        }
-        if (p_create_info->pBindings[i].descriptorType == VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC ||
-            p_create_info->pBindings[i].descriptorType == VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC) {
-            binding_to_dyn_count[p_create_info->pBindings[i].binding] = p_create_info->pBindings[i].descriptorCount;
-            dynamic_descriptor_count_ += p_create_info->pBindings[i].descriptorCount;
+
+        if (binding_info.descriptorType == VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC ||
+            binding_info.descriptorType == VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC) {
+            binding_to_dyn_count[binding_num] = binding_info.descriptorCount;
+            dynamic_descriptor_count_ += binding_info.descriptorCount;
         }
     }
     assert(bindings_.size() == binding_count_);
     uint32_t global_index = 0;
-    // Vector order is finalized so create maps of bindings to indices
+    binding_to_global_index_range_map_.reserve(binding_count_);
+    // Vector order is finalized so create maps of bindings to descriptors and descriptors to indices
     for (uint32_t i = 0; i < binding_count_; ++i) {
         auto binding_num = bindings_[i].binding;
-        binding_to_index_map_[binding_num] = i;
         auto final_index = global_index + bindings_[i].descriptorCount;
         binding_to_global_index_range_map_[binding_num] = IndexRange(global_index, final_index);
+        if (final_index != global_index) {
+            global_start_to_index_map_[global_index] = i;
+        }
         global_index = final_index;
     }
+
     // Now create dyn offset array mapping for any dynamic descriptors
     uint32_t dyn_array_idx = 0;
+    binding_to_dynamic_array_idx_map_.reserve(binding_to_dyn_count.size());
     for (const auto &bc_pair : binding_to_dyn_count) {
         binding_to_dynamic_array_idx_map_[bc_pair.first] = dyn_array_idx;
         dyn_array_idx += bc_pair.second;
@@ -102,72 +105,54 @@ bool cvdescriptorset::DescriptorSetLayout::ValidateCreateInfo(debug_report_data 
     return skip;
 }
 
-// put all bindings into the given set
-void cvdescriptorset::DescriptorSetLayout::FillBindingSet(std::unordered_set<uint32_t> *binding_set) const {
-    for (auto binding_index_pair : binding_to_index_map_) binding_set->insert(binding_index_pair.first);
-}
-
-VkDescriptorSetLayoutBinding const *cvdescriptorset::DescriptorSetLayout::GetDescriptorSetLayoutBindingPtrFromBinding(
-    const uint32_t binding) const {
+// Return valid index or "end" i.e. binding_count_;
+// The asserts in "Get" are reduced to the set where no valid answer(like null or 0) could be given
+// Common code for all binding lookups.
+uint32_t cvdescriptorset::DescriptorSetLayout::GetIndexFromBinding(uint32_t binding) const {
     const auto &bi_itr = binding_to_index_map_.find(binding);
-    if (bi_itr != binding_to_index_map_.end()) {
-        return bindings_[bi_itr->second].ptr();
-    }
-    return nullptr;
+    if (bi_itr != binding_to_index_map_.cend()) return bi_itr->second;
+    return GetBindingCount();
 }
 VkDescriptorSetLayoutBinding const *cvdescriptorset::DescriptorSetLayout::GetDescriptorSetLayoutBindingPtrFromIndex(
     const uint32_t index) const {
     if (index >= bindings_.size()) return nullptr;
     return bindings_[index].ptr();
 }
-// Return descriptorCount for given binding, 0 if index is unavailable
-uint32_t cvdescriptorset::DescriptorSetLayout::GetDescriptorCountFromBinding(const uint32_t binding) const {
-    const auto &bi_itr = binding_to_index_map_.find(binding);
-    if (bi_itr != binding_to_index_map_.end()) {
-        return bindings_[bi_itr->second].descriptorCount;
-    }
-    return 0;
-}
 // Return descriptorCount for given index, 0 if index is unavailable
 uint32_t cvdescriptorset::DescriptorSetLayout::GetDescriptorCountFromIndex(const uint32_t index) const {
     if (index >= bindings_.size()) return 0;
     return bindings_[index].descriptorCount;
 }
-// For the given binding, return descriptorType
-VkDescriptorType cvdescriptorset::DescriptorSetLayout::GetTypeFromBinding(const uint32_t binding) const {
-    assert(binding_to_index_map_.count(binding));
-    const auto &bi_itr = binding_to_index_map_.find(binding);
-    if (bi_itr != binding_to_index_map_.end()) {
-        return bindings_[bi_itr->second].descriptorType;
-    }
-    return VK_DESCRIPTOR_TYPE_MAX_ENUM;
-}
 // For the given index, return descriptorType
 VkDescriptorType cvdescriptorset::DescriptorSetLayout::GetTypeFromIndex(const uint32_t index) const {
     assert(index < bindings_.size());
-    return bindings_[index].descriptorType;
-}
-// For the given global index, return descriptorType
-//  Currently just counting up through bindings_, may improve this in future
-VkDescriptorType cvdescriptorset::DescriptorSetLayout::GetTypeFromGlobalIndex(const uint32_t index) const {
-    uint32_t global_offset = 0;
-    for (auto binding : bindings_) {
-        global_offset += binding.descriptorCount;
-        if (index < global_offset) return binding.descriptorType;
-    }
-    assert(0);  // requested global index is out of bounds
+    if (index < bindings_.size()) return bindings_[index].descriptorType;
     return VK_DESCRIPTOR_TYPE_MAX_ENUM;
 }
-// For the given binding, return stageFlags
-VkShaderStageFlags cvdescriptorset::DescriptorSetLayout::GetStageFlagsFromBinding(const uint32_t binding) const {
-    assert(binding_to_index_map_.count(binding));
-    const auto &bi_itr = binding_to_index_map_.find(binding);
-    if (bi_itr != binding_to_index_map_.end()) {
-        return bindings_[bi_itr->second].stageFlags;
-    }
+// For the given index, return stageFlags
+VkShaderStageFlags cvdescriptorset::DescriptorSetLayout::GetStageFlagsFromIndex(const uint32_t index) const {
+    assert(index < bindings_.size());
+    if (index < bindings_.size()) return bindings_[index].stageFlags;
     return VkShaderStageFlags(0);
 }
 
+// For the given global index, return index
+uint32_t cvdescriptorset::DescriptorSetLayout::GetIndexFromGlobalIndex(const uint32_t global_index) const {
+    auto start_it = global_start_to_index_map_.upper_bound(global_index);
+    uint32_t index = binding_count_;
+    assert(start_it != global_start_to_index_map_.cbegin());
+    if (start_it != global_start_to_index_map_.cbegin()) {
+        --start_it;
+        index = start_it->second;
+#ifndef NDEBUG
+        const auto &range = GetGlobalIndexRangeFromBinding(bindings_[index].binding);
+        assert(range.start <= global_index && global_index < range.end);
+#endif
+    }
+    return index;
+}
+
+// For the given binding, return the global index range
 // As start and end are often needed in pairs, get both with a single hash lookup.
 const cvdescriptorset::IndexRange &cvdescriptorset::DescriptorSetLayout::GetGlobalIndexRangeFromBinding(
     const uint32_t binding) const {
@@ -183,7 +168,6 @@ const cvdescriptorset::IndexRange &cvdescriptorset::DescriptorSetLayout::GetGlob
 
 // For given binding, return ptr to ImmutableSampler array
 VkSampler const *cvdescriptorset::DescriptorSetLayout::GetImmutableSamplerPtrFromBinding(const uint32_t binding) const {
-    assert(binding_to_index_map_.count(binding));
     const auto &bi_itr = binding_to_index_map_.find(binding);
     if (bi_itr != binding_to_index_map_.end()) {
         return bindings_[bi_itr->second].pImmutableSamplers;
@@ -192,16 +176,17 @@ VkSampler const *cvdescriptorset::DescriptorSetLayout::GetImmutableSamplerPtrFro
 }
 // Move to next valid binding having a non-zero binding count
 uint32_t cvdescriptorset::DescriptorSetLayout::GetNextValidBinding(const uint32_t binding) const {
-    uint32_t new_binding = binding;
-    do {
-        new_binding++;
-    } while (GetDescriptorCountFromBinding(new_binding) == 0);
-    return new_binding;
+    auto it = non_empty_bindings_.upper_bound(binding);
+    assert(it != non_empty_bindings_.cend());
+    if (it != non_empty_bindings_.cend()) return *it;
+    return GetMaxBinding() + 1;
 }
 // For given index, return ptr to ImmutableSampler array
 VkSampler const *cvdescriptorset::DescriptorSetLayout::GetImmutableSamplerPtrFromIndex(const uint32_t index) const {
-    assert(index < bindings_.size());
-    return bindings_[index].pImmutableSamplers;
+    if (index < bindings_.size()) {
+        return bindings_[index].pImmutableSamplers;
+    }
+    return nullptr;
 }
 // If our layout is compatible with rh_ds_layout, return true,
 //  else return false and fill in error_msg will description of what causes incompatibility
@@ -320,6 +305,7 @@ cvdescriptorset::DescriptorSet::DescriptorSet(const VkDescriptorSet set, const V
       limits_(GetPhysDevProperties(dev_data)->properties.limits) {
     pool_state_ = GetDescriptorPoolState(dev_data, pool);
     // Foreach binding, create default descriptors of given type
+    descriptors_.reserve(p_layout_->GetTotalDescriptorCount());
     for (uint32_t i = 0; i < p_layout_->GetBindingCount(); ++i) {
         auto type = p_layout_->GetTypeFromIndex(i);
         switch (type) {
@@ -1186,6 +1172,7 @@ void cvdescriptorset::PerformUpdateDescriptorSetsWithTemplateKHR(layer_data *dev
         auto binding_being_updated = create_info.pDescriptorUpdateEntries[i].dstBinding;
         auto dst_array_element = create_info.pDescriptorUpdateEntries[i].dstArrayElement;
 
+        desc_writes.reserve(desc_writes.size() + create_info.pDescriptorUpdateEntries[i].descriptorCount);
         for (uint32_t j = 0; j < create_info.pDescriptorUpdateEntries[i].descriptorCount; j++) {
             desc_writes.emplace_back();
             auto &write_entry = desc_writes.back();
