@@ -15302,6 +15302,89 @@ TEST_F(VkLayerTest, CreateShaderModuleCheckBadCapability) {
     m_errorMonitor->VerifyFound();
 }
 
+TEST_F(VkPositiveLayerTest, CreatePipelineCheckShaderCapabilityExtension1of2) {
+    // This is a positive test, no errors expected
+    // Verifies the ability to deal with a shader that declares a non-unique SPIRV capability ID
+    TEST_DESCRIPTION("Create a shader in which uses a non-unique capability ID extension, 1 of 2");
+
+    ASSERT_NO_FATAL_FAILURE(InitFramework(myDbgFunc, m_errorMonitor));
+    if (!DeviceExtensionSupported(gpu(), nullptr, VK_EXT_SHADER_VIEWPORT_INDEX_LAYER_EXTENSION_NAME)) {
+        printf("             Extension %s not supported, skipping this pass. \n",
+               VK_EXT_SHADER_VIEWPORT_INDEX_LAYER_EXTENSION_NAME);
+        return;
+    }
+    m_device_extension_names.push_back(VK_EXT_SHADER_VIEWPORT_INDEX_LAYER_EXTENSION_NAME);
+    ASSERT_NO_FATAL_FAILURE(InitState());
+
+    // These tests require that the device support multiViewport
+    if (!m_device->phy().features().multiViewport) {
+        printf("             Device does not support multiViewport, test skipped.\n");
+        return;
+    }
+    ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
+
+    // Vertex shader using viewport array capability
+    char const *vsSource =
+        "#version 450\n"
+        "#extension GL_ARB_shader_viewport_layer_array : enable\n"
+        "void main() {\n"
+        "    gl_ViewportIndex = 1;\n"
+        "}\n";
+
+    VkShaderObj vs(m_device, vsSource, VK_SHADER_STAGE_VERTEX_BIT, this);
+
+    VkPipelineObj pipe(m_device);
+    pipe.AddDefaultColorAttachment();
+    pipe.AddShader(&vs);
+
+    const VkPipelineLayoutObj pipe_layout(m_device, {});
+
+    m_errorMonitor->ExpectSuccess();
+    pipe.CreateVKPipeline(pipe_layout.handle(), renderPass());
+    m_errorMonitor->VerifyNotFound();
+}
+
+TEST_F(VkPositiveLayerTest, CreatePipelineCheckShaderCapabilityExtension2of2) {
+    // This is a positive test, no errors expected
+    // Verifies the ability to deal with a shader that declares a non-unique SPIRV capability ID
+    TEST_DESCRIPTION("Create a shader in which uses a non-unique capability ID extension, 2 of 2");
+
+    ASSERT_NO_FATAL_FAILURE(InitFramework(myDbgFunc, m_errorMonitor));
+    if (!DeviceExtensionSupported(gpu(), nullptr, VK_NV_VIEWPORT_ARRAY2_EXTENSION_NAME)) {
+        printf("             Extension %s not supported, skipping this pass. \n", VK_NV_VIEWPORT_ARRAY2_EXTENSION_NAME);
+        return;
+    }
+    m_device_extension_names.push_back(VK_NV_VIEWPORT_ARRAY2_EXTENSION_NAME);
+    ASSERT_NO_FATAL_FAILURE(InitState());
+
+    // These tests require that the device support multiViewport
+    if (!m_device->phy().features().multiViewport) {
+        printf("             Device does not support multiViewport, test skipped.\n");
+        return;
+    }
+    ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
+
+    // Vertex shader using viewport array capability
+    char const *vsSource =
+        "#version 450\n"
+        "#extension GL_ARB_shader_viewport_layer_array : enable\n"
+        "void main() {\n"
+        "    gl_ViewportIndex = 1;\n"
+        "}\n";
+
+    VkShaderObj vs(m_device, vsSource, VK_SHADER_STAGE_VERTEX_BIT, this);
+
+    VkPipelineObj pipe(m_device);
+    pipe.AddDefaultColorAttachment();
+    pipe.AddShader(&vs);
+
+    const VkPipelineLayoutObj pipe_layout(m_device, {});
+
+    m_errorMonitor->ExpectSuccess();
+    pipe.CreateVKPipeline(pipe_layout.handle(), renderPass());
+    m_errorMonitor->VerifyNotFound();
+}
+
 TEST_F(VkLayerTest, CreatePipelineFragmentInputNotProvided) {
     TEST_DESCRIPTION(
         "Test that an error is produced for a fragment shader input "
