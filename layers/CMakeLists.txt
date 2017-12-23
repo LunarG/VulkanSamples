@@ -188,6 +188,14 @@ else()
     set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wpointer-arith -Wno-unused-function -Wno-sign-compare")
 endif()
 
+# Clang (and not gcc) warns about unused const variables.
+# Generated files may purposely contain unused consts, so
+# silence this warning in Clang. 
+if (CMAKE_C_COMPILER_ID MATCHES "Clang")
+   set_source_files_properties(parameter_validation.cpp PROPERTIES
+        COMPILE_FLAGS "-Wno-unused-const-variable")
+endif()
+
 run_vk_xml_generate(threading_generator.py thread_check.h)
 run_vk_xml_generate(parameter_validation_generator.py parameter_validation.cpp)
 run_vk_xml_generate(unique_objects_generator.py unique_objects_wrappers.h)
