@@ -649,6 +649,8 @@ struct GLOBAL_CB_NODE : public BASE_NODE {
     bool hasDrawCmd;
     CB_STATE state;                      // Track cmd buffer update state
     uint64_t submitCount;                // Number of times CB has been submitted
+    typedef uint64_t ImageLayoutUpdateCount;
+    ImageLayoutUpdateCount image_layout_change_count;  // The sequence number for changes to image layout (for cached validation)
     CBStatusFlags status;                // Track status of various bindings on cmd buffer
     CBStatusFlags static_status;         // All state bits provided by current graphics pipeline
                                          // rather than dynamic state
@@ -697,6 +699,7 @@ struct GLOBAL_CB_NODE : public BASE_NODE {
     std::unordered_set<VkDeviceMemory> memObjs;
     std::vector<std::function<bool(VkQueue)>> eventUpdates;
     std::vector<std::function<bool(VkQueue)>> queryUpdates;
+    std::unordered_set<cvdescriptorset::DescriptorSet *> validated_descriptor_sets;
 };
 
 struct SEMAPHORE_WAIT {

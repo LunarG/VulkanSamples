@@ -228,6 +228,7 @@ void SetLayout(layer_data *device_data, GLOBAL_CB_NODE *pCB, ImageSubresourcePai
 void SetImageLayout(layer_data *device_data, GLOBAL_CB_NODE *cb_node, const IMAGE_STATE *image_state,
                     VkImageSubresourceRange image_subresource_range, const VkImageLayout &layout) {
     assert(image_state);
+    cb_node->image_layout_change_count++;  // Change the version of this data to force revalidation
     for (uint32_t level_index = 0; level_index < image_subresource_range.levelCount; ++level_index) {
         uint32_t level = image_subresource_range.baseMipLevel + level_index;
         for (uint32_t layer_index = 0; layer_index < image_subresource_range.layerCount; layer_index++) {
@@ -385,6 +386,7 @@ void TransitionImageAspectLayout(layer_data *device_data, GLOBAL_CB_NODE *pCB, c
     VkImageSubresource sub = {aspect, level, layer};
     IMAGE_CMD_BUF_LAYOUT_NODE node;
     if (!FindCmdBufLayout(device_data, pCB, mem_barrier->image, sub, node)) {
+        pCB->image_layout_change_count++;  // Change the version of this data to force revalidation
         SetLayout(device_data, pCB, mem_barrier->image, sub,
                   IMAGE_CMD_BUF_LAYOUT_NODE(mem_barrier->oldLayout, mem_barrier->newLayout));
         return;

@@ -30,6 +30,7 @@
 #include <algorithm>
 
 // Construct DescriptorSetLayout instance from given create info
+// Proactively reserve and resize as possible, as the reallocation was visible in profiling
 cvdescriptorset::DescriptorSetLayout::DescriptorSetLayout(const VkDescriptorSetLayoutCreateInfo *p_create_info,
                                                           const VkDescriptorSetLayout layout)
     : layout_(layout),
@@ -37,7 +38,7 @@ cvdescriptorset::DescriptorSetLayout::DescriptorSetLayout(const VkDescriptorSetL
       binding_count_(p_create_info->bindingCount),
       descriptor_count_(0),
       dynamic_descriptor_count_(0) {
-    // Proactively reserve and resize as possible, as the reallocation was visible in profiling
+    binding_type_stats_ = {0, 0, 0};
     std::set<uint32_t> sorted_bindings;
     // Create the sorted set and unsorted map of bindings and indices
     for (uint32_t i = 0; i < binding_count_; i++) {
@@ -65,6 +66,12 @@ cvdescriptorset::DescriptorSetLayout::DescriptorSetLayout(const VkDescriptorSetL
             binding_info.descriptorType == VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC) {
             binding_to_dyn_count[binding_num] = binding_info.descriptorCount;
             dynamic_descriptor_count_ += binding_info.descriptorCount;
+            binding_type_stats_.dynamic_buffer_count++;
+        } else if ((binding_info.descriptorType == VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER) ||
+                   (binding_info.descriptorType == VK_DESCRIPTOR_TYPE_STORAGE_BUFFER)) {
+            binding_type_stats_.non_dynamic_buffer_count++;
+        } else {
+            binding_type_stats_.image_sampler_count++;
         }
     }
     assert(bindings_.size() == binding_count_);
@@ -296,7 +303,7 @@ cvdescriptorset::AllocateDescriptorSetsData::AllocateDescriptorSetsData(uint32_t
     : required_descriptors_by_type{}, layout_nodes(count, nullptr) {}
 
 cvdescriptorset::DescriptorSet::DescriptorSet(const VkDescriptorSet set, const VkDescriptorPool pool,
-                                              const std::shared_ptr<DescriptorSetLayout const> &layout, const layer_data *dev_data)
+                                              const std::shared_ptr<DescriptorSetLayout const> &layout, layer_data *dev_data)
     : some_update_(false),
       set_(set),
       pool_state_(nullptr),
@@ -383,7 +390,7 @@ bool cvdescriptorset::DescriptorSet::IsCompatible(DescriptorSetLayout const *con
 //  that any update buffers are valid, and that any dynamic offsets are within the bounds of their buffers.
 // Return true if state is acceptable, or false and write an error message into error string
 bool cvdescriptorset::DescriptorSet::ValidateDrawState(const std::map<uint32_t, descriptor_req> &bindings,
-                                                       const std::vector<uint32_t> &dynamic_offsets, const GLOBAL_CB_NODE *cb_node,
+                                                       const std::vector<uint32_t> &dynamic_offsets, GLOBAL_CB_NODE *cb_node,
                                                        const char *caller, std::string *error) const {
     for (auto binding_pair : bindings) {
         auto binding = binding_pair.first;
@@ -415,7 +422,7 @@ bool cvdescriptorset::DescriptorSet::ValidateDrawState(const std::map<uint32_t, 
                                   << " references invalid buffer " << buffer << ".";
                         *error = error_str.str();
                         return false;
-                    } else {
+                    } else if (!buffer_node->sparse) {
                         for (auto mem_binding : buffer_node->GetBoundMemory()) {
                             if (!GetMemObjInfo(device_data_, mem_binding)) {
                                 std::stringstream error_str;
@@ -425,6 +432,13 @@ bool cvdescriptorset::DescriptorSet::ValidateDrawState(const std::map<uint32_t, 
                                 return false;
                             }
                         }
+                    } else {
+                        // Enqueue sparse resource validation, as these can only be validated at submit time
+                        auto device_data_copy = device_data_;  // Cannot capture members by value, so make capturable copy.
+                        std::function<bool(void)> function = [device_data_copy, caller, buffer_node]() {
+                            return core_validation::ValidateBufferMemoryIsValid(device_data_copy, buffer_node, caller);
+                        };
+                        cb_node->queue_submit_functions.push_back(function);
                     }
                     if (descriptors_[i]->IsDynamic()) {
                         // Validate that dynamic offsets are within the buffer
@@ -720,6 +734,72 @@ void cvdescriptorset::DescriptorSet::BindCommandBuffer(GLOBAL_CB_NODE *cb_node,
         auto range = p_layout_->GetGlobalIndexRangeFromBinding(binding);
         for (uint32_t i = range.start; i < range.end; ++i) {
             descriptors_[i]->BindCommandBuffer(device_data_, cb_node);
+        }
+    }
+}
+void cvdescriptorset::DescriptorSet::FilterAndTrackOneBindingReq(const BindingReqMap::value_type &binding_req_pair,
+                                                                 const BindingReqMap &in_req, BindingReqMap *out_req,
+                                                                 TrackedBindings *bindings) {
+    assert(out_req);
+    assert(bindings);
+    const auto binding = binding_req_pair.first;
+    // Use insert and look at the boolean ("was inserted") in the returned pair to see if this is a new set member.
+    // Saves one hash lookup vs. find ... compare w/ end ... insert.
+    const auto it_bool_pair = bindings->insert(binding);
+    if (it_bool_pair.second) {
+        out_req->emplace(binding_req_pair);
+    }
+}
+void cvdescriptorset::DescriptorSet::FilterAndTrackOneBindingReq(const BindingReqMap::value_type &binding_req_pair,
+                                                                 const BindingReqMap &in_req, BindingReqMap *out_req,
+                                                                 TrackedBindings *bindings, uint32_t limit) {
+    if (bindings->size() < limit) FilterAndTrackOneBindingReq(binding_req_pair, in_req, out_req, bindings);
+}
+
+void cvdescriptorset::DescriptorSet::FilterAndTrackBindingReqs(GLOBAL_CB_NODE *cb_state, const BindingReqMap &in_req,
+                                                               BindingReqMap *out_req) {
+    TrackedBindings &bound = cached_validation_[cb_state].command_binding_and_usage;
+    if (bound.size() == GetBindingCount()) {
+        return;  // All bindings are bound, out req is empty
+    }
+    for (const auto &binding_req_pair : in_req) {
+        const auto binding = binding_req_pair.first;
+        // If a binding doesn't exist, or has already been bound, skip it
+        if (p_layout_->HasBinding(binding)) {
+            FilterAndTrackOneBindingReq(binding_req_pair, in_req, out_req, &bound);
+        }
+    }
+}
+
+void cvdescriptorset::DescriptorSet::FilterAndTrackBindingReqs(GLOBAL_CB_NODE *cb_state, PIPELINE_STATE *pipeline,
+                                                               const BindingReqMap &in_req, BindingReqMap *out_req) {
+    auto &validated = cached_validation_[cb_state];
+    auto &image_sample_val = validated.image_samplers[pipeline];
+    auto *const dynamic_buffers = &validated.dynamic_buffers;
+    auto *const non_dynamic_buffers = &validated.non_dynamic_buffers;
+    const auto &stats = p_layout_->GetBindingTypeStats();
+    for (const auto &binding_req_pair : in_req) {
+        auto binding = binding_req_pair.first;
+        VkDescriptorSetLayoutBinding const *layout_binding = p_layout_->GetDescriptorSetLayoutBindingPtrFromBinding(binding);
+        if (!layout_binding) {
+            continue;
+        }
+        // Caching criteria differs per type.
+        // If image_layout have changed , the image descriptors need to be validated against them.
+        if ((layout_binding->descriptorType == VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC) ||
+            (layout_binding->descriptorType == VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC)) {
+            FilterAndTrackOneBindingReq(binding_req_pair, in_req, out_req, dynamic_buffers, stats.dynamic_buffer_count);
+        } else if ((layout_binding->descriptorType == VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER) ||
+                   (layout_binding->descriptorType == VK_DESCRIPTOR_TYPE_STORAGE_BUFFER)) {
+            FilterAndTrackOneBindingReq(binding_req_pair, in_req, out_req, non_dynamic_buffers, stats.non_dynamic_buffer_count);
+        } else {
+            // This is rather crude, as the changed layouts may not impact the bound descriptors,
+            // but the simple "versioning" is a simple "dirt" test.
+            auto &version = image_sample_val[binding];  // Take advantage of default construtor zero initialzing new entries
+            if (version != cb_state->image_layout_change_count) {
+                version = cb_state->image_layout_change_count;
+                out_req->emplace(binding_req_pair);
+            }
         }
     }
 }
@@ -1706,7 +1786,7 @@ void cvdescriptorset::PerformAllocateDescriptorSets(const VkDescriptorSetAllocat
                                                     const AllocateDescriptorSetsData *ds_data,
                                                     std::unordered_map<VkDescriptorPool, DESCRIPTOR_POOL_STATE *> *pool_map,
                                                     std::unordered_map<VkDescriptorSet, cvdescriptorset::DescriptorSet *> *set_map,
-                                                    const layer_data *dev_data) {
+                                                    layer_data *dev_data) {
     auto pool_state = (*pool_map)[p_alloc_info->descriptorPool];
     // Account for sets and individual descriptors allocated from pool
     pool_state->availableSets -= p_alloc_info->descriptorSetCount;
@@ -1721,5 +1801,22 @@ void cvdescriptorset::PerformAllocateDescriptorSets(const VkDescriptorSetAllocat
         pool_state->sets.insert(new_ds);
         new_ds->in_use.store(0);
         (*set_map)[descriptor_sets[i]] = new_ds;
+    }
+}
+
+cvdescriptorset::PrefilterBindRequestMap::PrefilterBindRequestMap(cvdescriptorset::DescriptorSet &ds, const BindingReqMap &in_map,
+                                                                  GLOBAL_CB_NODE *cb_state)
+    : filtered_map_(), orig_map_(in_map) {
+    if (ds.GetTotalDescriptorCount() > kManyDescriptors_) {
+        filtered_map_.reset(new std::map<uint32_t, descriptor_req>());
+        ds.FilterAndTrackBindingReqs(cb_state, orig_map_, filtered_map_.get());
+    }
+}
+cvdescriptorset::PrefilterBindRequestMap::PrefilterBindRequestMap(cvdescriptorset::DescriptorSet &ds, const BindingReqMap &in_map,
+                                                                  GLOBAL_CB_NODE *cb_state, PIPELINE_STATE *pipeline)
+    : filtered_map_(), orig_map_(in_map) {
+    if (ds.GetTotalDescriptorCount() > kManyDescriptors_) {
+        filtered_map_.reset(new std::map<uint32_t, descriptor_req>());
+        ds.FilterAndTrackBindingReqs(cb_state, pipeline, orig_map_, filtered_map_.get());
     }
 }
