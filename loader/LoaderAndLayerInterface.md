@@ -26,6 +26,7 @@
     * [Example Code for CreateInstance](#example-code-for-createinstance)
     * [Example Code for CreateDevice](#example-code-for-createdevice)
     * [Meta-layers](#meta-layers)
+    * [Pre-Instance Functions](#pre-instance-functions)
     * [Special Considerations](#special-considerations)
     * [Layer Manifest File Format](#layer-manifest-file-format)
     * [Layer Library Versions](#layer-library-versions)
@@ -771,6 +772,7 @@ In this section we'll discuss how the loader interacts with layers, including:
   * [Example Code for CreateInstance](#example-code-for-createinstance)
   * [Example Code for CreateDevice](#example-code-for-createdevice)
   * [Meta-layers](#meta-layers)
+  * [Pre-Instance Functions](#pre-instance-functions)
   * [Special Considerations](#special-considerations)
     * [Associating Private Data with Vulkan Objects Within a Layer](#associating-private-data-with-vulkan-objects-within-a-layer)
       * [Wrapping](#wrapping)
@@ -1453,6 +1455,83 @@ The
 Manifest file formatting necessary to define a meta-layer can be found in the
 [Layer Manifest File Format](#layer-manifest-file-format) section.
 
+#### Pre-Instance Functions
+
+Vulkan includes a small number of functions which are called without any dispatchable object.
+Most layers do not intercept these functions, as layers are enabled when an instance is created.
+However, under certain conditions it is possible for a layer to intercept these functions.
+
+In order to intercept the pre-instance functions, several conditions must be met:
+* The layer must be implicit
+* The layer manifest version must be 1.1.2 or later
+* The layer must export the entry point symbols for each intercepted function
+* The layer manifest must specify the name of each intercepted function in a `pre_instance_functions` JSON object
+
+The functions that may be intercepted in this way are:
+* `vkEnumerateInstanceExtensionProperties`
+* `vkEnumerateInstanceLayerProperties`
+
+Pre-instance functions work differently from all other layer intercept functions.
+Other intercept functions have a function prototype identical to that of the function they are intercepting.
+They then rely on data that was passed to the layer at instance or device creation so that layers can call down the chain.
+Because there is no need to create an instance before calling the pre-instance functions, these functions must use a separate mechanism for constructing the call chain.
+This mechanism consists of an extra parameter that will be passed to the layer intercept function when it is called.
+This parameter will be a pointer to a struct, defined as follows:
+
+```
+typedef struct Vk...Chain
+{
+    struct {
+        VkChainType type;
+        uint32_t version;
+        uint32_t size;
+    } header;
+    PFN_vkVoidFunction pfnNextLayer;
+    const struct Vk...Chain* pNextLink;
+} Vk...Chain;
+```
+
+These structs are defined in the `vk_layer.h` file so that it is not necessary to redefine the chain structs in any external code.
+The name of each struct is be similar to the name of the function it corresponds to, but the leading "V" is capitalized, and the word "Chain" is added to the end.
+For example, the struct for `vkEnumerateInstanceExtensionProperties` is called `VkEnumerateInstanceExtensionPropertiesChain`.
+Furthermore, the `pfnNextLayer` struct member is not actually a void function pointer &mdash; its type will be the actual type of each function in the call chain.
+
+Each layer intercept function must have a prototype that is the same as the prototype of the function being intercepted, except that the first parameter must be that function's chain struct (passed as a const pointer).
+For example, a function that wishes to intercept `vkEnumerateInstanceExtensionProperties` would have the prototype:
+
+```
+VkResult InterceptFunctionName(const VkEnumerateInstanceExtensionProperties* pChain,
+    const char* pLayerName, uint32_t* pPropertyCount, VkExtensionProperties* pProperties);
+```
+
+The name of the function is arbitrary; it can be anything provided that it is given in the layer manifest file (see [Layer Manifest File Format](#layer-manifest-file-format)).
+The implementation of each intercept functions is responsible for calling the next item in the call chain, using the chain parameter.
+This is done by calling the `pfnNextLayer` member of the chain struct, passing `pNextLink` as the first argument, and passing the remaining function arguments after that.
+For example, a simple implementation for `vkEnumerateInstanceExtensionProperties` that does nothing but call down the chain would look like:
+
+```
+VkResult InterceptFunctionName(const VkEnumerateInstanceExtensionProperties* pChain,
+    const char* pLayerName, uint32_t* pPropertyCount, VkExtensionProperties* pProperties)
+{
+    return pChain->pfnNextLayer(pChain->pNextLink, pLayerName, pPropertyCount, pProperties);
+}
+```
+
+When using a C++ compiler, each chain type also defines a function named `CallDown` which can be used to automatically handle the first argument.
+Implementing the above function using this method would look like:
+
+```
+VkResult InterceptFunctionName(const VkEnumerateInstanceExtensionProperties* pChain,
+    const char* pLayerName, uint32_t* pPropertyCount, VkExtensionProperties* pProperties)
+{
+    return pChain->CallDown(pLayerName, pPropertyCount, pProperties);
+}
+```
+
+Unlike with other functions in layers, the layer may not save any global data between these function calls.
+Because Vulkan does not store any state until an instance has been created, all layer libraries are released at the end of each pre-instance call.
+This means that implicit layers can use pre-instance intercepts to modify data that is returned by the functions, but they cannot be used to record that data.
+
 #### Special Considerations
 
 
@@ -1643,7 +1722,7 @@ Here is an example layer JSON Manifest file with a single layer:
        ],
        "enable_environment": {
            "ENABLE_LAYER_OVERLAY_1": "1"
-       }
+       },
        "disable_environment": {
            "DISABLE_LAYER_OVERLAY_1": ""
        }
@@ -1694,7 +1773,7 @@ Here's an example of a meta-layer manifest file:
 | JSON Node | Description and Notes | Introspection Query |
 |:----------------:|--------------------|:----------------:
 | "file\_format\_version" | Manifest format major.minor.patch version number. | N/A |
-| | Supported versions are: 1.0.0, 1.0.1, and 1.1.0. | |
+| | Supported versions are: 1.0.0, 1.0.1, 1.1.0, 1.1.1, and 1.1.2. | |
 | "layer" | The identifier used to group a single layer's information together. | vkEnumerateInstanceLayerProperties |
 | "layers" | The identifier used to group multiple layers' information together.  This requires a minimum Manifest file format version of 1.0.1.| vkEnumerateInstanceLayerProperties |
 | "name" | The string used to uniquely identify this layer to applications. | vkEnumerateInstanceLayerProperties |
@@ -1710,11 +1789,21 @@ Here's an example of a meta-layer manifest file:
 | "enable\_environment" | **Implicit Layers Only** - **OPTIONAL:** Indicates an environment variable used to enable the Implicit Layer (w/ value of 1).  This environment variable (which should vary with each "version" of the layer) must be set to the given value or else the implicit layer is not loaded. This is for application environments (e.g. Steam) which want to enable a layer(s) only for applications that they launch, and allows for applications run outside of an application environment to not get that implicit layer(s).| N/A |
 | "disable\_environment" | **Implicit Layers Only** - **REQUIRED:**Indicates an environment variable used to disable the Implicit Layer (w/ value of 1). In rare cases of an application not working with an implicit layer, the application can set this environment variable (before calling Vulkan functions) in order to "blacklist" the layer. This environment variable (which should vary with each "version" of the layer) must be set (not particularly to any value). If both the "enable_environment" and "disable_environment" variables are set, the implicit layer is disabled. | N/A |
 | "component_layers" | **Meta-layers Only** - Indicates the component layer names that are part of a meta-layer.  The names listed must be the "name" identified in each of the component layer's Mainfest file "name" tag (this is the same as the name of the layer that is passed to the `vkCreateInstance` command).  All component layers must be present on the system and found by the loader in order for this meta-layer to be available and activated. **This field must not be present if "library\_path" is defined** | N/A |
+| "pre_instance_functions" | **Implicit Layers Only** - **OPTIONAL:** Indicates which functions the layer wishes to intercept, that do not require that an instance has been created. This should be an object where each function to be intercepted is defined as a string entry where the key is the Vulkan function name and the value is the name of the intercept function in the layer's dynamic library. Available in layer manifest versions 1.1.2 and up. See [Pre-Instance Functions](#pre-instance-functions) for more information. | vkEnumerateInstance*Properties |
 
 ##### Layer Manifest File Version History
 
-The current highest supported Layer Manifest file format supported is 1.1.0.
+The current highest supported Layer Manifest file format supported is 1.1.2.
 Information about each version is detailed in the following sub-sections:
+
+###### Layer Manifest File Version 1.1.2
+
+Version 1.1.2 introduced the ability of layers to intercept function calls that do not have an instance.
+
+###### Layer Manifest File Version 1.1.1
+
+The ability to define custom metalayers was added.
+To support metalayers, the "component_layers" section was added, and the requirement for a "library_path" section to be present was removed when the "component_layers" section is present.
 
 ###### Layer Manifest File Version 1.1.0
 
