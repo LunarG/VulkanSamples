@@ -86,7 +86,7 @@ else()
                 )
         endforeach(config_file)
         foreach (config_file ${LAYER_BINARY_JSON_FILES})
-            add_custom_target(${config_file}-json ALL
+            add_custom_target(${config_file}-bin-json ALL
                 COMMAND ln -sf ${CMAKE_CURRENT_SOURCE_DIR}/linux/${config_file}.json
                 VERBATIM
                 )
@@ -115,7 +115,7 @@ if ((Win32) OR (NOT (CMAKE_CURRENT_SOURCE_DIR STREQUAL CMAKE_CURRENT_BINARY_DIR)
     endforeach(config_file)
     if(UNIX)
         foreach (config_file ${LAYER_BINARY_JSON_FILES})
-            add_dependencies(${config_file}-json VkLayer_utils)
+            add_dependencies(${config_file}-bin-json VkLayer_utils)
         endforeach(config_file)
         foreach (config_file ${LAYER_BINARY_FILES})
             add_dependencies(${config_file}-so VkLayer_utils)
