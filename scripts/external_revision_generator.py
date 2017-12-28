@@ -23,20 +23,9 @@ import os
 import subprocess
 import sys
 
-if __name__ == '__main__':
-    if (len(sys.argv) != 4):
-        print("Usage: %s <SOURCE_DIR> <SYMBOL_NAME> <OUTPUT_HEADER_FILE>" % sys.argv[0])
-        sys.exit(os.EX_USAGE)
-    
-    source_dir = sys.argv[1]
-    symbol_name = sys.argv[2]
-    output_header_file = sys.argv[3]
-    
-    # Extract commit ID from the specified source directory
-    # Call git.bat on Windows for compatiblity.
-    git_binary = "git.bat" if os == "nt" else "git"
+def generate(git_binary):
     commit_id = subprocess.check_output([git_binary, "rev-parse", "HEAD"], cwd=source_dir).decode('utf-8').strip()
-    
+
     # Write commit ID to output header file
     with open(output_header_file, "w") as header_file:
          # File Comment
@@ -74,4 +63,19 @@ if __name__ == '__main__':
         contents = '#pragma once\n\n'
         contents += '#define %s "%s"\n' % (symbol_name, commit_id)
         header_file.write(contents)
+
+if __name__ == '__main__':
+    if (len(sys.argv) != 4):
+        print("Usage: %s <SOURCE_DIR> <SYMBOL_NAME> <OUTPUT_HEADER_FILE>" % sys.argv[0])
+        sys.exit(os.EX_USAGE)
     
+    source_dir = sys.argv[1]
+    symbol_name = sys.argv[2]
+    output_header_file = sys.argv[3]
+    
+    # Extract commit ID from the specified source directory
+    try:
+        generate('git')
+    except WindowsError:
+        # Call git.bat on Windows for compatiblity.
+        generate('git.bat')
