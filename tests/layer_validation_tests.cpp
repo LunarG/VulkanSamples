@@ -703,6 +703,7 @@ class VkBufferTest {
         eInvalidDeviceOffset,
         eInvalidMemoryOffset,
         eBindNullBuffer,
+        eBindFakeBuffer,
         eFreeInvalidHandle,
         eNone,
     };
@@ -739,9 +740,20 @@ class VkBufferTest {
 
     // A constructor which performs validation tests within construction.
     VkBufferTest(VkDeviceObj *aVulkanDevice, VkBufferUsageFlags aBufferUsage, eTestEnFlags aTestFlag = eNone)
-        : AllocateCurrent(false), BoundCurrent(false), CreateCurrent(false), VulkanDevice(aVulkanDevice->device()) {
-        if (eBindNullBuffer == aTestFlag) {
-            VulkanMemory = 0;
+        : AllocateCurrent(true),
+          BoundCurrent(false),
+          CreateCurrent(false),
+          InvalidDeleteEn(false),
+          VulkanDevice(aVulkanDevice->device()) {
+        if (eBindNullBuffer == aTestFlag || eBindFakeBuffer == aTestFlag) {
+            VkMemoryAllocateInfo memory_allocate_info = {};
+            memory_allocate_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+            memory_allocate_info.allocationSize = 1;   // fake size -- shouldn't matter for the test
+            memory_allocate_info.memoryTypeIndex = 0;  // fake type -- shouldn't matter for the test
+            vkAllocateMemory(VulkanDevice, &memory_allocate_info, nullptr, &VulkanMemory);
+
+            VulkanBuffer = (aTestFlag == eBindNullBuffer) ? VK_NULL_HANDLE : (VkBuffer)0xCDCDCDCDCDCDCDCD;
+
             vkBindBufferMemory(VulkanDevice, VulkanBuffer, VulkanMemory, 0);
         } else {
             VkBufferCreateInfo buffer_create_info = {};
@@ -768,7 +780,6 @@ class VkBufferTest {
             }
 
             vkAllocateMemory(VulkanDevice, &memory_allocate_info, NULL, &VulkanMemory);
-            AllocateCurrent = true;
             // NB: 1 is intentionally an invalid offset value
             const bool offset_en = eInvalidDeviceOffset == aTestFlag || eInvalidMemoryOffset == aTestFlag;
             vkBindBufferMemory(VulkanDevice, VulkanBuffer, VulkanMemory, offset_en ? eOffsetAlignment : 0);
@@ -13032,10 +13043,17 @@ TEST_F(VkLayerTest, VertexBufferInvalid) {
 
     {
         // Attempt to bind a null buffer.
+        m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
+                                             "vkBindBufferMemory: required parameter buffer specified as VK_NULL_HANDLE");
+        VkBufferTest buffer_test(m_device, 0, VkBufferTest::eBindNullBuffer);
+        (void)buffer_test;
+        m_errorMonitor->VerifyFound();
+    }
+
+    {
+        // Attempt to bind a fake buffer.
         m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_17001a01);
-        m_errorMonitor->SetUnexpectedError("required parameter memory specified as VK_NULL_HANDLE");
-        m_errorMonitor->SetUnexpectedError("memory must be a valid VkDeviceMemory handle");
-        VkBufferTest buffer_test(m_device, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VkBufferTest::eBindNullBuffer);
+        VkBufferTest buffer_test(m_device, 0, VkBufferTest::eBindFakeBuffer);
         (void)buffer_test;
         m_errorMonitor->VerifyFound();
     }
