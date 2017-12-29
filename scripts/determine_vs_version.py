@@ -20,6 +20,7 @@
 
 import sys
 import os
+import subprocess
 
 # Following function code snippet was found on StackOverflow (with a change to lower
 # camel-case on the variable names):
@@ -63,7 +64,7 @@ def determine_year(version):
 # it into a format we can use, which is "<version_num> <version_year>".
 if __name__ == '__main__':
     exeName     = 'msbuild.exe'
-    versionCall = exeName + ' /ver'
+    arguments   = '/ver'
 
     # Determine if the executable exists in the path, this is critical.
     #
@@ -75,7 +76,8 @@ if __name__ == '__main__':
         print('00 0000')
         print('Executable ' + exeName + ' not found in PATH!')
     else:
-        sysCallOut = os.popen(versionCall).read()
+        proc = subprocess.Popen([exeName, arguments], stdout=subprocess.PIPE)
+        sysCallOut = proc.stdout.readline().decode('iso-8859-1').rstrip()
         
         version = None
 
