@@ -341,8 +341,12 @@ class VkDescriptorSetLayoutObj : public vk_testing::DescriptorSetLayout {
                              const std::vector<VkDescriptorSetLayoutBinding> &descriptor_set_bindings = {},
                              VkDescriptorSetLayoutCreateFlags flags = 0);
 
-    VkDescriptorSetLayoutObj(VkDescriptorSetLayoutObj &&src) = default;
-    VkDescriptorSetLayoutObj &operator=(VkDescriptorSetLayoutObj &&src) = default;
+    // Move constructor and move assignment operator for Visual Studio 2013
+    VkDescriptorSetLayoutObj(VkDescriptorSetLayoutObj &&src) : DescriptorSetLayout(std::move(src)){};
+    VkDescriptorSetLayoutObj &operator=(VkDescriptorSetLayoutObj &&src) {
+        DescriptorSetLayout::operator=(std::move(src));
+        return *this;
+    }
 };
 
 class VkDescriptorSetObj : public vk_testing::DescriptorPool {
@@ -389,8 +393,12 @@ class VkPipelineLayoutObj : public vk_testing::PipelineLayout {
     VkPipelineLayoutObj(VkDeviceObj *device, const std::vector<const VkDescriptorSetLayoutObj *> &descriptor_layouts = {},
                         const std::vector<VkPushConstantRange> &push_constant_ranges = {});
 
-    VkPipelineLayoutObj(VkPipelineLayoutObj &&src) = default;
-    VkPipelineLayoutObj &operator=(VkPipelineLayoutObj &&src) = default;
+    // Move constructor and move assignment operator for Visual Studio 2013
+    VkPipelineLayoutObj(VkPipelineLayoutObj &&src) : PipelineLayout(std::move(src)) {}
+    VkPipelineLayoutObj &operator=(VkPipelineLayoutObj &&src) {
+        PipelineLayout::operator=(std::move(src));
+        return *this;
+    }
 
     void Reset();
 };
