@@ -820,11 +820,11 @@ class MockICDOutputGenerator(OutputGenerator):
         if self.header:
             write('#include <unordered_map>', file=self.outFile)
             write('#include <mutex>', file=self.outFile)
+            write('#include <string>', file=self.outFile)
             write('#include <cstring>', file=self.outFile)
             write('#include "vulkan/vk_icd.h"', file=self.outFile)
         else:
             write('#include "mock_icd.h"', file=self.outFile)
-            write('#include <string.h>', file=self.outFile)
             write('#include <stdlib.h>', file=self.outFile)
             write('#include <vector>', file=self.outFile)
 
