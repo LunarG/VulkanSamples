@@ -5166,7 +5166,7 @@ VKAPI_ATTR VkResult VKAPI_CALL terminator_CreateDevice(VkPhysicalDevice physical
             filtered_extension_names[localCreateInfo.enabledExtensionCount] = (char *)extension_name;
             localCreateInfo.enabledExtensionCount++;
         } else {
-            loader_log(icd_term->this_instance, VK_DEBUG_REPORT_WARNING_BIT_EXT, 0,
+            loader_log(icd_term->this_instance, VK_DEBUG_REPORT_DEBUG_BIT_EXT, 0,
                        "vkCreateDevice extension %s not available for "
                        "devices associated with ICD %s",
                        extension_name, icd_term->scanned_icd->lib_name);
