@@ -12,7 +12,7 @@ version: "{build}"
 max_jobs: 4
 
 os:
-  - Visual Studio 2015
+  - Visual Studio 2013
 
 environment:
   PYTHON_PATH: "C:/Python35"
@@ -72,7 +72,7 @@ before_build:
   - cd  %GLSLANG_DIR%
   - if not exist build (mkdir build)
   - cd build
-  - cmake -G "Visual Studio 14 2015 Win64" -DCMAKE_INSTALL_PREFIX=install ..
+  - cmake -G "Visual Studio 12 2013 Win64" -DCMAKE_INSTALL_PREFIX=install ..
   - msbuild INSTALL.vcxproj /p:Platform=x64 /p:Configuration=Release /verbosity:quiet
   # Build the x64 debug version if selected.
   - if %PLATFORM% == x64 (if %CONFIGURATION% == Debug (msbuild INSTALL.vcxproj /p:Platform=x64 /p:Configuration=Debug /verbosity:quiet))
@@ -80,13 +80,13 @@ before_build:
   - cd %GLSLANG_DIR%
   - if not exist build32 (mkdir build32)
   - cd build32
-  - if %PLATFORM% == Win32 (cmake -G "Visual Studio 14 2015" -DCMAKE_INSTALL_PREFIX=install ..)
+  - if %PLATFORM% == Win32 (cmake -G "Visual Studio 12 2013" -DCMAKE_INSTALL_PREFIX=install ..)
   - if %PLATFORM% == Win32 (msbuild INSTALL.vcxproj /p:Platform=x86 /p:Configuration=%CONFIGURATION% /verbosity:quiet)
   # Generate build files using CMake for the build step.
   - echo.
   - echo Starting build for %APPVEYOR_REPO_NAME%
-  - if %PLATFORM% == Win32 (set GENERATOR="Visual Studio 14 2015")
-  - if %PLATFORM% == x64 (set GENERATOR="Visual Studio 14 2015 Win64")
+  - if %PLATFORM% == Win32 (set GENERATOR="Visual Studio 12 2013")
+  - if %PLATFORM% == x64 (set GENERATOR="Visual Studio 12 2013 Win64")
   - cd %TOP_DIR%
   - mkdir build
   - cd build
