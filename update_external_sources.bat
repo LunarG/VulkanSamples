@@ -16,6 +16,10 @@ set BUILD_DIR=%~dp0
 set BASE_DIR="%BUILD_DIR%external"
 set REVISION_DIR="%BUILD_DIR%external_revisions"
 set GLSLANG_DIR=%BASE_DIR%\glslang
+set do_32=0
+set do_64=0
+set do_debug=0
+set do_release=0
 
 REM // ======== Parameter parsing ======== //
 
@@ -23,6 +27,10 @@ REM // ======== Parameter parsing ======== //
    set arg-do-glslang=0
    set arg-no-sync=0
    set arg-no-build=0
+   set arg-32=0
+   set arg-64=0
+   set arg-debug=0
+   set arg-release=0
 
    :parameterLoop
 
@@ -58,6 +66,34 @@ REM // ======== Parameter parsing ======== //
          goto:parameterLoop
       )
 
+      if "%1" == "--32" (
+         set arg-32=1
+         echo 32-bit build requested
+         shift
+         goto:parameterLoop
+      )
+
+      if "%1" == "--64" (
+         set arg-64=1
+         echo 64-bit build requested
+         shift
+         goto:parameterLoop
+      )
+
+      if "%1" == "--debug" (
+         set arg-debug=1
+         echo debug build requested
+         shift
+         goto:parameterLoop
+      )
+
+      if "%1" == "--release" (
+         set arg-release=1
+         echo release build requested
+         shift
+         goto:parameterLoop
+      )
+
       if "%1" == "--spirv-tools" (
          echo --spirv-tools argument has been deprecated and is no longer necessary
          shift
@@ -89,12 +125,22 @@ REM // ======== Parameter parsing ======== //
       echo     --all               enable all components
       echo     --no-sync           skip sync from git
       echo     --no-build          skip build
+      echo     --32                build for 32-bit
+      echo     --64                build for 64-bit
+      echo     --debug             build for debug
+      echo     --release           build for release
       echo.
       echo   If any component enables are provided, only those components are enabled.
       echo   If no component enables are provided, all components are enabled.
       echo.
       echo   Sync uses git to pull a specific revision.
       echo   Build configures CMake, builds Release and Debug.
+      echo.
+      echo   --32 without --64 builds only 32-bit, and vice-versa.
+      echo   --debug without --release builds only debug, and vice-versa.
+      echo   Specifying neither or both --32 and --64 builds both.
+      echo   Specifying neither or both --debug and --release builds both.
+      echo   So specifying none of these 4 options (default) builds all 4.
 
 
       goto:error
@@ -117,6 +163,32 @@ REM // ======== Parameter parsing ======== //
       if %arg-no-build% equ 0 (
          set check-glslang-build-dependencies=1
          set build-glslang=1
+      )
+   )
+
+   if %arg-32% equ 1 (
+       set do_32=1
+   )
+   if %arg-64% equ 1 (
+       set do_64=1
+   )
+   if %arg-32% equ 0 (
+      if %arg-64% equ 0 (
+          set do_32=1
+          set do_64=1
+      )
+   )
+
+   if %arg-debug% equ 1 (
+       set do_debug=1
+   )
+   if %arg-release% equ 1 (
+       set do_release=1
+   )
+   if %arg-debug% equ 0 (
+      if %arg-release% equ 0 (
+          set do_debug=1
+          set do_release=1
       )
    )
 
@@ -254,61 +326,72 @@ goto:eof
        mkdir build
    )
 
-   echo Making 32-bit glslang
-   echo *************************
-
    set GLSLANG_BUILD_DIR=%GLSLANG_DIR%\build32
-   cd %GLSLANG_BUILD_DIR%
+   if %do_32% equ 1 (
+      echo Making 32-bit glslang
+      echo *************************
+      cd %GLSLANG_BUILD_DIR%
 
-   echo Generating 32-bit Glslang CMake files for Visual Studio %VS_VERSION% -DCMAKE_INSTALL_PREFIX=install ..
-   cmake -G "Visual Studio %VS_VERSION%" -DCMAKE_INSTALL_PREFIX=install ..
+      echo Generating 32-bit Glslang CMake files for Visual Studio %VS_VERSION% -DCMAKE_INSTALL_PREFIX=install ..
+      cmake -G "Visual Studio %VS_VERSION%" -DCMAKE_INSTALL_PREFIX=install ..
 
-   echo Building 32-bit Glslang: MSBuild INSTALL.vcxproj /p:Platform=x86 /p:Configuration=Debug
-   msbuild INSTALL.vcxproj /p:Platform=x86 /p:Configuration=Debug /verbosity:quiet
+      if %do_debug% equ 1 (
+         echo Building 32-bit Glslang: MSBuild INSTALL.vcxproj /p:Platform=x86 /p:Configuration=Debug
+         msbuild INSTALL.vcxproj /p:Platform=x86 /p:Configuration=Debug /verbosity:quiet
 
-   REM Check for existence of one lib, even though we should check for all results
-   if not exist %GLSLANG_BUILD_DIR%\glslang\Debug\glslangd.lib (
-      echo.
-      echo glslang 32-bit Debug build failed!
-      set errorCode=1
+         REM Check for existence of one lib, even though we should check for all results
+         if not exist %GLSLANG_BUILD_DIR%\glslang\Debug\glslangd.lib (
+            echo.
+            echo glslang 32-bit Debug build failed!
+            set errorCode=1
+         )
+      )
+      if %do_release% equ 1 (
+         echo Building Glslang: MSBuild INSTALL.vcxproj /p:Platform=x86 /p:Configuration=Release
+         msbuild INSTALL.vcxproj /p:Platform=x86 /p:Configuration=Release /verbosity:quiet
+
+         REM Check for existence of one lib, even though we should check for all results
+         if not exist %GLSLANG_BUILD_DIR%\glslang\Release\glslang.lib (
+            echo.
+            echo glslang 32-bit Release build failed!
+            set errorCode=1
+         )
+      )
+      cd ..
    )
-   echo Building Glslang: MSBuild INSTALL.vcxproj /p:Platform=x86 /p:Configuration=Release
-   msbuild INSTALL.vcxproj /p:Platform=x86 /p:Configuration=Release /verbosity:quiet
 
-   REM Check for existence of one lib, even though we should check for all results
-   if not exist %GLSLANG_BUILD_DIR%\glslang\Release\glslang.lib (
-      echo.
-      echo glslang 32-bit Release build failed!
-      set errorCode=1
-   )
-
-   cd ..
-
-   echo Making 64-bit glslang
-   echo *************************
    set GLSLANG_BUILD_DIR=%GLSLANG_DIR%\build
-   cd %GLSLANG_BUILD_DIR%
+   if %do_64% equ 1 (
+      echo Making 64-bit glslang
+      echo *************************
+      cd %GLSLANG_BUILD_DIR%
 
-   echo Generating 64-bit Glslang CMake files for Visual Studio %VS_VERSION% -DCMAKE_INSTALL_PREFIX=install ..
-   cmake -G "Visual Studio %VS_VERSION% Win64" -DCMAKE_INSTALL_PREFIX=install ..
+      echo Generating 64-bit Glslang CMake files for Visual Studio %VS_VERSION% -DCMAKE_INSTALL_PREFIX=install ..
+      cmake -G "Visual Studio %VS_VERSION% Win64" -DCMAKE_INSTALL_PREFIX=install ..
 
-   echo Building 64-bit Glslang: MSBuild INSTALL.vcxproj /p:Platform=x64 /p:Configuration=Debug
-   msbuild INSTALL.vcxproj /p:Platform=x64 /p:Configuration=Debug /verbosity:quiet
+      if %do_debug% equ 1 (
+         echo Building 64-bit Glslang: MSBuild INSTALL.vcxproj /p:Platform=x64 /p:Configuration=Debug
+         msbuild INSTALL.vcxproj /p:Platform=x64 /p:Configuration=Debug /verbosity:quiet
 
-   REM Check for existence of one lib, even though we should check for all results
-   if not exist %GLSLANG_BUILD_DIR%\glslang\Debug\glslangd.lib (
-       echo.
-       echo glslang 64-bit Debug build failed!
-       set errorCode=1
+         REM Check for existence of one lib, even though we should check for all results
+         if not exist %GLSLANG_BUILD_DIR%\glslang\Debug\glslangd.lib (
+            echo.
+            echo glslang 64-bit Debug build failed!
+            set errorCode=1
+         )
+      )
+      if %do_release% equ 1 (
+         echo Building Glslang: MSBuild INSTALL.vcxproj /p:Platform=x64 /p:Configuration=Release
+         msbuild INSTALL.vcxproj /p:Platform=x64 /p:Configuration=Release /verbosity:quiet
+
+         REM Check for existence of one lib, even though we should check for all results
+         if not exist %GLSLANG_BUILD_DIR%\glslang\Release\glslang.lib (
+            echo.
+            echo glslang 64-bit Release build failed!
+            set errorCode=1
+         )
+      )
+      cd ..
    )
 
-   echo Building Glslang: MSBuild INSTALL.vcxproj /p:Platform=x64 /p:Configuration=Release
-   msbuild INSTALL.vcxproj /p:Platform=x64 /p:Configuration=Release /verbosity:quiet
-
-   REM Check for existence of one lib, even though we should check for all results
-   if not exist %GLSLANG_BUILD_DIR%\glslang\Release\glslang.lib (
-       echo.
-       echo glslang 64-bit Release build failed!
-       set errorCode=1
-   )
 goto:eof
