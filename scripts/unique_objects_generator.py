@@ -245,23 +245,6 @@ class UniqueObjectsOutputGenerator(OutputGenerator):
             else:
                 self.newline()
 
-        # Write out device extension white list
-        self.newline()
-        write('// Layer Device Extension Whitelist', file=self.outFile)
-        write('static const char *kUniqueObjectsSupportedDeviceExtensions =', file=self.outFile)
-        for line in self.device_extensions:
-            write('%s' % line, file=self.outFile)
-        write(';\n', file=self.outFile)
-
-        # Write out instance extension white list
-        self.newline()
-        write('// Layer Instance Extension Whitelist', file=self.outFile)
-        write('static const char *kUniqueObjectsSupportedInstanceExtensions =', file=self.outFile)
-        for line in self.instance_extensions:
-            write('%s' % line, file=self.outFile)
-        write(';\n', file=self.outFile)
-        self.newline()
-
         # Record intercepted procedures
         write('// Map of all APIs to be intercepted by this layer', file=self.outFile)
         write('static const std::unordered_map<std::string, void*> name_to_funcptr_map = {', file=self.outFile)
