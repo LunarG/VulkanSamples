@@ -187,7 +187,7 @@ cmake -H. -Bbuild -DCMAKE_BUILD_TYPE=Debug -DDEMOS_WSI_SELECTION=XLIB
 
 Windows 7+ with additional required software packages:
 
-- Microsoft Visual Studio 2015 Professional.  Note: it is possible that lesser/older versions may work, but that has not been tested.
+- Microsoft Visual Studio 2013 Professional.  Note: it is possible that lesser/older versions may work, but that has not been tested.
 - [CMake](http://www.cmake.org/download/).  Notes:
   - Tell the installer to "Add CMake to the system PATH" environment variable.
 - [Python 3](https://www.python.org/downloads).  Notes:
@@ -202,7 +202,7 @@ Windows 7+ with additional required software packages:
   - Install each a 32-bit and a 64-bit version, as the 64-bit installer does not install the 32-bit libraries and tools.
 - glslang is required for demos and tests.
   - [You can download and configure it (in a peer directory) here](https://github.com/KhronosGroup/glslang/blob/master/README.md)
-  - A windows batch file has been included that will pull and build the correct version.  Run it from Developer Command Prompt for VS2015 like so:
+  - A windows batch file has been included that will pull and build the correct version.  Run it from Developer Command Prompt for VS2013 like so:
     - update\_external\_sources.bat --build-glslang (Note: see **Loader and Validation Layer Dependencies** below for other options)
 
 ## Windows Build - MSVC
@@ -211,7 +211,7 @@ Before building on Windows, you may want to modify the customize section in load
 set the version numbers and build description for your build. Doing so will set the information displayed
 for the Properties->Details tab of the loader vulkan-1.dll file that is built.
 
-Build all Windows targets after installing required software and cloning the Loader and Validation Layer repo as described above by completing the following steps in a "Developer Command Prompt for VS2015" window (Note that the update\_external\_sources script used below builds external tools into predefined locations. See **Loader and Validation Layer Dependencies** for more information and other options):
+Build all Windows targets after installing required software and cloning the Loader and Validation Layer repo as described above by completing the following steps in a "Developer Command Prompt for VS2013" window (Note that the update\_external\_sources script used below builds external tools into predefined locations. See **Loader and Validation Layer Dependencies** for more information and other options):
 ```
 cd Vulkan-LoaderAndValidationLayers  # cd to the root of the cloned git repository
 update_external_sources.bat
@@ -325,7 +325,7 @@ cd build-android
 ndk-build -j $(sysctl -n hw.ncpu)
 ```
 #### Windows
-Follow the setup steps for Windows above, then from Developer Command Prompt for VS2015:
+Follow the setup steps for Windows above, then from Developer Command Prompt for VS2013:
 ```
 cd build-android
 update_external_sources_android.bat
