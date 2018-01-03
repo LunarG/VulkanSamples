@@ -663,6 +663,10 @@ CUSTOM_C_INTERCEPTS = {
     }
     mapped_memory_map.erase(memory);
 ''',
+'vkGetImageSubresourceLayout': '''
+    // Need safe values. Callers are computing memory offsets from pLayout, with no return code to flag failure. 
+    *pLayout = VkSubresourceLayout(); // Default constructor zero values.
+''',
 }
 
 # MockICDGeneratorOptions - subclass of GeneratorOptions.
