@@ -660,6 +660,15 @@ class HelperFileOutputGenerator(OutputGenerator):
             struct += '    }\n'
             struct += '};\n'
             struct += '\n'
+            # Output reference lists of instance/device extension names
+            struct += 'static const char * const k%sExtensionNames = \n' % type
+            for ext_name, ifdef in extension_dict.items():
+                if ifdef is not None:
+                    struct += '#ifdef %s\n' % ifdef
+                struct += '    %s\n' % ext_name
+                if ifdef is not None:
+                    struct += '#endif\n'
+            struct += ';\n\n'
         extension_helper_header += struct
         extension_helper_header += '\n'
         extension_helper_header += '#endif // VK_EXTENSION_HELPER_H_\n'
