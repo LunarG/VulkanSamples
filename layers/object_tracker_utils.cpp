@@ -99,6 +99,26 @@ void ValidateQueueFlags(VkQueue queue, const char *function) {
     }
 }
 
+// Look for this device object in any of the instance child devices lists.
+// NOTE: This is of dubious value. In most circumstances Vulkan will die a flaming death if a dispatchable object is invalid.
+// However, if this layer is loaded first and GetProcAddress is used to make API calls, it will detect bad DOs.
+bool ValidateDeviceObject(uint64_t device_handle, enum UNIQUE_VALIDATION_ERROR_CODE invalid_handle_code,
+                          enum UNIQUE_VALIDATION_ERROR_CODE wrong_device_code) {
+    VkInstance last_instance = nullptr;
+    for (auto layer_data : layer_data_map) {
+        for (auto object : layer_data.second->object_map[kVulkanObjectTypeDevice]) {
+            // Grab last instance to use for possible error message
+            last_instance = layer_data.second->instance;
+            if (object.second->handle == device_handle) return false;
+        }
+    }
+
+    layer_data *instance_data = GetLayerDataPtr(get_dispatch_key(last_instance), layer_data_map);
+    return log_msg(instance_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, device_handle,
+                   __LINE__, invalid_handle_code, LayerName, "Invalid Device Object 0x%" PRIxLEAST64 ". %s", device_handle,
+                   validation_error_map[invalid_handle_code]);
+}
+
 void AllocateCommandBuffer(VkDevice device, const VkCommandPool command_pool, const VkCommandBuffer command_buffer,
                            VkCommandBufferLevel level) {
     layer_data *device_data = GetLayerDataPtr(get_dispatch_key(device), layer_data_map);
@@ -326,16 +346,14 @@ VKAPI_ATTR void VKAPI_CALL DestroyInstance(VkInstance instance, const VkAllocati
     for (auto iit = instance_data->object_map[kVulkanObjectTypePhysicalDevice].begin();
          iit != instance_data->object_map[kVulkanObjectTypePhysicalDevice].end();) {
         ObjTrackState *pNode = iit->second;
-
         VkPhysicalDevice physical_device = reinterpret_cast<VkPhysicalDevice>(pNode->handle);
+
         DestroyObject(instance, physical_device, kVulkanObjectTypePhysicalDevice, nullptr, VALIDATION_ERROR_UNDEFINED,
                       VALIDATION_ERROR_UNDEFINED);
         iit = instance_data->object_map[kVulkanObjectTypePhysicalDevice].begin();
     }
 
-    DestroyObject(instance, instance, kVulkanObjectTypeInstance, pAllocator, VALIDATION_ERROR_258004ec, VALIDATION_ERROR_258004ee);
-    // Report any remaining objects in LL
-
+    // Destroy child devices
     for (auto iit = instance_data->object_map[kVulkanObjectTypeDevice].begin();
          iit != instance_data->object_map[kVulkanObjectTypeDevice].end();) {
         ObjTrackState *pNode = iit->second;
@@ -347,8 +365,14 @@ VKAPI_ATTR void VKAPI_CALL DestroyInstance(VkInstance instance, const VkAllocati
                 OBJTRACK_OBJECT_LEAK, LayerName, "OBJ ERROR : %s object 0x%" PRIxLEAST64 " has not been destroyed.",
                 string_VkDebugReportObjectTypeEXT(debug_object_type), pNode->handle);
 
+        // Report any remaining objects in LL
         ReportUndestroyedObjects(device, VALIDATION_ERROR_258004ea);
+
+        DestroyObject(instance, device, kVulkanObjectTypeDevice, pAllocator, VALIDATION_ERROR_258004ec, VALIDATION_ERROR_258004ee);
+        iit = instance_data->object_map[kVulkanObjectTypeDevice].begin();
     }
+
+
     instance_data->object_map[kVulkanObjectTypeDevice].clear();
 
     VkLayerInstanceDispatchTable *pInstanceTable = get_dispatch_table(ot_instance_table_map, instance);
@@ -380,8 +404,9 @@ VKAPI_ATTR void VKAPI_CALL DestroyInstance(VkInstance instance, const VkAllocati
 
 VKAPI_ATTR void VKAPI_CALL DestroyDevice(VkDevice device, const VkAllocationCallbacks *pAllocator) {
     std::unique_lock<std::mutex> lock(global_lock);
+    layer_data *device_data = GetLayerDataPtr(get_dispatch_key(device), layer_data_map);
     ValidateObject(device, device, kVulkanObjectTypeDevice, true, VALIDATION_ERROR_24a05601, VALIDATION_ERROR_UNDEFINED);
-    DestroyObject(device, device, kVulkanObjectTypeDevice, pAllocator, VALIDATION_ERROR_24a002f6, VALIDATION_ERROR_24a002f8);
+    DestroyObject(device_data->instance, device, kVulkanObjectTypeDevice, pAllocator, VALIDATION_ERROR_24a002f6, VALIDATION_ERROR_24a002f8);
 
     // Report any remaining objects associated with this VkDevice object in LL
     ReportUndestroyedObjects(device, VALIDATION_ERROR_24a002f4);
@@ -639,10 +664,11 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateDevice(VkPhysicalDevice physicalDevice, con
 
     // Add link back to physDev
     device_data->physical_device = physicalDevice;
+    device_data->instance = phy_dev_data->instance;
 
     initDeviceTable(*pDevice, fpGetDeviceProcAddr, ot_device_table_map);
 
-    CreateObject(*pDevice, *pDevice, kVulkanObjectTypeDevice, pAllocator);
+    CreateObject(phy_dev_data->instance, *pDevice, kVulkanObjectTypeDevice, pAllocator);
 
     return result;
 }
@@ -665,6 +691,41 @@ VKAPI_ATTR VkResult VKAPI_CALL GetSwapchainImagesKHR(VkDevice device, VkSwapchai
             CreateSwapchainImageObject(device, pSwapchainImages[i], swapchain);
         }
         lock.unlock();
+    }
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL CreateDescriptorSetLayout(VkDevice device, const VkDescriptorSetLayoutCreateInfo *pCreateInfo,
+                                                         const VkAllocationCallbacks *pAllocator,
+                                                         VkDescriptorSetLayout *pSetLayout) {
+    bool skip = false;
+    {
+        std::lock_guard<std::mutex> lock(global_lock);
+        skip |=
+            ValidateObject(device, device, kVulkanObjectTypeDevice, false, VALIDATION_ERROR_1f805601, VALIDATION_ERROR_UNDEFINED);
+        if (pCreateInfo) {
+            if (pCreateInfo->pBindings) {
+                for (uint32_t binding_index = 0; binding_index < pCreateInfo->bindingCount; ++binding_index) {
+                    const VkDescriptorSetLayoutBinding &binding = pCreateInfo->pBindings[binding_index];
+                    const bool is_sampler_type = binding.descriptorType == VK_DESCRIPTOR_TYPE_SAMPLER ||
+                                                 binding.descriptorType == VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+                    if (binding.pImmutableSamplers && is_sampler_type) {
+                        for (uint32_t index2 = 0; index2 < binding.descriptorCount; ++index2) {
+                            const VkSampler sampler = binding.pImmutableSamplers[index2];
+                            skip |= ValidateObject(device, sampler, kVulkanObjectTypeSampler, false, VALIDATION_ERROR_04e00234,
+                                                   VALIDATION_ERROR_UNDEFINED);
+                        }
+                    }
+                }
+            }
+        }
+    }
+    if (skip) return VK_ERROR_VALIDATION_FAILED_EXT;
+    VkResult result =
+        get_dispatch_table(ot_device_table_map, device)->CreateDescriptorSetLayout(device, pCreateInfo, pAllocator, pSetLayout);
+    if (VK_SUCCESS == result) {
+        std::lock_guard<std::mutex> lock(global_lock);
+        CreateObject(device, *pSetLayout, kVulkanObjectTypeDescriptorSetLayout, pAllocator);
     }
     return result;
 }

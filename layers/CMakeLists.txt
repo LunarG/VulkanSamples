@@ -39,8 +39,15 @@ set(LAYER_JSON_FILES_NO_DEPENDENCIES
 
 set(LAYER_JSON_FILES ${LAYER_JSON_FILES_WITH_DEPENDENCIES} ${LAYER_JSON_FILES_NO_DEPENDENCIES})
 
+set(LAYER_BINARY_JSON_FILES
+    VkLayer_device_simulation
+    )
+
+set(LAYER_BINARY_FILES
+    libVkLayer_device_simulation
+    )
+
 if (WIN32)
-    if (NOT (CMAKE_CURRENT_SOURCE_DIR STREQUAL CMAKE_CURRENT_BINARY_DIR))
         if (CMAKE_GENERATOR MATCHES "^Visual Studio.*")
             foreach (config_file ${LAYER_JSON_FILES})
                 FILE(TO_NATIVE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/windows/${config_file}.json src_json)
@@ -60,6 +67,7 @@ if (WIN32)
                     )
             endforeach(config_file)
         endif()
+    if (NOT (CMAKE_CURRENT_SOURCE_DIR STREQUAL CMAKE_CURRENT_BINARY_DIR))
         # Copy vk_validation_error_messages.h from source to build dir for scripts to pick up
         FILE(TO_NATIVE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/vk_validation_error_messages.h src_val_msgs)
         FILE(TO_NATIVE_PATH ${CMAKE_CURRENT_BINARY_DIR}/vk_validation_error_messages.h dst_val_msgs)
@@ -77,6 +85,18 @@ else()
                 VERBATIM
                 )
         endforeach(config_file)
+        foreach (config_file ${LAYER_BINARY_JSON_FILES})
+            add_custom_target(${config_file}-bin-json ALL
+                COMMAND ln -sf ${CMAKE_CURRENT_SOURCE_DIR}/linux/${config_file}.json
+                VERBATIM
+                )
+        endforeach(config_file)
+        foreach (config_file ${LAYER_BINARY_FILES})
+            add_custom_target(${config_file}-so ALL
+                COMMAND ln -sf ${CMAKE_CURRENT_SOURCE_DIR}/linux/${config_file}.so
+                VERBATIM
+                )
+        endforeach(config_file)
         # Add link to vk_validation_error_messages.h in build dir for scripts to pick up
         add_custom_target(vk_validation_error_messages ALL
             COMMAND ln -sf ${CMAKE_CURRENT_SOURCE_DIR}/vk_validation_error_messages.h
@@ -84,15 +104,24 @@ else()
             )
     endif()
 endif()
-# If a layer has a direcgt dependency on a project with the same name, use it.
-foreach (config_file ${LAYER_JSON_FILES_WITH_DEPENDENCIES})
-    add_dependencies(${config_file}-json ${config_file})
-endforeach(config_file)
-# If a layer has no direct dependencies, give it one so it copies in the proper order
-foreach (config_file ${LAYER_JSON_FILES_NO_DEPENDENCIES})
-    add_dependencies(${config_file}-json VkLayer_utils)
-endforeach(config_file)
-
+# If a layer has a direct dependency on a project with the same name, use it.
+if ((Win32) OR (NOT (CMAKE_CURRENT_SOURCE_DIR STREQUAL CMAKE_CURRENT_BINARY_DIR)))
+    foreach (config_file ${LAYER_JSON_FILES_WITH_DEPENDENCIES})
+        add_dependencies(${config_file}-json ${config_file})
+    endforeach(config_file)
+    # If a layer has no direct dependencies, give it one so it copies in the proper order
+    foreach (config_file ${LAYER_JSON_FILES_NO_DEPENDENCIES})
+        add_dependencies(${config_file}-json VkLayer_utils)
+    endforeach(config_file)
+    if(UNIX)
+        foreach (config_file ${LAYER_BINARY_JSON_FILES})
+            add_dependencies(${config_file}-bin-json VkLayer_utils)
+        endforeach(config_file)
+        foreach (config_file ${LAYER_BINARY_FILES})
+            add_dependencies(${config_file}-so VkLayer_utils)
+        endforeach(config_file)
+    endif()
+endif()
 
 # Add targets for JSON file install on Linux.
 # Need to remove the "./" from the library path before installing to /etc.
@@ -159,10 +188,12 @@ else()
     set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wpointer-arith -Wno-unused-function -Wno-sign-compare")
 endif()
 
-if (${CMAKE_SYSTEM_PROCESSOR} STREQUAL "mips64")
-    if("${CMAKE_SIZEOF_VOID_P}" EQUAL "8")
-        set_source_files_properties(core_validation.cpp PROPERTIES COMPILE_FLAGS -mxgot)
-    endif()
+# Clang (and not gcc) warns about unused const variables.
+# Generated files may purposely contain unused consts, so
+# silence this warning in Clang. 
+if (CMAKE_C_COMPILER_ID MATCHES "Clang")
+   set_source_files_properties(parameter_validation.cpp PROPERTIES
+        COMPILE_FLAGS "-Wno-unused-const-variable")
 endif()
 
 run_vk_xml_generate(threading_generator.py thread_check.h)
@@ -184,7 +215,7 @@ else()
 endif()
 add_dependencies(VkLayer_utils generate_helper_files)
 
-add_vk_layer(core_validation core_validation.cpp vk_layer_table.cpp descriptor_sets.cpp buffer_validation.cpp shader_validation.cpp)
+add_vk_layer(core_validation core_validation.cpp vk_layer_table.cpp descriptor_sets.cpp buffer_validation.cpp shader_validation.cpp xxhash.c)
 add_vk_layer(object_tracker object_tracker.cpp object_tracker_utils.cpp vk_layer_table.cpp)
 # generated
 add_vk_layer(threading threading.cpp thread_check.h vk_layer_table.cpp)

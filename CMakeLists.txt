@@ -15,6 +15,15 @@ string(TOLOWER ${API_NAME} API_LOWERCASE)
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 find_package(PythonInterp 3 REQUIRED)
 
+option(USE_CCACHE "Use ccache" OFF)
+if (USE_CCACHE)
+    find_program(CCACHE_FOUND ccache)
+    if(CCACHE_FOUND)
+        set_property(GLOBAL PROPERTY RULE_LAUNCH_COMPILE ccache)
+        set_property(GLOBAL PROPERTY RULE_LAUNCH_LINK ccache)
+    endif(CCACHE_FOUND)
+endif()
+
 if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
     set(FALLBACK_CONFIG_DIRS "/etc/xdg" CACHE STRING
         "Search path to use when XDG_CONFIG_DIRS is unset or empty or the current process is SUID/SGID. Default is freedesktop compliant.")
@@ -86,6 +95,10 @@ if(WIN32)
     # Warn about potentially uninitialized variables
     add_compile_options("$<$<CXX_COMPILER_ID:MSVC>:/w34701>")
     add_compile_options("$<$<CXX_COMPILER_ID:MSVC>:/w34703>")
+    # Warn about different indirection types.
+    add_compile_options("$<$<CXX_COMPILER_ID:MSVC>:/w34057>")
+    # Warn about signed/unsigned mismatch.
+    add_compile_options("$<$<CXX_COMPILER_ID:MSVC>:/w34245>")
 endif()
 
 if(NOT WIN32)
@@ -168,10 +181,10 @@ if (WIN32)
         set (SPIRV_TOOLS_OPT_SEARCH_PATH "${SPIRV_TOOLS_OPT_BINARY_ROOT}/${BUILDTGT_DIR}/source/opt/${RELEASE_DECORATION}")
         set (SPIRV_TOOLS_OPT_DEBUG_SEARCH_PATH "${SPIRV_TOOLS_OPT_BINARY_ROOT}/${BUILDTGT_DIR}/source/opt/${DEBUG_DECORATION}")
     else()
-        set (SPIRV_TOOLS_SEARCH_PATH "${EXTERNAL_SOURCE_ROOT}/spirv-tools/${BUILDTGT_DIR}/source/${RELEASE_DECORATION}")
-        set (SPIRV_TOOLS_DEBUG_SEARCH_PATH "${EXTERNAL_SOURCE_ROOT}/spirv-tools/${BUILDTGT_DIR}/source/${DEBUG_DECORATION}")
-        set (SPIRV_TOOLS_OPT_SEARCH_PATH "${EXTERNAL_SOURCE_ROOT}/spirv-tools/${BUILDTGT_DIR}/source/opt/${RELEASE_DECORATION}")
-        set (SPIRV_TOOLS_OPT_DEBUG_SEARCH_PATH "${EXTERNAL_SOURCE_ROOT}/spirv-tools/${BUILDTGT_DIR}/source/opt/${DEBUG_DECORATION}")
+        set (SPIRV_TOOLS_SEARCH_PATH "${EXTERNAL_SOURCE_ROOT}/glslang/${BUILDTGT_DIR}/External/spirv-tools/source/${RELEASE_DECORATION}")
+        set (SPIRV_TOOLS_DEBUG_SEARCH_PATH "${EXTERNAL_SOURCE_ROOT}/glslang/${BUILDTGT_DIR}/External/spirv-tools/source/${DEBUG_DECORATION}")
+        set (SPIRV_TOOLS_OPT_SEARCH_PATH "${EXTERNAL_SOURCE_ROOT}/glslang/${BUILDTGT_DIR}/External/spirv-tools/source/opt/${RELEASE_DECORATION}")
+        set (SPIRV_TOOLS_OPT_DEBUG_SEARCH_PATH "${EXTERNAL_SOURCE_ROOT}/glslang/${BUILDTGT_DIR}/External/spirv-tools/source/opt/${DEBUG_DECORATION}")
     endif()
 else()
     # not WIN32
@@ -191,8 +204,8 @@ else()
         set (SPIRV_TOOLS_SEARCH_PATH "${SPIRV_TOOLS_BINARY_ROOT}/source" )
         set (SPIRV_TOOLS_OPT_SEARCH_PATH "${SPIRV_TOOLS_OPT_BINARY_ROOT}/source/opt" )
     else()
-        set (SPIRV_TOOLS_SEARCH_PATH "${EXTERNAL_SOURCE_ROOT}/spirv-tools/${BUILDTGT_DIR}/source" "${CMAKE_SOURCE_DIR}/../x86_64/lib/spirv-tools" )
-        set (SPIRV_TOOLS_OPT_SEARCH_PATH "${EXTERNAL_SOURCE_ROOT}/spirv-tools/${BUILDTGT_DIR}/source/opt" "${CMAKE_SOURCE_DIR}/../x86_64/lib/spirv-tools" )
+        set (SPIRV_TOOLS_SEARCH_PATH "${EXTERNAL_SOURCE_ROOT}/glslang/${BUILDTGT_DIR}/External/spirv-tools/source" "${CMAKE_SOURCE_DIR}/../x86_64/lib/spirv-tools" )
+        set (SPIRV_TOOLS_OPT_SEARCH_PATH "${EXTERNAL_SOURCE_ROOT}/glslang/${BUILDTGT_DIR}/External/spirv-tools/source/opt" "${CMAKE_SOURCE_DIR}/../x86_64/lib/spirv-tools" )
     endif()
 endif()
 
@@ -205,11 +218,8 @@ find_path(GLSLANG_SPIRV_INCLUDE_DIR SPIRV/spirv.hpp HINTS "${EXTERNAL_SOURCE_ROO
                                                     "${CMAKE_SOURCE_DIR}/../glslang"
                                               DOC "Path to SPIRV/spirv.hpp")
 
-find_path(SPIRV_TOOLS_INCLUDE_DIR spirv-tools/libspirv.h HINTS "${EXTERNAL_SOURCE_ROOT}/spirv-tools/include"
-                                                   "${EXTERNAL_SOURCE_ROOT}/SPIRV-Tools/include"
-                                                   "${CMAKE_SOURCE_DIR}/../spirv-tools/include"
-                                                   "${CMAKE_SOURCE_DIR}/../SPIRV-Tools/include"
-                                                   "${EXTERNAL_SOURCE_ROOT}/source/spirv-tools/external/include"
+find_path(SPIRV_TOOLS_INCLUDE_DIR spirv-tools/libspirv.h HINTS "${EXTERNAL_SOURCE_ROOT}/glslang/External/spirv-tools/include"
+                                                   "${CMAKE_SOURCE_DIR}/../glslang/External/spirv-tools/include"
                                              DOC "Path to spirv-tools/libspirv.h")
 
 find_library(GLSLANG_LIB NAMES glslang
@@ -259,9 +269,9 @@ if (WIN32)
                  HINTS ${GLSLANG_DEBUG_SEARCH_PATH} )
     find_library(SPIRV_REMAPPER_DLIB NAMES SPVRemapperd
                  HINTS ${GLSLANG_DEBUG_SEARCH_PATH} )
-    find_library(SPIRV_TOOLS_DLIB NAMES SPIRV-Tools
+    find_library(SPIRV_TOOLS_DLIB NAMES SPIRV-Toolsd
                  HINTS ${SPIRV_TOOLS_DEBUG_SEARCH_PATH} )
-    find_library(SPIRV_TOOLS_OPT_DLIB NAMES SPIRV-Tools-opt
+    find_library(SPIRV_TOOLS_OPT_DLIB NAMES SPIRV-Tools-optd
                  HINTS ${SPIRV_TOOLS_OPT_DEBUG_SEARCH_PATH} )
 
     set_target_properties(glslang PROPERTIES
@@ -307,6 +317,14 @@ macro(run_vk_xml_generate dependency output)
     )
 endmacro()
 
+# Define macro used for generating header files containing commit IDs for external dependencies
+macro(run_external_revision_generate source_dir symbol_name output)
+    add_custom_command(OUTPUT ${output}
+    COMMAND ${PYTHON_CMD} ${SCRIPTS_DIR}/external_revision_generator.py ${source_dir} ${symbol_name} ${output}
+    DEPENDS ${SCRIPTS_DIR}/external_revision_generator.py ${source_dir}/.git/HEAD ${source_dir}/.git/index
+    )
+endmacro()
+
 # Custom target for generated vulkan helper file dependencies
 add_custom_target(generate_helper_files DEPENDS
     vk_enum_string_helper.h
@@ -318,6 +336,8 @@ add_custom_target(generate_helper_files DEPENDS
     vk_layer_dispatch_table.h
     vk_dispatch_table_helper.h
     vk_extension_helper.h
+    vk_typemap_helper.h
+    spirv_tools_commit_id.h
     )
 
 # Rules to build generated helper files
@@ -330,6 +350,8 @@ run_vk_xml_generate(helper_file_generator.py vk_struct_size_helper.c)
 run_vk_xml_generate(helper_file_generator.py vk_enum_string_helper.h)
 run_vk_xml_generate(helper_file_generator.py vk_object_types.h)
 run_vk_xml_generate(helper_file_generator.py vk_extension_helper.h)
+run_vk_xml_generate(helper_file_generator.py vk_typemap_helper.h)
+run_external_revision_generate(${EXTERNAL_SOURCE_ROOT}/glslang/External/spirv-tools SPIRV_TOOLS_COMMIT_ID spirv_tools_commit_id.h)
 
 if(NOT WIN32)
     include(GNUInstallDirs)

@@ -181,10 +181,6 @@ static const VkLayerProperties device_profile_api_LayerProps = {
     "LunarG device profile api Layer",
 };
 
-static const VkExtensionProperties device_profile_api_physicaldevice_extensions[] = {{
-    "vkLayerdevice_profile_apiEXT", 1,
-}};
-
 template <typename T>
 VkResult EnumerateProperties(uint32_t src_count, const T *src_props, uint32_t *dst_count, T *dst_props) {
     if (!dst_props || !src_props) {

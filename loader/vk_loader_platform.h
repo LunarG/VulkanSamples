@@ -280,7 +280,7 @@ static loader_platform_dl_handle loader_platform_open_library(const char *lib_pa
 }
 static char *loader_platform_open_library_error(const char *libPath) {
     static char errorMsg[164];
-    (void)snprintf(errorMsg, 163, "Failed to open dynamic library \"%s\" with error %d", libPath, GetLastError());
+    (void)snprintf(errorMsg, 163, "Failed to open dynamic library \"%s\" with error %lu", libPath, GetLastError());
     return errorMsg;
 }
 static void loader_platform_close_library(loader_platform_dl_handle library) { FreeLibrary(library); }

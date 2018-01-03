@@ -328,7 +328,22 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateGraphicsPipelines(VkDevice device, VkPipeli
         local_pCreateInfos = new safe_VkGraphicsPipelineCreateInfo[createInfoCount];
         std::lock_guard<std::mutex> lock(global_lock);
         for (uint32_t idx0 = 0; idx0 < createInfoCount; ++idx0) {
-            local_pCreateInfos[idx0].initialize(&pCreateInfos[idx0]);
+            bool uses_color_attachment = false;
+            bool uses_depthstencil_attachment = false;
+            {
+                const auto subpasses_uses_it =
+                    device_data->renderpasses_states.find(Unwrap(device_data, pCreateInfos[idx0].renderPass));
+                if (subpasses_uses_it != device_data->renderpasses_states.end()) {
+                    const auto &subpasses_uses = subpasses_uses_it->second;
+                    if (subpasses_uses.subpasses_using_color_attachment.count(pCreateInfos[idx0].subpass))
+                        uses_color_attachment = true;
+                    if (subpasses_uses.subpasses_using_depthstencil_attachment.count(pCreateInfos[idx0].subpass))
+                        uses_depthstencil_attachment = true;
+                }
+            }
+
+            local_pCreateInfos[idx0].initialize(&pCreateInfos[idx0], uses_color_attachment, uses_depthstencil_attachment);
+
             if (pCreateInfos[idx0].basePipelineHandle) {
                 local_pCreateInfos[idx0].basePipelineHandle = Unwrap(device_data, pCreateInfos[idx0].basePipelineHandle);
             }
@@ -364,6 +379,55 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateGraphicsPipelines(VkDevice device, VkPipeli
         }
     }
     return result;
+}
+
+static void PostCallCreateRenderPass(layer_data *dev_data, const VkRenderPassCreateInfo *pCreateInfo, VkRenderPass renderPass) {
+    auto &renderpass_state = dev_data->renderpasses_states[renderPass];
+
+    for (uint32_t subpass = 0; subpass < pCreateInfo->subpassCount; ++subpass) {
+        bool uses_color = false;
+        for (uint32_t i = 0; i < pCreateInfo->pSubpasses[subpass].colorAttachmentCount && !uses_color; ++i)
+            if (pCreateInfo->pSubpasses[subpass].pColorAttachments[i].attachment != VK_ATTACHMENT_UNUSED) uses_color = true;
+
+        bool uses_depthstencil = false;
+        if (pCreateInfo->pSubpasses[subpass].pDepthStencilAttachment)
+            if (pCreateInfo->pSubpasses[subpass].pDepthStencilAttachment->attachment != VK_ATTACHMENT_UNUSED)
+                uses_depthstencil = true;
+
+        if (uses_color) renderpass_state.subpasses_using_color_attachment.insert(subpass);
+        if (uses_depthstencil) renderpass_state.subpasses_using_depthstencil_attachment.insert(subpass);
+    }
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL CreateRenderPass(VkDevice device, const VkRenderPassCreateInfo *pCreateInfo,
+                                                const VkAllocationCallbacks *pAllocator, VkRenderPass *pRenderPass) {
+    layer_data *dev_data = GetLayerDataPtr(get_dispatch_key(device), layer_data_map);
+    VkResult result = dev_data->dispatch_table.CreateRenderPass(device, pCreateInfo, pAllocator, pRenderPass);
+    if (VK_SUCCESS == result) {
+        std::lock_guard<std::mutex> lock(global_lock);
+
+        PostCallCreateRenderPass(dev_data, pCreateInfo, *pRenderPass);
+
+        *pRenderPass = WrapNew(dev_data, *pRenderPass);
+    }
+    return result;
+}
+
+static void PostCallDestroyRenderPass(layer_data *dev_data, VkRenderPass renderPass) {
+    dev_data->renderpasses_states.erase(renderPass);
+}
+
+VKAPI_ATTR void VKAPI_CALL DestroyRenderPass(VkDevice device, VkRenderPass renderPass, const VkAllocationCallbacks *pAllocator) {
+    layer_data *dev_data = GetLayerDataPtr(get_dispatch_key(device), layer_data_map);
+    std::unique_lock<std::mutex> lock(global_lock);
+    uint64_t renderPass_id = reinterpret_cast<uint64_t &>(renderPass);
+    renderPass = (VkRenderPass)dev_data->unique_id_mapping[renderPass_id];
+    dev_data->unique_id_mapping.erase(renderPass_id);
+    lock.unlock();
+    dev_data->dispatch_table.DestroyRenderPass(device, renderPass, pAllocator);
+
+    lock.lock();
+    PostCallDestroyRenderPass(dev_data, renderPass);
 }
 
 VKAPI_ATTR VkResult VKAPI_CALL CreateSwapchainKHR(VkDevice device, const VkSwapchainCreateInfoKHR *pCreateInfo,
@@ -608,12 +672,13 @@ VKAPI_ATTR void VKAPI_CALL UpdateDescriptorSetWithTemplateKHR(VkDevice device, V
                                                               const void *pData) {
     layer_data *dev_data = GetLayerDataPtr(get_dispatch_key(device), layer_data_map);
     uint64_t template_handle = reinterpret_cast<uint64_t &>(descriptorUpdateTemplate);
+    void *unwrapped_buffer = nullptr;
     {
         std::lock_guard<std::mutex> lock(global_lock);
         descriptorSet = Unwrap(dev_data, descriptorSet);
         descriptorUpdateTemplate = (VkDescriptorUpdateTemplateKHR)dev_data->unique_id_mapping[template_handle];
+        unwrapped_buffer = BuildUnwrappedUpdateTemplateBuffer(dev_data, template_handle, pData);
     }
-    void *unwrapped_buffer = BuildUnwrappedUpdateTemplateBuffer(dev_data, template_handle, pData);
     dev_data->dispatch_table.UpdateDescriptorSetWithTemplateKHR(device, descriptorSet, descriptorUpdateTemplate,
                                                                         unwrapped_buffer);
     free(unwrapped_buffer);
@@ -624,12 +689,13 @@ VKAPI_ATTR void VKAPI_CALL CmdPushDescriptorSetWithTemplateKHR(VkCommandBuffer c
                                                                VkPipelineLayout layout, uint32_t set, const void *pData) {
     layer_data *dev_data = GetLayerDataPtr(get_dispatch_key(commandBuffer), layer_data_map);
     uint64_t template_handle = reinterpret_cast<uint64_t &>(descriptorUpdateTemplate);
+    void *unwrapped_buffer = nullptr;
     {
         std::lock_guard<std::mutex> lock(global_lock);
         descriptorUpdateTemplate = Unwrap(dev_data, descriptorUpdateTemplate);
         layout = Unwrap(dev_data, layout);
+        unwrapped_buffer = BuildUnwrappedUpdateTemplateBuffer(dev_data, template_handle, pData);
     }
-    void *unwrapped_buffer = BuildUnwrappedUpdateTemplateBuffer(dev_data, template_handle, pData);
     dev_data->dispatch_table.CmdPushDescriptorSetWithTemplateKHR(commandBuffer, descriptorUpdateTemplate, layout, set,
                                                                          unwrapped_buffer);
     free(unwrapped_buffer);

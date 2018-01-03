@@ -24,8 +24,10 @@
 #include <algorithm>
 #include <cstdlib>
 #include <string>
+#include <sstream>
 #include <bitset>
 #include <mutex>
+#include <unordered_map>
 #include <unordered_set>
 
 #include "vulkan/vulkan.h"
@@ -79,6 +81,13 @@ struct layer_data {
     VkPhysicalDevice physical_device = VK_NULL_HANDLE;
     VkDevice device = VK_NULL_HANDLE;
     DeviceExtensions extensions;
+
+    struct SubpassesUsageStates {
+        std::unordered_set<uint32_t> subpasses_using_color_attachment;
+        std::unordered_set<uint32_t> subpasses_using_depthstencil_attachment;
+    };
+
+    std::unordered_map<VkRenderPass, SubpassesUsageStates> renderpasses_states;
 
     VkLayerDispatchTable dispatch_table = {};
 };
@@ -153,9 +162,11 @@ bool ValidateGreaterThan(debug_report_data *report_data, const char *api_name, c
     bool skip_call = false;
 
     if (value <= lower_bound) {
-        skip_call |=
-            log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__, 1, LayerName,
-                    "%s: parameter %s must be greater than %d", api_name, parameter_name.get_name().c_str(), lower_bound);
+        std::ostringstream ss;
+        ss << api_name << ": parameter " << parameter_name.get_name() << " is " << value << " but must be greater than "
+           << lower_bound;
+        skip_call |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__, 1,
+                             LayerName, "%s", ss.str().c_str());
     }
 
     return skip_call;

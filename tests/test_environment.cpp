@@ -25,7 +25,6 @@
  */
 
 #include "test_common.h"
-#include "vktestbinding.h"
 #include "test_environment.h"
 
 #if defined(NDEBUG) && defined(__GNUC__)

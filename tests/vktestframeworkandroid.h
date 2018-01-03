@@ -21,7 +21,6 @@
 #define VKTESTFRAMEWORKANDROID_H
 
 #include "test_common.h"
-#include "vktestbinding.h"
 
 #if defined(NDEBUG)
 #define U_ASSERT_ONLY __attribute__((unused))
@@ -44,6 +43,7 @@ class VkTestFramework : public ::testing::Test {
 
     VkFormat GetFormat(VkInstance instance, vk_testing::Device *device);
     bool GLSLtoSPV(const VkShaderStageFlagBits shader_type, const char *pshader, std::vector<unsigned int> &spv);
+    static bool m_devsim_layer;
 };
 
 class TestEnvironment : public ::testing::Environment {

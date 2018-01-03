@@ -35,6 +35,7 @@
 #include "core_validation_types.h"
 #include "shader_validation.h"
 #include "spirv-tools/libspirv.h"
+#include "xxhash.h"
 
 enum FORMAT_TYPE {
     FORMAT_TYPE_FLOAT = 1,  // UNORM, SNORM, FLOAT, USCALED, SSCALED, SRGB -- anything we consider float in the shader
@@ -584,8 +585,8 @@ static std::map<location_t, interface_var> collect_interface_by_location(shader_
             unsigned id = insn.word(2);
             unsigned type = insn.word(1);
 
-            int location = value_or_default(var_locations, id, -1);
-            int builtin = value_or_default(var_builtins, id, -1);
+            int location = value_or_default(var_locations, id, static_cast<unsigned>(-1));
+            int builtin = value_or_default(var_builtins, id, static_cast<unsigned>(-1));
             unsigned component = value_or_default(var_components, id, 0);  // Unspecified is OK, is 0
             bool is_patch = var_patch.find(id) != var_patch.end();
             bool is_relaxed_precision = var_relaxed_precision.find(id) != var_relaxed_precision.end();
@@ -770,7 +771,7 @@ static bool validate_vi_against_vs_inputs(debug_report_data const *report_data, 
 static bool validate_fs_outputs_against_render_pass(debug_report_data const *report_data, shader_module const *fs,
                                                     spirv_inst_iter entrypoint, PIPELINE_STATE const *pipeline,
                                                     uint32_t subpass_index) {
-    auto rpci = pipeline->render_pass_ci.ptr();
+    auto rpci = pipeline->rp_state->createInfo.ptr();
 
     std::map<uint32_t, VkFormat> color_attachments;
     auto subpass = rpci->pSubpasses[subpass_index];
@@ -1161,7 +1162,7 @@ static bool validate_shader_capabilities(layer_data *dev_data, shader_module con
     using E = DeviceExtensions;
 
     // clang-format off
-    static const std::unordered_map<uint32_t, CapabilityInfo> capabilities = {
+    static const std::unordered_multimap<uint32_t, CapabilityInfo> capabilities = {
         // Capabilities always supported by a Vulkan 1.0 implementation -- no
         // feature bits.
         {spv::CapabilityMatrix, {nullptr}},
@@ -1205,6 +1206,7 @@ static bool validate_shader_capabilities(layer_data *dev_data, shader_module con
         {spv::CapabilityDrawParameters, {VK_KHR_SHADER_DRAW_PARAMETERS_EXTENSION_NAME, nullptr, &E::vk_khr_shader_draw_parameters}},
         {spv::CapabilityGeometryShaderPassthroughNV, {VK_NV_GEOMETRY_SHADER_PASSTHROUGH_EXTENSION_NAME, nullptr, &E::vk_nv_geometry_shader_passthrough}},
         {spv::CapabilitySampleMaskOverrideCoverageNV, {VK_NV_SAMPLE_MASK_OVERRIDE_COVERAGE_EXTENSION_NAME, nullptr, &E::vk_nv_sample_mask_override_coverage}},
+        {spv::CapabilityShaderViewportIndexLayerEXT, {VK_EXT_SHADER_VIEWPORT_INDEX_LAYER_EXTENSION_NAME, nullptr, &E::vk_ext_shader_viewport_index_layer}},
         {spv::CapabilityShaderViewportIndexLayerNV, {VK_NV_VIEWPORT_ARRAY2_EXTENSION_NAME, nullptr, &E::vk_nv_viewport_array2}},
         {spv::CapabilityShaderViewportMaskNV, {VK_NV_VIEWPORT_ARRAY2_EXTENSION_NAME, nullptr, &E::vk_nv_viewport_array2}},
         {spv::CapabilitySubgroupBallotKHR, {VK_EXT_SHADER_SUBGROUP_BALLOT_EXTENSION_NAME, nullptr, &E::vk_ext_shader_subgroup_ballot }},
@@ -1214,13 +1216,44 @@ static bool validate_shader_capabilities(layer_data *dev_data, shader_module con
 
     for (auto insn : *src) {
         if (insn.opcode() == spv::OpCapability) {
-            auto it = capabilities.find(insn.word(1));
-            if (it != capabilities.end()) {
-                if (it->second.feature) {
-                    skip |= require_feature(report_data, enabledFeatures->*(it->second.feature), it->second.name);
+            size_t n = capabilities.count(insn.word(1));
+            if (1 == n) {  // key occurs exactly once
+                auto it = capabilities.find(insn.word(1));
+                if (it != capabilities.end()) {
+                    if (it->second.feature) {
+                        skip |= require_feature(report_data, enabledFeatures->*(it->second.feature), it->second.name);
+                    }
+                    if (it->second.extension) {
+                        skip |= require_extension(report_data, extensions->*(it->second.extension), it->second.name);
+                    }
                 }
-                if (it->second.extension) {
-                    skip |= require_extension(report_data, extensions->*(it->second.extension), it->second.name);
+            } else if (1 < n) {  // key occurs multiple times, at least one must be enabled
+                bool needs_feature = false, has_feature = false;
+                bool needs_ext = false, has_ext = false;
+                std::string feature_names = "(one of) [ ";
+                std::string extension_names = feature_names;
+                auto caps = capabilities.equal_range(insn.word(1));
+                for (auto it = caps.first; it != caps.second; ++it) {
+                    if (it->second.feature) {
+                        needs_feature = true;
+                        has_feature = has_feature || enabledFeatures->*(it->second.feature);
+                        feature_names += it->second.name;
+                        feature_names += " ";
+                    }
+                    if (it->second.extension) {
+                        needs_ext = true;
+                        has_ext = has_ext || extensions->*(it->second.extension);
+                        extension_names += it->second.name;
+                        extension_names += " ";
+                    }
+                }
+                if (needs_feature) {
+                    feature_names += "]";
+                    skip |= require_feature(report_data, has_feature, feature_names.c_str());
+                }
+                if (needs_ext) {
+                    extension_names += "]";
+                    skip |= require_extension(report_data, has_ext, extension_names.c_str());
                 }
             }
         }
@@ -1355,7 +1388,7 @@ static bool validate_pipeline_shader_stage(
     if (pStage->stage == VK_SHADER_STAGE_FRAGMENT_BIT) {
         auto input_attachment_uses = collect_interface_by_input_attachment_index(module, accessible_ids);
 
-        auto rpci = pipeline->render_pass_ci.ptr();
+        auto rpci = pipeline->rp_state->createInfo.ptr();
         auto subpass = pipeline->graphicsPipelineCI.subpass;
 
         for (auto use : input_attachment_uses) {
@@ -1517,6 +1550,20 @@ bool validate_compute_pipeline(layer_data *dev_data, PIPELINE_STATE *pipeline) {
     return validate_pipeline_shader_stage(dev_data, &pCreateInfo->stage, pipeline, &module, &entrypoint);
 }
 
+uint32_t ValidationCache::MakeShaderHash(VkShaderModuleCreateInfo const *smci) {
+        return XXH32(smci->pCode, smci->codeSize, 0);
+}
+
+static ValidationCache *GetValidationCacheInfo(
+    VkShaderModuleCreateInfo const *pCreateInfo) {
+    while ((pCreateInfo = (VkShaderModuleCreateInfo const *)pCreateInfo->pNext) != nullptr) {
+        if (pCreateInfo->sType == VK_STRUCTURE_TYPE_SHADER_MODULE_VALIDATION_CACHE_CREATE_INFO_EXT)
+            return (ValidationCache *)((VkShaderModuleValidationCacheCreateInfoEXT const *)pCreateInfo)->validationCache;
+    }
+
+    return nullptr;
+}
+
 bool PreCallValidateCreateShaderModule(layer_data *dev_data, VkShaderModuleCreateInfo const *pCreateInfo, bool *spirv_valid) {
     bool skip = false;
     spv_result_t spv_valid = SPV_SUCCESS;
@@ -1534,6 +1581,14 @@ bool PreCallValidateCreateShaderModule(layer_data *dev_data, VkShaderModuleCreat
                         "SPIR-V module not valid: Codesize must be a multiple of 4 but is " PRINTF_SIZE_T_SPECIFIER ". %s",
                         pCreateInfo->codeSize, validation_error_map[VALIDATION_ERROR_12a00ac0]);
     } else {
+        auto cache = GetValidationCacheInfo(pCreateInfo);
+        uint32_t hash = 0;
+        if (cache) {
+            hash = ValidationCache::MakeShaderHash(pCreateInfo);
+            if (cache->Contains(hash))
+                return false;
+        }
+
         // Use SPIRV-Tools validator to try and catch any issues with the module itself
         spv_context ctx = spvContextCreate(SPV_ENV_VULKAN_1_0);
         spv_const_binary_t binary{ pCreateInfo->pCode, pCreateInfo->codeSize / sizeof(uint32_t) };
@@ -1546,6 +1601,10 @@ bool PreCallValidateCreateShaderModule(layer_data *dev_data, VkShaderModuleCreat
                                 spv_valid == SPV_WARNING ? VK_DEBUG_REPORT_WARNING_BIT_EXT : VK_DEBUG_REPORT_ERROR_BIT_EXT,
                                 VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__, SHADER_CHECKER_INCONSISTENT_SPIRV, "SC",
                                 "SPIR-V module not valid: %s", diag && diag->error ? diag->error : "(no error text)");
+            }
+        } else {
+            if (cache) {
+                cache->Insert(hash);
             }
         }
 

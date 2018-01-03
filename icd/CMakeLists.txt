@@ -31,7 +31,7 @@ if (WIN32)
     if (NOT (CMAKE_CURRENT_SOURCE_DIR STREQUAL CMAKE_CURRENT_BINARY_DIR))
         if (CMAKE_GENERATOR MATCHES "^Visual Studio.*")
             foreach (config_file ${ICD_JSON_FILES})
-                FILE(TO_NATIVE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/${config_file}.json src_json)
+                FILE(TO_NATIVE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/windows/${config_file}.json src_json)
                 FILE(TO_NATIVE_PATH ${CMAKE_CURRENT_BINARY_DIR}/$<CONFIGURATION>/${config_file}.json dst_json)
                 add_custom_target(${config_file}-json ALL
                     COMMAND copy ${src_json} ${dst_json}
@@ -40,7 +40,7 @@ if (WIN32)
             endforeach(config_file)
         else()
             foreach (config_file ${ICD_JSON_FILES})
-                FILE(TO_NATIVE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/${config_file}.json src_json)
+                FILE(TO_NATIVE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/windows/${config_file}.json src_json)
                 FILE(TO_NATIVE_PATH ${CMAKE_CURRENT_BINARY_DIR}/${config_file}.json dst_json)
                 add_custom_target(${config_file}-json ALL
                     COMMAND copy ${src_json} ${dst_json}
@@ -54,16 +54,18 @@ else()
     if (NOT (CMAKE_CURRENT_SOURCE_DIR STREQUAL CMAKE_CURRENT_BINARY_DIR))
         foreach (config_file ${ICD_JSON_FILES})
             add_custom_target(${config_file}-json ALL
-                COMMAND ln -sf ${CMAKE_CURRENT_SOURCE_DIR}/${config_file}.json
+                COMMAND ln -sf ${CMAKE_CURRENT_SOURCE_DIR}/linux/${config_file}.json
                 VERBATIM
                 )
         endforeach(config_file)
     endif()
 endif()
 # For ICD with a direct dependency on a project with the same name, use it.
-foreach (config_file ${ICD_JSON_FILES})
-    add_dependencies(${config_file}-json ${config_file})
-endforeach(config_file)
+if (NOT (CMAKE_CURRENT_SOURCE_DIR STREQUAL CMAKE_CURRENT_BINARY_DIR))
+    foreach (config_file ${ICD_JSON_FILES})
+        add_dependencies(${config_file}-json ${config_file})
+    endforeach(config_file)
+endif()
 
 add_custom_target(generate_icd_files DEPENDS
     mock_icd.h
@@ -77,10 +79,10 @@ if(UNIX)
         foreach (config_file ${ICD_JSON_FILES})
             add_custom_target(${config_file}-staging-json ALL
                 COMMAND mkdir -p ${CMAKE_CURRENT_BINARY_DIR}/staging-json
-                COMMAND cp ${CMAKE_CURRENT_SOURCE_DIR}/${config_file}.json ${CMAKE_CURRENT_BINARY_DIR}/staging-json
+                COMMAND cp ${CMAKE_CURRENT_SOURCE_DIR}/linux/${config_file}.json ${CMAKE_CURRENT_BINARY_DIR}/staging-json
                 COMMAND sed -i -e "/\"library_path\":/s$./libVkICD$libVkICD$" ${CMAKE_CURRENT_BINARY_DIR}/staging-json/${config_file}.json
                 VERBATIM
-                DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/${config_file}.json
+                DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/linux/${config_file}.json
                 )
             install(FILES ${CMAKE_CURRENT_BINARY_DIR}/staging-json/${config_file}.json DESTINATION ${CMAKE_INSTALL_SYSCONFDIR}/vulkan/icd.d)
         endforeach(config_file)
@@ -133,12 +135,6 @@ if (WIN32)
 else()
     set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wpointer-arith -Wno-unused-function -Wno-sign-compare")
     set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wpointer-arith -Wno-unused-function -Wno-sign-compare")
-endif()
-
-if (${CMAKE_SYSTEM_PROCESSOR} STREQUAL "mips64")
-    if("${CMAKE_SIZEOF_VOID_P}" EQUAL "8")
-        set_source_files_properties(mock_icd.cpp PROPERTIES COMPILE_FLAGS -mxgot)
-    endif()
 endif()
 
 run_vk_xml_generate(mock_icd_generator.py mock_icd.h)

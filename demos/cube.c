@@ -1630,7 +1630,7 @@ static void demo_prepare_textures(struct demo *demo) {
             // shader to run until layout transition completes
             demo_set_image_layout(demo, demo->textures[i].image, VK_IMAGE_ASPECT_COLOR_BIT,
                                   VK_IMAGE_LAYOUT_PREINITIALIZED, demo->textures[i].imageLayout,
-                                  VK_ACCESS_HOST_WRITE_BIT, VK_PIPELINE_STAGE_HOST_BIT,
+                                  0, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
                                   VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
             demo->staging_texture.image = 0;
         } else if (props.optimalTilingFeatures &
@@ -1653,8 +1653,8 @@ static void demo_prepare_textures(struct demo *demo) {
                                   VK_IMAGE_ASPECT_COLOR_BIT,
                                   VK_IMAGE_LAYOUT_PREINITIALIZED,
                                   VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-                                  VK_ACCESS_HOST_WRITE_BIT,
-                                  VK_PIPELINE_STAGE_HOST_BIT,
+                                  0,
+                                  VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
                                   VK_PIPELINE_STAGE_TRANSFER_BIT);
 
             demo_set_image_layout(demo, demo->textures[i].image,
@@ -1924,109 +1924,35 @@ static void demo_prepare_render_pass(struct demo *demo) {
     assert(!err);
 }
 
-//TODO: Merge shader reading
-#ifndef __ANDROID__
-static VkShaderModule
-demo_prepare_shader_module(struct demo *demo, const void *code, size_t size) {
+static VkShaderModule demo_prepare_shader_module(struct demo *demo, const uint32_t *code, size_t size) {
     VkShaderModule module;
     VkShaderModuleCreateInfo moduleCreateInfo;
     VkResult U_ASSERT_ONLY err;
 
     moduleCreateInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
     moduleCreateInfo.pNext = NULL;
-
+    moduleCreateInfo.flags = 0;
     moduleCreateInfo.codeSize = size;
     moduleCreateInfo.pCode = code;
-    moduleCreateInfo.flags = 0;
+
     err = vkCreateShaderModule(demo->device, &moduleCreateInfo, NULL, &module);
     assert(!err);
 
     return module;
 }
 
-char *demo_read_spv(const char *filename, size_t *psize) {
-    long int size;
-    size_t U_ASSERT_ONLY retval;
-    void *shader_code;
-
-#if (defined(VK_USE_PLATFORM_IOS_MVK) || defined(VK_USE_PLATFORM_MACOS_MVK))
-    filename =[[[NSBundle mainBundle] resourcePath] stringByAppendingPathComponent: @(filename)].UTF8String;
-#endif
-
-    FILE *fp = fopen(filename, "rb");
-    if (!fp)
-        return NULL;
-
-    fseek(fp, 0L, SEEK_END);
-    size = ftell(fp);
-
-    fseek(fp, 0L, SEEK_SET);
-
-    shader_code = malloc(size);
-    retval = fread(shader_code, size, 1, fp);
-    assert(retval == 1);
-
-    *psize = size;
-
-    fclose(fp);
-    return shader_code;
-}
-#endif
-
-static VkShaderModule demo_prepare_vs(struct demo *demo) {
-#ifdef __ANDROID__
-    VkShaderModuleCreateInfo sh_info = {};
-    sh_info.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
-
-#include "cube.vert.h"
-    sh_info.codeSize = sizeof(cube_vert);
-    sh_info.pCode = cube_vert;
-    VkResult U_ASSERT_ONLY err = vkCreateShaderModule(demo->device, &sh_info, NULL, &demo->vert_shader_module);
-    assert(!err);
-#else
-    void *vertShaderCode;
-    size_t size;
-
-    vertShaderCode = demo_read_spv("cube-vert.spv", &size);
-    if (!vertShaderCode) {
-        ERR_EXIT("Failed to load cube-vert.spv", "Load Shader Failure");
-    }
-
-    demo->vert_shader_module =
-        demo_prepare_shader_module(demo, vertShaderCode, size);
-
-    free(vertShaderCode);
-#endif
-
-    return demo->vert_shader_module;
+static void demo_prepare_vs(struct demo *demo) {
+    const uint32_t vs_code[] = {
+#include "cube.vert.inc"
+    };
+    demo->vert_shader_module = demo_prepare_shader_module(demo, vs_code, sizeof(vs_code));
 }
 
-static VkShaderModule demo_prepare_fs(struct demo *demo) {
-#ifdef __ANDROID__
-    VkShaderModuleCreateInfo sh_info = {};
-    sh_info.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
-
-#include "cube.frag.h"
-    sh_info.codeSize = sizeof(cube_frag);
-    sh_info.pCode = cube_frag;
-    VkResult U_ASSERT_ONLY err = vkCreateShaderModule(demo->device, &sh_info, NULL, &demo->frag_shader_module);
-    assert(!err);
-#else
-    void *fragShaderCode;
-    size_t size;
-
-    fragShaderCode = demo_read_spv("cube-frag.spv", &size);
-    if (!fragShaderCode) {
-        ERR_EXIT("Failed to load cube-frag.spv", "Load Shader Failure");
-    }
-
-    demo->frag_shader_module =
-        demo_prepare_shader_module(demo, fragShaderCode, size);
-
-    free(fragShaderCode);
-#endif
-
-    return demo->frag_shader_module;
+static void demo_prepare_fs(struct demo *demo) {
+    const uint32_t fs_code[] = {
+#include "cube.frag.inc"
+    };
+    demo->frag_shader_module = demo_prepare_shader_module(demo, fs_code, sizeof(fs_code));
 }
 
 static void demo_prepare_pipeline(struct demo *demo) {
@@ -2104,19 +2030,21 @@ static void demo_prepare_pipeline(struct demo *demo) {
     ms.pSampleMask = NULL;
     ms.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
 
+    demo_prepare_vs(demo);
+    demo_prepare_fs(demo);
+
     // Two stages: vs and fs
-    pipeline.stageCount = 2;
     VkPipelineShaderStageCreateInfo shaderStages[2];
     memset(&shaderStages, 0, 2 * sizeof(VkPipelineShaderStageCreateInfo));
 
     shaderStages[0].sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
     shaderStages[0].stage = VK_SHADER_STAGE_VERTEX_BIT;
-    shaderStages[0].module = demo_prepare_vs(demo);
+    shaderStages[0].module = demo->vert_shader_module;
     shaderStages[0].pName = "main";
 
     shaderStages[1].sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
     shaderStages[1].stage = VK_SHADER_STAGE_FRAGMENT_BIT;
-    shaderStages[1].module = demo_prepare_fs(demo);
+    shaderStages[1].module = demo->frag_shader_module;
     shaderStages[1].pName = "main";
 
     memset(&pipelineCache, 0, sizeof(pipelineCache));
@@ -2133,6 +2061,7 @@ static void demo_prepare_pipeline(struct demo *demo) {
     pipeline.pMultisampleState = &ms;
     pipeline.pViewportState = &vp;
     pipeline.pDepthStencilState = &ds;
+    pipeline.stageCount = ARRAY_SIZE(shaderStages);
     pipeline.pStages = shaderStages;
     pipeline.renderPass = demo->render_pass;
     pipeline.pDynamicState = &dynamicState;
@@ -3925,14 +3854,19 @@ static void demo_init(struct demo *demo, int argc, char **argv) {
 #if defined(ANDROID)
         ERR_EXIT("Usage: cube [--validate]\n", "Usage");
 #else
-        fprintf(stderr, "Usage:\n  %s [--use_staging] [--validate] [--validate-checks-disabled] [--break] "
-                        "[--c <framecount>] [--suppress_popups] [--incremental_present] [--display_timing] [--present_mode <present mode enum>]\n"
-                        "VK_PRESENT_MODE_IMMEDIATE_KHR = %d\n"
-                        "VK_PRESENT_MODE_MAILBOX_KHR = %d\n"
-                        "VK_PRESENT_MODE_FIFO_KHR = %d\n"
-                        "VK_PRESENT_MODE_FIFO_RELAXED_KHR = %d\n",
-                APP_SHORT_NAME, VK_PRESENT_MODE_IMMEDIATE_KHR, VK_PRESENT_MODE_MAILBOX_KHR,
-                VK_PRESENT_MODE_FIFO_KHR, VK_PRESENT_MODE_FIFO_RELAXED_KHR);
+        fprintf(stderr,
+                "Usage:\n  %s [--use_staging] [--validate] [--validate-checks-disabled]\n"
+                "       [--break] [--c <framecount>] [--suppress_popups]\n"
+                "       [--incremental_present] [--display_timing]\n"
+                "       [--present_mode {0,1,2,3}]\n"
+                "\n"
+                "Options for --present_mode:\n"
+                "  %d: VK_PRESENT_MODE_IMMEDIATE_KHR\n"
+                "  %d: VK_PRESENT_MODE_MAILBOX_KHR\n"
+                "  %d: VK_PRESENT_MODE_FIFO_KHR (default)\n"
+                "  %d: VK_PRESENT_MODE_FIFO_RELAXED_KHR\n",
+                APP_SHORT_NAME, VK_PRESENT_MODE_IMMEDIATE_KHR, VK_PRESENT_MODE_MAILBOX_KHR, VK_PRESENT_MODE_FIFO_KHR,
+                VK_PRESENT_MODE_FIFO_RELAXED_KHR);
         fflush(stderr);
         exit(1);
 #endif

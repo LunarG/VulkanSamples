@@ -2,6 +2,8 @@ cmake_minimum_required(VERSION 2.8.11)
 
 if(CMAKE_SYSTEM_NAME STREQUAL "Windows")
     add_definitions(-DVK_USE_PLATFORM_WIN32_KHR -DWIN32_LEAN_AND_MEAN)
+    # Workaround for TR1 deprecation in Visual Studio 15.5 until Google Test is updated
+    add_definitions(-D_SILENCE_TR1_NAMESPACE_DEPRECATION_WARNING)
     set(DisplayServer Win32)
 elseif(CMAKE_SYSTEM_NAME STREQUAL "Android")
     add_definitions(-DVK_USE_PLATFORM_ANDROID_KHR)

@@ -26,6 +26,8 @@ from generator import *
 from collections import namedtuple
 from vuid_mapping import *
 
+# This is a workaround to use a Python 2.7 and 3.x compatible syntax.
+from io import open
 
 # ParameterValidationGeneratorOptions - subclass of GeneratorOptions.
 #
@@ -152,6 +154,8 @@ class ParameterValidationOutputGenerator(OutputGenerator):
             'vkCreateDebugReportCallbackEXT',
             'vkDestroyDebugReportCallbackEXT',
             'vkCreateCommandPool',
+            'vkCreateRenderPass',
+            'vkDestroyRenderPass',
             ]
         # Structure fields to ignore
         self.structMemberBlacklist = { 'VkWriteDescriptorSet' : ['dstSet'] }
@@ -189,6 +193,9 @@ class ParameterValidationOutputGenerator(OutputGenerator):
 
         self.vuid_file = None
         # Cover cases where file is built from scripts directory, Lin/Win, or Android build structure
+        # Set cwd to the script directory to more easily locate the header.
+        previous_dir = os.getcwd()
+        os.chdir(os.path.dirname(sys.argv[0]))
         vuid_filename_locations = [
             './vk_validation_error_messages.h',
             '../layers/vk_validation_error_messages.h',
@@ -201,7 +208,8 @@ class ParameterValidationOutputGenerator(OutputGenerator):
                 break
         if self.vuid_file == None:
             print("Error: Could not find vk_validation_error_messages.h")
-            quit()
+            sys.exit(1)
+        os.chdir(previous_dir)
     #
     # Generate Copyright comment block for file
     def GenerateCopyright(self):
@@ -246,7 +254,7 @@ class ParameterValidationOutputGenerator(OutputGenerator):
     def IdToHex(self, dec_num):
         if dec_num > 4294967295:
             print ("ERROR: Decimal # %d can't be represented in 8 hex digits" % (dec_num))
-            sys.exit()
+            sys.exit(1)
         hex_num = hex(dec_num)
         return hex_num[2:].zfill(8)
     #
@@ -1198,7 +1206,13 @@ class ParameterValidationOutputGenerator(OutputGenerator):
                 cmdDef += '%sbool skip = false;\n' % indent
                 if not just_validate:
                     if command.result != '':
-                        cmdDef += indent + '%s result = VK_ERROR_VALIDATION_FAILED_EXT;\n' % command.result
+                        if command.result == "VkResult":
+                            cmdDef += indent + '%s result = VK_ERROR_VALIDATION_FAILED_EXT;\n' % command.result
+                        elif command.result == "VkBool32":
+                            cmdDef += indent + '%s result = VK_FALSE;\n' % command.result
+                        else:
+                            raise Exception("Unknown result type: " + command.result)
+
                     cmdDef += '%sstd::unique_lock<std::mutex> lock(global_lock);\n' % indent
                 for line in lines:
                     cmdDef += '\n'

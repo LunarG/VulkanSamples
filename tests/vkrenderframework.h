@@ -29,11 +29,22 @@ class VkImageObj;
 #include "vktestframework.h"
 #endif
 
+#include <algorithm>
 #include <array>
 #include <map>
 #include <vector>
 
 using namespace std;
+
+using vk_testing::MakeVkHandles;
+
+template <class Dst, class Src>
+std::vector<Dst *> MakeTestbindingHandles(const std::vector<Src *> &v) {
+    std::vector<Dst *> handles;
+    handles.reserve(v.size());
+    std::transform(v.begin(), v.end(), std::back_inserter(handles), [](const Src *o) { return static_cast<Dst *>(o); });
+    return handles;
+}
 
 class VkDeviceObj : public vk_testing::Device {
    public:
@@ -64,8 +75,10 @@ class VkRenderFramework : public VkTestFramework {
 
     VkInstance instance() { return inst; }
     VkDevice device() { return m_device->device(); }
+    VkDeviceObj *DeviceObj() const { return m_device; }
     VkPhysicalDevice gpu();
     VkRenderPass renderPass() { return m_renderPass; }
+    const VkRenderPassCreateInfo &RenderPassInfo() const { return renderPass_info_; };
     VkFramebuffer framebuffer() { return m_framebuffer; }
     void InitViewport(float width, float height);
     void InitViewport();
@@ -82,6 +95,7 @@ class VkRenderFramework : public VkTestFramework {
     const VkRenderPassBeginInfo &renderPassBeginInfo() const { return m_renderPassBeginInfo; }
 
     bool InstanceLayerSupported(const char *name, uint32_t specVersion = 0, uint32_t implementationVersion = 0);
+    bool EnableDeviceProfileLayer();
     bool InstanceExtensionSupported(const char *name, uint32_t specVersion = 0);
     bool DeviceExtensionSupported(VkPhysicalDevice dev, const char *layer, const char *name, uint32_t specVersion = 0);
 
@@ -94,6 +108,7 @@ class VkRenderFramework : public VkTestFramework {
     VkCommandPoolObj *m_commandPool;
     VkCommandBufferObj *m_commandBuffer;
     VkRenderPass m_renderPass;
+    VkRenderPassCreateInfo renderPass_info_ = {};
     VkFramebuffer m_framebuffer;
     std::vector<VkViewport> m_viewports;
     std::vector<VkRect2D> m_scissors;
@@ -165,9 +180,9 @@ class VkCommandBufferObj : public vk_testing::CommandBuffer {
                          uint32_t memoryBarrierCount, const VkMemoryBarrier *pMemoryBarriers, uint32_t bufferMemoryBarrierCount,
                          const VkBufferMemoryBarrier *pBufferMemoryBarriers, uint32_t imageMemoryBarrierCount,
                          const VkImageMemoryBarrier *pImageMemoryBarriers);
-    void ClearAllBuffers(VkClearColorValue clear_color, float depth_clear_color, uint32_t stencil_clear_color,
-                         VkDepthStencilObj *depthStencilObj);
-    void PrepareAttachments();
+    void ClearAllBuffers(const vector<VkImageObj *> &color_objs, VkClearColorValue clear_color,
+                         VkDepthStencilObj *depth_stencil_obj, float depth_clear_value, uint32_t stencil_clear_value);
+    void PrepareAttachments(const vector<VkImageObj *> &color_atts, VkDepthStencilObj *depth_stencil_att);
     void BindDescriptorSet(VkDescriptorSetObj &descriptorSet);
     void BindVertexBuffer(VkConstantBufferObj *vertexBuffer, VkDeviceSize offset, uint32_t binding);
     void BeginRenderPass(const VkRenderPassBeginInfo &info);
@@ -192,7 +207,6 @@ class VkCommandBufferObj : public vk_testing::CommandBuffer {
 
    protected:
     VkDeviceObj *m_device;
-    vector<VkImageObj *> m_renderTargets;
 };
 
 class VkConstantBufferObj : public vk_testing::Buffer {
@@ -222,7 +236,7 @@ class VkRenderpassObj {
 class VkImageObj : public vk_testing::Image {
    public:
     VkImageObj(VkDeviceObj *dev);
-    bool IsCompatible(VkFlags usage, VkFlags features);
+    bool IsCompatible(VkImageUsageFlags usages, VkFormatFeatureFlags features);
 
    public:
     void Init(uint32_t const width, uint32_t const height, uint32_t const mipLevels, VkFormat const format, VkFlags const usage,
@@ -302,6 +316,8 @@ class VkDepthStencilObj : public VkImageObj {
     bool Initialized();
     VkImageView *BindInfo();
 
+    VkFormat Format() const;
+
    protected:
     VkDeviceObj *m_device;
     bool m_initialized;
@@ -316,6 +332,21 @@ class VkSamplerObj : public vk_testing::Sampler {
 
    protected:
     VkDeviceObj *m_device;
+};
+
+class VkDescriptorSetLayoutObj : public vk_testing::DescriptorSetLayout {
+   public:
+    VkDescriptorSetLayoutObj() = default;
+    VkDescriptorSetLayoutObj(const VkDeviceObj *device,
+                             const std::vector<VkDescriptorSetLayoutBinding> &descriptor_set_bindings = {},
+                             VkDescriptorSetLayoutCreateFlags flags = 0);
+
+    // Move constructor and move assignment operator for Visual Studio 2013
+    VkDescriptorSetLayoutObj(VkDescriptorSetLayoutObj &&src) : DescriptorSetLayout(std::move(src)){};
+    VkDescriptorSetLayoutObj &operator=(VkDescriptorSetLayoutObj &&src) {
+        DescriptorSetLayout::operator=(std::move(src));
+        return *this;
+    }
 };
 
 class VkDescriptorSetObj : public vk_testing::DescriptorPool {
@@ -356,6 +387,22 @@ class VkShaderObj : public vk_testing::ShaderModule {
     VkDeviceObj *m_device;
 };
 
+class VkPipelineLayoutObj : public vk_testing::PipelineLayout {
+   public:
+    VkPipelineLayoutObj() = default;
+    VkPipelineLayoutObj(VkDeviceObj *device, const std::vector<const VkDescriptorSetLayoutObj *> &descriptor_layouts = {},
+                        const std::vector<VkPushConstantRange> &push_constant_ranges = {});
+
+    // Move constructor and move assignment operator for Visual Studio 2013
+    VkPipelineLayoutObj(VkPipelineLayoutObj &&src) : PipelineLayout(std::move(src)) {}
+    VkPipelineLayoutObj &operator=(VkPipelineLayoutObj &&src) {
+        PipelineLayout::operator=(std::move(src));
+        return *this;
+    }
+
+    void Reset();
+};
+
 class VkPipelineObj : public vk_testing::Pipeline {
    public:
     VkPipelineObj(VkDeviceObj *device);
@@ -363,14 +410,14 @@ class VkPipelineObj : public vk_testing::Pipeline {
     void AddShader(VkPipelineShaderStageCreateInfo const &createInfo);
     void AddVertexInputAttribs(VkVertexInputAttributeDescription *vi_attrib, uint32_t count);
     void AddVertexInputBindings(VkVertexInputBindingDescription *vi_binding, uint32_t count);
-    void AddColorAttachment(uint32_t binding, const VkPipelineColorBlendAttachmentState *att);
+    void AddColorAttachment(uint32_t binding, const VkPipelineColorBlendAttachmentState &att);
     void MakeDynamic(VkDynamicState state);
 
-    void AddColorAttachment(VkColorComponentFlags writeMask = 0xf) {
+    void AddDefaultColorAttachment(VkColorComponentFlags writeMask = 0xf /*=R|G|B|A*/) {
         VkPipelineColorBlendAttachmentState att = {};
         att.blendEnable = VK_FALSE;
         att.colorWriteMask = writeMask;
-        AddColorAttachment(0, &att);
+        AddColorAttachment(0, att);
     }
 
     void SetDepthStencil(const VkPipelineDepthStencilStateCreateInfo *);

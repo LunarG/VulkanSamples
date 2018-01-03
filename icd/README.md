@@ -33,17 +33,17 @@ To enable the mock ICD, set VK\_ICD\_FILENAMES environment variable to point to 
 
 The initial mock ICD is just the null driver which can be used in combination with DevSim to test validation layers on
 simulated devices. Here's a rough sequence of tasks planned for the mock driver going forward:
-- Get all LVL tests passing on the bare null driver
- - Get failing tests passing
- - Get skipped tests passing as able
-- Get all LVL tests to run without unexpected errors
-- Develop automated test flow using mock ICD (alternative to or replacement for run\_all\_tests.sh)
-- Get all LVL tests to pass on a selection of device profiles using DevSim layer
-- Update LVL tests with device dependencies to target specific device profiles
-- Add entrypoint tracking & verification
- - Initially track expected calls
- - Update some tests to verify expected capability
- - Expand tracking to include parameters
+- [X] Get all LVL tests passing on the bare null driver
+- [X] Get failing tests passing
+- [X] Get skipped tests passing as able
+- [ ] Get all LVL tests to run without unexpected errors
+- [X] Develop automated test flow using mock ICD (alternative to or replacement for run\_all\_tests.sh)
+- [X] Get all LVL tests to pass on a selection of device profiles using DevSim layer
+- [ ] Update LVL tests with device dependencies to target specific device profiles
+- [ ] Add entrypoint tracking & verification
+- [ ] Initially track expected calls
+- [ ] Update some tests to verify expected capability
+- [ ] Expand tracking to include parameters
 
 ## Beyond Validation Layer Testing
 
@@ -69,27 +69,19 @@ NONE
 
 ### Passing Tests With Unexpected Errors
 
-VkLayerTest.InvalidCmdBufferBufferDestroyed
-VkLayerTest.RenderPassInUseDestroyedSignaled
-VkLayerTest.InvalidCmdBufferDescriptorSetBufferDestroyed
-VkLayerTest.InvalidDynamicOffsetCases
-VkLayerTest.DSUsageBitsErrors
-VkLayerTest.DSBufferInfoErrors
-VkLayerTest.DSBufferLimitErrors
-VkLayerTest.RenderPassIncompatible
+- VkLayerTest.RenderPassInUseDestroyedSignaled
+- VkLayerTest.RenderPassIncompatible
 
 ### Skipped Tests
 
-VkLayerTest.BindImageInvalidMemoryType
-VkLayerTest.CreatePipelineBadVertexAttributeFormat
-VkLayerTest.MiscBlitImageTests
-VkLayerTest.TemporaryExternalSemaphore
-VkLayerTest.TemporaryExternalFence
-VkLayerTest.PSOViewportScissorCountTests
-VkLayerTest.InvalidBarriers
-VkLayerTest.CommandQueueFlags
-VkPositiveLayerTest.TwoQueuesEnsureCorrectRetirementWithWorkStolen
-VkPositiveLayerTest.ExternalSemaphore
-VkPositiveLayerTest.ExternalFence
-
-
+- VkLayerTest.BindImageInvalidMemoryType
+- VkLayerTest.CreatePipelineBadVertexAttributeFormat
+- VkLayerTest.MiscBlitImageTests
+- VkLayerTest.TemporaryExternalSemaphore
+- VkLayerTest.TemporaryExternalFence
+- VkLayerTest.InvalidBarriers
+- VkLayerTest.CommandQueueFlags
+- VkPositiveLayerTest.TwoQueuesEnsureCorrectRetirementWithWorkStolen
+- VkPositiveLayerTest.ExternalSemaphore
+- VkPositiveLayerTest.ExternalFence
+- VkPositiveLayerTest.ExternalMemory

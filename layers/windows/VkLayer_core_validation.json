@@ -4,7 +4,7 @@
         "name": "VK_LAYER_LUNARG_core_validation",
         "type": "GLOBAL",
         "library_path": ".\\VkLayer_core_validation.dll",
-        "api_version": "1.0.65",
+        "api_version": "1.0.66",
         "implementation_version": "1",
         "description": "LunarG Validation Layer",
         "instance_extensions": [
@@ -23,6 +23,15 @@
                         "vkCmdDebugMarkerEndEXT",
                         "vkCmdDebugMarkerInsertEXT"
                        ]
+             },
+             {
+                 "name": "VK_EXT_validation_cache",
+                 "spec_version": "1",
+                 "entrypoints": ["vkCreateValidationCacheEXT",
+                         "vkDestroyValidationCacheEXT",
+                         "vkGetValidationCacheDataEXT",
+                         "vkMergeValidationCachesEXT"
+                        ]
              }
          ]
     }

@@ -25,6 +25,9 @@ from generator import *
 from collections import namedtuple
 from vuid_mapping import *
 
+# This is a workaround to use a Python 2.7 and 3.x compatible syntax.
+from io import open
+
 # ObjectTrackerGeneratorOptions - subclass of GeneratorOptions.
 #
 # Adds options used by ObjectTrackerOutputGenerator objects during
@@ -166,6 +169,7 @@ class ObjectTrackerOutputGenerator(OutputGenerator):
             'vkCreateComputePipelines',
             'vkGetDeviceQueue',
             'vkGetSwapchainImagesKHR',
+            'vkCreateDescriptorSetLayout',
             ]
         # These VUIDS are not implicit, but are best handled in this layer. Codegen for vkDestroy calls will generate a key
         # which is translated here into a good VU.  Saves ~40 checks.
@@ -234,6 +238,9 @@ class ObjectTrackerOutputGenerator(OutputGenerator):
         self.valid_vuids = set()       # Set of all valid VUIDs
         self.vuid_file = None
         # Cover cases where file is built from scripts directory, Lin/Win, or Android build structure
+        # Set cwd to the script directory to more easily locate the header.
+        previous_dir = os.getcwd()
+        os.chdir(os.path.dirname(sys.argv[0]))
         vuid_filename_locations = [
             './vk_validation_error_messages.h',
             '../layers/vk_validation_error_messages.h',
@@ -246,7 +253,8 @@ class ObjectTrackerOutputGenerator(OutputGenerator):
                 break
         if self.vuid_file == None:
             print("Error: Could not find vk_validation_error_messages.h")
-            quit()
+            sys.exit(1)
+        os.chdir(previous_dir)
     #
     # Check if the parameter passed in is optional
     def paramIsOptional(self, param):
@@ -934,7 +942,12 @@ class ObjectTrackerOutputGenerator(OutputGenerator):
             API = cmdinfo.elem.attrib.get('name').replace('vk', dispatch_table, 1)
             # Put all this together for the final down-chain call
             if assignresult != '':
-                self.appendSection('command', '    if (skip) return VK_ERROR_VALIDATION_FAILED_EXT;')
+                if resulttype.text == 'VkResult':
+                    self.appendSection('command', '    if (skip) return VK_ERROR_VALIDATION_FAILED_EXT;')
+                elif resulttype.text == 'VkBool32':
+                    self.appendSection('command', '    if (skip) return VK_FALSE;')
+                else:
+                    raise Exception('Unknown result type ' + resulttype.text)
             else:
                 self.appendSection('command', '    if (skip) return;')
             self.appendSection('command', '    ' + assignresult + API + '(' + paramstext + ');')

@@ -1016,7 +1016,7 @@ cvdescriptorset::ImageDescriptor::ImageDescriptor(const VkDescriptorType type)
     updated = false;
     descriptor_class = Image;
     if (VK_DESCRIPTOR_TYPE_STORAGE_IMAGE == type) storage_ = true;
-};
+}
 
 void cvdescriptorset::ImageDescriptor::WriteUpdate(const VkWriteDescriptorSet *update, const uint32_t index) {
     updated = true;
@@ -1079,7 +1079,7 @@ cvdescriptorset::TexelDescriptor::TexelDescriptor(const VkDescriptorType type) :
     updated = false;
     descriptor_class = TexelBuffer;
     if (VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER == type) storage_ = true;
-};
+}
 
 void cvdescriptorset::TexelDescriptor::WriteUpdate(const VkWriteDescriptorSet *update, const uint32_t index) {
     updated = true;
@@ -1678,7 +1678,7 @@ void cvdescriptorset::UpdateAllocateDescriptorSetsData(const layer_data *dev_dat
         }
         // Any unknown layouts will be flagged as errors during ValidateAllocateDescriptorSets() call
     }
-};
+}
 // Verify that the state at allocate time is correct, but don't actually allocate the sets yet
 bool cvdescriptorset::ValidateAllocateDescriptorSets(const core_validation::layer_data *dev_data,
                                                      const VkDescriptorSetAllocateInfo *p_alloc_info,

@@ -46,13 +46,8 @@ LOADER_EXPORT VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL vkGetInstanceProcAddr(VkI
     void *addr;
 
     addr = globalGetProcAddr(pName);
-    if (instance == VK_NULL_HANDLE) {
-        // Get entrypoint addresses that are global (no dispatchable object)
-
+    if (instance == VK_NULL_HANDLE || addr != NULL) {
         return addr;
-    } else {
-        // If a global entrypoint return NULL
-        if (addr) return NULL;
     }
 
     struct loader_instance *ptr_instance = loader_get_instance(instance);

@@ -19,7 +19,9 @@
  * Author: Tony Barbour <tony@LunarG.com>
  */
 
-#include "vktestbinding.h"
+#include "test_common.h"    // NOEXCEPT macro (must precede vktestbinding.h)
+#include "vktestbinding.h"  // Left for clarity, no harm, already included via test_common.h
+#include <algorithm>
 #include <assert.h>
 #include <iostream>
 #include <stdarg.h>
@@ -52,14 +54,6 @@ bool expect_failure(const char *expr, const char *file, unsigned int line, const
     }
 
     return false;
-}
-
-template <class T, class S>
-std::vector<T> make_handles(const std::vector<S> &v) {
-    std::vector<T> handles;
-    handles.reserve(v.size());
-    for (typename std::vector<S>::const_iterator it = v.begin(); it != v.end(); it++) handles.push_back((*it)->handle());
-    return handles;
 }
 
 }  // namespace
@@ -227,15 +221,17 @@ std::vector<VkLayerProperties> PhysicalDevice::layers() const {
 QueueCreateInfoArray::QueueCreateInfoArray(const std::vector<VkQueueFamilyProperties> &queue_props) : queue_info_(), queue_priorities_() {
     queue_info_.reserve(queue_props.size());
 
-    for (uint32_t i = 0; i < (uint32_t)queue_props.size(); i++) {
-        VkDeviceQueueCreateInfo qi = {};
-        qi.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
-        qi.pNext = NULL;
-        qi.queueFamilyIndex = i;
-        qi.queueCount = queue_props[i].queueCount;
-        queue_priorities_.emplace_back(qi.queueCount, 0.0f);
-        qi.pQueuePriorities = queue_priorities_[i].data();
-        queue_info_.push_back(qi);
+    for (uint32_t i = 0; i < (uint32_t)queue_props.size(); ++i) {
+        if (queue_props[i].queueCount > 0) {
+            VkDeviceQueueCreateInfo qi = {};
+            qi.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
+            qi.pNext = NULL;
+            qi.queueFamilyIndex = i;
+            qi.queueCount = queue_props[i].queueCount;
+            queue_priorities_.emplace_back(qi.queueCount, 0.0f);
+            qi.pQueuePriorities = queue_priorities_[i].data();
+            queue_info_.push_back(qi);
+        }
     }
 }
 
@@ -259,12 +255,22 @@ void Device::init(std::vector<const char *> &extensions, VkPhysicalDeviceFeature
             graphics_queue_node_index_ = i;
         }
     }
+    // Only request creation with queuefamilies that have at least one queue
+    std::vector<VkDeviceQueueCreateInfo> create_queue_infos;
+    auto qci = queue_info.data();
+    for (uint32_t j = 0; j < queue_info.size(); ++j) {
+        if (qci[j].queueCount) {
+            create_queue_infos.push_back(qci[j]);
+        }
+    }
+
+    enabled_extensions_ = extensions;
 
     VkDeviceCreateInfo dev_info = {};
     dev_info.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
     dev_info.pNext = NULL;
-    dev_info.queueCreateInfoCount = queue_info.size();
-    dev_info.pQueueCreateInfos = queue_info.data();
+    dev_info.queueCreateInfoCount = create_queue_infos.size();
+    dev_info.pQueueCreateInfos = create_queue_infos.data();
     dev_info.enabledLayerCount = 0;
     dev_info.ppEnabledLayerNames = NULL;
     dev_info.enabledExtensionCount = extensions.size();
@@ -348,6 +354,11 @@ void Device::init_formats() {
     EXPECT(!formats_.empty());
 }
 
+bool Device::IsEnbledExtension(const char *extension) {
+    const auto is_x = [&extension](const char *enabled_extension) { return strcmp(extension, enabled_extension) == 0; };
+    return std::any_of(enabled_extensions_.begin(), enabled_extensions_.end(), is_x);
+}
+
 VkFormatProperties Device::format_properties(VkFormat format) {
     VkFormatProperties data;
     vkGetPhysicalDeviceFormatProperties(phy().handle(), format, &data);
@@ -358,7 +369,7 @@ VkFormatProperties Device::format_properties(VkFormat format) {
 void Device::wait() { EXPECT(vkDeviceWaitIdle(handle()) == VK_SUCCESS); }
 
 VkResult Device::wait(const std::vector<const Fence *> &fences, bool wait_all, uint64_t timeout) {
-    const std::vector<VkFence> fence_handles = make_handles<VkFence>(fences);
+    const std::vector<VkFence> fence_handles = MakeVkHandles<VkFence>(fences);
     VkResult err = vkWaitForFences(handle(), fence_handles.size(), fence_handles.data(), wait_all, timeout);
     EXPECT(err == VK_SUCCESS || err == VK_TIMEOUT);
 
@@ -371,7 +382,7 @@ void Device::update_descriptor_sets(const std::vector<VkWriteDescriptorSet> &wri
 }
 
 void Queue::submit(const std::vector<const CommandBuffer *> &cmds, Fence &fence) {
-    const std::vector<VkCommandBuffer> cmd_handles = make_handles<VkCommandBuffer>(cmds);
+    const std::vector<VkCommandBuffer> cmd_handles = MakeVkHandles<VkCommandBuffer>(cmds);
     VkSubmitInfo submit_info;
     submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
     submit_info.pNext = NULL;
@@ -421,8 +432,16 @@ void DeviceMemory::unmap() const { vkUnmapMemory(device(), handle()); }
 
 VkMemoryAllocateInfo DeviceMemory::get_resource_alloc_info(const Device &dev, const VkMemoryRequirements &reqs,
                                                            VkMemoryPropertyFlags mem_props) {
-    VkMemoryAllocateInfo info = alloc_info(reqs.size, 0);
-    dev.phy().set_memory_type(reqs.memoryTypeBits, &info, mem_props);
+    // Find appropriate memory type for given reqs
+    VkPhysicalDeviceMemoryProperties dev_mem_props = dev.phy().memory_properties();
+    uint32_t mem_type_index = 0;
+    for (mem_type_index = 0; mem_type_index < dev_mem_props.memoryTypeCount; ++mem_type_index) {
+        if (mem_props == (mem_props & dev_mem_props.memoryTypes[mem_type_index].propertyFlags)) break;
+    }
+    // If we exceeded types, then this device doesn't have the memory we need
+    assert(mem_type_index < dev_mem_props.memoryTypeCount);
+    VkMemoryAllocateInfo info = alloc_info(reqs.size, mem_type_index);
+    EXPECT(dev.phy().set_memory_type(reqs.memoryTypeBits, &info, mem_props));
     return info;
 }
 
@@ -624,7 +643,8 @@ NON_DISPATCHABLE_HANDLE_DTOR(PipelineLayout, vkDestroyPipelineLayout)
 
 void PipelineLayout::init(const Device &dev, VkPipelineLayoutCreateInfo &info,
                           const std::vector<const DescriptorSetLayout *> &layouts) {
-    const std::vector<VkDescriptorSetLayout> layout_handles = make_handles<VkDescriptorSetLayout>(layouts);
+    const std::vector<VkDescriptorSetLayout> layout_handles = MakeVkHandles<VkDescriptorSetLayout>(layouts);
+    info.setLayoutCount = layout_handles.size();
     info.pSetLayouts = layout_handles.data();
 
     NON_DISPATCHABLE_HANDLE_INIT(vkCreatePipelineLayout, dev, &info);
@@ -653,7 +673,7 @@ void DescriptorPool::reset() { EXPECT(vkResetDescriptorPool(device(), handle(), 
 
 std::vector<DescriptorSet *> DescriptorPool::alloc_sets(const Device &dev,
                                                         const std::vector<const DescriptorSetLayout *> &layouts) {
-    const std::vector<VkDescriptorSetLayout> layout_handles = make_handles<VkDescriptorSetLayout>(layouts);
+    const std::vector<VkDescriptorSetLayout> layout_handles = MakeVkHandles<VkDescriptorSetLayout>(layouts);
 
     std::vector<VkDescriptorSet> set_handles;
     set_handles.resize(layout_handles.size());
@@ -744,4 +764,4 @@ void CommandBuffer::end() { EXPECT(vkEndCommandBuffer(handle()) == VK_SUCCESS); 
 
 void CommandBuffer::reset(VkCommandBufferResetFlags flags) { EXPECT(vkResetCommandBuffer(handle(), flags) == VK_SUCCESS); }
 
-};  // namespace vk_testing
+}  // namespace vk_testing

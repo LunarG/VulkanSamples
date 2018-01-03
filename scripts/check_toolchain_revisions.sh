@@ -2,7 +2,7 @@
 
 set -e
 
-# If any tracked revision no longer matches the local revision, blast the extenal toolchain directoies
+# If any tracked revision no longer matches the local revision, blast the extenal toolchain directories
 
 function check_revision()
 {
@@ -32,16 +32,6 @@ function check_revision()
 tool=glslang
 dir=external/glslang
 rev=external_revisions/glslang_revision
-check_revision $tool $dir $rev
-
-tool=spirv-tools
-dir=external/spirv-tools
-rev=external_revisions/spirv-tools_revision
-check_revision $tool $dir $rev
-
-tool=spirv-headers
-dir=external/spirv-tools/external/spirv-headers
-rev=external_revisions/spirv-headers_revision
 check_revision $tool $dir $rev
 
 tool=glslang_android

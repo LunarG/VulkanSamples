@@ -20,6 +20,8 @@
 #ifndef VULKAN_SHADER_VALIDATION_H
 #define VULKAN_SHADER_VALIDATION_H
 
+#include <spirv_tools_commit_id.h>
+
 // A forward iterator over spirv instructions. Provides easy access to len, opcode, and content words
 // without the caller needing to care too much about the physical SPIRV module layout.
 struct spirv_inst_iter {
@@ -98,6 +100,103 @@ struct shader_module {
     }
 
     void build_def_index();
+};
+
+class ValidationCache {
+    // hashes of shaders that have passed validation before, and can be skipped.
+    // we don't store negative results, as we would have to also store what was
+    // wrong with them; also, we expect they will get fixed, so we're less
+    // likely to see them again.
+    std::unordered_set<uint32_t> good_shader_hashes;
+    ValidationCache() {}
+
+public:
+    static VkValidationCacheEXT Create(VkValidationCacheCreateInfoEXT const *pCreateInfo) {
+        auto cache = new ValidationCache();
+        cache->Load(pCreateInfo);
+        return VkValidationCacheEXT(cache);
+    }
+
+    void Load(VkValidationCacheCreateInfoEXT const *pCreateInfo) {
+        auto size = 8u + VK_UUID_SIZE;
+        if (!pCreateInfo->pInitialData || pCreateInfo->initialDataSize < size)
+            return;
+
+        uint32_t const *data = (uint32_t const *)pCreateInfo->pInitialData;
+        if (data[0] != size)
+            return;
+        if (data[1] != VK_VALIDATION_CACHE_HEADER_VERSION_ONE_EXT)
+            return;
+        uint8_t expected_uuid[16];
+        CommitIdToUuid(SPIRV_TOOLS_COMMIT_ID, expected_uuid);
+        if (memcmp(&data[2], expected_uuid, 16) != 0)
+            return;  // different version
+
+        data += 6;
+
+        for (;size < pCreateInfo->initialDataSize;
+             data++, size += sizeof(uint32_t)) {
+            good_shader_hashes.insert(*data);
+        }
+    }
+
+    void Write(size_t *pDataSize, void *pData) {
+        auto headerSize = 8u + VK_UUID_SIZE; // 4 bytes for header size + 4 bytes for version number + UUID
+        if (!pData) {
+            *pDataSize = headerSize + good_shader_hashes.size() * sizeof(uint32_t);
+            return;
+        }
+
+        if (*pDataSize < headerSize) {
+            *pDataSize = 0;
+            return;   // Too small for even the header!
+        }
+
+        uint32_t *out = (uint32_t *)pData;
+        size_t actualSize = headerSize;
+
+        // Write the header
+        *out++ = headerSize;
+        *out++ = VK_VALIDATION_CACHE_HEADER_VERSION_ONE_EXT;
+        // Convert SPIRV-Tools commit ID (as a string of hexadecimal digits) into bytes,
+        // and write as many bytes as will fit into the header as a UUID.
+        CommitIdToUuid(SPIRV_TOOLS_COMMIT_ID, reinterpret_cast<uint8_t*>(out));
+        out += 4;
+
+        for (auto it = good_shader_hashes.begin();
+             it != good_shader_hashes.end() && actualSize < *pDataSize;
+             it++, out++, actualSize += sizeof(uint32_t)) {
+            *out = *it;
+        }
+
+        *pDataSize = actualSize;
+    }
+
+    void Merge(ValidationCache const *other) {
+        good_shader_hashes.reserve(good_shader_hashes.size() + other->good_shader_hashes.size());
+        for (auto h : other->good_shader_hashes)
+            good_shader_hashes.insert(h);
+    }
+
+    static uint32_t MakeShaderHash(VkShaderModuleCreateInfo const *smci);
+
+    bool Contains(uint32_t hash) {
+        return good_shader_hashes.count(hash) != 0;
+    }
+
+    void Insert(uint32_t hash) {
+        good_shader_hashes.insert(hash);
+    }
+private:
+    void CommitIdToUuid(const char* commitId, uint8_t uuid[VK_UUID_SIZE]) {
+      assert(strlen(commitId)/2 >= VK_UUID_SIZE);
+      char str[3] = {};
+      for (uint32_t i = 0; i < VK_UUID_SIZE; ++i) {
+        str[0] = commitId[2 * i + 0];
+        str[1] = commitId[2 * i + 1];
+        uuid[i] = static_cast<uint8_t>(strtol(str, NULL, 16));
+      }
+    }
 };
 
 bool validate_and_capture_pipeline_shader_state(layer_data *dev_data, PIPELINE_STATE *pPipeline);

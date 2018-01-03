@@ -25,6 +25,7 @@
 #endif
 
 #include <cassert>
+#include <cinttypes>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
@@ -231,14 +232,14 @@ struct Demo {
     void prepare_descriptor_pool();
     void prepare_descriptor_set();
     void prepare_framebuffers();
+    vk::ShaderModule prepare_shader_module(const uint32_t *, size_t);
+    vk::ShaderModule prepare_vs();
     vk::ShaderModule prepare_fs();
     void prepare_pipeline();
     void prepare_render_pass();
-    vk::ShaderModule prepare_shader_module(const void *, size_t);
     void prepare_texture_image(const char *, texture_object *, vk::ImageTiling, vk::ImageUsageFlags, vk::MemoryPropertyFlags);
     void prepare_textures();
-    vk::ShaderModule prepare_vs();
-    char *read_spv(const char *, size_t *);
+
     void resize();
     void set_image_layout(vk::Image, vk::ImageAspectFlags, vk::ImageLayout, vk::ImageLayout, vk::AccessFlags,
                           vk::PipelineStageFlags, vk::PipelineStageFlags);
@@ -920,7 +921,7 @@ Demo::Demo()
                 continue;
             }
             if (strcmp(argv[i], "--c") == 0 && frameCount == UINT32_MAX && i < argc - 1 &&
-                sscanf(argv[i + 1], "%d", &frameCount) == 1) {
+                sscanf(argv[i + 1], "%" SCNu32, &frameCount) == 1) {
                 i++;
                 continue;
             }
@@ -930,12 +931,14 @@ Demo::Demo()
             }
 
             fprintf(stderr,
-                    "Usage:\n  %s [--use_staging] [--validate] [--break] "
-                    "[--c <framecount>] [--suppress_popups] [--present_mode <present mode enum>]\n"
-                    "VK_PRESENT_MODE_IMMEDIATE_KHR = %d\n"
-                    "VK_PRESENT_MODE_MAILBOX_KHR = %d\n"
-                    "VK_PRESENT_MODE_FIFO_KHR = %d\n"
-                    "VK_PRESENT_MODE_FIFO_RELAXED_KHR = %d\n",
+                    "Usage:\n  %s [--use_staging] [--validate] [--break] [--c <framecount>] \n"
+                    "       [--suppress_popups] [--present_mode {0,1,2,3}]\n"
+                    "\n"
+                    "Options for --present_mode:\n"
+                    "  %d: VK_PRESENT_MODE_IMMEDIATE_KHR\n"
+                    "  %d: VK_PRESENT_MODE_MAILBOX_KHR\n"
+                    "  %d: VK_PRESENT_MODE_FIFO_KHR (default)\n"
+                    "  %d: VK_PRESENT_MODE_FIFO_RELAXED_KHR\n",
                     APP_SHORT_NAME, VK_PRESENT_MODE_IMMEDIATE_KHR, VK_PRESENT_MODE_MAILBOX_KHR, VK_PRESENT_MODE_FIFO_KHR,
                     VK_PRESENT_MODE_FIFO_RELAXED_KHR);
             fflush(stderr);
@@ -1855,15 +1858,11 @@ Demo::Demo()
     }
 
     vk::ShaderModule Demo::prepare_fs() {
-        size_t size = 0;
-        void *fragShaderCode = read_spv("cube-frag.spv", &size);
-        if (!fragShaderCode) {
-            ERR_EXIT("Failed to load cube-frag.spv", "Load Shader Failure");
-        }
+        const uint32_t fragShaderCode[] = {
+#include "cube.frag.inc"
+        };
 
-        frag_shader_module = prepare_shader_module(fragShaderCode, size);
-
-        free(fragShaderCode);
+        frag_shader_module = prepare_shader_module(fragShaderCode, sizeof(fragShaderCode));
 
         return frag_shader_module;
     }
@@ -2001,8 +2000,8 @@ Demo::Demo()
         VERIFY(result == vk::Result::eSuccess);
     }
 
-    vk::ShaderModule Demo::prepare_shader_module(const void *code, size_t size) {
-        auto const moduleCreateInfo = vk::ShaderModuleCreateInfo().setCodeSize(size).setPCode((uint32_t const *)code);
+    vk::ShaderModule Demo::prepare_shader_module(const uint32_t *code, size_t size) {
+        const auto moduleCreateInfo = vk::ShaderModuleCreateInfo().setCodeSize(size).setPCode(code);
 
         vk::ShaderModule module;
         auto result = device.createShaderModule(&moduleCreateInfo, nullptr, &module);
@@ -2086,7 +2085,7 @@ Demo::Demo()
                 // Nothing in the pipeline needs to be complete to start, and don't allow fragment
                 // shader to run until layout transition completes
                 set_image_layout(textures[i].image, vk::ImageAspectFlagBits::eColor, vk::ImageLayout::ePreinitialized,
-                                 textures[i].imageLayout, vk::AccessFlagBits::eHostWrite, vk::PipelineStageFlagBits::eTopOfPipe,
+                                 textures[i].imageLayout, vk::AccessFlagBits(), vk::PipelineStageFlagBits::eTopOfPipe,
                                  vk::PipelineStageFlagBits::eFragmentShader);
                 staging_texture.image = vk::Image();
             } else if (props.optimalTilingFeatures & vk::FormatFeatureFlagBits::eSampledImage) {
@@ -2101,11 +2100,11 @@ Demo::Demo()
                                       vk::MemoryPropertyFlagBits::eDeviceLocal);
 
                 set_image_layout(staging_texture.image, vk::ImageAspectFlagBits::eColor, vk::ImageLayout::ePreinitialized,
-                                 vk::ImageLayout::eTransferSrcOptimal, vk::AccessFlagBits::eHostWrite,
+                                 vk::ImageLayout::eTransferSrcOptimal, vk::AccessFlagBits(),
                                  vk::PipelineStageFlagBits::eTopOfPipe, vk::PipelineStageFlagBits::eTransfer);
 
                 set_image_layout(textures[i].image, vk::ImageAspectFlagBits::eColor, vk::ImageLayout::ePreinitialized,
-                                 vk::ImageLayout::eTransferDstOptimal, vk::AccessFlagBits::eHostWrite,
+                                 vk::ImageLayout::eTransferDstOptimal, vk::AccessFlagBits(),
                                  vk::PipelineStageFlagBits::eTopOfPipe, vk::PipelineStageFlagBits::eTransfer);
 
                 auto const subresource = vk::ImageSubresourceLayers()
@@ -2164,39 +2163,13 @@ Demo::Demo()
     }
 
     vk::ShaderModule Demo::prepare_vs() {
-        size_t size = 0;
-        void *vertShaderCode = read_spv("cube-vert.spv", &size);
-        if (!vertShaderCode) {
-            ERR_EXIT("Failed to load cube-vert.spv", "Load Shader Failure");
-        }
+        const uint32_t vertShaderCode[] = {
+#include "cube.vert.inc"
+        };
 
-        vert_shader_module = prepare_shader_module(vertShaderCode, size);
-
-        free(vertShaderCode);
+        vert_shader_module = prepare_shader_module(vertShaderCode, sizeof(vertShaderCode));
 
         return vert_shader_module;
-    }
-
-    char *Demo::read_spv(const char *filename, size_t *psize) {
-        FILE *fp = fopen(filename, "rb");
-        if (!fp) {
-            return nullptr;
-        }
-
-        fseek(fp, 0L, SEEK_END);
-        long int size = ftell(fp);
-
-        fseek(fp, 0L, SEEK_SET);
-
-        void *shader_code = malloc(size);
-        size_t retval = fread(shader_code, size, 1, fp);
-        VERIFY(retval == 1);
-
-        *psize = size;
-
-        fclose(fp);
-
-        return (char *)shader_code;
     }
 
     void Demo::resize() {
@@ -2348,7 +2321,7 @@ Demo::Demo()
             }
         } while (!strncmp(header, "#", 1));
 
-        sscanf(header, "%u %u", width, height);
+        sscanf(header, "%" SCNd32 " %" SCNd32, width, height);
         if (rgba_data == nullptr) {
             fclose(fPtr);
             return true;

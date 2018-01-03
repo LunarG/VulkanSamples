@@ -424,6 +424,28 @@ def makeGenOpts(extensions = [], removeExtensions = [], protect = True, director
             helper_file_type  = 'extension_helper_header')
         ]
 
+    # Helper file generator options for typemap_helper.h
+    genOpts['vk_typemap_helper.h'] = [
+          HelperFileOutputGenerator,
+          HelperFileOutputGeneratorOptions(
+            filename          = 'vk_typemap_helper.h',
+            directory         = directory,
+            apiname           = 'vulkan',
+            profile           = None,
+            versions          = allVersions,
+            emitversions      = allVersions,
+            defaultExtensions = 'vulkan',
+            addExtensions     = addExtensions,
+            removeExtensions  = removeExtensions,
+            prefixText        = prefixStrings + vkPrefixStrings,
+            protectFeature    = False,
+            apicall           = 'VKAPI_ATTR ',
+            apientry          = 'VKAPI_CALL ',
+            apientryp         = 'VKAPI_PTR *',
+            alignFuncParam    = 48,
+            helper_file_type  = 'typemap_helper_header')
+        ]
+
     # Options for mock ICD header
     genOpts['mock_icd.h'] = [
           MockICDOutputGenerator,

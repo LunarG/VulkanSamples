@@ -27,7 +27,7 @@ LOCAL_C_INCLUDES += $(LOCAL_PATH)/$(SRC_DIR)/include \
                     $(LOCAL_PATH)/$(LAYER_DIR)/include \
                     $(LOCAL_PATH)/$(SRC_DIR)/layers \
                     $(LOCAL_PATH)/$(SRC_DIR)/loader
-LOCAL_CPPFLAGS += -std=c++11 -Wall -Werror -Wno-unused-function -Wno-unused-const-variable -mxgot
+LOCAL_CPPFLAGS += -std=c++11 -Wall -Werror -Wno-unused-function -Wno-unused-const-variable
 LOCAL_CPPFLAGS += -DVK_USE_PLATFORM_ANDROID_KHR -DVK_PROTOTYPES -fvisibility=hidden
 include $(BUILD_STATIC_LIBRARY)
 
@@ -38,12 +38,13 @@ LOCAL_SRC_FILES += $(SRC_DIR)/layers/descriptor_sets.cpp
 LOCAL_SRC_FILES += $(SRC_DIR)/layers/buffer_validation.cpp
 LOCAL_SRC_FILES += $(SRC_DIR)/layers/shader_validation.cpp
 LOCAL_SRC_FILES += $(SRC_DIR)/layers/vk_layer_table.cpp
+LOCAL_SRC_FILES += $(SRC_DIR)/layers/xxhash.c
 LOCAL_C_INCLUDES += $(LOCAL_PATH)/$(SRC_DIR)/include \
                     $(LOCAL_PATH)/$(SRC_DIR)/layers \
                     $(LOCAL_PATH)/$(LAYER_DIR)/include \
                     $(LOCAL_PATH)/$(SRC_DIR)/loader
 LOCAL_STATIC_LIBRARIES += layer_utils glslang SPIRV-Tools
-LOCAL_CPPFLAGS += -std=c++11 -Wall -Werror -Wno-unused-function -Wno-unused-const-variable -mxgot
+LOCAL_CPPFLAGS += -std=c++11 -Wall -Werror -Wno-unused-function -Wno-unused-const-variable
 LOCAL_CPPFLAGS += -DVK_USE_PLATFORM_ANDROID_KHR -DVK_PROTOTYPES -fvisibility=hidden
 LOCAL_LDLIBS    := -llog
 LOCAL_LDFLAGS   += -Wl,-Bsymbolic
@@ -60,7 +61,7 @@ LOCAL_C_INCLUDES += $(LOCAL_PATH)/$(SRC_DIR)/include \
                     $(LOCAL_PATH)/$(SRC_DIR)/layers \
                     $(LOCAL_PATH)/$(SRC_DIR)/loader
 LOCAL_STATIC_LIBRARIES += layer_utils
-LOCAL_CPPFLAGS += -std=c++11 -DVK_PROTOTYPES -Wall -Werror -Wno-unused-function -Wno-unused-const-variable -mxgot
+LOCAL_CPPFLAGS += -std=c++11 -DVK_PROTOTYPES -Wall -Werror -Wno-unused-function -Wno-unused-const-variable
 LOCAL_CPPFLAGS += -DVK_USE_PLATFORM_ANDROID_KHR -fvisibility=hidden
 LOCAL_LDLIBS    := -llog
 LOCAL_LDFLAGS   += -Wl,-Bsymbolic
@@ -77,7 +78,7 @@ LOCAL_C_INCLUDES += $(LOCAL_PATH)/$(SRC_DIR)/include \
                     $(LOCAL_PATH)/$(LAYER_DIR)/include \
                     $(LOCAL_PATH)/$(SRC_DIR)/loader
 LOCAL_STATIC_LIBRARIES += layer_utils
-LOCAL_CPPFLAGS += -std=c++11 -DVK_PROTOTYPES -Wall -Werror -Wno-unused-function -Wno-unused-const-variable -mxgot
+LOCAL_CPPFLAGS += -std=c++11 -DVK_PROTOTYPES -Wall -Werror -Wno-unused-function -Wno-unused-const-variable
 LOCAL_CPPFLAGS += -DVK_USE_PLATFORM_ANDROID_KHR -fvisibility=hidden
 LOCAL_LDLIBS    := -llog
 LOCAL_LDFLAGS   += -Wl,-Bsymbolic
@@ -93,7 +94,7 @@ LOCAL_C_INCLUDES += $(LOCAL_PATH)/$(SRC_DIR)/include \
                     $(LOCAL_PATH)/$(LAYER_DIR)/include \
                     $(LOCAL_PATH)/$(SRC_DIR)/loader
 LOCAL_STATIC_LIBRARIES += layer_utils
-LOCAL_CPPFLAGS += -std=c++11 -DVK_PROTOTYPES -Wall -Werror -Wno-unused-function -Wno-unused-const-variable -mxgot
+LOCAL_CPPFLAGS += -std=c++11 -DVK_PROTOTYPES -Wall -Werror -Wno-unused-function -Wno-unused-const-variable
 LOCAL_CPPFLAGS += -DVK_USE_PLATFORM_ANDROID_KHR -fvisibility=hidden
 LOCAL_LDLIBS    := -llog
 LOCAL_LDFLAGS   += -Wl,-Bsymbolic
@@ -109,7 +110,7 @@ LOCAL_C_INCLUDES += $(LOCAL_PATH)/$(SRC_DIR)/include \
                     $(LOCAL_PATH)/$(LAYER_DIR)/include \
                     $(LOCAL_PATH)/$(SRC_DIR)/loader
 LOCAL_STATIC_LIBRARIES += layer_utils
-LOCAL_CPPFLAGS += -std=c++11 -Wall -Werror -Wno-unused-function -Wno-unused-const-variable -mxgot
+LOCAL_CPPFLAGS += -std=c++11 -Wall -Werror -Wno-unused-function -Wno-unused-const-variable
 LOCAL_CPPFLAGS += -DVK_USE_PLATFORM_ANDROID_KHR -DVK_PROTOTYPES -fvisibility=hidden
 LOCAL_LDLIBS    := -llog
 LOCAL_LDFLAGS   += -Wl,-Bsymbolic
@@ -130,7 +131,7 @@ LOCAL_C_INCLUDES += $(LOCAL_PATH)/$(SRC_DIR)/include \
                     $(LOCAL_PATH)/$(SRC_DIR)/common
 
 LOCAL_STATIC_LIBRARIES := googletest_main layer_utils shaderc
-LOCAL_CPPFLAGS += -std=c++11 -DVK_PROTOTYPES -Wall -Werror -Wno-unused-function -Wno-unused-const-variable -mxgot
+LOCAL_CPPFLAGS += -std=c++11 -DVK_PROTOTYPES -Wall -Werror -Wno-unused-function -Wno-unused-const-variable
 LOCAL_CPPFLAGS += -DVK_USE_PLATFORM_ANDROID_KHR -fvisibility=hidden --include=$(SRC_DIR)/common/vulkan_wrapper.h
 LOCAL_LDLIBS := -llog
 LOCAL_LDFLAGS   += -Wl,-Bsymbolic
@@ -152,7 +153,7 @@ LOCAL_C_INCLUDES += $(LOCAL_PATH)/$(SRC_DIR)/include \
                     $(LOCAL_PATH)/$(SRC_DIR)/common
 
 LOCAL_STATIC_LIBRARIES := googletest_main layer_utils shaderc
-LOCAL_CPPFLAGS += -std=c++11 -DVK_PROTOTYPES -Wall -Werror -Wno-unused-function -Wno-unused-const-variable -mxgot
+LOCAL_CPPFLAGS += -std=c++11 -DVK_PROTOTYPES -Wall -Werror -Wno-unused-function -Wno-unused-const-variable
 LOCAL_CPPFLAGS += -DVK_USE_PLATFORM_ANDROID_KHR -fvisibility=hidden -DVALIDATION_APK --include=$(SRC_DIR)/common/vulkan_wrapper.h
 LOCAL_WHOLE_STATIC_LIBRARIES += android_native_app_glue
 LOCAL_LDLIBS := -llog -landroid
@@ -168,7 +169,7 @@ LOCAL_SRC_FILES += $(SRC_DIR)/libs/vkjson/vkjson.cc \
 LOCAL_C_INCLUDES += $(LOCAL_PATH)/$(SRC_DIR)/include \
                     $(LOCAL_PATH)/$(SRC_DIR)/loader
 
-LOCAL_CPPFLAGS += -std=c++11 -DVK_PROTOTYPES -Wall -Werror -Wno-unused-function -Wno-unused-const-variable -mxgot
+LOCAL_CPPFLAGS += -std=c++11 -DVK_PROTOTYPES -Wall -Werror -Wno-unused-function -Wno-unused-const-variable
 LOCAL_CPPFLAGS += -DVK_USE_PLATFORM_ANDROID_KHR -fvisibility=hidden --include=$(SRC_DIR)/common/vulkan_wrapper.h
 include $(BUILD_STATIC_LIBRARY)
 
@@ -180,7 +181,7 @@ LOCAL_C_INCLUDES += $(LOCAL_PATH)/$(SRC_DIR)/loader \
                     $(LOCAL_PATH)/$(SRC_DIR)/include
 
 LOCAL_STATIC_LIBRARIES += vkjson
-LOCAL_CPPFLAGS += -std=c++11 -DVK_PROTOTYPES -Wall -Werror -Wno-unused-function -Wno-unused-const-variable -mxgot
+LOCAL_CPPFLAGS += -std=c++11 -DVK_PROTOTYPES -Wall -Werror -Wno-unused-function -Wno-unused-const-variable
 LOCAL_CPPFLAGS += -Wno-sign-compare -DVK_USE_PLATFORM_ANDROID_KHR --include=$(SRC_DIR)/common/vulkan_wrapper.h
 LOCAL_LDLIBS := -llog
 LOCAL_LDFLAGS += -Wl,--exclude-libs,ALL

@@ -21,6 +21,9 @@
 
 #include "vulkan/vulkan.h"
 
+#include <unordered_map>
+#include <unordered_set>
+
 #include "vk_layer_data.h"
 #include "vk_safe_struct.h"
 #include "vk_layer_utils.h"
@@ -68,6 +71,13 @@ struct layer_data {
     bool wsi_enabled;
     std::unordered_map<uint64_t, uint64_t> unique_id_mapping;  // Map uniqueID to actual object handle
     VkPhysicalDevice gpu;
+
+    struct SubpassesUsageStates {
+        std::unordered_set<uint32_t> subpasses_using_color_attachment;
+        std::unordered_set<uint32_t> subpasses_using_depthstencil_attachment;
+    };
+    // uses unwrapped handles
+    std::unordered_map<VkRenderPass, SubpassesUsageStates> renderpasses_states;
 
     layer_data() : wsi_enabled(false), gpu(VK_NULL_HANDLE){};
 };
