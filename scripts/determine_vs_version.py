@@ -41,7 +41,7 @@ def find_executable(program):
                 return exe_file
 
     return None
-
+    
 def determine_year(version):
     if version == 8:
         return 2005
@@ -59,7 +59,7 @@ def determine_year(version):
         return 2017
     else:
         return 0000
-
+    
 # Determine if msbuild is in the path, then call it to determine the version and parse
 # it into a format we can use, which is "<version_num> <version_year>".
 if __name__ == '__main__':
@@ -76,8 +76,9 @@ if __name__ == '__main__':
         print('00 0000')
         print('Executable ' + exeName + ' not found in PATH!')
     else:
-        sysCallOut = os.popen(versionCall).read()
-
+        proc = subprocess.Popen([exeName, arguments], stdout=subprocess.PIPE)
+        sysCallOut = proc.stdout.readline().decode('iso-8859-1').rstrip()
+        
         version = None
 
         # Split around any spaces first
@@ -87,7 +88,7 @@ if __name__ == '__main__':
             # If we've already found it, bail.
             if version != None:
                 break
-
+        
             # Now split around line feeds
             lineList = spaceString.split('\n')
             for curLine in lineList:
@@ -95,7 +96,7 @@ if __name__ == '__main__':
                 # If we've already found it, bail.
                 if version != None:
                     break
-
+            
                 # We only want to continue if there's a period in the list
                 if '.' not in curLine:
                     continue
@@ -106,13 +107,13 @@ if __name__ == '__main__':
                 if splitAroundPeriod[0].isdigit():
                     version = int (splitAroundPeriod[0])
                     break
-
+        
         # Failsafe to return a number in the proper format, but one that will fail.
         if version == None:
             version = 00
 
         # Determine the year associated with that version
         year = determine_year(version)
-
+        
         # Output the string we need for Cmake to properly build for this version
         print(str(version) + ' ' + str(year))
