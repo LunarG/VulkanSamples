@@ -12,9 +12,13 @@ The Vulkan validation layers are one of the larger and more important components
 While there are often active and organized development efforts underway to improve their coverage,
 there are always opportunities for anyone to help by contributing additional validation layer checks
 and tests for these validation checks.
-If you desire to help in this area, please examine the
-[issues list](https://github.com/KhronosGroup/Vulkan-LoaderAndValidationLayers/issues)
-in this repository and look for any issues that are of interest to you.
+
+There are a couple of methods to identify areas of need:
+* Examine the [issues list](https://github.com/KhronosGroup/Vulkan-LoaderAndValidationLayers/issues)
+in this repository and look for issues that are of interest
+* Alternatively, examine the [vk_validation_error_database.txt](layers/vk_validation_error_database.txt) file -- unimplemented validation checks are marked
+with an 'N' in the 'check_implemented' column and each of these needs coverage in the validation layers.
+
 Of course, if you have your own work in mind, please open an issue to describe it and assign it to yourself.
 Finally, please feel free to contact any of the developers that are actively contributing should you
 wish to coordinate further.
@@ -28,7 +32,7 @@ Repository Issue labels:
 development that would have been directly useful, and are high priority.
 * _Enhancement_:  These issues refer to ideas for extending or improving the loader, demos, or validation layers.
 
-It is the mainainers goal for all issues to be assigned within one business day of their submission. If you choose
+It is the maintainers goal for all issues to be assigned within one business day of their submission. If you choose
 to work on an issue that is assigned, simply coordinate with the current assignee.
 
 ### **How to Submit Fixes**
@@ -38,7 +42,7 @@ to work on an issue that is assigned, simply coordinate with the current assigne
 * Use the existing GitHub forking and pull request process.
   This will involve [forking the repository](https://help.github.com/articles/fork-a-repo/),
   creating a branch with your commits, and then [submitting a pull request](https://help.github.com/articles/using-pull-requests/).
-* Please read and adhere to the style and process [guidelines](#coding conventions and formatting) enumerated below.
+* Please read and adhere to the style and process [guidelines ](#coding-conventions-and-formatting) enumerated below.
 * Please base your fixes on the master branch.  SDK branches are generally not updated except for critical fixes needed to repair an SDK release.
 
 
@@ -99,7 +103,7 @@ that to be accepted into the repository, the pull request must [pass all tests](
 or you can run `run_all_tests.ps1` from a PowerShell window
 
 * Note that some tests may fail with known issues or driver-specific problems.
-  The idea here is that your changes shouldn't change the test results, unless that was the intent of your changes.
+  The idea here is that your changes should not change the test results, unless that was the intent of your changes.
 * Run tests that explicitly exercise your changes.
 * Feel free to subject your code changes to other tests as well!
 
@@ -118,10 +122,9 @@ contains checks that require some amount of application state to carry out. In c
 checks that require (mostly) no state at all. Please inquire if you are unsure of the location for your contribution. The other
 layers (threading, object_tracker, unique_objects) are more special-purpose and are mostly code-generated from the specification.
 
-
 ### **Contributor License Agreement (CLA)**
 
-You'll be prompted with a one-time "click-through" CLA dialog as part of submitting your pull request 
+You will be prompted with a one-time "click-through" CLA dialog as part of submitting your pull request
 or other contribution to GitHub.
 
 ### **License and Copyrights**

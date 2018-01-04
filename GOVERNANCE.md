@@ -16,17 +16,18 @@ interpretations may require consulting with the Khronos Vulkan Workgroup for res
   - Google and LunarG collaboration:
     - Google: Monitor for Android
     - LunarG: Monitor for desktop (Windows and Linux)
-    - Continuous Integration: Internal HW test farms monitor various hardware/software platforms
+    - Continuous Integration: HW test farms operated by Google and LunarG monitor various hardware/software platforms
 * Repo Quality
   - Repo remains in healthy state with all tests passing and good-quality, consistent codebase
-  - Continuous Integration: Along with Github, internal test farms perform pre-commit cloud testing on pull-requests
+  - Continuous Integration: Along with Github, HW test farms operated by Google and LunarG perform pre-commit cloud testing
+on pull-requests
 
 # **Roles and Definitions**
 * Contributor, Commenter, User
-  - Submitting contributions, issues, or users of the repository
+  - Submitting contributions, creating issues, or using the contents of the repository
 * Approver
   - Experienced project members who have made significant technical contributions 
-  - Write control: Approve pull/merge requests (verify submissions vs. accepance criteria)
+  - Write control: Approve pull/merge requests (verify submissions vs. acceptance criteria)
 * Technical Project Leads
   - Lead the project in terms of versioning, quality assurance, and overarching objectives 
   - Monitor github issues and drive timely resolution
