@@ -287,7 +287,7 @@ int sample_main(int argc, char *argv[]) {
     assert(tweakValueIndex >= 0);
 
     // Generate the unique variants from the template
-    constexpr size_t SHADER_COUNT = 10000;
+    const size_t SHADER_COUNT = 10000;
     std::vector<ShaderVariant> shaderVariants(SHADER_COUNT);
     for (size_t i = 0; i < SHADER_COUNT; ++i) {
         shaderVariants[i].spv = spvTemplate;
