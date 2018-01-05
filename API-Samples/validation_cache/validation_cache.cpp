@@ -294,12 +294,14 @@ int sample_main(int argc, char *argv[]) {
         shaderVariants[i].spv[tweakValueIndex] = i;
 #if defined(VK_EXT_validation_cache)
         shaderVariants[i].moduleValidationCacheCreateInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_VALIDATION_CACHE_CREATE_INFO_EXT;
+        shaderVariants[i].moduleValidationCacheCreateInfo.pNext = 0;
         shaderVariants[i].moduleValidationCacheCreateInfo.validationCache = validationCache;
         shaderVariants[i].moduleCreateInfo.pNext = &shaderVariants[i].moduleValidationCacheCreateInfo;
 #endif
         shaderVariants[i].moduleCreateInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
         shaderVariants[i].moduleCreateInfo.codeSize = static_cast<uint32_t>(spvTemplate.size() * sizeof(uint32_t));
         shaderVariants[i].moduleCreateInfo.pCode = shaderVariants[i].spv.data();
+        shaderVariants[i].moduleCreateInfo.flags = 0;
     }
 
     // Time (roughly) taken to create (and validate) the shader modules.
