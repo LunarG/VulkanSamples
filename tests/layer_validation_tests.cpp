@@ -17339,40 +17339,50 @@ TEST_F(VkLayerTest, CreateImageLimitsViolationMaxWidth) {
 }
 
 TEST_F(VkLayerTest, CreateImageLimitsViolationMinWidth) {
+    TEST_DESCRIPTION("Create invalid image with dimensions of zero.");
+
     ASSERT_NO_FATAL_FAILURE(Init());
 
-    VkFormat const format = VK_FORMAT_B8G8R8A8_UNORM;
-    {
-        VkFormatProperties properties;
-        vkGetPhysicalDeviceFormatProperties(m_device->phy().handle(), format, &properties);
-        if (properties.optimalTilingFeatures == 0) {
-            printf("             Image format not supported; skipped.\n");
-            return;
-        }
-    }
+    const VkFormat safe_format = VK_FORMAT_B8G8R8A8_UNORM;
+    const VkImageUsageFlags safe_usage = VK_IMAGE_USAGE_SAMPLED_BIT;
 
     VkImageCreateInfo info = {};
     info.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
-    info.pNext = NULL;
-    info.imageType = VK_IMAGE_TYPE_2D;
-    info.format = format;
-    info.extent.height = 32;
-    info.extent.depth = 1;
+    info.imageType = VK_IMAGE_TYPE_3D;
+    info.format = safe_format;
+    // extent to be set by tests
     info.mipLevels = 1;
     info.arrayLayers = 1;
     info.samples = VK_SAMPLE_COUNT_1_BIT;
-    info.tiling = VK_IMAGE_TILING_OPTIMAL;
-    info.usage = VK_IMAGE_USAGE_SAMPLED_BIT;
-    info.flags = 0;
+    info.usage = safe_usage;
 
-    // Introduce error by sending down a bogus width extent
-    info.extent.width = 0;
+    enum Dimension { kWidth = 0x1, kHeight = 0x2, kDepth = 0x4 };
 
-    VkImage image;
-    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_09e007b8);
-    m_errorMonitor->SetUnexpectedError("parameter pCreateInfo->extent.width must be greater than 0");
-    vkCreateImage(m_device->device(), &info, NULL, &image);
-    m_errorMonitor->VerifyFound();
+    for (underlying_type<Dimension>::type bad_dimensions = 0x1; bad_dimensions < 0x8; ++bad_dimensions) {
+        VkExtent3D extent = {1, 1, 1};
+
+        if (bad_dimensions & kWidth) {
+            extent.width = 0;
+            m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_09e00760);
+        }
+
+        if (bad_dimensions & kHeight) {
+            extent.height = 0;
+            m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_09e00762);
+        }
+
+        if (bad_dimensions & kDepth) {
+            extent.depth = 0;
+            m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_09e00764);
+        }
+
+        info.extent = extent;
+
+        VkImage image;
+        vkCreateImage(m_device->device(), &info, NULL, &image);
+
+        m_errorMonitor->VerifyFound();
+    }
 }
 
 TEST_F(VkLayerTest, AttachmentDescriptionUndefinedFormat) {
