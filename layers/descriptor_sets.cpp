@@ -29,34 +29,38 @@
 #include <sstream>
 #include <algorithm>
 
+struct BindingNumCmp {
+    bool operator()(const VkDescriptorSetLayoutBinding *a, const VkDescriptorSetLayoutBinding *b) {
+        return a->binding < b->binding;
+    }
+};
+
 // Construct DescriptorSetLayout instance from given create info
 // Proactively reserve and resize as possible, as the reallocation was visible in profiling
 cvdescriptorset::DescriptorSetLayout::DescriptorSetLayout(const VkDescriptorSetLayoutCreateInfo *p_create_info,
                                                           const VkDescriptorSetLayout layout)
-    : layout_(layout),
-      flags_(p_create_info->flags),
-      binding_count_(p_create_info->bindingCount),
-      descriptor_count_(0),
-      dynamic_descriptor_count_(0) {
+    : layout_(layout), flags_(p_create_info->flags), binding_count_(0), descriptor_count_(0), dynamic_descriptor_count_(0) {
     binding_type_stats_ = {0, 0, 0};
-    std::set<uint32_t> sorted_bindings;
-    // Create the sorted set and unsorted map of bindings and indices
-    for (uint32_t i = 0; i < binding_count_; i++) {
-        sorted_bindings.insert(p_create_info->pBindings[i].binding);
-    }
-    uint32_t index = 0;
-    binding_to_index_map_.reserve(binding_count_);
-    for (const uint32_t binding_num : sorted_bindings) {
-        binding_to_index_map_[binding_num] = index++;
+    std::set<const VkDescriptorSetLayoutBinding *, BindingNumCmp> sorted_bindings;
+    const uint32_t input_bindings_count = p_create_info->bindingCount;
+    // Sort the input bindings in binding number order, eliminating duplicates
+    for (uint32_t i = 0; i < input_bindings_count; i++) {
+        sorted_bindings.insert(p_create_info->pBindings + i);
     }
 
     // Store the create info in the sorted order from above
     std::map<uint32_t, uint32_t> binding_to_dyn_count;
-    bindings_.resize(binding_count_);
-    for (uint32_t i = 0; i < binding_count_; ++i) {
-        const auto binding_num = p_create_info->pBindings[i].binding;
-        auto &binding_info = bindings_[binding_to_index_map_[binding_num]];
-        binding_info = std::move(safe_VkDescriptorSetLayoutBinding(&p_create_info->pBindings[i]));
+    uint32_t index = 0;
+    binding_count_ = static_cast<uint32_t>(sorted_bindings.size());
+    bindings_.reserve(binding_count_);
+    binding_to_index_map_.reserve(binding_count_);
+    for (auto input_binding : sorted_bindings) {
+        // Add to binding and map, s.t. it is robust to invalid duplication of binding_num
+        const auto binding_num = input_binding->binding;
+        binding_to_index_map_[binding_num] = index++;
+        bindings_.emplace_back(input_binding);
+        auto &binding_info = bindings_.back();
+
         descriptor_count_ += binding_info.descriptorCount;
         if (binding_info.descriptorCount > 0) {
             non_empty_bindings_.insert(binding_num);
