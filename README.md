@@ -29,13 +29,13 @@ The following components are available in this repository:
 - [*Tests*](tests/)
 
 ## Contact Information
-[Tobine Ehlis](mailto:tobine@google.com)
-[Mark Lobodzinski](mailto:mark@lunarg.com)
+* [Tobine Ehlis](mailto:tobine@google.com)
+* [Mark Lobodzinski](mailto:mark@lunarg.com)
 
 ## Information for Developing or Contributing:
 
-Please see the [CONTRIBUTING](CONTRIBUTING.md) file in this repository for more details.
-Please see the [GOVERNANCE](GOVERNANCE.md) file in this repository for repository management details.
+Please see the [CONTRIBUTING.md](CONTRIBUTING.md) file in this repository for more details.
+Please see the [GOVERNANCE.md](GOVERNANCE.md) file in this repository for repository management details.
 
 ## How to Build and Run
 
