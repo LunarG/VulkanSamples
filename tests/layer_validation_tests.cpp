@@ -13503,14 +13503,9 @@ TEST_F(VkLayerTest, InvalidQueueIndexInvalidQuery) {
         "Use an invalid queue index in a vkCmdWaitEvents call."
         "End a command buffer with a query still in progress.");
 
-    const char *invalid_queue_index =
-        "was created with sharingMode of VK_SHARING_MODE_EXCLUSIVE. If one "
-        "of src- or dstQueueFamilyIndex is VK_QUEUE_FAMILY_IGNORED, both "
-        "must be.";
-
     const char *invalid_query = "Ending command buffer with in progress query: queryPool 0x";
 
-    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, invalid_queue_index);
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_0a000960);
 
     ASSERT_NO_FATAL_FAILURE(Init());
 

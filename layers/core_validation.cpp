@@ -7039,7 +7039,258 @@ static bool ValidateAccessMaskPipelineStage(VkAccessFlags access_mask, VkPipelin
     return true;
 }
 
-static bool ValidateBarriers(layer_data *device_data, const char *funcName, GLOBAL_CB_NODE const *cb_state,
+namespace barrier_queue_families {
+enum VuIndex {
+    kSrcOrDstMustBeIgnore,
+    kSpecialOrIgnoreOnly,
+    kSrcIgnoreRequiresDstIgnore,
+    kDstValidOrSpecialIfNotIgnore,
+    kSrcValidOrSpecialIfNotIgnore,
+    kSrcAndDestMustBeIgnore,
+    kBothIgnoreOrBothValid,
+    kSubmitQueueMustMatchSrcOrDst
+};
+static const char *vu_summary[] = {"Source or destination queue family must be ignored.",
+                                   "Source or destination queue family must be special or ignored.",
+                                   "Destination queue family must be ignored if source queue family is.",
+                                   "Destination queue family must be valid, ignored, or special.",
+                                   "Source queue family must be valid, ignored, or special.",
+                                   "Source and destination queue family must both be ignored.",
+                                   "Source and destination queue family must both be ignore or both valid.",
+                                   "Source or destination queue family must match submit queue family, if not ignored."};
+
+static const UNIQUE_VALIDATION_ERROR_CODE image_error_codes[] = {
+    VALIDATION_ERROR_0a000aca,  //  VUID-VkImageMemoryBarrier-image-01381 -- kSrcOrDstMustBeIgnore
+    VALIDATION_ERROR_0a000dcc,  //  VUID-VkImageMemoryBarrier-image-01766 -- kSpecialOrIgnoreOnly
+    VALIDATION_ERROR_0a000962,  //  VUID-VkImageMemoryBarrier-image-01201 -- kSrcIgnoreRequiresDstIgnore
+    VALIDATION_ERROR_0a000dd0,  //  VUID-VkImageMemoryBarrier-image-01768 -- kDstValidOrSpecialIfNotIgnore
+    VALIDATION_ERROR_0a000dce,  //  VUID-VkImageMemoryBarrier-image-01767 -- kSrcValidOrSpecialIfNotIgnore
+    VALIDATION_ERROR_0a00095e,  //  VUID-VkImageMemoryBarrier-image-01199 -- kSrcAndDestMustBeIgnore
+    VALIDATION_ERROR_0a000960,  //  VUID-VkImageMemoryBarrier-image-01200 -- kBothIgnoreOrBothValid
+    VALIDATION_ERROR_0a00096a,  //  VUID-VkImageMemoryBarrier-image-01205 -- kSubmitQueueMustMatchSrcOrDst
+};
+
+static const UNIQUE_VALIDATION_ERROR_CODE buffer_error_codes[] = {
+    VALIDATION_ERROR_0180094e,  //  VUID-VkBufferMemoryBarrier-buffer-01191 -- kSrcOrDstMustBeIgnore
+    VALIDATION_ERROR_01800dc6,  //  VUID-VkBufferMemoryBarrier-buffer-01763 -- kSpecialOrIgnoreOnly
+    VALIDATION_ERROR_01800952,  //  VUID-VkBufferMemoryBarrier-buffer-01193 -- kSrcIgnoreRequiresDstIgnore
+    VALIDATION_ERROR_01800dca,  //  VUID-VkBufferMemoryBarrier-buffer-01765 -- kDstValidOrSpecialIfNotIgnore
+    VALIDATION_ERROR_01800dc8,  //  VUID-VkBufferMemoryBarrier-buffer-01764 -- kSrcValidOrSpecialIfNotIgnore
+    VALIDATION_ERROR_0180094c,  //  VUID-VkBufferMemoryBarrier-buffer-01190 -- kSrcAndDestMustBeIgnore
+    VALIDATION_ERROR_01800950,  //  VUID-VkBufferMemoryBarrier-buffer-01192 -- kBothIgnoreOrBothValid
+    VALIDATION_ERROR_01800958,  //  VUID-VkBufferMemoryBarrier-buffer-01196 -- kSubmitQueueMustMatchSrcOrDst
+};
+
+class ValidatorState {
+   public:
+    ValidatorState(const layer_data *device_data, const char *func_name, const GLOBAL_CB_NODE *cb_state,
+                   const uint64_t barrier_handle64, const VkSharingMode sharing_mode, const VulkanObjectType object_type,
+                   const UNIQUE_VALIDATION_ERROR_CODE *val_codes)
+        : report_data_(device_data->report_data),
+          func_name_(func_name),
+          cb_handle64_(HandleToUint64(cb_state->commandBuffer)),
+          barrier_handle64_(barrier_handle64),
+          sharing_mode_(sharing_mode),
+          object_type_(object_type),
+          val_codes_(val_codes),
+          limit_(static_cast<uint32_t>(device_data->phys_dev_properties.queue_family_properties.size())),
+          mem_ext_(device_data->extensions.vk_khr_external_memory) {}
+
+    // Create a validator state from an image state... reducing the image specific to the generic version.
+    ValidatorState(const layer_data *device_data, const char *func_name, const GLOBAL_CB_NODE *cb_state,
+                   const VkImageMemoryBarrier *barrier, const IMAGE_STATE *state)
+        : ValidatorState(device_data, func_name, cb_state, HandleToUint64(barrier->image), state->createInfo.sharingMode,
+                         kVulkanObjectTypeImage, image_error_codes) {}
+
+    // Create a validator state from an buffer state... reducing the buffer specific to the generic version.
+    ValidatorState(const layer_data *device_data, const char *func_name, const GLOBAL_CB_NODE *cb_state,
+                   const VkBufferMemoryBarrier *barrier, const BUFFER_STATE *state)
+        : ValidatorState(device_data, func_name, cb_state, HandleToUint64(barrier->buffer), state->createInfo.sharingMode,
+                         kVulkanObjectTypeImage, buffer_error_codes) {}
+
+    // Log the messages using boilerplate from object state, and Vu specific information from the template arg
+    // One and two family versions, in the single family version, Vu holds the name of the passed parameter
+    bool LogMsg(VuIndex vu_index, size_t location, uint32_t family, const char *param_name) const {
+        const UNIQUE_VALIDATION_ERROR_CODE val_code = val_codes_[vu_index];
+        const char *annotation = GetFamilyAnnotation(family);
+        return log_msg(report_data_, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, cb_handle64_,
+                       location, val_code, "DS",
+                       "%s: Barrier using %s 0x%" PRIx64 " created with sharingMode %s, has %s %u%s. %s %s", func_name_,
+                       GetTypeString(), barrier_handle64_, GetModeString(), param_name, family, annotation, vu_summary[vu_index],
+                       validation_error_map[val_code]);
+    }
+
+    bool LogMsg(VuIndex vu_index, size_t location, uint32_t src_family, uint32_t dst_family) const {
+        const UNIQUE_VALIDATION_ERROR_CODE val_code = val_codes_[vu_index];
+        const char *src_annotation = GetFamilyAnnotation(src_family);
+        const char *dst_annotation = GetFamilyAnnotation(dst_family);
+        return log_msg(report_data_, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, cb_handle64_,
+                       location, val_code, "DS",
+                       "%s: Barrier using %s 0x%" PRIx64
+                       " created with sharingMode %s, "
+                       "has srcQueueFamilyIndex %u%s and dstQueueFamilyIndex %u%s. %s %s",
+                       func_name_, GetTypeString(), barrier_handle64_, GetModeString(), src_family, src_annotation, dst_family,
+                       dst_annotation, vu_summary[vu_index], validation_error_map[val_code]);
+    }
+
+    // This abstract Vu can only be tested at submit time, thus we need a callback from the closure containing the needed
+    // data. Note that the mem_barrier is copied to the closure as the lambda lifespan exceed the guarantees of validity for
+    // application input.
+    static bool ValidateAtQueueSubmit(const VkQueue queue, const layer_data *device_data, uint32_t src_family, uint32_t dst_family,
+                                      const ValidatorState &val) {
+        auto queue_data_it = device_data->queueMap.find(queue);
+        if (queue_data_it == device_data->queueMap.end()) return false;
+
+        uint32_t queue_family = queue_data_it->second.queueFamilyIndex;
+        if ((src_family != queue_family) && (dst_family != queue_family)) {
+            const UNIQUE_VALIDATION_ERROR_CODE val_code = val.val_codes_[kSubmitQueueMustMatchSrcOrDst];
+            const char *src_annotation = val.GetFamilyAnnotation(src_family);
+            const char *dst_annotation = val.GetFamilyAnnotation(dst_family);
+            return log_msg(device_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_QUEUE_EXT,
+                           HandleToUint64(queue), __LINE__, val_code, "DS",
+                           "%s: Barrier submitted to queue with family index %u, using %s 0x%" PRIx64
+                           " created with sharingMode %s, has srcQueueFamilyIndex %u%s and dstQueueFamilyIndex %u%s. %s %s",
+                           "vkQueueSubmit", queue_family, val.GetTypeString(), val.barrier_handle64_, val.GetModeString(),
+                           src_family, src_annotation, dst_family, dst_annotation, vu_summary[kSubmitQueueMustMatchSrcOrDst],
+                           validation_error_map[val_code]);
+        }
+        return false;
+    }
+    // Logical helpers for semantic clarity
+    inline bool KhrExternalMem() const { return mem_ext_; }
+    inline bool IsValid(uint32_t queue_family) const { return (queue_family < limit_); }
+    inline bool IsSpecial(uint32_t queue_family) const {
+        return (queue_family == VK_QUEUE_FAMILY_EXTERNAL_KHR) || (queue_family == VK_QUEUE_FAMILY_FOREIGN_EXT);
+    }
+    inline bool IsValidOrSpecial(uint32_t queue_family) const {
+        return IsValid(queue_family) || (mem_ext_ && IsSpecial(queue_family));
+    }
+    inline bool IsIgnored(uint32_t queue_family) const { return queue_family == VK_QUEUE_FAMILY_IGNORED; }
+
+    // Helpers for LogMsg (and log_msg)
+    const char *GetModeString() const { return string_VkSharingMode(sharing_mode_); }
+
+    // Descriptive text for the various types of queue family index
+    const char *GetFamilyAnnotation(uint32_t family) const {
+        const char *external = " (VK_QUEUE_FAMILY_EXTERNAL_KHR)";
+        const char *foreign = " (VK_QUEUE_FAMILY_FOREIGN_EXT)";
+        const char *ignored = " (VK_QUEUE_FAMILY_IGNORED)";
+        const char *valid = " (VALID)";
+        const char *invalid = " (INVALID)";
+        switch (family) {
+            case VK_QUEUE_FAMILY_EXTERNAL_KHR:
+                return external;
+            case VK_QUEUE_FAMILY_FOREIGN_EXT:
+                return foreign;
+            case VK_QUEUE_FAMILY_IGNORED:
+                return ignored;
+            default:
+                if (IsValid(family)) {
+                    return valid;
+                }
+                return invalid;
+        };
+    }
+    const char *GetTypeString() const { return object_string[object_type_]; }
+    VkSharingMode GetSharingMode() const { return sharing_mode_; }
+
+   protected:
+    const debug_report_data *const report_data_;
+    const char *const func_name_;
+    const uint64_t cb_handle64_;
+    const uint64_t barrier_handle64_;
+    const VkSharingMode sharing_mode_;
+    const VulkanObjectType object_type_;
+    const UNIQUE_VALIDATION_ERROR_CODE *val_codes_;
+    const uint32_t limit_;
+    const bool mem_ext_;
+};
+
+bool Validate(const layer_data *device_data, const char *func_name, GLOBAL_CB_NODE *cb_state, const ValidatorState &val,
+              const uint32_t src_queue_family, const uint32_t dst_queue_family) {
+    bool skip = false;
+
+    const bool mode_concurrent = val.GetSharingMode() == VK_SHARING_MODE_CONCURRENT;
+    const bool src_ignored = val.IsIgnored(src_queue_family);
+    const bool dst_ignored = val.IsIgnored(dst_queue_family);
+    if (val.KhrExternalMem()) {
+        if (mode_concurrent) {
+            if (!(src_ignored || dst_ignored)) {
+                skip |= val.LogMsg(kSrcOrDstMustBeIgnore, __LINE__, src_queue_family, dst_queue_family);
+            }
+            if ((src_ignored && !(dst_ignored || val.IsSpecial(dst_queue_family))) ||
+                (dst_ignored && !(src_ignored || val.IsSpecial(src_queue_family)))) {
+                skip |= val.LogMsg(kSpecialOrIgnoreOnly, __LINE__, src_queue_family, dst_queue_family);
+            }
+        } else {
+            // VK_SHARING_MODE_EXCLUSIVE
+            if (src_ignored && !dst_ignored) {
+                skip |= val.LogMsg(kSrcIgnoreRequiresDstIgnore, __LINE__, src_queue_family, dst_queue_family);
+            }
+            if (!dst_ignored && !val.IsValidOrSpecial(dst_queue_family)) {
+                skip |= val.LogMsg(kDstValidOrSpecialIfNotIgnore, __LINE__, dst_queue_family, "dstQueueFamilyIndex");
+            }
+            if (!src_ignored && !val.IsValidOrSpecial(src_queue_family)) {
+                skip |= val.LogMsg(kSrcValidOrSpecialIfNotIgnore, __LINE__, src_queue_family, "srcQueueFamilyIndex");
+            }
+        }
+    } else {
+        // No memory extension
+        if (mode_concurrent) {
+            if (!src_ignored || !dst_ignored) {
+                skip |= val.LogMsg(kSrcAndDestMustBeIgnore, __LINE__, src_queue_family, dst_queue_family);
+            }
+        } else {
+            // VK_SHARING_MODE_EXCLUSIVE
+            if (!((src_ignored && dst_ignored) || (val.IsValid(src_queue_family) && val.IsValid(dst_queue_family)))) {
+                skip |= val.LogMsg(kBothIgnoreOrBothValid, __LINE__, src_queue_family, dst_queue_family);
+            }
+        }
+    }
+    if (!mode_concurrent && !src_ignored && !dst_ignored) {
+        // Only enqueue submit time check if it is needed. If more submit time checks are added, change the criteria
+        // TODO create a better named list, or rename the submit time lists to something that matches the broader usage...
+        // Note: if we want to create a semantic that separates state lookup, validation, and state update this should go
+        // to a local queue of update_state_actions or something.
+        cb_state->eventUpdates.emplace_back([device_data, src_queue_family, dst_queue_family, val](VkQueue queue) {
+            return ValidatorState::ValidateAtQueueSubmit(queue, device_data, src_queue_family, dst_queue_family, val);
+        });
+    }
+    return skip;
+}
+}  // namespace barrier_queue_families
+
+// Type specific wrapper for image barriers
+bool ValidateBarrierQueueFamilies(const layer_data *device_data, const char *func_name, GLOBAL_CB_NODE *cb_state,
+                                  const VkImageMemoryBarrier *barrier, const IMAGE_STATE *state_data) {
+    // State data is required
+    if (!state_data) {
+        return false;
+    }
+
+    // Create the validator state from the image state
+    barrier_queue_families::ValidatorState val(device_data, func_name, cb_state, barrier, state_data);
+    const uint32_t src_queue_family = barrier->srcQueueFamilyIndex;
+    const uint32_t dst_queue_family = barrier->dstQueueFamilyIndex;
+    return barrier_queue_families::Validate(device_data, func_name, cb_state, val, src_queue_family, dst_queue_family);
+}
+
+// Type specific wrapper for buffer barriers
+bool ValidateBarrierQueueFamilies(const layer_data *device_data, const char *func_name, GLOBAL_CB_NODE *cb_state,
+                                  const VkBufferMemoryBarrier *barrier, const BUFFER_STATE *state_data) {
+    // State data is required
+    if (!state_data) {
+        return false;
+    }
+
+    // Create the validator state from the buffer state
+    barrier_queue_families::ValidatorState val(device_data, func_name, cb_state, barrier, state_data);
+    const uint32_t src_queue_family = barrier->srcQueueFamilyIndex;
+    const uint32_t dst_queue_family = barrier->dstQueueFamilyIndex;
+    return barrier_queue_families::Validate(device_data, func_name, cb_state, val, src_queue_family, dst_queue_family);
+}
+
+static bool ValidateBarriers(layer_data *device_data, const char *funcName, GLOBAL_CB_NODE *cb_state,
                              VkPipelineStageFlags src_stage_mask, VkPipelineStageFlags dst_stage_mask, uint32_t memBarrierCount,
                              const VkMemoryBarrier *pMemBarriers, uint32_t bufferBarrierCount,
                              const VkBufferMemoryBarrier *pBufferMemBarriers, uint32_t imageMemBarrierCount,
@@ -7074,62 +7325,16 @@ static bool ValidateBarriers(layer_data *device_data, const char *funcName, GLOB
                             "%s: pImageMemBarriers[%d].dstAccessMask (0x%X) is not supported by dstStageMask (0x%X). %s", funcName,
                             i, mem_barrier->dstAccessMask, dst_stage_mask, validation_error_map[VALIDATION_ERROR_1b800942]);
         }
+
         auto image_data = GetImageState(device_data, mem_barrier->image);
-        if (image_data) {
-            uint32_t src_q_f_index = mem_barrier->srcQueueFamilyIndex;
-            uint32_t dst_q_f_index = mem_barrier->dstQueueFamilyIndex;
-            if (image_data->createInfo.sharingMode == VK_SHARING_MODE_CONCURRENT) {
-                // srcQueueFamilyIndex and dstQueueFamilyIndex must both
-                // be VK_QUEUE_FAMILY_IGNORED
-                if ((src_q_f_index != VK_QUEUE_FAMILY_IGNORED) || (dst_q_f_index != VK_QUEUE_FAMILY_IGNORED)) {
-                    skip |= log_msg(device_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT,
-                                    VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, HandleToUint64(cb_state->commandBuffer),
-                                    __LINE__, DRAWSTATE_INVALID_QUEUE_INDEX, "DS",
-                                    "%s: Image Barrier for image 0x%" PRIx64
-                                    " was created with sharingMode of "
-                                    "VK_SHARING_MODE_CONCURRENT. Src and dst "
-                                    "queueFamilyIndices must be VK_QUEUE_FAMILY_IGNORED.",
-                                    funcName, HandleToUint64(mem_barrier->image));
-                }
-            } else {
-                // Sharing mode is VK_SHARING_MODE_EXCLUSIVE. srcQueueFamilyIndex and
-                // dstQueueFamilyIndex must either both be VK_QUEUE_FAMILY_IGNORED,
-                // or both be a valid queue family
-                if (((src_q_f_index == VK_QUEUE_FAMILY_IGNORED) || (dst_q_f_index == VK_QUEUE_FAMILY_IGNORED)) &&
-                    (src_q_f_index != dst_q_f_index)) {
-                    skip |= log_msg(device_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT,
-                                    VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, HandleToUint64(cb_state->commandBuffer),
-                                    __LINE__, DRAWSTATE_INVALID_QUEUE_INDEX, "DS",
-                                    "%s: Image 0x%" PRIx64
-                                    " was created with sharingMode "
-                                    "of VK_SHARING_MODE_EXCLUSIVE. If one of src- or "
-                                    "dstQueueFamilyIndex is VK_QUEUE_FAMILY_IGNORED, both "
-                                    "must be.",
-                                    funcName, HandleToUint64(mem_barrier->image));
-                } else if (((src_q_f_index != VK_QUEUE_FAMILY_IGNORED) && (dst_q_f_index != VK_QUEUE_FAMILY_IGNORED)) &&
-                           ((src_q_f_index >= device_data->phys_dev_properties.queue_family_properties.size()) ||
-                            (dst_q_f_index >= device_data->phys_dev_properties.queue_family_properties.size()))) {
-                    skip |= log_msg(device_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT,
-                                    VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, HandleToUint64(cb_state->commandBuffer),
-                                    __LINE__, DRAWSTATE_INVALID_QUEUE_INDEX, "DS",
-                                    "%s: Image 0x%" PRIx64
-                                    " was created with sharingMode "
-                                    "of VK_SHARING_MODE_EXCLUSIVE, but srcQueueFamilyIndex %d"
-                                    " or dstQueueFamilyIndex %d is greater than " PRINTF_SIZE_T_SPECIFIER
-                                    "queueFamilies crated for this device.",
-                                    funcName, HandleToUint64(mem_barrier->image), src_q_f_index, dst_q_f_index,
-                                    device_data->phys_dev_properties.queue_family_properties.size());
-                }
-            }
-        }
+        skip |= ValidateBarrierQueueFamilies(device_data, funcName, cb_state, mem_barrier, image_data);
 
         if (mem_barrier->newLayout == VK_IMAGE_LAYOUT_UNDEFINED || mem_barrier->newLayout == VK_IMAGE_LAYOUT_PREINITIALIZED) {
             skip |= log_msg(device_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
                             HandleToUint64(cb_state->commandBuffer), __LINE__, DRAWSTATE_INVALID_BARRIER, "DS",
-                            "%s: Image Layout cannot be transitioned to UNDEFINED or "
-                            "PREINITIALIZED.",
-                            funcName);
+                            "%s: Image Layout cannot be transitioned to UNDEFINED or PREINITIALIZED.", funcName);
         }
+
         if (image_data) {
             auto aspect_mask = mem_barrier->subresourceRange.aspectMask;
             skip |= ValidateImageAspectMask(device_data, image_data->image, image_data->createInfo.format, aspect_mask, funcName);
@@ -7157,20 +7362,9 @@ static bool ValidateBarriers(layer_data *device_data, const char *funcName, GLOB
                             i, mem_barrier->dstAccessMask, dst_stage_mask, validation_error_map[VALIDATION_ERROR_1b800942]);
         }
         // Validate buffer barrier queue family indices
-        if ((mem_barrier->srcQueueFamilyIndex != VK_QUEUE_FAMILY_IGNORED &&
-             mem_barrier->srcQueueFamilyIndex >= device_data->phys_dev_properties.queue_family_properties.size()) ||
-            (mem_barrier->dstQueueFamilyIndex != VK_QUEUE_FAMILY_IGNORED &&
-             mem_barrier->dstQueueFamilyIndex >= device_data->phys_dev_properties.queue_family_properties.size())) {
-            skip |= log_msg(device_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
-                            HandleToUint64(cb_state->commandBuffer), __LINE__, DRAWSTATE_INVALID_QUEUE_INDEX, "DS",
-                            "%s: Buffer Barrier 0x%" PRIx64
-                            " has QueueFamilyIndex greater "
-                            "than the number of QueueFamilies (" PRINTF_SIZE_T_SPECIFIER ") for this device.",
-                            funcName, HandleToUint64(mem_barrier->buffer),
-                            device_data->phys_dev_properties.queue_family_properties.size());
-        }
-
         auto buffer_state = GetBufferState(device_data, mem_barrier->buffer);
+        skip |= ValidateBarrierQueueFamilies(device_data, funcName, cb_state, mem_barrier, buffer_state);
+
         if (buffer_state) {
             auto buffer_size = buffer_state->requirements.size;
             if (mem_barrier->offset >= buffer_size) {
