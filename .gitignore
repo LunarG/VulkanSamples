@@ -33,3 +33,4 @@ build-android/external
 *.creator.user
 *.files
 *.includes
+.vscode/
