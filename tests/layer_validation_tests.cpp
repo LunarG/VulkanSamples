@@ -6218,9 +6218,20 @@ TEST_F(VkLayerTest, CreatePipelineLayoutExcessPerStageDescriptors) {
     uint32_t max_samplers = m_device->phy().properties().limits.maxPerStageDescriptorSamplers;
     uint32_t max_combined = std::min(max_samplers, max_sampled_images);
 
+    uint32_t sum_dyn_uniform_buffers = m_device->phy().properties().limits.maxDescriptorSetUniformBuffersDynamic;
+    uint32_t sum_uniform_buffers = m_device->phy().properties().limits.maxDescriptorSetUniformBuffers;
+    uint32_t sum_dyn_storage_buffers = m_device->phy().properties().limits.maxDescriptorSetStorageBuffersDynamic;
+    uint32_t sum_storage_buffers = m_device->phy().properties().limits.maxDescriptorSetStorageBuffers;
+    uint32_t sum_sampled_images = m_device->phy().properties().limits.maxDescriptorSetSampledImages;
+    uint32_t sum_storage_images = m_device->phy().properties().limits.maxDescriptorSetStorageImages;
+    uint32_t sum_samplers = m_device->phy().properties().limits.maxDescriptorSetSamplers;
+
+    uint32_t gfx_stages = 2;  // vtx, frag
+    gfx_stages += (m_device->phy().features().geometryShader ? 1 : 0);
+    gfx_stages += (m_device->phy().features().tessellationShader ? 2 : 0);
+
     // Devices that report UINT_MAX for any of these limits can't run this test
-    if (UINT_MAX == std::max({ max_uniform_buffers, max_storage_buffers, max_sampled_images, max_storage_images, max_samplers }))
-    {
+    if (UINT_MAX == std::max({max_uniform_buffers, max_storage_buffers, max_sampled_images, max_storage_images, max_samplers})) {
         printf("             Physical device limits report as 2^32-1. Skipping test.\n");
         return;
     }
@@ -6258,6 +6269,14 @@ TEST_F(VkLayerTest, CreatePipelineLayoutExcessPerStageDescriptors) {
     ASSERT_VK_SUCCESS(err);
 
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_0fe0023e);
+    if ((max_samplers * gfx_stages + max_combined) > sum_samplers) {
+        m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
+                                             VALIDATION_ERROR_0fe00d1a);  // expect all-stages sum too
+    }
+    if (max_combined > sum_sampled_images) {
+        m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
+                                             VALIDATION_ERROR_0fe00d24);  // expect all-stages sum too
+    }
     err = vkCreatePipelineLayout(m_device->device(), &pipeline_layout_ci, NULL, &pipeline_layout);
     m_errorMonitor->VerifyFound();
     vkDestroyPipelineLayout(m_device->device(), pipeline_layout, NULL);  // Unnecessary but harmless if test passed
@@ -6282,6 +6301,14 @@ TEST_F(VkLayerTest, CreatePipelineLayoutExcessPerStageDescriptors) {
     ASSERT_VK_SUCCESS(err);
 
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_0fe00240);
+    if ((2 * dslb.descriptorCount) > sum_uniform_buffers) {
+        m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
+                                             VALIDATION_ERROR_0fe00d1c);  // expect all-stages sum too
+    }
+    if (dslb.descriptorCount > sum_dyn_uniform_buffers) {
+        m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
+                                             VALIDATION_ERROR_0fe00d1e);  // expect all-stages sum too
+    }
     err = vkCreatePipelineLayout(m_device->device(), &pipeline_layout_ci, NULL, &pipeline_layout);
     m_errorMonitor->VerifyFound();
     vkDestroyPipelineLayout(m_device->device(), pipeline_layout, NULL);  // Unnecessary but harmless if test passed
@@ -6309,6 +6336,14 @@ TEST_F(VkLayerTest, CreatePipelineLayoutExcessPerStageDescriptors) {
     ASSERT_VK_SUCCESS(err);
 
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_0fe00242);
+    if (((gfx_stages + 1) * dslb.descriptorCount) > sum_dyn_storage_buffers) {
+        m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
+                                             VALIDATION_ERROR_0fe00d22);  // expect all-stages sum too
+    }
+    if (((gfx_stages + 2) * dslb.descriptorCount) > sum_storage_buffers) {
+        m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
+                                             VALIDATION_ERROR_0fe00d20);  // expect all-stages sum too
+    }
     err = vkCreatePipelineLayout(m_device->device(), &pipeline_layout_ci, NULL, &pipeline_layout);
     m_errorMonitor->VerifyFound();
     vkDestroyPipelineLayout(m_device->device(), pipeline_layout, NULL);  // Unnecessary but harmless if test passed
@@ -6337,6 +6372,14 @@ TEST_F(VkLayerTest, CreatePipelineLayoutExcessPerStageDescriptors) {
     ASSERT_VK_SUCCESS(err);
 
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_0fe00244);
+    if (max_combined + ((gfx_stages + 2) * (max_sampled_images / 2)) > sum_sampled_images) {
+        m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
+                                             VALIDATION_ERROR_0fe00d24);  // expect all-stages sum too
+    }
+    if ((gfx_stages * max_combined) > sum_samplers) {
+        m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
+                                             VALIDATION_ERROR_0fe00d1a);  // expect all-stages sum too
+    }
     err = vkCreatePipelineLayout(m_device->device(), &pipeline_layout_ci, NULL, &pipeline_layout);
     m_errorMonitor->VerifyFound();
     vkDestroyPipelineLayout(m_device->device(), pipeline_layout, NULL);  // Unnecessary but harmless if test passed
@@ -6361,6 +6404,10 @@ TEST_F(VkLayerTest, CreatePipelineLayoutExcessPerStageDescriptors) {
     ASSERT_VK_SUCCESS(err);
 
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_0fe00246);
+    if ((4 * dslb.descriptorCount) > sum_storage_images) {
+        m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
+                                             VALIDATION_ERROR_0fe00d26);  // expect all-stages sum too
+    }
     err = vkCreatePipelineLayout(m_device->device(), &pipeline_layout_ci, NULL, &pipeline_layout);
     m_errorMonitor->VerifyFound();
     vkDestroyPipelineLayout(m_device->device(), pipeline_layout, NULL);  // Unnecessary but harmless if test passed

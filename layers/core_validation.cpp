@@ -4831,22 +4831,22 @@ static bool validatePushConstantRange(const layer_data *dev_data, const uint32_t
     return skip;
 }
 
-enum DSL_DESCRIPTOR_TYPES {
+enum DSL_DESCRIPTOR_GROUPS {
     DSL_TYPE_SAMPLERS = 0,
     DSL_TYPE_UNIFORM_BUFFERS,
     DSL_TYPE_STORAGE_BUFFERS,
     DSL_TYPE_SAMPLED_IMAGES,
     DSL_TYPE_STORAGE_IMAGES,
-    DSL_NUM_DESCRIPTOR_TYPES
+    DSL_TYPE_INPUT_ATTACHMENTS,
+    DSL_NUM_DESCRIPTOR_GROUPS
 };
 
 // Used by PreCallValiateCreatePipelineLayout.
-// Returns an array of size DSL_NUM_DESCRIPTOR_TYPES of the maximum number of descriptors used in any single pipeline stage
+// Returns an array of size DSL_NUM_DESCRIPTOR_GROUPS of the maximum number of descriptors used in any single pipeline stage
 std::valarray<uint32_t> GetDescriptorCountMaxPerStage(
     const layer_data *dev_data, const std::vector<std::shared_ptr<cvdescriptorset::DescriptorSetLayout const>> set_layouts) {
     // Identify active pipeline stages
-    std::vector<VkShaderStageFlags> stage_flags = {VK_SHADER_STAGE_VERTEX_BIT, 
-                                                   VK_SHADER_STAGE_FRAGMENT_BIT,
+    std::vector<VkShaderStageFlags> stage_flags = {VK_SHADER_STAGE_VERTEX_BIT, VK_SHADER_STAGE_FRAGMENT_BIT,
                                                    VK_SHADER_STAGE_COMPUTE_BIT};
     if (dev_data->enabled_features.geometryShader) {
         stage_flags.push_back(VK_SHADER_STAGE_GEOMETRY_BIT);
@@ -4856,14 +4856,14 @@ std::valarray<uint32_t> GetDescriptorCountMaxPerStage(
         stage_flags.push_back(VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT);
     }
 
-    // Allow iteration over enum
-    std::vector<DSL_DESCRIPTOR_TYPES> dsl_types = {DSL_TYPE_SAMPLERS, DSL_TYPE_UNIFORM_BUFFERS, DSL_TYPE_STORAGE_BUFFERS,
-                                        DSL_TYPE_SAMPLED_IMAGES, DSL_TYPE_STORAGE_IMAGES};
+    // Allow iteration over enum values
+    std::vector<DSL_DESCRIPTOR_GROUPS> dsl_groups = {DSL_TYPE_SAMPLERS,       DSL_TYPE_UNIFORM_BUFFERS, DSL_TYPE_STORAGE_BUFFERS,
+                                                     DSL_TYPE_SAMPLED_IMAGES, DSL_TYPE_STORAGE_IMAGES,  DSL_TYPE_INPUT_ATTACHMENTS};
 
     // Sum by layouts per stage, then pick max of stages per type
-    std::valarray<uint32_t> max_sum(0U, 5);  // max descriptor sum among all pipeline stages
+    std::valarray<uint32_t> max_sum(0U, DSL_NUM_DESCRIPTOR_GROUPS);  // max descriptor sum among all pipeline stages
     for (auto stage : stage_flags) {
-        std::valarray<uint32_t> stage_sum(0U, 5);  // per-stage sums
+        std::valarray<uint32_t> stage_sum(0U, DSL_NUM_DESCRIPTOR_GROUPS);  // per-stage sums
         for (auto dsl : set_layouts) {
             for (uint32_t binding_idx = 0; binding_idx < dsl->GetBindingCount(); binding_idx++) {
                 const VkDescriptorSetLayoutBinding *binding = dsl->GetDescriptorSetLayoutBindingPtrFromIndex(binding_idx);
@@ -4892,17 +4892,50 @@ std::valarray<uint32_t> GetDescriptorCountMaxPerStage(
                             stage_sum[DSL_TYPE_SAMPLED_IMAGES] += binding->descriptorCount;
                             stage_sum[DSL_TYPE_SAMPLERS] += binding->descriptorCount;
                             break;
+                        case VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT:
+                            stage_sum[DSL_TYPE_INPUT_ATTACHMENTS] += binding->descriptorCount;
+                            break;
                         default:
                             break;
                     }
                 }
             }
         }
-        for (auto type : dsl_types) {
+        for (auto type : dsl_groups) {
             max_sum[type] = std::max(stage_sum[type], max_sum[type]);
         }
     }
     return max_sum;
+}
+
+// Used by PreCallValiateCreatePipelineLayout.
+// Returns an array of size VK_DESCRIPTOR_TYPE_RANGE_SIZE of the summed descriptors by type across all pipeline stages
+std::valarray<uint32_t> GetDescriptorSumAcrossStages(
+    const layer_data *dev_data, const std::vector<std::shared_ptr<cvdescriptorset::DescriptorSetLayout const>> set_layouts) {
+    // Identify active pipeline stages
+    std::vector<VkShaderStageFlags> stage_flags = {VK_SHADER_STAGE_VERTEX_BIT, VK_SHADER_STAGE_FRAGMENT_BIT,
+                                                   VK_SHADER_STAGE_COMPUTE_BIT};
+    if (dev_data->enabled_features.geometryShader) {
+        stage_flags.push_back(VK_SHADER_STAGE_GEOMETRY_BIT);
+    }
+    if (dev_data->enabled_features.tessellationShader) {
+        stage_flags.push_back(VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT);
+        stage_flags.push_back(VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT);
+    }
+
+    // Sum by descriptor type across all enabled stages
+    std::valarray<uint32_t> sum_by_type(0U, VK_DESCRIPTOR_TYPE_RANGE_SIZE);
+    for (auto stage : stage_flags) {
+        for (auto dsl : set_layouts) {
+            for (uint32_t binding_idx = 0; binding_idx < dsl->GetBindingCount(); binding_idx++) {
+                const VkDescriptorSetLayoutBinding *binding = dsl->GetDescriptorSetLayoutBindingPtrFromIndex(binding_idx);
+                if (0 != (stage & binding->stageFlags)) {
+                    sum_by_type[binding->descriptorType] += binding->descriptorCount;
+                }
+            }
+        }
+    }
+    return sum_by_type;
 }
 
 static bool PreCallValiateCreatePipelineLayout(const layer_data *dev_data, const VkPipelineLayoutCreateInfo *pCreateInfo) {
@@ -4961,8 +4994,8 @@ static bool PreCallValiateCreatePipelineLayout(const layer_data *dev_data, const
                         validation_error_map[VALIDATION_ERROR_0fe0024a]);
     }
 
-    std::valarray<uint32_t> max_descriptors_per_stage(0u, DSL_NUM_DESCRIPTOR_TYPES);
-    max_descriptors_per_stage = GetDescriptorCountMaxPerStage(dev_data, set_layouts);
+    // Max descriptors by type, within a single pipeline stage
+    std::valarray<uint32_t> max_descriptors_per_stage = GetDescriptorCountMaxPerStage(dev_data, set_layouts);
     // Samplers
     if (max_descriptors_per_stage[DSL_TYPE_SAMPLERS] > dev_data->phys_dev_props.limits.maxPerStageDescriptorSamplers) {
         skip |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
@@ -5015,6 +5048,114 @@ static bool PreCallValiateCreatePipelineLayout(const layer_data *dev_data, const
                         max_descriptors_per_stage[DSL_TYPE_STORAGE_IMAGES],
                         dev_data->phys_dev_props.limits.maxPerStageDescriptorStorageImages,
                         validation_error_map[VALIDATION_ERROR_0fe00246]);
+    }
+
+    // Input attachments
+    if (max_descriptors_per_stage[DSL_TYPE_INPUT_ATTACHMENTS] >
+        dev_data->phys_dev_props.limits.maxPerStageDescriptorInputAttachments) {
+        skip |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
+                        VALIDATION_ERROR_0fe00d18, "DS",
+                        "vkCreatePipelineLayout(): max per-stage input attachment bindings count (%d) exceeds device "
+                        "maxPerStageDescriptorInputAttachments limit (%d). %s",
+                        max_descriptors_per_stage[DSL_TYPE_INPUT_ATTACHMENTS],
+                        dev_data->phys_dev_props.limits.maxPerStageDescriptorInputAttachments,
+                        validation_error_map[VALIDATION_ERROR_0fe00d18]);
+    }
+
+    // Total descriptors by type, summed across all pipeline stages
+    //
+    std::valarray<uint32_t> sum_all_stages = GetDescriptorSumAcrossStages(dev_data, set_layouts);
+    // Samplers
+    if ((sum_all_stages[VK_DESCRIPTOR_TYPE_SAMPLER] + sum_all_stages[VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER]) >
+        dev_data->phys_dev_props.limits.maxDescriptorSetSamplers) {
+        skip |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
+                        VALIDATION_ERROR_0fe00d1a, "DS",
+                        "vkCreatePipelineLayout(): sum of sampler bindings among all stages (%d) exceeds device "
+                        "maxDescriptorSetSamplers limit (%d). %s",
+                        sum_all_stages[VK_DESCRIPTOR_TYPE_SAMPLER] + sum_all_stages[VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER],
+                        dev_data->phys_dev_props.limits.maxDescriptorSetSamplers, validation_error_map[VALIDATION_ERROR_0fe00d1a]);
+    }
+
+    // Uniform buffers
+    if (sum_all_stages[VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER] > dev_data->phys_dev_props.limits.maxDescriptorSetUniformBuffers) {
+        skip |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
+                        VALIDATION_ERROR_0fe00d1c, "DS",
+                        "vkCreatePipelineLayout(): sum of uniform buffer bindings among all stages (%d) exceeds device "
+                        "maxDescriptorSetUniformBuffers limit (%d). %s",
+                        sum_all_stages[VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER],
+                        dev_data->phys_dev_props.limits.maxDescriptorSetUniformBuffers,
+                        validation_error_map[VALIDATION_ERROR_0fe00d1c]);
+    }
+
+    // Dynamic uniform buffers
+    if (sum_all_stages[VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC] >
+        dev_data->phys_dev_props.limits.maxDescriptorSetUniformBuffersDynamic) {
+        skip |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
+                        VALIDATION_ERROR_0fe00d1e, "DS",
+                        "vkCreatePipelineLayout(): sum of dynamic uniform buffer bindings among all stages (%d) exceeds device "
+                        "maxDescriptorSetUniformBuffersDynamic limit (%d). %s",
+                        sum_all_stages[VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC],
+                        dev_data->phys_dev_props.limits.maxDescriptorSetUniformBuffersDynamic,
+                        validation_error_map[VALIDATION_ERROR_0fe00d1e]);
+    }
+
+    // Storage buffers
+    if (sum_all_stages[VK_DESCRIPTOR_TYPE_STORAGE_BUFFER] > dev_data->phys_dev_props.limits.maxDescriptorSetStorageBuffers) {
+        skip |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
+                        VALIDATION_ERROR_0fe00d20, "DS",
+                        "vkCreatePipelineLayout(): sum of storage buffer bindings among all stages (%d) exceeds device "
+                        "maxDescriptorSetStorageBuffers limit (%d). %s",
+                        sum_all_stages[VK_DESCRIPTOR_TYPE_STORAGE_BUFFER],
+                        dev_data->phys_dev_props.limits.maxDescriptorSetStorageBuffers,
+                        validation_error_map[VALIDATION_ERROR_0fe00d20]);
+    }
+
+    // Dynamic storage buffers
+    if (sum_all_stages[VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC] >
+        dev_data->phys_dev_props.limits.maxDescriptorSetStorageBuffersDynamic) {
+        skip |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
+                        VALIDATION_ERROR_0fe00d22, "DS",
+                        "vkCreatePipelineLayout(): sum of dynamic storage buffer bindings among all stages (%d) exceeds device "
+                        "maxDescriptorSetStorageBuffersDynamic limit (%d). %s",
+                        sum_all_stages[VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC],
+                        dev_data->phys_dev_props.limits.maxDescriptorSetStorageBuffersDynamic,
+                        validation_error_map[VALIDATION_ERROR_0fe00d22]);
+    }
+
+    //  Sampled images
+    if ((sum_all_stages[VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE] + sum_all_stages[VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER] +
+         sum_all_stages[VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER]) > dev_data->phys_dev_props.limits.maxDescriptorSetSampledImages) {
+        skip |=
+            log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
+                    VALIDATION_ERROR_0fe00d24, "DS",
+                    "vkCreatePipelineLayout(): sum of sampled image bindings among all stages (%d) exceeds device "
+                    "maxDescriptorSetSampledImages limit (%d). %s",
+                    sum_all_stages[VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE] + sum_all_stages[VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER] +
+                        sum_all_stages[VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER],
+                    dev_data->phys_dev_props.limits.maxDescriptorSetSampledImages, validation_error_map[VALIDATION_ERROR_0fe00d24]);
+    }
+
+    //  Storage images
+    if ((sum_all_stages[VK_DESCRIPTOR_TYPE_STORAGE_IMAGE] + sum_all_stages[VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER]) >
+        dev_data->phys_dev_props.limits.maxDescriptorSetStorageImages) {
+        skip |=
+            log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
+                    VALIDATION_ERROR_0fe00d26, "DS",
+                    "vkCreatePipelineLayout(): sum of storage image bindings among all stages (%d) exceeds device "
+                    "maxDescriptorSetStorageImages limit (%d). %s",
+                    sum_all_stages[VK_DESCRIPTOR_TYPE_STORAGE_IMAGE] + sum_all_stages[VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER],
+                    dev_data->phys_dev_props.limits.maxDescriptorSetStorageImages, validation_error_map[VALIDATION_ERROR_0fe00d26]);
+    }
+
+    // Input attachments
+    if (sum_all_stages[VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT] > dev_data->phys_dev_props.limits.maxDescriptorSetInputAttachments) {
+        skip |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
+                        VALIDATION_ERROR_0fe00d28, "DS",
+                        "vkCreatePipelineLayout(): sum of input attachment bindings among all stages (%d) exceeds device "
+                        "maxDescriptorSetInputAttachments limit (%d). %s",
+                        sum_all_stages[VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT],
+                        dev_data->phys_dev_props.limits.maxDescriptorSetInputAttachments,
+                        validation_error_map[VALIDATION_ERROR_0fe00d28]);
     }
 
     return skip;
