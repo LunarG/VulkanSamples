@@ -709,15 +709,6 @@ bool PreCallValidateCreateImage(layer_data *device_data, const VkImageCreateInfo
 
     VkDeviceSize imageGranularity = GetPhysicalDeviceProperties(device_data)->limits.bufferImageGranularity;
     imageGranularity = imageGranularity == 1 ? 0 : imageGranularity;
-    // TODO : This is also covering 2918 & 2919. Break out into separate checks
-    if ((pCreateInfo->extent.width <= 0) || (pCreateInfo->extent.height <= 0) || (pCreateInfo->extent.depth <= 0)) {
-        skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT, 0, __LINE__,
-                        VALIDATION_ERROR_09e007b8, "Image",
-                        "CreateImage extent is 0 for at least one required dimension for image: "
-                        "Width = %d Height = %d Depth = %d. %s",
-                        pCreateInfo->extent.width, pCreateInfo->extent.height, pCreateInfo->extent.depth,
-                        validation_error_map[VALIDATION_ERROR_09e007b8]);
-    }
 
     // TODO: VALIDATION_ERROR_09e00770 VALIDATION_ERROR_09e00772 VALIDATION_ERROR_09e00776 VALIDATION_ERROR_09e0076e
     // All these extent-related VUs should be checked here

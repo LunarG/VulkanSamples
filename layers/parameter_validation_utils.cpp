@@ -643,10 +643,10 @@ bool pv_vkCreateBuffer(VkDevice device, const VkBufferCreateInfo *pCreateInfo, c
     layer_data *device_data = GetLayerDataPtr(get_dispatch_key(device), layer_data_map);
     debug_report_data *report_data = device_data->report_data;
 
+    const LogMiscParams log_misc{report_data, VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT, VK_NULL_HANDLE, LayerName, "vkCreateBuffer"};
+
     if (pCreateInfo != nullptr) {
-        // Buffer size must be greater than 0 (error 00663)
-        skip |=
-            ValidateGreaterThan(report_data, "vkCreateBuffer", "pCreateInfo->size", pCreateInfo->size, static_cast<VkDeviceSize>(0));
+        skip |= ValidateGreaterThanZero(pCreateInfo->size, "pCreateInfo->size", VALIDATION_ERROR_01400720, log_misc);
 
         // Validation for parameters excluded from the generated validation code due to a 'noautovalidity' tag in vk.xml
         if (pCreateInfo->sharingMode == VK_SHARING_MODE_CONCURRENT) {
@@ -696,6 +696,8 @@ bool pv_vkCreateImage(VkDevice device, const VkImageCreateInfo *pCreateInfo, con
     bool skip = false;
     layer_data *device_data = GetLayerDataPtr(get_dispatch_key(device), layer_data_map);
     debug_report_data *report_data = device_data->report_data;
+
+    const LogMiscParams log_misc{report_data, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT, VK_NULL_HANDLE, LayerName, "vkCreateImage"};
 
     if (pCreateInfo != nullptr) {
         if ((device_data->physical_device_features.textureCompressionETC2 == false) &&
@@ -753,16 +755,15 @@ bool pv_vkCreateImage(VkDevice device, const VkImageCreateInfo *pCreateInfo, con
             }
         }
 
-        // width, height, and depth members of extent must be greater than 0
-        skip |= ValidateGreaterThan(report_data, "vkCreateImage", "pCreateInfo->extent.width", pCreateInfo->extent.width, 0u);
-        skip |= ValidateGreaterThan(report_data, "vkCreateImage", "pCreateInfo->extent.height", pCreateInfo->extent.height, 0u);
-        skip |= ValidateGreaterThan(report_data, "vkCreateImage", "pCreateInfo->extent.depth", pCreateInfo->extent.depth, 0u);
+        skip |=
+            ValidateGreaterThanZero(pCreateInfo->extent.width, "pCreateInfo->extent.width", VALIDATION_ERROR_09e00760, log_misc);
+        skip |=
+            ValidateGreaterThanZero(pCreateInfo->extent.height, "pCreateInfo->extent.height", VALIDATION_ERROR_09e00762, log_misc);
+        skip |=
+            ValidateGreaterThanZero(pCreateInfo->extent.depth, "pCreateInfo->extent.depth", VALIDATION_ERROR_09e00764, log_misc);
 
-        // mipLevels must be greater than 0
-        skip |= ValidateGreaterThan(report_data, "vkCreateImage", "pCreateInfo->mipLevels", pCreateInfo->mipLevels, 0u);
-
-        // arrayLayers must be greater than 0
-        skip |= ValidateGreaterThan(report_data, "vkCreateImage", "pCreateInfo->arrayLayers", pCreateInfo->arrayLayers, 0u);
+        skip |= ValidateGreaterThanZero(pCreateInfo->mipLevels, "pCreateInfo->mipLevels", VALIDATION_ERROR_09e00766, log_misc);
+        skip |= ValidateGreaterThanZero(pCreateInfo->arrayLayers, "pCreateInfo->arrayLayers", VALIDATION_ERROR_09e00768, log_misc);
 
         // If imageType is VK_IMAGE_TYPE_1D, both extent.height and extent.depth must be 1
         if ((pCreateInfo->imageType == VK_IMAGE_TYPE_1D) && (pCreateInfo->extent.height != 1) && (pCreateInfo->extent.depth != 1)) {
@@ -797,7 +798,7 @@ bool pv_vkCreateImage(VkDevice device, const VkImageCreateInfo *pCreateInfo, con
 
         // mipLevels must be less than or equal to floor(log2(max(extent.width,extent.height,extent.depth)))+1
         uint32_t maxDim = std::max(std::max(pCreateInfo->extent.width, pCreateInfo->extent.height), pCreateInfo->extent.depth);
-        if (pCreateInfo->mipLevels > (floor(log2(maxDim)) + 1)) {
+        if (maxDim > 0 && pCreateInfo->mipLevels > (floor(log2(maxDim)) + 1)) {
             skip |=
                 log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
                         VALIDATION_ERROR_09e0077c, LayerName,
@@ -2359,6 +2360,9 @@ bool pv_vkCreateSwapchainKHR(VkDevice device, const VkSwapchainCreateInfoKHR *pC
     layer_data *device_data = GetLayerDataPtr(get_dispatch_key(device), layer_data_map);
     debug_report_data *report_data = device_data->report_data;
 
+    const LogMiscParams log_misc{report_data, VK_DEBUG_REPORT_OBJECT_TYPE_SWAPCHAIN_KHR_EXT, VK_NULL_HANDLE, LayerName,
+                                 "vkCreateSwapchainKHR"};
+
     if (pCreateInfo != nullptr) {
         if ((device_data->physical_device_features.textureCompressionETC2 == false) &&
             FormatIsCompressed_ETC2_EAC(pCreateInfo->imageFormat)) {
@@ -2416,9 +2420,8 @@ bool pv_vkCreateSwapchainKHR(VkDevice device, const VkSwapchainCreateInfoKHR *pC
             }
         }
 
-        // imageArrayLayers must be greater than 0
-        skip |= ValidateGreaterThan(report_data, "vkCreateSwapchainKHR", "pCreateInfo->imageArrayLayers",
-                                    pCreateInfo->imageArrayLayers, 0u);
+        skip |= ValidateGreaterThanZero(pCreateInfo->imageArrayLayers, "pCreateInfo->imageArrayLayers", VALIDATION_ERROR_146009f6,
+                                        log_misc);
     }
 
     return skip;

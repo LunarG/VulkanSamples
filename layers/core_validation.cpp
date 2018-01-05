@@ -9703,11 +9703,11 @@ static bool PreCallValidateCreateSwapchainKHR(layer_data *dev_data, const char *
                 return true;
         }
         // Validate pCreateInfo->imageArrayLayers against VkSurfaceCapabilitiesKHR::maxImageArrayLayers:
-        if ((pCreateInfo->imageArrayLayers < 1) || (pCreateInfo->imageArrayLayers > capabilities.maxImageArrayLayers)) {
+        if (pCreateInfo->imageArrayLayers > capabilities.maxImageArrayLayers) {
             if (log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
                         HandleToUint64(dev_data->device), __LINE__, VALIDATION_ERROR_146009f6, "DS",
-                        "%s called with a non-supported imageArrayLayers (i.e. %d).  Minimum value is 1, maximum value is %d. %s",
-                        func_name, pCreateInfo->imageArrayLayers, capabilities.maxImageArrayLayers,
+                        "%s called with a non-supported imageArrayLayers (i.e. %d).  Maximum value is %d. %s", func_name,
+                        pCreateInfo->imageArrayLayers, capabilities.maxImageArrayLayers,
                         validation_error_map[VALIDATION_ERROR_146009f6]))
                 return true;
         }
