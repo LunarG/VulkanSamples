@@ -4,13 +4,12 @@
 
 * Alignment with the Vulkan Specification
   - The goal is for validation layer behavior to enforce the vulkan specification on applications. Questions on specification
-interpretations may require consulting with the Khronos Vulkan Workgroup for resolution 
+interpretations may require consulting with the Khronos Vulkan Workgroup for resolution
     - [Core Specification](https://www.khronos.org/registry/vulkan/specs/1.0/html/vkspec.html)
     - [Header Files](https://www.khronos.org/registry/vulkan/#headers)
     - [SDK Resources](https://vulkan.lunarg.com)
 * ISV Enablement
   - Updates of loader and validation layer functionality should be available in a timely fashion
-  - All new specification features should have validation at public launch
   - Every effort will be made to be responsive to ISV issues with validation layers
 * Cross Platform Compatibility
   - Google and LunarG collaboration:
@@ -26,12 +25,12 @@ on pull-requests
 * Contributor, Commenter, User
   - Submitting contributions, creating issues, or using the contents of the repository
 * Approver
-  - Experienced project members who have made significant technical contributions 
+  - Experienced project members who have made significant technical contributions
   - Write control: Approve pull/merge requests (verify submissions vs. acceptance criteria)
 * Technical Project Leads
-  - Lead the project in terms of versioning, quality assurance, and overarching objectives 
+  - Lead the project in terms of versioning, quality assurance, and overarching objectives
   - Monitor github issues and drive timely resolution
-  - Designate new approvers 
+  - Designate new approvers
   - Ensure project information such as the Readme, Contributing docs, wiki, etc., kept up-to-date
   - Act as a facilitator in resolving technical conflicts
   - Is a point-of-contact for project-related questions
@@ -40,9 +39,9 @@ The technical project leads for this repository are:
 * **Mark Lobodzinski** [mark@lunarg.com](mailto:mark@lunarg.com)
 * **Tobin Ehlis** [tobine@google.com](mailto:tobine@google.com)
 
-# **Acceptance Criteria and Process** 
-  - All source code to include Khronos copyright and license (Apache 2.0). 
-    - Additional copyrights of contributors appended 
+# **Acceptance Criteria and Process**
+  - All source code to include Khronos copyright and license (Apache 2.0).
+    - Additional copyrights of contributors appended
   - Contributions are via pull requests
     - Project leads will assigning approvers to contributor pull requests
     - Approvers can self-assign their reviewers
