@@ -104,5 +104,5 @@ configuration:
 
 build:
   parallel: true                  # enable MSBuild parallel builds
-  project: build/VULKAN.sln       # path to Visual Studio solution or project
+  project: build/VULKAN_SAMPLES.sln # path to Visual Studio solution or project
   verbosity: quiet                # quiet|minimal|normal|detailed
