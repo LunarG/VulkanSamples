@@ -70,23 +70,6 @@ add_custom_target(generate_icd_files DEPENDS
     mock_icd.cpp
     )
 
-# Add targets for JSON file install on Linux.
-# Need to remove the "./" from the library path before installing to /etc.
-if(UNIX)
-    if(INSTALL_LVL_FILES)
-        foreach (config_file ${ICD_JSON_FILES})
-            add_custom_target(${config_file}-staging-json ALL
-                COMMAND mkdir -p ${CMAKE_CURRENT_BINARY_DIR}/staging-json
-                COMMAND cp ${CMAKE_CURRENT_SOURCE_DIR}/${config_file}.json ${CMAKE_CURRENT_BINARY_DIR}/staging-json
-                COMMAND sed -i -e "/\"library_path\":/s$./libVkICD$libVkICD$" ${CMAKE_CURRENT_BINARY_DIR}/staging-json/${config_file}.json
-                VERBATIM
-                DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/${config_file}.json
-                )
-            install(FILES ${CMAKE_CURRENT_BINARY_DIR}/staging-json/${config_file}.json DESTINATION ${CMAKE_INSTALL_SYSCONFDIR}/vulkan/icd.d)
-        endforeach(config_file)
-    endif()
-endif()
-
 if (WIN32)
     macro(add_vk_icd target)
     FILE(TO_NATIVE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/VkICD_${target}.def DEF_FILE)
