@@ -3759,15 +3759,17 @@ static bool PreCallValidateBindBufferMemory(layer_data *dev_data, VkBuffer buffe
         }
 
         // Validate memory requirements size
-        if (buffer_state->requirements.size > (mem_info->alloc_info.allocationSize - memoryOffset)) {
-            skip |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT,
-                            buffer_handle, __LINE__, VALIDATION_ERROR_1700081a, "DS",
-                            "vkBindBufferMemory(): memory size minus memoryOffset is 0x%" PRIxLEAST64
-                            " but must be at least as large as "
-                            "VkMemoryRequirements::size value 0x%" PRIxLEAST64
-                            ", returned from a call to vkGetBufferMemoryRequirements with buffer. %s",
-                            mem_info->alloc_info.allocationSize - memoryOffset, buffer_state->requirements.size,
-                            validation_error_map[VALIDATION_ERROR_1700081a]);
+        if (mem_info) {
+            if (buffer_state->requirements.size > (mem_info->alloc_info.allocationSize - memoryOffset)) {
+                skip |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT,
+                                buffer_handle, __LINE__, VALIDATION_ERROR_1700081a, "DS",
+                                "vkBindBufferMemory(): memory size minus memoryOffset is 0x%" PRIxLEAST64
+                                " but must be at least as large as "
+                                "VkMemoryRequirements::size value 0x%" PRIxLEAST64
+                                ", returned from a call to vkGetBufferMemoryRequirements with buffer. %s",
+                                mem_info->alloc_info.allocationSize - memoryOffset, buffer_state->requirements.size,
+                                validation_error_map[VALIDATION_ERROR_1700081a]);
+            }
         }
 
         // Validate device limits alignments
@@ -9084,15 +9086,17 @@ static bool PreCallValidateBindImageMemory(layer_data *dev_data, VkImage image, 
         }
 
         // Validate memory requirements size
-        if (image_state->requirements.size > mem_info->alloc_info.allocationSize - memoryOffset) {
-            skip |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT,
-                            image_handle, __LINE__, VALIDATION_ERROR_17400832, "DS",
-                            "vkBindImageMemory(): memory size minus memoryOffset is 0x%" PRIxLEAST64
-                            " but must be at least as large as "
-                            "VkMemoryRequirements::size value 0x%" PRIxLEAST64
-                            ", returned from a call to vkGetImageMemoryRequirements with image. %s",
-                            mem_info->alloc_info.allocationSize - memoryOffset, image_state->requirements.size,
-                            validation_error_map[VALIDATION_ERROR_17400832]);
+        if (mem_info) {
+            if (image_state->requirements.size > mem_info->alloc_info.allocationSize - memoryOffset) {
+                skip |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT,
+                                image_handle, __LINE__, VALIDATION_ERROR_17400832, "DS",
+                                "vkBindImageMemory(): memory size minus memoryOffset is 0x%" PRIxLEAST64
+                                " but must be at least as large as "
+                                "VkMemoryRequirements::size value 0x%" PRIxLEAST64
+                                ", returned from a call to vkGetImageMemoryRequirements with image. %s",
+                                mem_info->alloc_info.allocationSize - memoryOffset, image_state->requirements.size,
+                                validation_error_map[VALIDATION_ERROR_17400832]);
+            }
         }
     }
     return skip;
