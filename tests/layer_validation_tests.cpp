@@ -20347,6 +20347,22 @@ TEST_F(VkLayerTest, InvalidCreateDescriptorPool) {
     }
 }
 
+TEST_F(VkLayerTest, InvalidCreateBufferSize) {
+    TEST_DESCRIPTION("Attempt to create VkBuffer with size of zero");
+
+    ASSERT_NO_FATAL_FAILURE(Init());
+
+    VkBufferCreateInfo info = {};
+    info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+    info.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
+
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_01400720);
+    info.size = 0;
+    VkBuffer buffer;
+    vkCreateBuffer(m_device->device(), &info, nullptr, &buffer);
+    m_errorMonitor->VerifyFound();
+}
+
 //
 // POSITIVE VALIDATION TESTS
 //
