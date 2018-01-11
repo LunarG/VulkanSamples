@@ -17338,8 +17338,8 @@ TEST_F(VkLayerTest, CreateImageLimitsViolationMaxWidth) {
     m_errorMonitor->VerifyFound();
 }
 
-TEST_F(VkLayerTest, CreateImageLimitsViolationMinWidth) {
-    TEST_DESCRIPTION("Create invalid image with dimensions of zero.");
+TEST_F(VkLayerTest, CreateImageMinLimitsViolation) {
+    TEST_DESCRIPTION("Create invalid image with invalid parameters of zero.");
 
     ASSERT_NO_FATAL_FAILURE(Init());
 
@@ -17381,6 +17381,29 @@ TEST_F(VkLayerTest, CreateImageLimitsViolationMinWidth) {
         VkImage image;
         vkCreateImage(m_device->device(), &info, NULL, &image);
 
+        m_errorMonitor->VerifyFound();
+    }
+
+    info.imageType = VK_IMAGE_TYPE_2D;
+    info.extent = {64, 64, 1};
+
+    {
+        VkImageCreateInfo bad_info = info;
+        bad_info.mipLevels = 0;
+
+        m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_09e00766);
+        VkImage image;
+        vkCreateImage(m_device->device(), &bad_info, NULL, &image);
+        m_errorMonitor->VerifyFound();
+    }
+
+    {
+        VkImageCreateInfo bad_info = info;
+        bad_info.arrayLayers = 0;
+
+        m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_09e00768);
+        VkImage image;
+        vkCreateImage(m_device->device(), &bad_info, NULL, &image);
         m_errorMonitor->VerifyFound();
     }
 }
