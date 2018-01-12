@@ -30,7 +30,7 @@
 #include <algorithm>
 
 struct BindingNumCmp {
-    bool operator()(const VkDescriptorSetLayoutBinding *a, const VkDescriptorSetLayoutBinding *b) {
+    bool operator()(const VkDescriptorSetLayoutBinding *a, const VkDescriptorSetLayoutBinding *b) const {
         return a->binding < b->binding;
     }
 };
