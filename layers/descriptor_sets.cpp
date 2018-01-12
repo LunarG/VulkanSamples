@@ -1183,7 +1183,7 @@ bool cvdescriptorset::ValidateUpdateDescriptorSets(const debug_report_data *repo
             if (!set_node->ValidateWriteUpdate(report_data, &p_wds[i], &error_code, &error_str)) {
                 skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT,
                                 HandleToUint64(dest_set), __LINE__, error_code, "DS",
-                                "vkUpdateDescriptorsSets() failed write update validation for Descriptor Set 0x%" PRIx64
+                                "vkUpdateDescriptorSets() failed write update validation for Descriptor Set 0x%" PRIx64
                                 " with error: %s. %s",
                                 HandleToUint64(dest_set), error_str.c_str(), validation_error_map[error_code]);
             }
@@ -1203,7 +1203,7 @@ bool cvdescriptorset::ValidateUpdateDescriptorSets(const debug_report_data *repo
         if (!dst_node->ValidateCopyUpdate(report_data, &p_cds[i], src_node, &error_code, &error_str)) {
             skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT,
                             HandleToUint64(dst_set), __LINE__, error_code, "DS",
-                            "vkUpdateDescriptorsSets() failed copy update from Descriptor Set 0x%" PRIx64
+                            "vkUpdateDescriptorSets() failed copy update from Descriptor Set 0x%" PRIx64
                             " to Descriptor Set 0x%" PRIx64 " with error: %s. %s",
                             HandleToUint64(src_set), HandleToUint64(dst_set), error_str.c_str(), validation_error_map[error_code]);
         }

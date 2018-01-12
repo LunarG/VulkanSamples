@@ -8370,7 +8370,7 @@ TEST_F(VkLayerTest, DescriptorImageUpdateNoMemoryBound) {
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
                                          " previously bound memory was freed. Memory must not be freed prior to this operation.");
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
-                                         "vkUpdateDescriptorsSets() failed write update validation for Descriptor Set 0x");
+                                         "vkUpdateDescriptorSets() failed write update validation for Descriptor Set 0x");
     vkUpdateDescriptorSets(m_device->device(), 1, &descriptor_write, 0, NULL);
     m_errorMonitor->VerifyFound();
     // Cleanup
@@ -8783,7 +8783,7 @@ TEST_F(VkLayerTest, DescriptorBufferUpdateNoMemoryBound) {
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
                                          " used with no memory bound. Memory should be bound by calling vkBindBufferMemory().");
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
-                                         "vkUpdateDescriptorsSets() failed write update validation for Descriptor Set 0x");
+                                         "vkUpdateDescriptorSets() failed write update validation for Descriptor Set 0x");
 
     ASSERT_NO_FATAL_FAILURE(Init());
     ASSERT_NO_FATAL_FAILURE(InitViewport());
