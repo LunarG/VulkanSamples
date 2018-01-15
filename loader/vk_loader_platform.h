@@ -116,8 +116,6 @@ static inline const char *loader_platform_get_proc_address_error(const char *nam
 // Threads:
 typedef pthread_t loader_platform_thread;
 #define THREAD_LOCAL_DECL __thread
-#define LOADER_PLATFORM_THREAD_ONCE_DECLARATION(var) pthread_once_t var = PTHREAD_ONCE_INIT;
-#define LOADER_PLATFORM_THREAD_ONCE_DEFINITION(var) pthread_once_t var;
 static inline void loader_platform_thread_once(pthread_once_t *ctl, void (*func)(void)) {
     assert(func != NULL);
     assert(ctl != NULL);
