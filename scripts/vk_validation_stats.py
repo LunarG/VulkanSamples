@@ -192,12 +192,12 @@ class ValidationSource:
                     filepath = '../%s/layers/%s' % (build_dir, source)
                     if os.path.isfile(filepath):
                         qualified_paths.append(filepath)
-                        continue
+                        break
             if len(self.generated_source_files) != len(qualified_paths):
                 print("Error: Unable to locate one or more of the following source files in the %s directories" % (", ".join(generated_source_directories)))
                 print(self.generated_source_files)
                 print("Skipping documentation validation test")
-                quit()
+                exit(1)
             else:
                 self.source_files.extend(qualified_paths)
 
