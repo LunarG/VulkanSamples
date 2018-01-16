@@ -708,6 +708,7 @@ VkResult loaderGetRegistryFiles(const struct loader_instance *inst, char *locati
                         if (NULL == *reg_data) {
                             loader_log(inst, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
                                        "loaderGetRegistryFiles: Failed to allocate space for registry data for key %s", name);
+                            RegCloseKey(key);
                             result = VK_ERROR_OUT_OF_HOST_MEMORY;
                             goto out;
                         }
@@ -720,6 +721,7 @@ VkResult loaderGetRegistryFiles(const struct loader_instance *inst, char *locati
                                 inst, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
                                 "loaderGetRegistryFiles: Failed to reallocate space for registry value of size %d for key %s",
                                 *reg_data_size * 2, name);
+                            RegCloseKey(key);
                             result = VK_ERROR_OUT_OF_HOST_MEMORY;
                             goto out;
                         }
@@ -738,6 +740,7 @@ VkResult loaderGetRegistryFiles(const struct loader_instance *inst, char *locati
                 }
                 name_size = 2048;
             }
+            RegCloseKey(key);
         }
 
         // Advance the location - if the next location is in the secondary hive, then reset the locations and advance the hive
