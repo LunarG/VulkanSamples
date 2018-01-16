@@ -381,14 +381,17 @@ class Buffer : public internal::NonDispHandle<VkBuffer> {
     void init(const Device &dev, const VkBufferCreateInfo &info) { init(dev, info, 0); }
     void init(const Device &dev, VkDeviceSize size, VkMemoryPropertyFlags mem_props) { init(dev, create_info(size, 0), mem_props); }
     void init(const Device &dev, VkDeviceSize size) { init(dev, size, 0); }
-    void init_as_src(const Device &dev, VkDeviceSize size, VkMemoryPropertyFlags &reqs) {
-        init(dev, create_info(size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT), reqs);
+    void init_as_src(const Device &dev, VkDeviceSize size, VkMemoryPropertyFlags &reqs,
+                     const std::vector<uint32_t> *queue_families = nullptr) {
+        init(dev, create_info(size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, queue_families), reqs);
     }
-    void init_as_dst(const Device &dev, VkDeviceSize size, VkMemoryPropertyFlags &reqs) {
-        init(dev, create_info(size, VK_BUFFER_USAGE_TRANSFER_DST_BIT), reqs);
+    void init_as_dst(const Device &dev, VkDeviceSize size, VkMemoryPropertyFlags &reqs,
+                     const std::vector<uint32_t> *queue_families = nullptr) {
+        init(dev, create_info(size, VK_BUFFER_USAGE_TRANSFER_DST_BIT, queue_families), reqs);
     }
-    void init_as_src_and_dst(const Device &dev, VkDeviceSize size, VkMemoryPropertyFlags &reqs) {
-        init(dev, create_info(size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT), reqs);
+    void init_as_src_and_dst(const Device &dev, VkDeviceSize size, VkMemoryPropertyFlags &reqs,
+                             const std::vector<uint32_t> *queue_families = nullptr) {
+        init(dev, create_info(size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, queue_families), reqs);
     }
     void init_no_mem(const Device &dev, const VkBufferCreateInfo &info);
 
@@ -402,7 +405,7 @@ class Buffer : public internal::NonDispHandle<VkBuffer> {
     // vkBindObjectMemory()
     void bind_memory(const DeviceMemory &mem, VkDeviceSize mem_offset);
 
-    static VkBufferCreateInfo create_info(VkDeviceSize size, VkFlags usage);
+    static VkBufferCreateInfo create_info(VkDeviceSize size, VkFlags usage, const std::vector<uint32_t> *queue_families = nullptr);
 
     VkBufferMemoryBarrier buffer_memory_barrier(VkFlags output_mask, VkFlags input_mask, VkDeviceSize offset,
                                                 VkDeviceSize size) const {
@@ -413,6 +416,10 @@ class Buffer : public internal::NonDispHandle<VkBuffer> {
         barrier.dstAccessMask = input_mask;
         barrier.offset = offset;
         barrier.size = size;
+        if (create_info_.sharingMode == VK_SHARING_MODE_CONCURRENT) {
+            barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+            barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+        }
         return barrier;
     }
 
@@ -466,6 +473,7 @@ class Image : public internal::NonDispHandle<VkImage> {
     VkExtent3D extent(uint32_t mip_level) const { return extent(create_info_.extent, mip_level); }
     VkFormat format() const { return create_info_.format; }
     VkImageUsageFlags usage() const { return create_info_.usage; }
+    VkSharingMode sharing_mode() const { return create_info_.sharingMode; }
     VkImageMemoryBarrier image_memory_barrier(VkFlags output_mask, VkFlags input_mask, VkImageLayout old_layout,
                                               VkImageLayout new_layout, const VkImageSubresourceRange &range) const {
         VkImageMemoryBarrier barrier = {};
@@ -476,6 +484,11 @@ class Image : public internal::NonDispHandle<VkImage> {
         barrier.newLayout = new_layout;
         barrier.image = handle();
         barrier.subresourceRange = range;
+
+        if (sharing_mode() == VK_SHARING_MODE_CONCURRENT) {
+            barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+            barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+        }
         return barrier;
     }
 
@@ -690,11 +703,18 @@ inline VkMemoryAllocateInfo DeviceMemory::alloc_info(VkDeviceSize size, uint32_t
     return info;
 }
 
-inline VkBufferCreateInfo Buffer::create_info(VkDeviceSize size, VkFlags usage) {
+inline VkBufferCreateInfo Buffer::create_info(VkDeviceSize size, VkFlags usage, const std::vector<uint32_t> *queue_families) {
     VkBufferCreateInfo info = {};
     info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
     info.size = size;
     info.usage = usage;
+
+    if (queue_families && queue_families->size() > 1) {
+        info.sharingMode = VK_SHARING_MODE_CONCURRENT;
+        info.queueFamilyIndexCount = static_cast<uint32_t>(queue_families->size());
+        info.pQueueFamilyIndices = queue_families->data();
+    }
+
     return info;
 }
 

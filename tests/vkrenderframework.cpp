@@ -859,7 +859,8 @@ bool VkImageObj::IsCompatible(const VkImageUsageFlags usages, const VkFormatFeat
 }
 
 void VkImageObj::InitNoLayout(uint32_t const width, uint32_t const height, uint32_t const mipLevels, VkFormat const format,
-                              VkFlags const usage, VkImageTiling const requested_tiling, VkMemoryPropertyFlags const reqs) {
+                              VkFlags const usage, VkImageTiling const requested_tiling, VkMemoryPropertyFlags const reqs,
+                              const std::vector<uint32_t> *queue_families) {
     VkFormatProperties image_fmt;
     VkImageTiling tiling = VK_IMAGE_TILING_OPTIMAL;
 
@@ -892,6 +893,13 @@ void VkImageObj::InitNoLayout(uint32_t const width, uint32_t const height, uint3
     imageCreateInfo.tiling = tiling;
     imageCreateInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 
+    // Automatically set sharing mode etc. based on queue family information
+    if (queue_families && (queue_families->size() > 1)) {
+        imageCreateInfo.sharingMode = VK_SHARING_MODE_CONCURRENT;
+        imageCreateInfo.queueFamilyIndexCount = static_cast<uint32_t>(queue_families->size());
+        imageCreateInfo.pQueueFamilyIndices = queue_families->data();
+    }
+
     Layout(imageCreateInfo.initialLayout);
     imageCreateInfo.usage = usage;
 
@@ -899,8 +907,9 @@ void VkImageObj::InitNoLayout(uint32_t const width, uint32_t const height, uint3
 }
 
 void VkImageObj::Init(uint32_t const width, uint32_t const height, uint32_t const mipLevels, VkFormat const format,
-                      VkFlags const usage, VkImageTiling const requested_tiling, VkMemoryPropertyFlags const reqs) {
-    InitNoLayout(width, height, mipLevels, format, usage, requested_tiling, reqs);
+                      VkFlags const usage, VkImageTiling const requested_tiling, VkMemoryPropertyFlags const reqs,
+                      const std::vector<uint32_t> *queue_families) {
+    InitNoLayout(width, height, mipLevels, format, usage, requested_tiling, reqs, queue_families);
 
     VkImageLayout newLayout;
     if (usage & VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT)
