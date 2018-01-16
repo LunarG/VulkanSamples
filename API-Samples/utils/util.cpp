@@ -23,8 +23,10 @@ VULKAN_SAMPLE_DESCRIPTION
 samples utility functions
 */
 
-#include <stdio.h>
 #include <assert.h>
+#include <errno.h>
+#include <stdio.h>
+#include <string.h>
 #include <cstdlib>
 #include <iomanip>
 #include <fstream>
