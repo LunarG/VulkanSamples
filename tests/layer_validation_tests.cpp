@@ -427,6 +427,7 @@ class VkLayerTest : public VkRenderFramework {
 
    public:
     ErrorMonitor *Monitor() { return m_errorMonitor; }
+    VkCommandBufferObj *CommandBuffer() { return m_commandBuffer; }
 
    protected:
     bool m_enableWSI;
@@ -11717,6 +11718,185 @@ TEST_F(VkLayerTest, InvalidBarriers) {
     bad_command_buffer.end();
 }
 
+class BarrierQueueFamilyTestHelper {
+   public:
+    BarrierQueueFamilyTestHelper(VkLayerTest &test) : layer_test_(test), image_(test.DeviceObj()) {}
+    // Init with queue familes non-null for CONCURRENT sharing mode (which requires them)
+    void Init(std::vector<uint32_t> *families) {
+        VkDeviceObj *device_obj = layer_test_.DeviceObj();
+        image_.Init(32, 32, 1, VK_FORMAT_B8G8R8A8_UNORM, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT, VK_IMAGE_TILING_OPTIMAL, 0, families);
+        ASSERT_TRUE(image_.initialized());
+
+        image_barrier_ =
+            image_.image_memory_barrier(VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT, image_.Layout(),
+                                        image_.Layout(), image_.subresource_range(VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1));
+
+        VkMemoryPropertyFlags mem_prop = VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
+        buffer_.init_as_src_and_dst(*device_obj, 256, mem_prop, families);
+        ASSERT_TRUE(buffer_.initialized());
+        buffer_barrier_ =
+            buffer_.buffer_memory_barrier(VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT, 0, VK_WHOLE_SIZE);
+    }
+
+    void operator()(UNIQUE_VALIDATION_ERROR_CODE img_err, UNIQUE_VALIDATION_ERROR_CODE buf_err, uint32_t src, uint32_t dst,
+                    bool positive = false, VkQueue submit = VK_NULL_HANDLE) {
+        auto monitor = layer_test_.Monitor();
+        monitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, img_err);
+        monitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, buf_err);
+
+        layer_test_.CommandBuffer()->begin();
+        image_barrier_.srcQueueFamilyIndex = src;
+        image_barrier_.dstQueueFamilyIndex = dst;
+        buffer_barrier_.srcQueueFamilyIndex = src;
+        buffer_barrier_.dstQueueFamilyIndex = dst;
+        vkCmdPipelineBarrier(layer_test_.CommandBuffer()->handle(), VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+                             VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, VK_DEPENDENCY_BY_REGION_BIT, 0, nullptr, 1, &buffer_barrier_, 1,
+                             &image_barrier_);
+        layer_test_.CommandBuffer()->end();
+
+        VkCommandBuffer cb_handle = layer_test_.CommandBuffer()->handle();
+        if (submit != VK_NULL_HANDLE) {
+            VkSubmitInfo submit_info = {VK_STRUCTURE_TYPE_SUBMIT_INFO, nullptr, 0, nullptr, nullptr, 1, &cb_handle, 0, nullptr};
+            VkResult err = vkQueueSubmit(submit, 1, &submit_info, VK_NULL_HANDLE);
+            if (positive) {
+                ASSERT_TRUE(err == VK_SUCCESS);
+                err = vkQueueWaitIdle(submit);
+            }
+        }
+        vkResetCommandBuffer(cb_handle, 0);
+
+        if (positive) {
+            monitor->VerifyNotFound();
+        } else {
+            monitor->VerifyFound();
+        }
+    };
+
+   protected:
+    VkLayerTest &layer_test_;
+    VkImageObj image_;
+    VkImageMemoryBarrier image_barrier_;
+    vk_testing::Buffer buffer_;
+    VkBufferMemoryBarrier buffer_barrier_;
+};
+
+TEST_F(VkLayerTest, InvalidBarrierQueueFamily) {
+    TEST_DESCRIPTION("Create and submit barriers with invalid queue families");
+    ASSERT_NO_FATAL_FAILURE(Init(nullptr, VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT));
+
+    // Find queues of two families
+    const uint32_t submit_family = m_device->graphics_queue_node_index_;
+    const uint32_t invalid = static_cast<uint32_t>(m_device->queue_props.size());
+    const uint32_t other_family = submit_family != 0 ? 0 : 1;
+    const bool only_one_family = invalid == 1;
+
+    if (only_one_family) {
+        printf("             Single queue family found -- VK_SHARING_MODE_CONCURRENT testcases skipped.\n");
+    } else {
+        std::vector<uint32_t> families = {submit_family, other_family};
+        BarrierQueueFamilyTestHelper conc_test(*this);
+        conc_test.Init(&families);
+        // core_validation::barrier_queue_families::kSrcAndDestMustBeIgnore
+        conc_test(VALIDATION_ERROR_0a00095e, VALIDATION_ERROR_0180094c, VK_QUEUE_FAMILY_IGNORED, submit_family);
+        conc_test(VALIDATION_ERROR_0a00095e, VALIDATION_ERROR_0180094c, submit_family, VK_QUEUE_FAMILY_IGNORED);
+        conc_test(VALIDATION_ERROR_0a00095e, VALIDATION_ERROR_0180094c, submit_family, submit_family);
+        // true -> positive test
+        conc_test(VALIDATION_ERROR_0a00095e, VALIDATION_ERROR_0180094c, VK_QUEUE_FAMILY_IGNORED, VK_QUEUE_FAMILY_IGNORED, true);
+    }
+
+    BarrierQueueFamilyTestHelper excl_test(*this);
+    excl_test.Init(nullptr);  // no queue families means *exclusive* sharing mode.
+
+    // core_validation::barrier_queue_families::kBothIgnoreOrBothValid
+    excl_test(VALIDATION_ERROR_0a000960, VALIDATION_ERROR_01800950, VK_QUEUE_FAMILY_IGNORED, submit_family);
+    excl_test(VALIDATION_ERROR_0a000960, VALIDATION_ERROR_01800950, submit_family, VK_QUEUE_FAMILY_IGNORED);
+    // true -> positive test
+    excl_test(VALIDATION_ERROR_0a000960, VALIDATION_ERROR_01800950, submit_family, submit_family, true);
+    excl_test(VALIDATION_ERROR_0a000960, VALIDATION_ERROR_01800950, VK_QUEUE_FAMILY_IGNORED, VK_QUEUE_FAMILY_IGNORED, true);
+
+    if (only_one_family) {
+        printf("             Single queue family found -- VK_SHARING_MODE_EXCLUSIVE submit testcases skipped.\n");
+    } else {
+        // core_validation::barrier_queue_families::kSubmitQueueMustMatchSrcOrDst
+        excl_test(VALIDATION_ERROR_0a00096a, VALIDATION_ERROR_01800958, other_family, other_family, false, m_device->m_queue);
+        // true -> positive test
+        // Note: when we start tracking resource onwership, we'll need a way to reset the buffers s.t. this doesn't
+        //       trigger unexpected errors
+        excl_test(VALIDATION_ERROR_0a00096a, VALIDATION_ERROR_01800958, submit_family, other_family, true, m_device->m_queue);
+        excl_test(VALIDATION_ERROR_0a00096a, VALIDATION_ERROR_01800958, other_family, submit_family, true, m_device->m_queue);
+    }
+}
+
+TEST_F(VkLayerTest, InvalidBarrierQueueFamilyWithMemExt) {
+    TEST_DESCRIPTION("Create and submit barriers with invalid queue families when memory extension is enabled ");
+    ASSERT_NO_FATAL_FAILURE(InitFramework(myDbgFunc, m_errorMonitor));
+    // Check for external memory device extensions
+    if (DeviceExtensionSupported(gpu(), nullptr, VK_KHR_EXTERNAL_MEMORY_EXTENSION_NAME)) {
+        m_device_extension_names.push_back(VK_KHR_EXTERNAL_MEMORY_EXTENSION_NAME);
+    } else {
+        printf("             External memory extension not supported, skipping test\n");
+        return;
+    }
+
+    ASSERT_NO_FATAL_FAILURE(InitState(nullptr, VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT));
+
+    // Find queues of two families
+    const uint32_t submit_family = m_device->graphics_queue_node_index_;
+    const uint32_t invalid = static_cast<uint32_t>(m_device->queue_props.size());
+    const uint32_t other_family = submit_family != 0 ? 0 : 1;
+    const bool only_one_family = invalid == 1;
+
+    if (only_one_family) {
+        printf("             Single queue family found -- VK_SHARING_MODE_CONCURRENT testcases skipped.\n");
+    } else {
+        std::vector<uint32_t> families = {submit_family, other_family};
+        BarrierQueueFamilyTestHelper conc_test(*this);
+
+        // core_validation::barrier_queue_families::kSrcOrDstMustBeIgnore
+        conc_test.Init(&families);
+        conc_test(VALIDATION_ERROR_0a000aca, VALIDATION_ERROR_0180094e, submit_family, submit_family);
+        // true -> positive test
+        conc_test(VALIDATION_ERROR_0a000aca, VALIDATION_ERROR_0180094e, VK_QUEUE_FAMILY_IGNORED, VK_QUEUE_FAMILY_IGNORED, true);
+        conc_test(VALIDATION_ERROR_0a000aca, VALIDATION_ERROR_0180094e, VK_QUEUE_FAMILY_IGNORED, VK_QUEUE_FAMILY_EXTERNAL_KHR,
+                  true);
+        conc_test(VALIDATION_ERROR_0a000aca, VALIDATION_ERROR_0180094e, VK_QUEUE_FAMILY_EXTERNAL_KHR, VK_QUEUE_FAMILY_IGNORED,
+                  true);
+
+        // core_validation::barrier_queue_families::kSpecialOrIgnoreOnly
+        conc_test(VALIDATION_ERROR_0a000dcc, VALIDATION_ERROR_01800dc6, submit_family, VK_QUEUE_FAMILY_IGNORED);
+        conc_test(VALIDATION_ERROR_0a000dcc, VALIDATION_ERROR_01800dc6, VK_QUEUE_FAMILY_IGNORED, submit_family);
+        // This is to flag the errors that would be considered only "unexpected" in the parallel case above
+        // true -> positive test
+        conc_test(VALIDATION_ERROR_0a000dcc, VALIDATION_ERROR_01800dc6, VK_QUEUE_FAMILY_IGNORED, VK_QUEUE_FAMILY_EXTERNAL_KHR,
+                  true);
+        conc_test(VALIDATION_ERROR_0a000dcc, VALIDATION_ERROR_01800dc6, VK_QUEUE_FAMILY_EXTERNAL_KHR, VK_QUEUE_FAMILY_IGNORED,
+                  true);
+    }
+
+    BarrierQueueFamilyTestHelper excl_test(*this);
+    excl_test.Init(nullptr);  // no queue families means *exclusive* sharing mode.
+
+    // core_validation::barrier_queue_families::kSrcIgnoreRequiresDstIgnore
+    excl_test(VALIDATION_ERROR_0a000962, VALIDATION_ERROR_01800952, VK_QUEUE_FAMILY_IGNORED, submit_family);
+    excl_test(VALIDATION_ERROR_0a000962, VALIDATION_ERROR_01800952, VK_QUEUE_FAMILY_IGNORED, VK_QUEUE_FAMILY_EXTERNAL_KHR);
+    // true -> positive test
+    excl_test(VALIDATION_ERROR_0a000962, VALIDATION_ERROR_01800952, VK_QUEUE_FAMILY_IGNORED, VK_QUEUE_FAMILY_IGNORED, true);
+
+    // core_validation::barrier_queue_families::kDstValidOrSpecialIfNotIgnore
+    excl_test(VALIDATION_ERROR_0a000dd0, VALIDATION_ERROR_01800dca, submit_family, invalid);
+    // true -> positive test
+    excl_test(VALIDATION_ERROR_0a000dd0, VALIDATION_ERROR_01800dca, submit_family, submit_family, true);
+    excl_test(VALIDATION_ERROR_0a000dd0, VALIDATION_ERROR_01800dca, submit_family, VK_QUEUE_FAMILY_IGNORED, true);
+    excl_test(VALIDATION_ERROR_0a000dd0, VALIDATION_ERROR_01800dca, submit_family, VK_QUEUE_FAMILY_EXTERNAL_KHR, true);
+
+    // core_validation::barrier_queue_families::kSrcValidOrSpecialIfNotIgnore
+    excl_test(VALIDATION_ERROR_0a000dce, VALIDATION_ERROR_01800dc8, invalid, submit_family);
+    // true -> positive test
+    excl_test(VALIDATION_ERROR_0a000dce, VALIDATION_ERROR_01800dc8, submit_family, submit_family, true);
+    excl_test(VALIDATION_ERROR_0a000dce, VALIDATION_ERROR_01800dc8, VK_QUEUE_FAMILY_IGNORED, VK_QUEUE_FAMILY_IGNORED, true);
+    excl_test(VALIDATION_ERROR_0a000dce, VALIDATION_ERROR_01800dc8, VK_QUEUE_FAMILY_EXTERNAL_KHR, submit_family, true);
+}
+
 TEST_F(VkLayerTest, ImageBarrierWithBadRange) {
     TEST_DESCRIPTION("VkImageMemoryBarrier with an invalid subresourceRange");
 
@@ -13498,14 +13678,12 @@ TEST_F(VkLayerTest, InvalidQueryPoolCreate) {
     vkDestroyDevice(local_device, nullptr);
 }
 
-TEST_F(VkLayerTest, InvalidQueueIndexInvalidQuery) {
+TEST_F(VkLayerTest, UnclosedQuery) {
     TEST_DESCRIPTION(
-        "Use an invalid queue index in a vkCmdWaitEvents call."
         "End a command buffer with a query still in progress.");
 
     const char *invalid_query = "Ending command buffer with in progress query: queryPool 0x";
 
-    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_0a000960);
 
     ASSERT_NO_FATAL_FAILURE(Init());
 
@@ -13518,32 +13696,6 @@ TEST_F(VkLayerTest, InvalidQueueIndexInvalidQuery) {
     vkGetDeviceQueue(m_device->device(), m_device->graphics_queue_node_index_, 0, &queue);
 
     m_commandBuffer->begin();
-
-    VkImageObj image(m_device);
-    image.Init(128, 128, 1, VK_FORMAT_B8G8R8A8_UNORM, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT, VK_IMAGE_TILING_OPTIMAL, 0);
-    ASSERT_TRUE(image.initialized());
-    VkImageMemoryBarrier img_barrier = {};
-    img_barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-    img_barrier.pNext = NULL;
-    img_barrier.srcAccessMask = VK_ACCESS_HOST_WRITE_BIT;
-    img_barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
-    img_barrier.oldLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-    img_barrier.newLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-    img_barrier.image = image.handle();
-    img_barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-
-    // QueueFamilyIndex must be VK_QUEUE_FAMILY_IGNORED, this verifies
-    // that layer validation catches the case when it is not.
-    img_barrier.dstQueueFamilyIndex = 0;
-    img_barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-    img_barrier.subresourceRange.baseArrayLayer = 0;
-    img_barrier.subresourceRange.baseMipLevel = 0;
-    img_barrier.subresourceRange.layerCount = 1;
-    img_barrier.subresourceRange.levelCount = 1;
-    vkCmdWaitEvents(m_commandBuffer->handle(), 1, &event, VK_PIPELINE_STAGE_HOST_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, 0,
-                    nullptr, 0, nullptr, 1, &img_barrier);
-    m_errorMonitor->VerifyFound();
-
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, invalid_query);
 
     VkQueryPool query_pool;
