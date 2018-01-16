@@ -8408,6 +8408,118 @@ TEST_F(VkLayerTest, InvalidPipeline) {
     m_errorMonitor->VerifyFound();
 }
 
+TEST_F(VkLayerTest, CmdDispatchExceedLimits) {
+    TEST_DESCRIPTION("Compute dispatch with dimensions that exceed device limits");
+
+    // Enable KHX device group extensions, if available
+    if (InstanceExtensionSupported(VK_KHX_DEVICE_GROUP_CREATION_EXTENSION_NAME)) {
+        m_instance_extension_names.push_back(VK_KHX_DEVICE_GROUP_CREATION_EXTENSION_NAME);
+    }
+    ASSERT_NO_FATAL_FAILURE(InitFramework(myDbgFunc, m_errorMonitor));
+    bool khx_dg_ext_available = false;
+    if (DeviceExtensionSupported(gpu(), nullptr, VK_KHX_DEVICE_GROUP_EXTENSION_NAME)) {
+        m_device_extension_names.push_back(VK_KHX_DEVICE_GROUP_EXTENSION_NAME);
+        khx_dg_ext_available = true;
+    }
+    ASSERT_NO_FATAL_FAILURE(InitState());
+
+    uint32_t x_limit = m_device->props.limits.maxComputeWorkGroupCount[0];
+    uint32_t y_limit = m_device->props.limits.maxComputeWorkGroupCount[1];
+    uint32_t z_limit = m_device->props.limits.maxComputeWorkGroupCount[2];
+    if (std::max({x_limit, y_limit, z_limit}) == UINT32_MAX) {
+        printf("             device maxComputeWorkGroupCount limit reports UINT32_MAX, test not possible, skipping.\n");
+        return;
+    }
+
+    // Create a minimal compute pipeline
+    std::string cs_text = "#version 450\nvoid main() {}\n";  // minimal no-op shader
+    VkShaderObj cs_obj(m_device, cs_text.c_str(), VK_SHADER_STAGE_COMPUTE_BIT, this);
+
+    VkPipelineLayoutCreateInfo info = {};
+    info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+    info.pNext = nullptr;
+    VkPipelineLayout pipe_layout;
+    vkCreatePipelineLayout(device(), &info, nullptr, &pipe_layout);
+
+    VkComputePipelineCreateInfo pipeline_info = {};
+    pipeline_info.sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO;
+    pipeline_info.pNext = nullptr;
+    pipeline_info.flags = khx_dg_ext_available ? VK_PIPELINE_CREATE_DISPATCH_BASE_KHX : 0;
+    pipeline_info.layout = pipe_layout;
+    pipeline_info.basePipelineHandle = VK_NULL_HANDLE;
+    pipeline_info.basePipelineIndex = -1;
+    pipeline_info.stage.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+    pipeline_info.stage.pNext = nullptr;
+    pipeline_info.stage.flags = 0;
+    pipeline_info.stage.stage = VK_SHADER_STAGE_COMPUTE_BIT;
+    pipeline_info.stage.module = cs_obj.handle();
+    pipeline_info.stage.pName = "main";
+    pipeline_info.stage.pSpecializationInfo = nullptr;
+    VkPipeline cs_pipeline;
+    vkCreateComputePipelines(device(), VK_NULL_HANDLE, 1, &pipeline_info, nullptr, &cs_pipeline);
+
+    // Bind pipeline to command buffer
+    m_commandBuffer->begin();
+    vkCmdBindPipeline(m_commandBuffer->handle(), VK_PIPELINE_BIND_POINT_COMPUTE, cs_pipeline);
+
+    // Dispatch counts that exceed device limits
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_19c00304);
+    vkCmdDispatch(m_commandBuffer->handle(), x_limit + 1, y_limit, z_limit);
+    m_errorMonitor->VerifyFound();
+
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_19c00306);
+    vkCmdDispatch(m_commandBuffer->handle(), x_limit, y_limit + 1, z_limit);
+    m_errorMonitor->VerifyFound();
+
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_19c00308);
+    vkCmdDispatch(m_commandBuffer->handle(), x_limit, y_limit, z_limit + 1);
+    m_errorMonitor->VerifyFound();
+
+    if (khx_dg_ext_available) {
+        PFN_vkCmdDispatchBaseKHX fp_vkCmdDispatchBaseKHX =
+            (PFN_vkCmdDispatchBaseKHX)vkGetInstanceProcAddr(instance(), "vkCmdDispatchBaseKHX");
+
+        // Base equals or exceeds limit
+        m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_19e0034a);
+        fp_vkCmdDispatchBaseKHX(m_commandBuffer->handle(), x_limit, y_limit - 1, z_limit - 1, 0, 0, 0);
+        m_errorMonitor->VerifyFound();
+
+        m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_19e0034c);
+        fp_vkCmdDispatchBaseKHX(m_commandBuffer->handle(), x_limit - 1, y_limit, z_limit - 1, 0, 0, 0);
+        m_errorMonitor->VerifyFound();
+
+        m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_19e0034e);
+        fp_vkCmdDispatchBaseKHX(m_commandBuffer->handle(), x_limit - 1, y_limit - 1, z_limit, 0, 0, 0);
+        m_errorMonitor->VerifyFound();
+
+        // (Base + count) exceeds limit
+        uint32_t x_base = x_limit / 2;
+        uint32_t y_base = y_limit / 2;
+        uint32_t z_base = z_limit / 2;
+        x_limit -= x_base;
+        y_limit -= y_base;
+        z_limit -= z_base;
+
+        m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_19e00350);
+        fp_vkCmdDispatchBaseKHX(m_commandBuffer->handle(), x_base, y_base, z_base, x_limit + 1, y_limit, z_limit);
+        m_errorMonitor->VerifyFound();
+
+        m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_19e00352);
+        fp_vkCmdDispatchBaseKHX(m_commandBuffer->handle(), x_base, y_base, z_base, x_limit, y_limit + 1, z_limit);
+        m_errorMonitor->VerifyFound();
+
+        m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_19e00354);
+        fp_vkCmdDispatchBaseKHX(m_commandBuffer->handle(), x_base, y_base, z_base, x_limit, y_limit, z_limit + 1);
+        m_errorMonitor->VerifyFound();
+    } else {
+        printf("             KHX_DEVICE_GROUP_* extensions not supported, skipping CmdDispatchBaseKHX() tests.\n");
+    }
+
+    // Clean up
+    vkDestroyPipeline(device(), cs_pipeline, nullptr);
+    vkDestroyPipelineLayout(device(), pipe_layout, nullptr);
+}
+
 TEST_F(VkLayerTest, DescriptorSetNotUpdated) {
     TEST_DESCRIPTION("Bind a descriptor set that hasn't been updated.");
     VkResult err;
