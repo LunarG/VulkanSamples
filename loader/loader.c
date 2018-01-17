@@ -1,8 +1,8 @@
 /*
  *
- * Copyright (c) 2014-2017 The Khronos Group Inc.
- * Copyright (c) 2014-2017 Valve Corporation
- * Copyright (c) 2014-2017 LunarG, Inc.
+ * Copyright (c) 2014-2018 The Khronos Group Inc.
+ * Copyright (c) 2014-2018 Valve Corporation
+ * Copyright (c) 2014-2018 LunarG, Inc.
  * Copyright (C) 2015 Google Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -21,6 +21,7 @@
  * Author: Jon Ashburn <jon@lunarg.com>
  * Author: Courtney Goeltzenleuchter <courtney@LunarG.com>
  * Author: Mark Young <marky@lunarg.com>
+ * Author: Lenny Komow <lenny@lunarg.com>
  *
  */
 
@@ -4346,7 +4347,7 @@ static void loader_add_implicit_layers(const struct loader_instance *inst, struc
 
 // Get the layer name(s) from the env_name environment variable. If layer is found in
 // search_list then add it to layer_list.  But only add it to layer_list if type_flags matches.
-static void loader_add_env_layers(struct loader_instance *inst, const enum layer_type_flags type_flags, const char *env_name,
+static void loader_add_env_layers(const struct loader_instance *inst, const enum layer_type_flags type_flags, const char *env_name,
                                   struct loader_layer_list *target_list, struct loader_layer_list *expanded_target_list,
                                   const struct loader_layer_list *source_list) {
     char *next, *name;
@@ -4399,7 +4400,7 @@ VkResult loader_enable_instance_layers(struct loader_instance *inst, const VkIns
     loader_add_implicit_layers(inst, &inst->app_activated_layer_list, &inst->expanded_activated_layer_list, instance_layers);
 
     // Add any layers specified via environment variable next
-    loader_add_env_layers(inst, VK_LAYER_TYPE_FLAG_EXPLICIT_LAYER, "VK_INSTANCE_LAYERS", &inst->app_activated_layer_list,
+    loader_add_env_layers(inst, VK_LAYER_TYPE_FLAG_EXPLICIT_LAYER, ENABLED_LAYERS_ENV, &inst->app_activated_layer_list,
                           &inst->expanded_activated_layer_list, instance_layers);
 
     // Add layers specified by the application
@@ -4831,9 +4832,32 @@ VkResult loader_validate_instance_extensions(const struct loader_instance *inst,
                                              const struct loader_layer_list *instance_layers,
                                              const VkInstanceCreateInfo *pCreateInfo) {
     VkExtensionProperties *extension_prop;
-    struct loader_layer_properties *layer_prop;
     char *env_value;
     bool check_if_known = true;
+    VkResult res = VK_SUCCESS;
+
+    struct loader_layer_list active_layers;
+    struct loader_layer_list expanded_layers;
+    memset(&active_layers, 0, sizeof(active_layers));
+    memset(&expanded_layers, 0, sizeof(expanded_layers));
+    if (!loader_init_layer_list(inst, &active_layers)) {
+        res = VK_ERROR_OUT_OF_HOST_MEMORY;
+        goto out;
+    }
+    if (!loader_init_layer_list(inst, &expanded_layers)) {
+        res = VK_ERROR_OUT_OF_HOST_MEMORY;
+        goto out;
+    }
+
+    // Build the lists of active layers (including metalayers) and expanded layers (with metalayers resolved to their components)
+    loader_add_implicit_layers(inst, &active_layers, &expanded_layers, instance_layers);
+    loader_add_env_layers(inst, VK_LAYER_TYPE_FLAG_EXPLICIT_LAYER, ENABLED_LAYERS_ENV, &active_layers, &expanded_layers,
+                          instance_layers);
+    res = loader_add_layer_names_to_list(inst, &active_layers, &expanded_layers, pCreateInfo->enabledLayerCount,
+                                         pCreateInfo->ppEnabledLayerNames, instance_layers);
+    if (VK_SUCCESS != res) {
+        goto out;
+    }
 
     for (uint32_t i = 0; i < pCreateInfo->enabledExtensionCount; i++) {
         VkStringErrorFlags result = vk_string_validate(MaxLoaderStringLength, pCreateInfo->ppEnabledExtensionNames[i]);
@@ -4841,7 +4865,8 @@ VkResult loader_validate_instance_extensions(const struct loader_instance *inst,
             loader_log(inst, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
                        "loader_validate_instance_extensions: Instance ppEnabledExtensionNames contains "
                        "string that is too long or is badly formed");
-            return VK_ERROR_EXTENSION_NOT_PRESENT;
+            res = VK_ERROR_EXTENSION_NOT_PRESENT;
+            goto out;
         }
 
         // Check if a user wants to disable the instance extension filtering behavior
@@ -4866,7 +4891,8 @@ VkResult loader_validate_instance_extensions(const struct loader_instance *inst,
                 loader_log(inst, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
                            "loader_validate_instance_extensions: Extension %s not found in list of known instance extensions.",
                            pCreateInfo->ppEnabledExtensionNames[i]);
-                return VK_ERROR_EXTENSION_NOT_PRESENT;
+                res = VK_ERROR_EXTENSION_NOT_PRESENT;
+                goto out;
             }
         }
 
@@ -4878,19 +4904,10 @@ VkResult loader_validate_instance_extensions(const struct loader_instance *inst,
 
         extension_prop = NULL;
 
-        // Not in global list, search layer extension lists
-        for (uint32_t j = 0; j < pCreateInfo->enabledLayerCount; j++) {
-            layer_prop = loader_get_layer_property(pCreateInfo->ppEnabledLayerNames[j], instance_layers);
-            if (NULL == layer_prop) {
-                // Should NOT get here, loader_validate_layers should have already filtered this case out.
-                continue;
-            }
-
-            extension_prop = get_extension_property(pCreateInfo->ppEnabledExtensionNames[i], &layer_prop->instance_extension_list);
-            if (extension_prop) {
-                // Found the extension in one of the layers enabled by the app.
-                break;
-            }
+        // Not in global list, search expanded layer extension list
+        for (uint32_t j = 0; NULL == extension_prop && j < expanded_layers.count; ++j) {
+            extension_prop =
+                get_extension_property(pCreateInfo->ppEnabledExtensionNames[i], &expanded_layers.list[j].instance_extension_list);
         }
 
         if (!extension_prop) {
@@ -4899,10 +4916,15 @@ VkResult loader_validate_instance_extensions(const struct loader_instance *inst,
                        "loader_validate_instance_extensions: Instance extension %s not supported by available ICDs or enabled "
                        "layers.",
                        pCreateInfo->ppEnabledExtensionNames[i]);
-            return VK_ERROR_EXTENSION_NOT_PRESENT;
+            res = VK_ERROR_EXTENSION_NOT_PRESENT;
+            goto out;
         }
     }
-    return VK_SUCCESS;
+
+out:
+    loader_destroy_layer_list(inst, NULL, &active_layers);
+    loader_destroy_layer_list(inst, NULL, &expanded_layers);
+    return res;
 }
 
 VkResult loader_validate_device_extensions(struct loader_physical_device_tramp *phys_dev,

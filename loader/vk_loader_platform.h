@@ -1,8 +1,8 @@
 /*
  *
- * Copyright (c) 2015-2016 The Khronos Group Inc.
- * Copyright (c) 2015-2016 Valve Corporation
- * Copyright (c) 2015-2016 LunarG, Inc.
+ * Copyright (c) 2015-2018 The Khronos Group Inc.
+ * Copyright (c) 2015-2018 Valve Corporation
+ * Copyright (c) 2015-2018 LunarG, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,6 +18,7 @@
  *
  * Author: Ian Elliot <ian@lunarg.com>
  * Author: Jon Ashburn <jon@lunarg.com>
+ * Author: Lenny Komow <lenny@lunarg.com>
  *
  */
 #pragma once
@@ -70,6 +71,7 @@
 #define LAYERS_SOURCE_PATH NULL
 #endif
 #define LAYERS_PATH_ENV "VK_LAYER_PATH"
+#define ENABLED_LAYERS_ENV "VK_INSTANCE_LAYERS"
 
 #define RELATIVE_VK_DRIVERS_INFO VULKAN_DIR VULKAN_ICDCONF_DIR
 #define RELATIVE_VK_ELAYERS_INFO VULKAN_DIR VULKAN_ELAYERCONF_DIR
@@ -180,6 +182,7 @@ static inline void loader_platform_thread_cond_broadcast(loader_platform_thread_
 #define LAYERS_SOURCE_PATH NULL
 #endif
 #define LAYERS_PATH_ENV "VK_LAYER_PATH"
+#define ENABLED_LAYERS_ENV "VK_INSTANCE_LAYERS"
 #define RELATIVE_VK_DRIVERS_INFO ""
 #define RELATIVE_VK_ELAYERS_INFO ""
 #define RELATIVE_VK_ILAYERS_INFO ""
