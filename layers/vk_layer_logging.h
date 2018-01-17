@@ -323,6 +323,22 @@ static inline bool will_log_msg(debug_report_data *debug_data, VkFlags msgFlags)
 
     return true;
 }
+#ifndef WIN32
+static int string_sprintf(std::string *output, const char *fmt, ...) __attribute__((format(printf, 2, 3)));
+#endif
+static int string_sprintf(std::string *output, const char *fmt, ...) {
+    std::string &formatted = *output;
+    va_list argptr;
+    va_start(argptr, fmt);
+    int reserve = vsnprintf(nullptr, 0, fmt, argptr);
+    va_end(argptr);
+    formatted.reserve(reserve + 1);
+    va_start(argptr, fmt);
+    int result = vsnprintf((char *)formatted.data(), formatted.capacity(), fmt, argptr);
+    va_end(argptr);
+    assert(result == reserve);
+    return result;
+}
 
 #ifdef WIN32
 static inline int vasprintf(char **strp, char const *fmt, va_list ap) {
