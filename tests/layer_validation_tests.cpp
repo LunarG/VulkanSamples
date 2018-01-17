@@ -15018,6 +15018,89 @@ TEST_F(VkLayerTest, SamplerInUseDestroyedSignaled) {
     vkDestroyImageView(m_device->device(), view, NULL);
 }
 
+TEST_F(VkLayerTest, UpdateDestroyDescriptorSetLayout) {
+    TEST_DESCRIPTION("Attempt updates to descriptor sets with destroyed descriptor set layouts");
+    // TODO: Update to match the descriptor set layout specific VUIDs/VALIDATION_ERROR_* when present
+    const auto kWriteDestroyedLayout = VALIDATION_ERROR_15c00280;
+    const auto kCopyDstDestroyedLayout = VALIDATION_ERROR_03207601;
+    const auto kCopySrcDestroyedLayout = VALIDATION_ERROR_0322d201;
+
+    ASSERT_NO_FATAL_FAILURE(Init());
+
+    // Set up the descriptor (resource) and write/copy operations to use.
+    float data[16] = {};
+    VkConstantBufferObj buffer(m_device, sizeof(data), data, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT);
+    ASSERT_TRUE(buffer.initialized());
+
+    VkDescriptorBufferInfo info = {};
+    info.buffer = buffer.handle();
+    info.range = VK_WHOLE_SIZE;
+
+    VkWriteDescriptorSet write_descriptor = {};
+    write_descriptor.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+    write_descriptor.dstSet = VK_NULL_HANDLE;  // must update this
+    write_descriptor.dstBinding = 0;
+    write_descriptor.descriptorCount = 1;
+    write_descriptor.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    write_descriptor.pBufferInfo = &info;
+
+    VkCopyDescriptorSet copy_descriptor = {};
+    copy_descriptor.sType = VK_STRUCTURE_TYPE_COPY_DESCRIPTOR_SET;
+    copy_descriptor.srcSet = VK_NULL_HANDLE;  // must update
+    copy_descriptor.srcBinding = 0;
+    copy_descriptor.dstSet = VK_NULL_HANDLE;  // must update
+    copy_descriptor.dstBinding = 0;
+    copy_descriptor.descriptorCount = 1;
+
+    // Create valid and invalid source and destination descriptor sets
+    std::vector<VkDescriptorSetLayoutBinding> one_uniform_buffer = {
+        {0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1, VK_SHADER_STAGE_ALL, nullptr},
+    };
+    OneOffDescriptorSet good_dst(m_device, one_uniform_buffer);
+    ASSERT_TRUE(good_dst.Initialized());
+
+    OneOffDescriptorSet bad_dst(m_device, one_uniform_buffer);
+    // Must assert before invalidating it below
+    ASSERT_TRUE(bad_dst.Initialized());
+    bad_dst.layout_ = VkDescriptorSetLayoutObj();
+
+    OneOffDescriptorSet good_src(m_device, one_uniform_buffer);
+    ASSERT_TRUE(good_src.Initialized());
+
+    // Put valid data in the good and bad sources, simultaneously doing a postive test on write and copy operations
+    m_errorMonitor->ExpectSuccess();
+    write_descriptor.dstSet = good_src.set_;
+    vkUpdateDescriptorSets(m_device->device(), 1, &write_descriptor, 0, NULL);
+    m_errorMonitor->VerifyNotFound();
+
+    OneOffDescriptorSet bad_src(m_device, one_uniform_buffer);
+    ASSERT_TRUE(bad_src.Initialized());
+
+    // to complete our positive testing use copy, where above we used write.
+    copy_descriptor.srcSet = good_src.set_;
+    copy_descriptor.dstSet = bad_src.set_;
+    vkUpdateDescriptorSets(m_device->device(), 0, nullptr, 1, &copy_descriptor);
+    bad_src.layout_ = VkDescriptorSetLayoutObj();
+    m_errorMonitor->VerifyNotFound();
+
+    // Trigger the three invalid use errors
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, kWriteDestroyedLayout);
+    write_descriptor.dstSet = bad_dst.set_;
+    vkUpdateDescriptorSets(m_device->device(), 1, &write_descriptor, 0, NULL);
+    m_errorMonitor->VerifyFound();
+
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, kCopyDstDestroyedLayout);
+    copy_descriptor.dstSet = bad_dst.set_;
+    vkUpdateDescriptorSets(m_device->device(), 0, nullptr, 1, &copy_descriptor);
+    m_errorMonitor->VerifyFound();
+
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, kCopySrcDestroyedLayout);
+    copy_descriptor.srcSet = bad_src.set_;
+    copy_descriptor.dstSet = good_dst.set_;
+    vkUpdateDescriptorSets(m_device->device(), 0, nullptr, 1, &copy_descriptor);
+    m_errorMonitor->VerifyFound();
+}
+
 TEST_F(VkLayerTest, QueueForwardProgressFenceWait) {
     TEST_DESCRIPTION(
         "Call VkQueueSubmit with a semaphore that is already "
