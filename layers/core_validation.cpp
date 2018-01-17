@@ -138,7 +138,7 @@ struct layer_data {
     unordered_map<VkCommandPool, COMMAND_POOL_NODE> commandPoolMap;
     unordered_map<VkDescriptorPool, DESCRIPTOR_POOL_STATE *> descriptorPoolMap;
     unordered_map<VkDescriptorSet, cvdescriptorset::DescriptorSet *> setMap;
-    unordered_map<VkDescriptorSetLayout, std::shared_ptr<cvdescriptorset::DescriptorSetLayout const>> descriptorSetLayoutMap;
+    unordered_map<VkDescriptorSetLayout, std::shared_ptr<cvdescriptorset::DescriptorSetLayout>> descriptorSetLayoutMap;
     unordered_map<VkPipelineLayout, PIPELINE_LAYOUT_NODE> pipelineLayoutMap;
     unordered_map<VkDeviceMemory, unique_ptr<DEVICE_MEM_INFO>> memObjMap;
     unordered_map<VkFence, FENCE_NODE> fenceMap;
@@ -3981,7 +3981,11 @@ VKAPI_ATTR void VKAPI_CALL DestroySampler(VkDevice device, VkSampler sampler, co
 }
 
 static void PostCallRecordDestroyDescriptorSetLayout(layer_data *dev_data, VkDescriptorSetLayout ds_layout) {
-    dev_data->descriptorSetLayoutMap.erase(ds_layout);
+    auto layout_it = dev_data->descriptorSetLayoutMap.find(ds_layout);
+    if (layout_it != dev_data->descriptorSetLayoutMap.end()) {
+        layout_it->second.get()->MarkDestroyed();
+        dev_data->descriptorSetLayoutMap.erase(layout_it);
+    }
 }
 
 VKAPI_ATTR void VKAPI_CALL DestroyDescriptorSetLayout(VkDevice device, VkDescriptorSetLayout descriptorSetLayout,

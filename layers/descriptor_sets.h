@@ -89,6 +89,8 @@ class DescriptorSetLayout {
     static bool ValidateCreateInfo(debug_report_data *, const VkDescriptorSetLayoutCreateInfo *);
     // Straightforward Get functions
     VkDescriptorSetLayout GetDescriptorSetLayout() const { return layout_; };
+    bool IsDestroyed() const { return layout_destroyed_; }
+    void MarkDestroyed() { layout_destroyed_ = true; }
     uint32_t GetTotalDescriptorCount() const { return descriptor_count_; };
     uint32_t GetDynamicDescriptorCount() const { return dynamic_descriptor_count_; };
     VkDescriptorSetLayoutCreateFlags GetCreateFlags() const { return flags_; }
@@ -156,6 +158,7 @@ class DescriptorSetLayout {
 
    private:
     VkDescriptorSetLayout layout_;
+    bool layout_destroyed_;
     std::set<uint32_t> non_empty_bindings_;  // Containing non-emtpy bindings in numerical order
     std::unordered_map<uint32_t, uint32_t> binding_to_index_map_;
     // The following map allows an non-iterative lookup of a binding from a global index...

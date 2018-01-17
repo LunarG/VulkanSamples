@@ -39,7 +39,12 @@ struct BindingNumCmp {
 // Proactively reserve and resize as possible, as the reallocation was visible in profiling
 cvdescriptorset::DescriptorSetLayout::DescriptorSetLayout(const VkDescriptorSetLayoutCreateInfo *p_create_info,
                                                           const VkDescriptorSetLayout layout)
-    : layout_(layout), flags_(p_create_info->flags), binding_count_(0), descriptor_count_(0), dynamic_descriptor_count_(0) {
+    : layout_(layout),
+      layout_destroyed_(false),
+      flags_(p_create_info->flags),
+      binding_count_(0),
+      descriptor_count_(0),
+      dynamic_descriptor_count_(0) {
     binding_type_stats_ = {0, 0, 0};
     std::set<const VkDescriptorSetLayoutBinding *, BindingNumCmp> sorted_bindings;
     const uint32_t input_bindings_count = p_create_info->bindingCount;
@@ -624,6 +629,29 @@ void cvdescriptorset::DescriptorSet::PerformWriteUpdate(const VkWriteDescriptorS
 bool cvdescriptorset::DescriptorSet::ValidateCopyUpdate(const debug_report_data *report_data, const VkCopyDescriptorSet *update,
                                                         const DescriptorSet *src_set, UNIQUE_VALIDATION_ERROR_CODE *error_code,
                                                         std::string *error_msg) {
+    // Verify dst layout still valid
+    if (p_layout_->IsDestroyed()) {
+        // TODO: Update to "cannot copy to dst descriptor set with destroyed descriptor set layout" VUID when present
+        *error_code = VALIDATION_ERROR_03207601;
+        string_sprintf(error_msg,
+                       "Cannot call vkUpdateDescriptorSets() to perform copy update on descriptor set dstSet 0x%" PRIxLEAST64
+                       " created with destroyed VkDescriptorSetLayout 0x%" PRIxLEAST64,
+                       HandleToUint64(set_), HandleToUint64(p_layout_->GetDescriptorSetLayout()));
+        return false;
+    }
+
+    // Verify src layout still valid
+    if (src_set->p_layout_->IsDestroyed()) {
+        // TODO: Update to "cannot copy from src descriptor set with destroyed descriptor set layout" VUID when present
+        *error_code = VALIDATION_ERROR_0322d201;
+        string_sprintf(
+            error_msg,
+            "Cannot call vkUpdateDescriptorSets() to perform copy update of dstSet 0x%" PRIxLEAST64
+            " from descriptor set srcSet 0x%" PRIxLEAST64 " created with destroyed VkDescriptorSetLayout 0x%" PRIxLEAST64,
+            HandleToUint64(set_), HandleToUint64(src_set->set_), HandleToUint64(src_set->p_layout_->GetDescriptorSetLayout()));
+        return false;
+    }
+
     // Verify idle ds
     if (in_use.load()) {
         // TODO : Re-using Free Idle error code, need copy update idle error code
@@ -1310,6 +1338,16 @@ void cvdescriptorset::PerformUpdateDescriptorSetsWithTemplateKHR(layer_data *dev
 //  If an error would occur for this update, return false and fill in details in error_msg string
 bool cvdescriptorset::DescriptorSet::ValidateWriteUpdate(const debug_report_data *report_data, const VkWriteDescriptorSet *update,
                                                          UNIQUE_VALIDATION_ERROR_CODE *error_code, std::string *error_msg) {
+    // Verify dst layout still valid
+    if (p_layout_->IsDestroyed()) {
+        // TODO: Update to "cannot write descriptor set with destroyed descriptor set layout" VUID when present
+        *error_code = VALIDATION_ERROR_15c00280;
+        string_sprintf(error_msg,
+                       "Cannot call vkUpdateDescriptorSets() to perform write update on descriptor set 0x%" PRIxLEAST64
+                       " created with destroyed VkDescriptorSetLayout 0x%" PRIxLEAST64,
+                       HandleToUint64(set_), HandleToUint64(p_layout_->GetDescriptorSetLayout()));
+        return false;
+    }
     // Verify idle ds
     if (in_use.load()) {
         // TODO : Re-using Free Idle error code, need write update idle error code
