@@ -17,6 +17,7 @@
  *
  * Author: Courtney Goeltzenleuchter <courtney@LunarG.com>
  * Author: Cody Northrop <cody@lunarg.com>
+ * Author: John Zulauf <jzulauf@lunarg.com>
  */
 
 #ifndef VKTESTBINDING_H
@@ -435,7 +436,21 @@ class BufferView : public internal::NonDispHandle<VkBufferView> {
 
     // vkCreateBufferView()
     void init(const Device &dev, const VkBufferViewCreateInfo &info);
+    static VkBufferViewCreateInfo createInfo(VkBuffer buffer, VkFormat format, VkDeviceSize offset = 0,
+                                             VkDeviceSize range = VK_WHOLE_SIZE);
 };
+
+inline VkBufferViewCreateInfo BufferView::createInfo(VkBuffer buffer, VkFormat format, VkDeviceSize offset, VkDeviceSize range) {
+    VkBufferViewCreateInfo info = {};
+    info.sType = VK_STRUCTURE_TYPE_BUFFER_VIEW_CREATE_INFO;
+    info.pNext = nullptr;
+    info.flags = VkFlags(0);
+    info.buffer = buffer;
+    info.format = format;
+    info.offset = offset;
+    info.range = range;
+    return info;
+}
 
 class Image : public internal::NonDispHandle<VkImage> {
    public:
@@ -628,12 +643,29 @@ class DescriptorPool : public internal::NonDispHandle<VkDescriptorPool> {
     std::vector<DescriptorSet *> alloc_sets(const Device &dev, const DescriptorSetLayout &layout, uint32_t count);
     DescriptorSet *alloc_sets(const Device &dev, const DescriptorSetLayout &layout);
 
+    template <typename PoolSizes>
+    static VkDescriptorPoolCreateInfo create_info(VkDescriptorPoolCreateFlags flags, uint32_t max_sets,
+                                                  const PoolSizes &pool_sizes);
+
    private:
     VkDescriptorPool pool_;
 
     // Track whether this pool's usage is VK_DESCRIPTOR_POOL_USAGE_DYNAMIC
     bool dynamic_usage_;
 };
+
+template <typename PoolSizes>
+inline VkDescriptorPoolCreateInfo DescriptorPool::create_info(VkDescriptorPoolCreateFlags flags, uint32_t max_sets,
+                                                              const PoolSizes &pool_sizes) {
+    VkDescriptorPoolCreateInfo info{};
+    info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+    info.pNext = nullptr;
+    info.flags = flags;
+    info.maxSets = max_sets;
+    info.poolSizeCount = pool_sizes.size();
+    info.pPoolSizes = (info.poolSizeCount) ? pool_sizes.data() : nullptr;
+    return info;
+}
 
 class DescriptorSet : public internal::NonDispHandle<VkDescriptorSet> {
    public:
