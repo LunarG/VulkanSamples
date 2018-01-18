@@ -26965,6 +26965,85 @@ TEST_F(VkPositiveLayerTest, GetMemoryRequirements2) {
     m_errorMonitor->VerifyNotFound();
 }
 
+TEST_F(VkPositiveLayerTest, BindMemory2) {
+    TEST_DESCRIPTION(
+        "Bind memory with VK_KHR_bind_memory2 instead of core entry points and verify layers do not emit errors when objects are "
+        "used");
+
+    ASSERT_NO_FATAL_FAILURE(InitFramework(myDbgFunc, m_errorMonitor));
+
+    // Check for VK_KHR_get_memory_requirementes2 extensions
+    if (DeviceExtensionSupported(gpu(), nullptr, VK_KHR_BIND_MEMORY_2_EXTENSION_NAME)) {
+        m_device_extension_names.push_back(VK_KHR_BIND_MEMORY_2_EXTENSION_NAME);
+    } else {
+        printf("             %s not supported, skipping test\n", VK_KHR_BIND_MEMORY_2_EXTENSION_NAME);
+        return;
+    }
+
+    ASSERT_NO_FATAL_FAILURE(InitState());
+
+    m_errorMonitor->ExpectSuccess(VK_DEBUG_REPORT_ERROR_BIT_EXT | VK_DEBUG_REPORT_WARNING_BIT_EXT);
+
+    // Create a test buffer
+    vk_testing::Buffer buffer;
+    buffer.init_no_mem(*m_device, vk_testing::Buffer::create_info(1024, VK_BUFFER_USAGE_TRANSFER_DST_BIT));
+
+    // Allocate buffer memory
+    vk_testing::DeviceMemory buffer_memory;
+    buffer_memory.init(*m_device, vk_testing::DeviceMemory::get_resource_alloc_info(*m_device, buffer.memory_requirements(), 0));
+
+    // Bind buffer memory with extension
+    auto vkBindBufferMemory2KHR =
+        reinterpret_cast<PFN_vkBindBufferMemory2KHR>(vkGetDeviceProcAddr(m_device->device(), "vkBindBufferMemory2KHR"));
+    ASSERT_TRUE(vkBindBufferMemory2KHR != nullptr);
+    VkBindBufferMemoryInfoKHR buffer_bind_info = {VK_STRUCTURE_TYPE_BIND_BUFFER_MEMORY_INFO_KHR, nullptr, buffer.handle(),
+                                                  buffer_memory.handle(), 0};
+    vkBindBufferMemory2KHR(m_device->device(), 1, &buffer_bind_info);
+
+    // Create a test image
+    auto image_ci = vk_testing::Image::create_info();
+    image_ci.imageType = VK_IMAGE_TYPE_2D;
+    image_ci.extent.width = 32;
+    image_ci.extent.height = 32;
+    image_ci.format = VK_FORMAT_R8G8B8A8_UNORM;
+    image_ci.tiling = VK_IMAGE_TILING_OPTIMAL;
+    image_ci.usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+    vk_testing::Image image;
+    image.init_no_mem(*m_device, image_ci);
+
+    // Allocate image memory
+    vk_testing::DeviceMemory image_memory;
+    image_memory.init(*m_device, vk_testing::DeviceMemory::get_resource_alloc_info(*m_device, image.memory_requirements(), 0));
+
+    // Bind image memory with extension
+    auto vkBindImageMemory2KHR =
+        reinterpret_cast<PFN_vkBindImageMemory2KHR>(vkGetDeviceProcAddr(m_device->device(), "vkBindImageMemory2KHR"));
+    ASSERT_TRUE(vkBindImageMemory2KHR != nullptr);
+    VkBindImageMemoryInfoKHR image_bind_info = {VK_STRUCTURE_TYPE_BIND_IMAGE_MEMORY_INFO_KHR, nullptr, image.handle(),
+                                                image_memory.handle(), 0};
+    vkBindImageMemory2KHR(m_device->device(), 1, &image_bind_info);
+
+    // Now execute arbitrary commands that use the test buffer and image
+    m_commandBuffer->begin();
+
+    // Fill buffer with 0
+    vkCmdFillBuffer(m_commandBuffer->handle(), buffer.handle(), 0, VK_WHOLE_SIZE, 0);
+
+    // Transition and clear image
+    const auto subresource_range = image.subresource_range(VK_IMAGE_ASPECT_COLOR_BIT);
+    const auto barrier = image.image_memory_barrier(0, VK_ACCESS_TRANSFER_WRITE_BIT, VK_IMAGE_LAYOUT_UNDEFINED,
+                                                    VK_IMAGE_LAYOUT_GENERAL, subresource_range);
+    vkCmdPipelineBarrier(m_commandBuffer->handle(), VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, 0, 0,
+                         nullptr, 0, nullptr, 1, &barrier);
+    const VkClearColorValue color = {};
+    vkCmdClearColorImage(m_commandBuffer->handle(), image.handle(), VK_IMAGE_LAYOUT_GENERAL, &color, 1, &subresource_range);
+
+    // Submit and verify no validation errors
+    m_commandBuffer->end();
+    m_commandBuffer->QueueCommandBuffer();
+    m_errorMonitor->VerifyNotFound();
+}
+
 #if defined(ANDROID) && defined(VALIDATION_APK)
 const char *appTag = "VulkanLayerValidationTests";
 static bool initialized = false;
