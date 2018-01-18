@@ -12339,196 +12339,70 @@ TEST_F(VkLayerTest, DSUsageBitsErrors) {
     TEST_DESCRIPTION(
         "Attempt to update descriptor sets for images and buffers "
         "that do not have correct usage bits sets.");
-    VkResult err;
 
     ASSERT_NO_FATAL_FAILURE(Init());
-    VkDescriptorPoolSize ds_type_count[VK_DESCRIPTOR_TYPE_RANGE_SIZE] = {};
-    for (uint32_t i = 0; i < VK_DESCRIPTOR_TYPE_RANGE_SIZE; ++i) {
+    std::array<VkDescriptorPoolSize, VK_DESCRIPTOR_TYPE_RANGE_SIZE> ds_type_count;
+    for (uint32_t i = 0; i < ds_type_count.size(); ++i) {
         ds_type_count[i].type = VkDescriptorType(i);
         ds_type_count[i].descriptorCount = 1;
     }
-    VkDescriptorPoolCreateInfo ds_pool_ci = {};
-    ds_pool_ci.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
-    ds_pool_ci.pNext = NULL;
-    ds_pool_ci.maxSets = VK_DESCRIPTOR_TYPE_RANGE_SIZE;
-    ds_pool_ci.poolSizeCount = VK_DESCRIPTOR_TYPE_RANGE_SIZE;
-    ds_pool_ci.pPoolSizes = ds_type_count;
 
-    VkDescriptorPool ds_pool;
-    err = vkCreateDescriptorPool(m_device->device(), &ds_pool_ci, NULL, &ds_pool);
-    ASSERT_VK_SUCCESS(err);
+    vk_testing::DescriptorPool ds_pool;
+    ds_pool.init(*m_device, vk_testing::DescriptorPool::create_info(0, VK_DESCRIPTOR_TYPE_RANGE_SIZE, ds_type_count));
+    ASSERT_TRUE(ds_pool.initialized());
 
-    // Create 10 layouts where each has a single descriptor of different type
-    VkDescriptorSetLayoutBinding dsl_binding[VK_DESCRIPTOR_TYPE_RANGE_SIZE] = {};
+    std::vector<VkDescriptorSetLayoutBinding> dsl_bindings(1);
+    dsl_bindings[0].binding = 0;
+    dsl_bindings[0].descriptorType = VkDescriptorType(0);
+    dsl_bindings[0].descriptorCount = 1;
+    dsl_bindings[0].stageFlags = VK_SHADER_STAGE_ALL;
+    dsl_bindings[0].pImmutableSamplers = NULL;
+
+    // Create arrays of layout and descriptor objects
+    using UpDescriptorSet = std::unique_ptr<vk_testing::DescriptorSet>;
+    std::vector<UpDescriptorSet> descriptor_sets;
+    using UpDescriptorSetLayout = std::unique_ptr<VkDescriptorSetLayoutObj>;
+    std::vector<UpDescriptorSetLayout> ds_layouts;
+    descriptor_sets.reserve(VK_DESCRIPTOR_TYPE_RANGE_SIZE);
+    ds_layouts.reserve(VK_DESCRIPTOR_TYPE_RANGE_SIZE);
     for (uint32_t i = 0; i < VK_DESCRIPTOR_TYPE_RANGE_SIZE; ++i) {
-        dsl_binding[i].binding = 0;
-        dsl_binding[i].descriptorType = VkDescriptorType(i);
-        dsl_binding[i].descriptorCount = 1;
-        dsl_binding[i].stageFlags = VK_SHADER_STAGE_ALL;
-        dsl_binding[i].pImmutableSamplers = NULL;
+        dsl_bindings[0].descriptorType = VkDescriptorType(i);
+        ds_layouts.push_back(UpDescriptorSetLayout(new VkDescriptorSetLayoutObj(m_device, dsl_bindings)));
+        descriptor_sets.push_back(UpDescriptorSet(ds_pool.alloc_sets(*m_device, *ds_layouts.back())));
+        ASSERT_TRUE(descriptor_sets.back()->initialized());
     }
-
-    std::vector<VkDescriptorSetLayoutObj> ds_layouts;
-    for (uint32_t i = 0; i < VK_DESCRIPTOR_TYPE_RANGE_SIZE; ++i) {
-        ds_layouts.emplace_back(m_device, std::vector<VkDescriptorSetLayoutBinding>(1, dsl_binding[i]));
-    }
-    const auto &ds_vk_layouts = MakeVkHandles<VkDescriptorSetLayout>(ds_layouts);
-
-    VkDescriptorSet descriptor_sets[VK_DESCRIPTOR_TYPE_RANGE_SIZE] = {};
-    VkDescriptorSetAllocateInfo alloc_info = {};
-    alloc_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-    alloc_info.descriptorPool = ds_pool;
-    alloc_info.descriptorSetCount = ds_vk_layouts.size();
-    alloc_info.pSetLayouts = ds_vk_layouts.data();
-    err = vkAllocateDescriptorSets(m_device->device(), &alloc_info, descriptor_sets);
-    ASSERT_VK_SUCCESS(err);
 
     // Create a buffer & bufferView to be used for invalid updates
-    VkBufferCreateInfo buff_ci = {};
-    buff_ci.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-    buff_ci.usage = VK_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT;
-    buff_ci.size = 256;
-    buff_ci.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-    VkBuffer buffer, storage_texel_buffer;
-    err = vkCreateBuffer(m_device->device(), &buff_ci, NULL, &buffer);
-    ASSERT_VK_SUCCESS(err);
+    const VkDeviceSize buffer_size = 256;
+    uint8_t data[buffer_size];
+    VkConstantBufferObj buffer(m_device, buffer_size, data, VK_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT);
+    VkConstantBufferObj storage_texel_buffer(m_device, buffer_size, data, VK_BUFFER_USAGE_STORAGE_TEXEL_BUFFER_BIT);
+    ASSERT_TRUE(buffer.initialized() && storage_texel_buffer.initialized());
 
-    // Create another buffer to use in testing the UNIFORM_TEXEL_BUFFER case
-    buff_ci.usage = VK_BUFFER_USAGE_STORAGE_TEXEL_BUFFER_BIT;
-    err = vkCreateBuffer(m_device->device(), &buff_ci, NULL, &storage_texel_buffer);
-    ASSERT_VK_SUCCESS(err);
-
-    VkMemoryRequirements mem_reqs;
-    vkGetBufferMemoryRequirements(m_device->device(), buffer, &mem_reqs);
-    VkMemoryAllocateInfo mem_alloc_info = {};
-    mem_alloc_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-    mem_alloc_info.pNext = NULL;
-    mem_alloc_info.memoryTypeIndex = 0;
-    mem_alloc_info.allocationSize = mem_reqs.size;
-    bool pass = m_device->phy().set_memory_type(mem_reqs.memoryTypeBits, &mem_alloc_info, 0);
-    if (!pass) {
-        vkDestroyBuffer(m_device->device(), buffer, NULL);
-        vkDestroyDescriptorPool(m_device->device(), ds_pool, NULL);
-        return;
-    }
-    VkDeviceMemory mem;
-    err = vkAllocateMemory(m_device->device(), &mem_alloc_info, NULL, &mem);
-    ASSERT_VK_SUCCESS(err);
-    err = vkBindBufferMemory(m_device->device(), buffer, mem, 0);
-    ASSERT_VK_SUCCESS(err);
-
-    VkBufferViewCreateInfo buff_view_ci = {};
-    buff_view_ci.sType = VK_STRUCTURE_TYPE_BUFFER_VIEW_CREATE_INFO;
-    buff_view_ci.buffer = buffer;
-    buff_view_ci.format = VK_FORMAT_R8_UNORM;
-    buff_view_ci.range = VK_WHOLE_SIZE;
-    VkBufferView buff_view;
-    err = vkCreateBufferView(m_device->device(), &buff_view_ci, NULL, &buff_view);
-    ASSERT_VK_SUCCESS(err);
-
-    // Now get resources / view for storage_texel_buffer
-    vkGetBufferMemoryRequirements(m_device->device(), storage_texel_buffer, &mem_reqs);
-    pass = m_device->phy().set_memory_type(mem_reqs.memoryTypeBits, &mem_alloc_info, 0);
-    if (!pass) {
-        vkDestroyBuffer(m_device->device(), buffer, NULL);
-        vkDestroyBufferView(m_device->device(), buff_view, NULL);
-        vkFreeMemory(m_device->device(), mem, NULL);
-        vkDestroyBuffer(m_device->device(), storage_texel_buffer, NULL);
-        vkDestroyDescriptorPool(m_device->device(), ds_pool, NULL);
-        return;
-    }
-    VkDeviceMemory storage_texel_buffer_mem;
-    VkBufferView storage_texel_buffer_view;
-    err = vkAllocateMemory(m_device->device(), &mem_alloc_info, NULL, &storage_texel_buffer_mem);
-    ASSERT_VK_SUCCESS(err);
-    err = vkBindBufferMemory(m_device->device(), storage_texel_buffer, storage_texel_buffer_mem, 0);
-    ASSERT_VK_SUCCESS(err);
-    buff_view_ci.buffer = storage_texel_buffer;
-    err = vkCreateBufferView(m_device->device(), &buff_view_ci, NULL, &storage_texel_buffer_view);
-    ASSERT_VK_SUCCESS(err);
+    auto buff_view_ci = vk_testing::BufferView::createInfo(buffer.handle(), VK_FORMAT_R8_UNORM);
+    vk_testing::BufferView buffer_view_obj, storage_texel_buffer_view_obj;
+    buffer_view_obj.init(*m_device, buff_view_ci);
+    buff_view_ci.buffer = storage_texel_buffer.handle();
+    storage_texel_buffer_view_obj.init(*m_device, buff_view_ci);
+    ASSERT_TRUE(buffer_view_obj.initialized() && storage_texel_buffer_view_obj.initialized());
+    VkBufferView buffer_view = buffer_view_obj.handle();
+    VkBufferView storage_texel_buffer_view = storage_texel_buffer_view_obj.handle();
 
     // Create an image to be used for invalid updates
-    // Find a format / tiling for COLOR_ATTACHMENT
-    VkImageCreateInfo image_ci = {};
-    image_ci.format = VK_FORMAT_UNDEFINED;
-    for (int f = VK_FORMAT_BEGIN_RANGE; f <= VK_FORMAT_END_RANGE; f++) {
-        VkFormat format = static_cast<VkFormat>(f);
-        VkFormatProperties fProps = m_device->format_properties(format);
-        if (fProps.linearTilingFeatures & VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT) {
-            image_ci.format = format;
-            image_ci.tiling = VK_IMAGE_TILING_LINEAR;
-            break;
-        } else if (fProps.optimalTilingFeatures & VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT) {
-            image_ci.format = format;
-            image_ci.tiling = VK_IMAGE_TILING_OPTIMAL;
-            break;
-        }
-    }
-    if (image_ci.format == VK_FORMAT_UNDEFINED) {
-        // Cleanup before early return
-        vkDestroyBuffer(m_device->device(), buffer, NULL);
-        vkDestroyBuffer(m_device->device(), storage_texel_buffer, NULL);
-        vkDestroyBufferView(m_device->device(), buff_view, NULL);
-        vkDestroyBufferView(m_device->device(), storage_texel_buffer_view, NULL);
-        vkFreeMemory(m_device->device(), mem, NULL);
-        vkFreeMemory(m_device->device(), storage_texel_buffer_mem, NULL);
-        vkDestroyDescriptorPool(m_device->device(), ds_pool, NULL);
-        return;
-    }
-
-    image_ci.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
-    image_ci.imageType = VK_IMAGE_TYPE_2D;
-    image_ci.extent.width = 64;
-    image_ci.extent.height = 64;
-    image_ci.extent.depth = 1;
-    image_ci.mipLevels = 1;
-    image_ci.arrayLayers = 1;
-    image_ci.samples = VK_SAMPLE_COUNT_1_BIT;
-    image_ci.initialLayout = VK_IMAGE_LAYOUT_PREINITIALIZED;
-    image_ci.usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
-    image_ci.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-    VkImage image;
-    err = vkCreateImage(m_device->device(), &image_ci, NULL, &image);
-    ASSERT_VK_SUCCESS(err);
-    // Bind memory to image
-    VkDeviceMemory image_mem;
-
-    VkMemoryAllocateInfo mem_alloc = {};
-    mem_alloc.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-    mem_alloc.pNext = NULL;
-    mem_alloc.allocationSize = 0;
-    mem_alloc.memoryTypeIndex = 0;
-    vkGetImageMemoryRequirements(m_device->device(), image, &mem_reqs);
-    mem_alloc.allocationSize = mem_reqs.size;
-    pass = m_device->phy().set_memory_type(mem_reqs.memoryTypeBits, &mem_alloc, 0);
-    ASSERT_TRUE(pass);
-    err = vkAllocateMemory(m_device->device(), &mem_alloc, NULL, &image_mem);
-    ASSERT_VK_SUCCESS(err);
-    err = vkBindImageMemory(m_device->device(), image, image_mem, 0);
-    ASSERT_VK_SUCCESS(err);
-    // Now create view for image
-    VkImageViewCreateInfo image_view_ci = {};
-    image_view_ci.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-    image_view_ci.image = image;
-    image_view_ci.format = image_ci.format;
-    image_view_ci.viewType = VK_IMAGE_VIEW_TYPE_2D;
-    image_view_ci.subresourceRange.layerCount = 1;
-    image_view_ci.subresourceRange.baseArrayLayer = 0;
-    image_view_ci.subresourceRange.levelCount = 1;
-    image_view_ci.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-    VkImageView image_view;
-    err = vkCreateImageView(m_device->device(), &image_view_ci, NULL, &image_view);
-    ASSERT_VK_SUCCESS(err);
+    VkImageObj image_obj(m_device);
+    image_obj.InitNoLayout(64, 64, 1, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT, VK_IMAGE_TILING_OPTIMAL, 0);
+    ASSERT_TRUE(image_obj.initialized());
+    VkImageView image_view = image_obj.targetView(VK_FORMAT_R8G8B8A8_UNORM);
 
     VkDescriptorBufferInfo buff_info = {};
-    buff_info.buffer = buffer;
+    buff_info.buffer = buffer.handle();
     VkDescriptorImageInfo img_info = {};
     img_info.imageView = image_view;
     VkWriteDescriptorSet descriptor_write = {};
     descriptor_write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
     descriptor_write.dstBinding = 0;
     descriptor_write.descriptorCount = 1;
-    descriptor_write.pTexelBufferView = &buff_view;
+    descriptor_write.pTexelBufferView = &buffer_view;
     descriptor_write.pBufferInfo = &buff_info;
     descriptor_write.pImageInfo = &img_info;
 
@@ -12553,27 +12427,16 @@ TEST_F(VkLayerTest, DSUsageBitsErrors) {
             descriptor_write.pTexelBufferView = &storage_texel_buffer_view;
         }
         descriptor_write.descriptorType = VkDescriptorType(i);
-        descriptor_write.dstSet = descriptor_sets[i];
+        descriptor_write.dstSet = descriptor_sets[i]->handle();
         m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, error_codes[i]);
 
         vkUpdateDescriptorSets(m_device->device(), 1, &descriptor_write, 0, NULL);
 
         m_errorMonitor->VerifyFound();
         if (VkDescriptorType(i) == VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER) {
-            descriptor_write.pTexelBufferView = &buff_view;
+            descriptor_write.pTexelBufferView = &buffer_view;
         }
     }
-
-    vkDestroyImage(m_device->device(), image, NULL);
-    vkFreeMemory(m_device->device(), image_mem, NULL);
-    vkDestroyImageView(m_device->device(), image_view, NULL);
-    vkDestroyBuffer(m_device->device(), buffer, NULL);
-    vkDestroyBuffer(m_device->device(), storage_texel_buffer, NULL);
-    vkDestroyBufferView(m_device->device(), buff_view, NULL);
-    vkDestroyBufferView(m_device->device(), storage_texel_buffer_view, NULL);
-    vkFreeMemory(m_device->device(), mem, NULL);
-    vkFreeMemory(m_device->device(), storage_texel_buffer_mem, NULL);
-    vkDestroyDescriptorPool(m_device->device(), ds_pool, NULL);
 }
 
 TEST_F(VkLayerTest, DSBufferInfoErrors) {
