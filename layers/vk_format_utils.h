@@ -111,16 +111,18 @@ VK_LAYER_EXPORT bool FormatIsUScaled(VkFormat format);
 VK_LAYER_EXPORT bool FormatIsSScaled(VkFormat format);
 VK_LAYER_EXPORT bool FormatIsCompressed(VkFormat format);
 
+VK_LAYER_EXPORT uint32_t FormatPlaneCount(VkFormat format);
+VK_LAYER_EXPORT uint32_t FormatChannelCount(VkFormat format);
+VK_LAYER_EXPORT VkExtent3D FormatCompressedTexelBlockExtent(VkFormat format);
+VK_LAYER_EXPORT size_t FormatSize(VkFormat format);
+VK_LAYER_EXPORT VkFormatCompatibilityClass FormatCompatibilityClass(VkFormat format);
+VK_LAYER_EXPORT VkDeviceSize SafeModulo(VkDeviceSize dividend, VkDeviceSize divisor);
+
 static inline bool FormatIsUndef(VkFormat format) { return (format == VK_FORMAT_UNDEFINED); }
 static inline bool FormatIsColor(VkFormat format) { return !(FormatIsUndef(format) || FormatIsDepthOrStencil(format)); }
 static inline bool FormatHasDepth(VkFormat format) { return (FormatIsDepthOnly(format) || FormatIsDepthAndStencil(format)); }
 static inline bool FormatHasStencil(VkFormat format) { return (FormatIsStencilOnly(format) || FormatIsDepthAndStencil(format)); }
-
-VK_LAYER_EXPORT VkExtent3D FormatCompressedTexelBlockExtent(VkFormat format);
-VK_LAYER_EXPORT size_t FormatSize(VkFormat format);
-VK_LAYER_EXPORT unsigned int FormatChannelCount(VkFormat format);
-VK_LAYER_EXPORT VkFormatCompatibilityClass FormatCompatibilityClass(VkFormat format);
-VK_LAYER_EXPORT VkDeviceSize SafeModulo(VkDeviceSize dividend, VkDeviceSize divisor);
+static inline bool FormatIsMultiplane(VkFormat format) { return ((FormatPlaneCount(format)) > 1u); }
 
 #ifdef __cplusplus
 }
