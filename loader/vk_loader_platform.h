@@ -118,11 +118,11 @@ static inline const char *loader_platform_get_proc_address_error(const char *nam
 // Threads:
 typedef pthread_t loader_platform_thread;
 #define THREAD_LOCAL_DECL __thread
-static inline void loader_platform_thread_once(pthread_once_t *ctl, void (*func)(void)) {
-    assert(func != NULL);
-    assert(ctl != NULL);
-    pthread_once(ctl, func);
-}
+
+// The once init functionality is not used on Linux
+#define LOADER_PLATFORM_THREAD_ONCE_DECLARATION(var)
+#define LOADER_PLATFORM_THREAD_ONCE_DEFINITION(var)
+#define LOADER_PLATFORM_THREAD_ONCE(ctl, func)
 
 // Thread IDs:
 typedef pthread_t loader_platform_thread_id;
@@ -299,19 +299,29 @@ static char *loader_platform_get_proc_address_error(const char *name) {
 // Threads:
 typedef HANDLE loader_platform_thread;
 #define THREAD_LOCAL_DECL __declspec(thread)
+
+// The once init functionality is not used when building a DLL on Windows. This is because there is no way to clean up the
+// resources allocated by anything allocated by once init. This isn't a problem for static libraries, but it is for dynamic
+// ones. When building a DLL, we use DllMain() instead to allow properly cleaning up resources.
+#if defined(LOADER_DYNAMIC_LIB)
+#define LOADER_PLATFORM_THREAD_ONCE_DECLARATION(var)
+#define LOADER_PLATFORM_THREAD_ONCE_DEFINITION(var)
+#define LOADER_PLATFORM_THREAD_ONCE(ctl, func)
+#else
 #define LOADER_PLATFORM_THREAD_ONCE_DECLARATION(var) INIT_ONCE var = INIT_ONCE_STATIC_INIT;
 #define LOADER_PLATFORM_THREAD_ONCE_DEFINITION(var) INIT_ONCE var;
+#define LOADER_PLATFORM_THREAD_ONCE(ctl, func) loader_platform_thread_once_fn(ctl, func)
 static BOOL CALLBACK InitFuncWrapper(PINIT_ONCE InitOnce, PVOID Parameter, PVOID *Context) {
     void (*func)(void) = (void (*)(void))Parameter;
     func();
     return TRUE;
 }
-
-static void loader_platform_thread_once(void *ctl, void (*func)(void)) {
+static void loader_platform_thread_once_fn(void *ctl, void (*func)(void)) {
     assert(func != NULL);
     assert(ctl != NULL);
     InitOnceExecuteOnce((PINIT_ONCE)ctl, InitFuncWrapper, func, NULL);
 }
+#endif
 
 // Thread IDs:
 typedef DWORD loader_platform_thread_id;

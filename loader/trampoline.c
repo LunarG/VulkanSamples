@@ -95,6 +95,7 @@ LOADER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkEnumerateInstanceExtensionPropert
                                                                                     uint32_t *pPropertyCount,
                                                                                     VkExtensionProperties *pProperties) {
     tls_instance = NULL;
+    LOADER_PLATFORM_THREAD_ONCE(&once_init, loader_initialize);
 
     // We know we need to call at least the terminator
     VkResult res = VK_SUCCESS;
@@ -182,6 +183,7 @@ LOADER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkEnumerateInstanceExtensionPropert
 LOADER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkEnumerateInstanceLayerProperties(uint32_t *pPropertyCount,
                                                                                 VkLayerProperties *pProperties) {
     tls_instance = NULL;
+    LOADER_PLATFORM_THREAD_ONCE(&once_init, loader_initialize);
 
     // We know we need to call at least the terminator
     VkResult res = VK_SUCCESS;
@@ -272,6 +274,8 @@ LOADER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateInstance(const VkInstanceCr
     VkInstance created_instance = VK_NULL_HANDLE;
     bool loaderLocked = false;
     VkResult res = VK_ERROR_INITIALIZATION_FAILED;
+
+    LOADER_PLATFORM_THREAD_ONCE(&once_init, loader_initialize);
 
     // Fail if the requested Vulkan apiVersion is > 1.0 since the loader only supports 1.0.
     // Having pCreateInfo == NULL, pCreateInfo->pApplication == NULL, or

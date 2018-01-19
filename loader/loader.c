@@ -93,6 +93,8 @@ uint32_t g_loader_log_msgs = 0;
 loader_platform_thread_mutex loader_lock;
 loader_platform_thread_mutex loader_json_lock;
 
+LOADER_PLATFORM_THREAD_ONCE_DECLARATION(once_init);
+
 void *loader_instance_heap_alloc(const struct loader_instance *instance, size_t size, VkSystemAllocationScope alloc_scope) {
     void *pMemory = NULL;
 #if (DEBUG_DISABLE_APP_ALLOCATORS == 1)
@@ -6008,6 +6010,8 @@ VKAPI_ATTR VkResult VKAPI_CALL terminator_EnumerateInstanceLayerProperties(const
     struct loader_layer_list instance_layer_list;
     tls_instance = NULL;
 
+    LOADER_PLATFORM_THREAD_ONCE(&once_init, loader_initialize);
+
     uint32_t copy_size;
 
     // Get layer libraries
@@ -6037,7 +6041,7 @@ out:
     return result;
 }
 
-#if defined(_WIN32)
+#if defined(_WIN32) && defined(LOADER_DYNAMIC_LIB)
 BOOL WINAPI DllMain(HINSTANCE hinst, DWORD reason, LPVOID reserved) {
     switch (reason) {
         case DLL_PROCESS_ATTACH:
@@ -6054,7 +6058,7 @@ BOOL WINAPI DllMain(HINSTANCE hinst, DWORD reason, LPVOID reserved) {
     }
     return TRUE;
 }
-#else
+#elif !defined(_WIN32)
 __attribute__((constructor)) void loader_init_library() { loader_initialize(); }
 
 __attribute__((destructor)) void loader_free_library() { loader_release(); }

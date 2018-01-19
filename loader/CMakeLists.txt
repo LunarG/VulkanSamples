@@ -155,16 +155,26 @@ if (WIN32)
     set(CMAKE_C_FLAGS_DEBUG " ")
     separate_arguments(LOCAL_C_FLAGS_REL WINDOWS_COMMAND ${CMAKE_C_FLAGS_RELEASE})
 
-    add_library(loader-norm OBJECT ${NORMAL_LOADER_SRCS} dirent_on_windows.c)
-    add_dependencies(loader-norm generate_helper_files loader_gen_files)
+    add_library(loader-norm-dy OBJECT ${NORMAL_LOADER_SRCS} dirent_on_windows.c)
+    add_dependencies(loader-norm-dy generate_helper_files loader_gen_files)
+    target_compile_definitions(loader-norm-dy PUBLIC LOADER_DYNAMIC_LIB)
+    target_compile_options(loader-norm-dy PUBLIC "$<$<CONFIG:DEBUG>:${LOCAL_C_FLAGS_DBG}>")
 
-    target_compile_options(loader-norm PUBLIC "$<$<CONFIG:DEBUG>:${LOCAL_C_FLAGS_DBG}>")
-    add_library(loader-opt OBJECT ${OPT_LOADER_SRCS})
-    add_dependencies(loader-opt generate_helper_files loader_gen_files loader_asm_gen_files)
+    add_library(loader-opt-dy OBJECT ${OPT_LOADER_SRCS})
+    add_dependencies(loader-opt-dy generate_helper_files loader_gen_files loader_asm_gen_files)
+    target_compile_definitions(loader-opt-dy PUBLIC LOADER_DYNAMIC_LIB)
+    target_compile_options(loader-opt-dy PUBLIC "$<$<CONFIG:DEBUG>:${LOCAL_C_FLAGS_REL}>")
 
-    target_compile_options(loader-opt PUBLIC "$<$<CONFIG:DEBUG>:${LOCAL_C_FLAGS_REL}>")
-    add_library(${API_LOWERCASE}-${MAJOR} SHARED $<TARGET_OBJECTS:loader-opt> $<TARGET_OBJECTS:loader-norm> ${CMAKE_CURRENT_BINARY_DIR}/${API_LOWERCASE}-${MAJOR}.def ${CMAKE_CURRENT_SOURCE_DIR}/loader.rc)
-    add_library(VKstatic.${MAJOR} STATIC $<TARGET_OBJECTS:loader-opt> $<TARGET_OBJECTS:loader-norm>)
+    add_library(loader-norm-st OBJECT ${NORMAL_LOADER_SRCS} dirent_on_windows.c)
+    add_dependencies(loader-norm-st generate_helper_files loader_gen_files)
+    target_compile_options(loader-norm-st PUBLIC "$<$<CONFIG:DEBUG>:${LOCAL_C_FLAGS_DBG}>")
+
+    add_library(loader-opt-st OBJECT ${OPT_LOADER_SRCS})
+    add_dependencies(loader-opt-st generate_helper_files loader_gen_files loader_asm_gen_files)
+    target_compile_options(loader-opt-st PUBLIC "$<$<CONFIG:DEBUG>:${LOCAL_C_FLAGS_REL}>")
+
+    add_library(${API_LOWERCASE}-${MAJOR} SHARED $<TARGET_OBJECTS:loader-opt-dy> $<TARGET_OBJECTS:loader-norm-dy> ${CMAKE_CURRENT_BINARY_DIR}/${API_LOWERCASE}-${MAJOR}.def ${CMAKE_CURRENT_SOURCE_DIR}/loader.rc)
+    add_library(VKstatic.${MAJOR} STATIC $<TARGET_OBJECTS:loader-opt-st> $<TARGET_OBJECTS:loader-norm-st>)
     # Suppress conflicting libs warning for debug builds.
     set_target_properties(${API_LOWERCASE}-${MAJOR} PROPERTIES LINK_FLAGS_DEBUG /ignore:4098)
     set_target_properties(VKstatic.${MAJOR} PROPERTIES OUTPUT_NAME VKstatic.${MAJOR})
@@ -197,6 +207,7 @@ else()
 
     add_library(${API_LOWERCASE} SHARED ${NORMAL_LOADER_SRCS} ${OPT_LOADER_SRCS})
     add_dependencies(${API_LOWERCASE} generate_helper_files loader_gen_files loader_asm_gen_files)
+    target_compile_definitions(${API_LOWERCASE} PUBLIC -DLOADER_DYNAMIC_LIB)
     set_target_properties(${API_LOWERCASE} PROPERTIES SOVERSION "1" VERSION "1.0.${vk_header_version}")
     target_link_libraries(${API_LOWERCASE} -ldl -lpthread -lm)
 
