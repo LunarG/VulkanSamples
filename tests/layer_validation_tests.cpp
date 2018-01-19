@@ -8520,6 +8520,101 @@ TEST_F(VkLayerTest, CmdDispatchExceedLimits) {
     vkDestroyPipelineLayout(device(), pipe_layout, nullptr);
 }
 
+TEST_F(VkLayerTest, MultiplaneImageLayoutBadAspectFlags) {
+    TEST_DESCRIPTION("Query layout of a multiplane image using illegal aspect flag masks");
+
+    // Enable KHR multiplane req'd extensions
+    bool mp_extensions = InstanceExtensionSupported(VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME,
+                                                    VK_KHR_GET_MEMORY_REQUIREMENTS_2_SPEC_VERSION);
+    if (mp_extensions) {
+        m_instance_extension_names.push_back(VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME);
+    }
+    ASSERT_NO_FATAL_FAILURE(InitFramework(myDbgFunc, m_errorMonitor));
+    mp_extensions = mp_extensions && DeviceExtensionSupported(gpu(), nullptr, VK_KHR_MAINTENANCE1_EXTENSION_NAME);
+    mp_extensions = mp_extensions && DeviceExtensionSupported(gpu(), nullptr, VK_KHR_GET_MEMORY_REQUIREMENTS_2_EXTENSION_NAME);
+    mp_extensions = mp_extensions && DeviceExtensionSupported(gpu(), nullptr, VK_KHR_BIND_MEMORY_2_EXTENSION_NAME);
+    mp_extensions = mp_extensions && DeviceExtensionSupported(gpu(), nullptr, VK_KHR_SAMPLER_YCBCR_CONVERSION_EXTENSION_NAME);
+    if (mp_extensions) {
+        m_device_extension_names.push_back(VK_KHR_MAINTENANCE1_EXTENSION_NAME);
+        m_device_extension_names.push_back(VK_KHR_GET_MEMORY_REQUIREMENTS_2_EXTENSION_NAME);
+        m_device_extension_names.push_back(VK_KHR_BIND_MEMORY_2_EXTENSION_NAME);
+        m_device_extension_names.push_back(VK_KHR_SAMPLER_YCBCR_CONVERSION_EXTENSION_NAME);
+    } else {
+        printf("             test requires KHR multiplane extensions, not available.  Skipping.\n");
+        return;
+    }
+    ASSERT_NO_FATAL_FAILURE(InitState());
+
+    // Query format support
+    PFN_vkGetPhysicalDeviceImageFormatProperties2KHR GetPDIFP2KHR =
+        (PFN_vkGetPhysicalDeviceImageFormatProperties2KHR)vkGetInstanceProcAddr(instance(),
+                                                                                "vkGetPhysicalDeviceImageFormatProperties2KHR");
+    VkPhysicalDeviceImageFormatInfo2KHR fmt_info = {};
+    fmt_info.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_IMAGE_FORMAT_INFO_2_KHR;
+    fmt_info.pNext = nullptr;
+    fmt_info.format = VK_FORMAT_G8_B8R8_2PLANE_420_UNORM_KHR;
+    fmt_info.type = VK_IMAGE_TYPE_2D;
+    fmt_info.tiling = VK_IMAGE_TILING_LINEAR;
+    fmt_info.usage = VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
+    fmt_info.flags = 0;
+
+    VkImageFormatProperties2KHR fmt_props = {};
+    fmt_props.sType = VK_STRUCTURE_TYPE_IMAGE_FORMAT_PROPERTIES_2_KHR;
+    VkResult err_2 = GetPDIFP2KHR(gpu(), &fmt_info, &fmt_props);
+
+    fmt_info.format = VK_FORMAT_G8_B8_R8_3PLANE_420_UNORM_KHR;
+    VkResult err_3 = GetPDIFP2KHR(gpu(), &fmt_info, &fmt_props);
+
+    if ((VK_SUCCESS != err_2) || (VK_SUCCESS != err_3)) {
+        printf("             Multiplane image format not supported.  Skipping test.\n");
+        return;  // Assume there's low ROI on searching for different mp formats
+    }
+
+    VkImageCreateInfo ci = {};
+    ci.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+    ci.pNext = NULL;
+    ci.flags = fmt_info.flags;
+    ci.imageType = fmt_info.type;
+    ci.format = VK_FORMAT_G8_B8R8_2PLANE_420_UNORM_KHR;
+    ci.extent = {128, 128, 1};
+    ci.mipLevels = 1;
+    ci.arrayLayers = 1;
+    ci.samples = VK_SAMPLE_COUNT_1_BIT;
+    ci.tiling = fmt_info.tiling;
+    ci.usage = fmt_info.usage;
+    ci.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+    ci.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+    VkImage image_2plane;
+    VkResult err = vkCreateImage(device(), &ci, NULL, &image_2plane);
+    ASSERT_VK_SUCCESS(err);
+
+    ci.format = VK_FORMAT_G8_B8_R8_3PLANE_420_UNORM_KHR;
+    VkImage image_3plane;
+    err = vkCreateImage(device(), &ci, NULL, &image_3plane);
+    ASSERT_VK_SUCCESS(err);
+
+    // Query layout of 3rd plane, for a 2-plane image
+    VkImageSubresource subres = {};
+    subres.aspectMask = VK_IMAGE_ASPECT_PLANE_2_BIT_KHR;
+    subres.mipLevel = 0;
+    subres.arrayLayer = 0;
+    VkSubresourceLayout layout = {};
+
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_2a600c5a);
+    vkGetImageSubresourceLayout(device(), image_2plane, &subres, &layout);
+    m_errorMonitor->VerifyFound();
+
+    // Query layout using color aspect, for a 3-plane image
+    subres.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_2a600c5c);
+    vkGetImageSubresourceLayout(device(), image_3plane, &subres, &layout);
+    m_errorMonitor->VerifyFound();
+
+    // Clean up
+    vkDestroyImage(device(), image_2plane, NULL);
+    vkDestroyImage(device(), image_3plane, NULL);
+}
+
 TEST_F(VkPositiveLayerTest, MultiplaneGetImageSubresourceLayout) {
     TEST_DESCRIPTION("Positive test, query layout of a single plane of a multiplane image. (repro Github #2530)");
 
