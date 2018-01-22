@@ -1115,7 +1115,7 @@ def convertVUID(vuid_string):
         print ("   replace '### ADD New func/struct mappings above this line' line with \"'%s' : %d,\"" % (vuid_parts[1], len(func_struct_id_map)))
         func_struct_id_map[vuid_parts[1]] = len(func_struct_id_map)
         #func_struct_update = True
-        sys.exit()
+        sys.exit(1)
     uniqueid = func_struct_id_map[vuid_parts[1]] << FUNC_STRUCT_SHIFT
     if vuid_parts[-1].isdigit(): # explit VUID has int on the end
         explicit_id = int(vuid_parts[-1])
@@ -1124,7 +1124,7 @@ def convertVUID(vuid_string):
     else: # implicit case
         if vuid_parts[-1] not in implicit_type_map:
             print("ERROR: Missing mapping for implicit type '%s'!\nTODO: Please add new mapping." % (vuid_parts[-1]))
-            sys.exit()
+            sys.exit(1)
         else:
             param_id = 0 # Default when no param is available
             if vuid_parts[-2] != vuid_parts[1]: # we have a parameter
@@ -1135,7 +1135,7 @@ def convertVUID(vuid_string):
                     print ("   replace '### ADD New implicit param mappings above this line' line with \"'%s' : %d,\"" % (vuid_parts[-2], len(implicit_param_map)))
                     implicit_param_map[vuid_parts[-2]] = len(implicit_param_map)
                     #imp_param_update = True
-                    sys.exit()
+                    sys.exit(1)
                 uniqueid = uniqueid + (param_id << IMPLICIT_PARAM_SHIFT) + (implicit_type_map[vuid_parts[-1]] << IMPLICIT_TYPE_SHIFT) + implicit_bit0
             else: # No parameter so that field is 0
                 uniqueid = uniqueid + (implicit_type_map[vuid_parts[-1]] << IMPLICIT_TYPE_SHIFT) + implicit_bit0
