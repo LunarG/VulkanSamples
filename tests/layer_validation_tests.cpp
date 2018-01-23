@@ -21335,6 +21335,91 @@ TEST_F(VkLayerTest, DuplicateDescriptorBinding) {
     m_errorMonitor->VerifyFound();
 }
 
+TEST_F(VkLayerTest, InvalidPushDescriptorSetLayout) {
+    TEST_DESCRIPTION("Create a push descriptor set layout with invalid bindings.");
+
+    if (InstanceExtensionSupported(VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME)) {
+        m_instance_extension_names.push_back(VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME);
+    } else {
+        printf("             Did not find VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME; skipped.\n");
+        return;
+    }
+
+    ASSERT_NO_FATAL_FAILURE(InitFramework(myDbgFunc, m_errorMonitor));
+    if (DeviceExtensionSupported(gpu(), nullptr, VK_KHR_PUSH_DESCRIPTOR_EXTENSION_NAME)) {
+        m_device_extension_names.push_back(VK_KHR_PUSH_DESCRIPTOR_EXTENSION_NAME);
+    } else {
+        printf("             %s Extension not supported, skipping tests\n", VK_KHR_PUSH_DESCRIPTOR_EXTENSION_NAME);
+        return;
+    }
+
+    ASSERT_NO_FATAL_FAILURE(InitState());
+
+    // Find address of extension call and make the call
+    PFN_vkGetPhysicalDeviceProperties2KHR vkGetPhysicalDeviceProperties2KHR =
+        (PFN_vkGetPhysicalDeviceProperties2KHR)vkGetInstanceProcAddr(instance(), "vkGetPhysicalDeviceProperties2KHR");
+    assert(vkGetPhysicalDeviceProperties2KHR != nullptr);
+
+    // Get the push descriptor limits
+    auto push_descriptor_prop = lvl_init_struct<VkPhysicalDevicePushDescriptorPropertiesKHR>();
+    auto prop2 = lvl_init_struct<VkPhysicalDeviceProperties2KHR>(&push_descriptor_prop);
+    vkGetPhysicalDeviceProperties2KHR(m_device->phy().handle(), &prop2);
+
+    VkDescriptorSetLayoutBinding binding = {0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr};
+
+    auto ds_layout_ci = lvl_init_struct<VkDescriptorSetLayoutCreateInfo>();
+    ds_layout_ci.flags = VK_DESCRIPTOR_SET_LAYOUT_CREATE_PUSH_DESCRIPTOR_BIT_KHR;
+    ds_layout_ci.bindingCount = 1;
+    ds_layout_ci.pBindings = &binding;
+
+    // Note that as binding is referenced in ds_layout_ci, it is effectively in the closure by reference as well.
+    auto test_create_ds_layout = [&ds_layout_ci, this](UNIQUE_VALIDATION_ERROR_CODE error) {
+        VkDescriptorSetLayout ds_layout = VK_NULL_HANDLE;
+        m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, error);
+        vkCreateDescriptorSetLayout(m_device->handle(), &ds_layout_ci, nullptr, &ds_layout);
+        m_errorMonitor->VerifyFound();
+        vkDestroyDescriptorSetLayout(m_device->handle(), ds_layout, nullptr);
+    };
+
+    // Starting with the initial VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC type set above..
+    test_create_ds_layout(VALIDATION_ERROR_05000230);
+
+    binding.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC;
+    test_create_ds_layout(VALIDATION_ERROR_05000230);  // This is the same VUID as above, just a second error condition.
+
+    if (!(push_descriptor_prop.maxPushDescriptors == std::numeric_limits<uint32_t>::max())) {
+        binding.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+        binding.descriptorCount = push_descriptor_prop.maxPushDescriptors + 1;
+        test_create_ds_layout(VALIDATION_ERROR_05000232);
+    } else {
+        printf("             maxPushDescriptors is set to maxiumum unit32_t value, skipping 'out of range test'.\n");
+    }
+}
+
+TEST_F(VkLayerTest, PushDescriptorSetLayoutWithoutExtension) {
+    TEST_DESCRIPTION("Create a push descriptor set layout without loading the needed extension.");
+    ASSERT_NO_FATAL_FAILURE(Init());
+
+    VkDescriptorSetLayoutBinding binding = {0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr};
+
+    auto ds_layout_ci = lvl_init_struct<VkDescriptorSetLayoutCreateInfo>();
+    ds_layout_ci.flags = VK_DESCRIPTOR_SET_LAYOUT_CREATE_PUSH_DESCRIPTOR_BIT_KHR;
+    ds_layout_ci.bindingCount = 1;
+    ds_layout_ci.pBindings = &binding;
+
+    std::string error = "Attemped to use VK_DESCRIPTOR_SET_LAYOUT_CREATE_PUSH_DESCRIPTOR_BIT_KHR in ";
+    error = error + "VkDescriptorSetLayoutCreateInfo::flags but its required extension ";
+    error = error + VK_KHR_PUSH_DESCRIPTOR_EXTENSION_NAME;
+    error = error + " has not been enabled.";
+
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, error.c_str());
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_05000232);
+    VkDescriptorSetLayout ds_layout = VK_NULL_HANDLE;
+    vkCreateDescriptorSetLayout(m_device->handle(), &ds_layout_ci, nullptr, &ds_layout);
+    m_errorMonitor->VerifyFound();
+    vkDestroyDescriptorSetLayout(m_device->handle(), ds_layout, nullptr);
+}
+
 TEST_F(VkLayerTest, ViewportBoundsCheckingWithNVHExtensionEnabled) {
     TEST_DESCRIPTION("Verify errors are detected on misuse of SetViewport with a negative viewport extension enabled.");
 
