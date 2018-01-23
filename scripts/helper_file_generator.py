@@ -1103,6 +1103,7 @@ class HelperFileOutputGenerator(OutputGenerator):
         typename_func = fprefix + 'typename'
         idname_func = fprefix + 'stype_name'
         find_func = fprefix + 'find_in_chain'
+        init_func = fprefix + 'init_struct'
 
         explanatory_comment = '\n'.join((
                 '// These empty generic templates are specialized for each type with sType',
@@ -1142,22 +1143,35 @@ class HelperFileOutputGenerator(OutputGenerator):
             '    }}',
             '    return found;',
             '}}',
+            '',
+            '// Init the header of an sType struct with pNext',
+            'template <typename T> T {init_func}(void *p_next) {{',
+            '    T out = {{}};',
+            '    out.sType = {type_map}<T>::kSType;',
+            '    out.pNext = p_next;',
+            '    return out;',
+            '}}',
+                        '',
+            '// Init the header of an sType struct',
+            'template <typename T> T {init_func}() {{',
+            '    T out = {{}};',
+            '    out.sType = {type_map}<T>::kSType;',
+            '    return out;',
+            '}}',
+
             ''))
 
         code = []
+
+        # Generate header
         code.append('\n'.join((
             '#pragma once',
             '#include <vulkan/vulkan.h>\n',
             explanatory_comment, '',
             empty_idmap,
-            empty_typemap, '',
-            utilities_format.format(id_member=id_member, id_map=idmap, type_map=typemap,
-                type_member=type_member, header=generic_header, typename_func=typename_func, idname_func=idname_func,
-                find_func=find_func), ''
-            )))
+            empty_typemap, '')))
 
         # Generate the specializations for each type and stype
-
         for item in self.structMembers:
             typename = item.name
             info = self.structTypes.get(typename)
@@ -1174,6 +1188,13 @@ class HelperFileOutputGenerator(OutputGenerator):
 
             if item.ifdef_protect != None:
                 code.append('#endif // %s' % item.ifdef_protect)
+
+        # Generate utilities for all types
+        code.append('\n'.join((
+            utilities_format.format(id_member=id_member, id_map=idmap, type_map=typemap,
+                type_member=type_member, header=generic_header, typename_func=typename_func, idname_func=idname_func,
+                find_func=find_func, init_func=init_func), ''
+            )))
 
         return "\n".join(code)
 
