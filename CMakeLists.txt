@@ -208,7 +208,7 @@ else()
 endif()
 
 find_program(GLSLANG_VALIDATOR NAMES glslangValidator
-             HINTS "${CMAKE_SOURCE_DIR}/external/glslang/${BUILDTGT_DIR}/install/bin"
+             HINTS "${EXTERNAL_SOURCE_ROOT}/glslang/${BUILDTGT_DIR}/install/bin"
                    "${GLSLANG_BINARY_ROOT}/StandAlone"
                    "${PROJECT_SOURCE_DIR}/external/${BINDATA_DIR}")
 
