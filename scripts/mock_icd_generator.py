@@ -839,8 +839,8 @@ class MockICDOutputGenerator(OutputGenerator):
             # Include all of the extensions in ICD except specific ignored ones
             device_exts = []
             instance_exts = []
-            # Ignore extensions that ICDs should not implement
-            ignore_exts = ['VK_EXT_validation_cache']
+            # Ignore extensions that ICDs should not implement or are not safe to report
+            ignore_exts = ['VK_EXT_validation_cache', 'VK_KHR_push_descriptor']
             for ext in self.registry.tree.findall("extensions/extension"):
                 if '0' != ext[0][0].attrib['value']: # Only include implemented extensions
                     if (ext.attrib['name'] in ignore_exts):
