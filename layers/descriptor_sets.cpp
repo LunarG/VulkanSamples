@@ -107,17 +107,54 @@ cvdescriptorset::DescriptorSetLayout::DescriptorSetLayout(const VkDescriptorSetL
 }
 
 // Validate descriptor set layout create info
-bool cvdescriptorset::DescriptorSetLayout::ValidateCreateInfo(debug_report_data *report_data,
-                                                              const VkDescriptorSetLayoutCreateInfo *create_info) {
+bool cvdescriptorset::DescriptorSetLayout::ValidateCreateInfo(const debug_report_data *report_data,
+                                                              const VkDescriptorSetLayoutCreateInfo *create_info,
+                                                              const bool push_descriptor_ext, const uint32_t max_push_descriptors) {
     bool skip = false;
     std::unordered_set<uint32_t> bindings;
+    uint64_t total_descriptors = 0;
+
+    const bool push_descriptor_set = create_info->flags & VK_DESCRIPTOR_SET_LAYOUT_CREATE_PUSH_DESCRIPTOR_BIT_KHR;
+    if (push_descriptor_set && !push_descriptor_ext) {
+        skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
+                        DRAWSTATE_EXTENSION_NOT_ENABLED, "DS",
+                        "Attemped to use %s in %s but its required extension %s has not been enabled.\n",
+                        "VK_DESCRIPTOR_SET_LAYOUT_CREATE_PUSH_DESCRIPTOR_BIT_KHR", "VkDescriptorSetLayoutCreateInfo::flags",
+                        VK_KHR_PUSH_DESCRIPTOR_EXTENSION_NAME);
+    }
+
+    auto valid_type = [push_descriptor_set](const VkDescriptorType type) {
+        return !push_descriptor_set ||
+               ((type != VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC) && (type != VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC));
+    };
+
     for (uint32_t i = 0; i < create_info->bindingCount; ++i) {
-        if (!bindings.insert(create_info->pBindings[i].binding).second) {
+        const auto &binding_info = create_info->pBindings[i];
+        if (!bindings.insert(binding_info.binding).second) {
             skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
                             VALIDATION_ERROR_0500022e, "DS", "duplicated binding number in VkDescriptorSetLayoutBinding. %s",
                             validation_error_map[VALIDATION_ERROR_0500022e]);
         }
+        if (!valid_type(binding_info.descriptorType)) {
+            skip |=
+                log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
+                        VALIDATION_ERROR_05000230, "DS",
+                        "invalid type %s ,for push descriptors in VkDescriptorSetLayoutBinding entry %" PRIu32 ". %s",
+                        string_VkDescriptorType(binding_info.descriptorType), i, validation_error_map[VALIDATION_ERROR_05000230]);
+        }
+        total_descriptors += binding_info.descriptorCount;
     }
+
+    if ((push_descriptor_set) && (total_descriptors > max_push_descriptors)) {
+        const char *undefined = push_descriptor_ext ? "" : " -- undefined";
+        skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
+                        VALIDATION_ERROR_05000232, "DS",
+                        "for push descriptor, total descriptor count in layout (%" PRIu64
+                        ") must not be greater than VkPhysicalDevicePushDescriptorPropertiesKHR::maxPushDescriptors (%" PRIu32
+                        "%s). %s",
+                        total_descriptors, max_push_descriptors, undefined, validation_error_map[VALIDATION_ERROR_05000232]);
+    }
+
     return skip;
 }
 
