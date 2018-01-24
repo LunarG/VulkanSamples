@@ -1824,12 +1824,16 @@ bool cvdescriptorset::ValidateAllocateDescriptorSets(const core_validation::laye
 
     for (uint32_t i = 0; i < p_alloc_info->descriptorSetCount; i++) {
         auto layout = GetDescriptorSetLayout(dev_data, p_alloc_info->pSetLayouts[i]);
-        if (!layout) {
-            skip |=
-                log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_LAYOUT_EXT,
-                        HandleToUint64(p_alloc_info->pSetLayouts[i]), __LINE__, DRAWSTATE_INVALID_LAYOUT, "DS",
-                        "Unable to find set layout node for layout 0x%" PRIxLEAST64 " specified in vkAllocateDescriptorSets() call",
-                        HandleToUint64(p_alloc_info->pSetLayouts[i]));
+        if (layout) {  // nullptr layout indicates no valid layout handle for this device, validated/logged in object_tracker
+            if (layout->GetCreateFlags() & VK_DESCRIPTOR_SET_LAYOUT_CREATE_PUSH_DESCRIPTOR_BIT_KHR) {
+                skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_LAYOUT_EXT,
+                                HandleToUint64(p_alloc_info->pSetLayouts[i]), __LINE__, VALIDATION_ERROR_04c00268, "DS",
+                                "Layout 0x%" PRIxLEAST64 " specified at pSetLayouts[%" PRIu32
+                                "] in vkAllocateDescriptorSets() was created with invalid flag %s set. %s",
+                                HandleToUint64(p_alloc_info->pSetLayouts[i]), i,
+                                "VK_DESCRIPTOR_SET_LAYOUT_CREATE_PUSH_DESCRIPTOR_BIT_KHR",
+                                validation_error_map[VALIDATION_ERROR_04c00268]);
+            }
         }
     }
     if (!GetDeviceExtensions(dev_data)->vk_khr_maintenance1) {
