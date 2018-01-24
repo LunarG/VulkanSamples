@@ -21420,6 +21420,56 @@ TEST_F(VkLayerTest, PushDescriptorSetLayoutWithoutExtension) {
     vkDestroyDescriptorSetLayout(m_device->handle(), ds_layout, nullptr);
 }
 
+TEST_F(VkLayerTest, AllocatePushDescriptorSet) {
+    TEST_DESCRIPTION("Attempt to allocate a push descriptor set.");
+    if (InstanceExtensionSupported(VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME)) {
+        m_instance_extension_names.push_back(VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME);
+    } else {
+        printf("             Did not find VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME; skipped.\n");
+        return;
+    }
+
+    ASSERT_NO_FATAL_FAILURE(InitFramework(myDbgFunc, m_errorMonitor));
+    if (DeviceExtensionSupported(gpu(), nullptr, VK_KHR_PUSH_DESCRIPTOR_EXTENSION_NAME)) {
+        m_device_extension_names.push_back(VK_KHR_PUSH_DESCRIPTOR_EXTENSION_NAME);
+    } else {
+        printf("             %s Extension not supported, skipping tests\n", VK_KHR_PUSH_DESCRIPTOR_EXTENSION_NAME);
+        return;
+    }
+    ASSERT_NO_FATAL_FAILURE(InitState());
+
+    VkDescriptorSetLayoutBinding binding = {0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr};
+    auto ds_layout_ci = lvl_init_struct<VkDescriptorSetLayoutCreateInfo>();
+    ds_layout_ci.flags = VK_DESCRIPTOR_SET_LAYOUT_CREATE_PUSH_DESCRIPTOR_BIT_KHR;
+    ds_layout_ci.bindingCount = 1;
+    ds_layout_ci.pBindings = &binding;
+    VkDescriptorSetLayout ds_layout = VK_NULL_HANDLE;
+    VkResult err = vkCreateDescriptorSetLayout(m_device->handle(), &ds_layout_ci, nullptr, &ds_layout);
+    ASSERT_VK_SUCCESS(err);
+
+    VkDescriptorPoolSize pool_size = {binding.descriptorType, binding.descriptorCount};
+    auto dspci = lvl_init_struct<VkDescriptorPoolCreateInfo>();
+    dspci.poolSizeCount = 1;
+    dspci.pPoolSizes = &pool_size;
+    dspci.maxSets = 1;
+    VkDescriptorPool pool;
+    err = vkCreateDescriptorPool(m_device->handle(), &dspci, nullptr, &pool);
+    ASSERT_VK_SUCCESS(err);
+
+    auto ds_alloc_info = lvl_init_struct<VkDescriptorSetAllocateInfo>();
+    ds_alloc_info.descriptorPool = pool;
+    ds_alloc_info.descriptorSetCount = 1;
+    ds_alloc_info.pSetLayouts = &ds_layout;
+
+    VkDescriptorSet ds = VK_NULL_HANDLE;
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_04c00268);
+    vkAllocateDescriptorSets(m_device->handle(), &ds_alloc_info, &ds);
+    m_errorMonitor->VerifyFound();
+
+    vkDestroyDescriptorPool(m_device->handle(), pool, nullptr);
+    vkDestroyDescriptorSetLayout(m_device->handle(), ds_layout, nullptr);
+}
+
 TEST_F(VkLayerTest, ViewportBoundsCheckingWithNVHExtensionEnabled) {
     TEST_DESCRIPTION("Verify errors are detected on misuse of SetViewport with a negative viewport extension enabled.");
 
