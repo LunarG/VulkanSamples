@@ -508,10 +508,12 @@ VkDeviceObj::VkDeviceObj(uint32_t id, VkPhysicalDevice obj, std::vector<const ch
     queue_props = phy().queue_properties();
 }
 
-uint32_t VkDeviceObj::QueueFamilyWithoutCapabilities(VkQueueFlags capabilities) {
-    // Find a queue family without desired capabilities
+uint32_t VkDeviceObj::QueueFamilyMatching(VkQueueFlags with, VkQueueFlags without, bool all_bits) {
+    // Find a queue family with and without desired capabilities
     for (uint32_t i = 0; i < queue_props.size(); i++) {
-        if ((queue_props[i].queueFlags & capabilities) == 0 && (queue_props[i].queueCount > 0)) {
+        auto flags = queue_props[i].queueFlags;
+        bool matches = all_bits ? (flags & with) == with : (flags & with) != 0;
+        if (matches && ((flags & without) == 0) && (queue_props[i].queueCount > 0)) {
             return i;
         }
     }

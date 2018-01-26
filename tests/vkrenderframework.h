@@ -52,7 +52,11 @@ class VkDeviceObj : public vk_testing::Device {
     VkDeviceObj(uint32_t id, VkPhysicalDevice obj, std::vector<const char *> &extension_names,
                 VkPhysicalDeviceFeatures *features = nullptr);
 
-    uint32_t QueueFamilyWithoutCapabilities(VkQueueFlags capabilities);
+    uint32_t QueueFamilyMatching(VkQueueFlags with, VkQueueFlags without, bool all_bits = true);
+    uint32_t QueueFamilyWithoutCapabilities(VkQueueFlags capabilities) {
+        // an all_bits match with 0 matches all
+        return QueueFamilyMatching(VkQueueFlags(0), capabilities, true /* all_bits with */);
+    }
 
     VkDevice device() { return handle(); }
     void get_device_queue();
