@@ -21425,7 +21425,7 @@ TEST_F(VkLayerTest, AllocatePushDescriptorSet) {
     if (InstanceExtensionSupported(VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME)) {
         m_instance_extension_names.push_back(VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME);
     } else {
-        printf("             Did not find VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME; skipped.\n");
+        printf("             %s Extension not supported, skipping tests\n", VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME);
         return;
     }
 
@@ -21468,6 +21468,120 @@ TEST_F(VkLayerTest, AllocatePushDescriptorSet) {
 
     vkDestroyDescriptorPool(m_device->handle(), pool, nullptr);
     vkDestroyDescriptorSetLayout(m_device->handle(), ds_layout, nullptr);
+}
+
+TEST_F(VkLayerTest, PushDescriptorSetCmdPushBadArgs) {
+    TEST_DESCRIPTION("Attempt to push a push descriptor set with incorrect arguments.");
+    if (InstanceExtensionSupported(VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME)) {
+        m_instance_extension_names.push_back(VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME);
+    } else {
+        printf("             %s Extension not supported, skipping tests\n", VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME);
+        return;
+    }
+
+    ASSERT_NO_FATAL_FAILURE(InitFramework(myDbgFunc, m_errorMonitor));
+    if (DeviceExtensionSupported(gpu(), nullptr, VK_KHR_PUSH_DESCRIPTOR_EXTENSION_NAME)) {
+        m_device_extension_names.push_back(VK_KHR_PUSH_DESCRIPTOR_EXTENSION_NAME);
+    } else {
+        printf("             %s Extension not supported, skipping tests\n", VK_KHR_PUSH_DESCRIPTOR_EXTENSION_NAME);
+        return;
+    }
+    ASSERT_NO_FATAL_FAILURE(InitState());
+
+    // Create ordinary and push descriptor set layout
+    VkDescriptorSetLayoutBinding binding = {0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr};
+    const VkDescriptorSetLayoutObj ds_layout(m_device, {binding});
+    ASSERT_TRUE(ds_layout.initialized());
+    const VkDescriptorSetLayoutObj push_ds_layout(m_device, {binding}, VK_DESCRIPTOR_SET_LAYOUT_CREATE_PUSH_DESCRIPTOR_BIT_KHR);
+    ASSERT_TRUE(push_ds_layout.initialized());
+
+    // Now use the descriptor set layouts to create a pipeline layout
+    const VkPipelineLayoutObj pipeline_layout(m_device, {&push_ds_layout, &ds_layout});
+    ASSERT_TRUE(pipeline_layout.initialized());
+
+    // Create a descriptor to push
+    const uint32_t buffer_data[4] = {4, 5, 6, 7};
+    VkConstantBufferObj buffer_obj(m_device, sizeof(buffer_data), &buffer_data);
+    ASSERT_TRUE(buffer_obj.initialized());
+
+    // Create a "write" struct, noting that the buffer_info cannot be a temporary arg (the return from write_descriptor_set
+    // references its data), and the DescriptorSet() can be temporary, because the value is ignored
+    VkDescriptorBufferInfo buffer_info = {buffer_obj.handle(), 0, VK_WHOLE_SIZE};
+
+    VkWriteDescriptorSet descriptor_write = vk_testing::Device::write_descriptor_set(
+        vk_testing::DescriptorSet(), 0, 0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1, &buffer_info);
+
+    // Find address of extension call and make the call
+    PFN_vkCmdPushDescriptorSetKHR vkCmdPushDescriptorSetKHR =
+        (PFN_vkCmdPushDescriptorSetKHR)vkGetDeviceProcAddr(m_device->device(), "vkCmdPushDescriptorSetKHR");
+    ASSERT_TRUE(vkCmdPushDescriptorSetKHR != nullptr);
+
+    // Section 1: Queue family matching/capabilities.
+    // Create command pool on a non-graphics queue
+    const uint32_t no_gfx_qfi = m_device->QueueFamilyMatching(VK_QUEUE_COMPUTE_BIT, VK_QUEUE_GRAPHICS_BIT);
+    const uint32_t transfer_only_qfi =
+        m_device->QueueFamilyMatching(VK_QUEUE_TRANSFER_BIT, (VK_QUEUE_COMPUTE_BIT | VK_QUEUE_GRAPHICS_BIT));
+    if ((UINT32_MAX == transfer_only_qfi) && (UINT32_MAX == no_gfx_qfi)) {
+        printf("             No compute or transfer only queue family, skipping bindpoint and queue tests.");
+    } else {
+        const uint32_t err_qfi = (UINT32_MAX == no_gfx_qfi) ? transfer_only_qfi : no_gfx_qfi;
+
+        VkCommandPoolObj command_pool(m_device, err_qfi);
+        ASSERT_TRUE(command_pool.initialized());
+        VkCommandBufferObj command_buffer(m_device, &command_pool);
+        ASSERT_TRUE(command_buffer.initialized());
+        command_buffer.begin();
+
+        m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_1be002d6);
+        if (err_qfi == transfer_only_qfi) {
+            // This as this queue neither supports the gfx or compute bindpoints, we'll get two errors
+            m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_1be02415);
+        }
+        vkCmdPushDescriptorSetKHR(command_buffer.handle(), VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_layout.handle(), 0, 1,
+                                  &descriptor_write);
+        m_errorMonitor->VerifyFound();
+        command_buffer.end();
+
+        // If we succeed in testing only one condition above, we need to test the other below.
+        if ((UINT32_MAX != transfer_only_qfi) && (err_qfi != transfer_only_qfi)) {
+            // Need to test the neither compute/gfx supported case separately.
+            VkCommandPoolObj tran_command_pool(m_device, transfer_only_qfi);
+            ASSERT_TRUE(tran_command_pool.initialized());
+            VkCommandBufferObj tran_command_buffer(m_device, &tran_command_pool);
+            ASSERT_TRUE(tran_command_buffer.initialized());
+            tran_command_buffer.begin();
+
+            // We can't avoid getting *both* errors in this case
+            m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_1be002d6);
+            m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_1be02415);
+            vkCmdPushDescriptorSetKHR(tran_command_buffer.handle(), VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_layout.handle(), 0, 1,
+                                      &descriptor_write);
+            m_errorMonitor->VerifyFound();
+            tran_command_buffer.end();
+        }
+    }
+
+    // Push to the non-push binding
+    m_commandBuffer->begin();
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_1be002da);
+    vkCmdPushDescriptorSetKHR(m_commandBuffer->handle(), VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_layout.handle(), 1, 1,
+                              &descriptor_write);
+    m_errorMonitor->VerifyFound();
+
+    // Specify set out of bounds
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_1be002d8);
+    vkCmdPushDescriptorSetKHR(m_commandBuffer->handle(), VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_layout.handle(), 2, 1,
+                              &descriptor_write);
+    m_errorMonitor->VerifyFound();
+    m_commandBuffer->end();
+
+    // This is a test for VUID-vkCmdPushDescriptorSetKHR-commandBuffer-recording
+    // TODO: Add VALIDATION_ERROR_ code support to core_validation::ValidateCmd
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
+                                         "You must call vkBeginCommandBuffer() before this call to vkCmdPushDescriptorSetKHR()");
+    vkCmdPushDescriptorSetKHR(m_commandBuffer->handle(), VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_layout.handle(), 0, 1,
+                              &descriptor_write);
+    m_errorMonitor->VerifyFound();
 }
 
 TEST_F(VkLayerTest, ViewportBoundsCheckingWithNVHExtensionEnabled) {
