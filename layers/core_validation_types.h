@@ -426,6 +426,7 @@ enum CMD_TYPE {
     CMD_ENDRENDERPASS,
     CMD_EXECUTECOMMANDS,
     CMD_END,  // Should be last command in any RECORDED cmd buffer
+    CMD_PUSHDESCRIPTORSET,
 };
 
 enum CB_STATE {

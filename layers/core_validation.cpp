@@ -37,6 +37,7 @@
 #define NOMINMAX
 
 #include <algorithm>
+#include <array>
 #include <assert.h>
 #include <iostream>
 #include <list>
@@ -5624,7 +5625,7 @@ VKAPI_ATTR void VKAPI_CALL CmdBindPipeline(VkCommandBuffer commandBuffer, VkPipe
         skip |= ValidateCmdQueueFlags(dev_data, cb_state, "vkCmdBindPipeline()", VK_QUEUE_GRAPHICS_BIT | VK_QUEUE_COMPUTE_BIT,
                                       VALIDATION_ERROR_18002415);
         skip |= ValidateCmd(dev_data, cb_state, CMD_BINDPIPELINE, "vkCmdBindPipeline()");
-        // TODO: VALIDATION_ERROR_18000612 VALIDATION_ERROR_18000616
+        // TODO: VALIDATION_ERROR_18000612 VALIDATION_ERROR_18000616  -- using ValidatePipelineBindPoint
 
         auto pipe_state = getPipelineState(dev_data, pipeline);
         if (VK_PIPELINE_BIND_POINT_GRAPHICS == pipelineBindPoint) {
@@ -6045,11 +6046,73 @@ VKAPI_ATTR void VKAPI_CALL CmdBindDescriptorSets(VkCommandBuffer commandBuffer, 
     }
 }
 
-static void PreCallRecordCmdPushDescriptorSetKHR(layer_data *device_data, VkCommandBuffer commandBuffer,
+// Validates that the supplied bind point is supported for the command buffer (vis. the command pool)
+// Takes array of error codes as some of the VUID's (e.g. vkCmdBindPipeline) are written per bindpoint
+// TODO add vkCmdBindPipeline bind_point validation using this call.
+bool ValidatePipelineBindPoint(layer_data *device_data, GLOBAL_CB_NODE *cb_state, VkPipelineBindPoint bind_point,
+                               const char *func_name,
+                               const std::array<UNIQUE_VALIDATION_ERROR_CODE, VK_PIPELINE_BIND_POINT_RANGE_SIZE> &bind_errors) {
+    bool skip = false;
+    auto pool = GetCommandPoolNode(device_data, cb_state->createInfo.commandPool);
+    if (pool) {  // The loss of a pool in a recording cmd is reported in DestroyCommandPool
+        static const VkQueueFlags flag_mask[VK_PIPELINE_BIND_POINT_RANGE_SIZE] = {VK_QUEUE_GRAPHICS_BIT, VK_QUEUE_COMPUTE_BIT};
+        const auto bind_point_index = bind_point - VK_PIPELINE_BIND_POINT_BEGIN_RANGE;  // typeof enum is not defined, use auto
+        const auto &qfp = GetPhysDevProperties(device_data)->queue_family_properties[pool->queueFamilyIndex];
+        if (0 == (qfp.queueFlags & flag_mask[bind_point_index])) {
+            const UNIQUE_VALIDATION_ERROR_CODE error = bind_errors[bind_point_index];
+            auto cb_u64 = HandleToUint64(cb_state->commandBuffer);
+            auto cp_u64 = HandleToUint64(cb_state->createInfo.commandPool);
+            skip |= log_msg(device_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
+                            cb_u64, __LINE__, error, "DS",
+                            "%s: CommandBuffer 0x%" PRIxLEAST64 " was allocated from VkCommandPool 0x%" PRIxLEAST64
+                            " that does not support bindpoint %s. %s",
+                            func_name, cb_u64, cp_u64, string_VkPipelineBindPoint(bind_point), validation_error_map[error]);
+        }
+    }
+    return skip;
+}
+
+static bool PreCallValidateCmdPushDescriptorSetKHR(layer_data *device_data, GLOBAL_CB_NODE *cb_state,
+                                                   const VkPipelineBindPoint bind_point, const VkPipelineLayout layout,
+                                                   const uint32_t set, const uint32_t descriptor_write_count,
+                                                   const VkWriteDescriptorSet *descriptor_writes, const char *func_name) {
+    bool skip = false;
+    skip |= ValidateCmd(device_data, cb_state, CMD_PUSHDESCRIPTORSET, func_name);
+    skip |= ValidateCmdQueueFlags(device_data, cb_state, func_name, (VK_QUEUE_GRAPHICS_BIT | VK_QUEUE_COMPUTE_BIT),
+                                  VALIDATION_ERROR_1be02415);
+    skip |= ValidatePipelineBindPoint(device_data, cb_state, bind_point, func_name,
+                                      {{VALIDATION_ERROR_1be002d6, VALIDATION_ERROR_1be002d6}});
+    auto layout_data = getPipelineLayout(device_data, layout);
+
+    // Validate the set index points to a push descriptor set and is in range
+    if (layout_data) {
+        const auto &set_layouts = layout_data->set_layouts;
+        const auto layout_u64 = HandleToUint64(layout);
+        if (set < set_layouts.size()) {
+            const auto *dsl = set_layouts[set].get();
+            if (dsl && (0 == (dsl->GetCreateFlags() & VK_DESCRIPTOR_SET_LAYOUT_CREATE_PUSH_DESCRIPTOR_BIT_KHR))) {
+                skip =
+                    log_msg(device_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT,
+                            VK_DEBUG_REPORT_OBJECT_TYPE_PIPELINE_LAYOUT_EXT, layout_u64, __LINE__, VALIDATION_ERROR_1be002da, "DS",
+                            "%s: Set index %" PRIu32
+                            " does not match push descriptor set layout index for VkPipelineLayout 0x%" PRIxLEAST64 ". %s",
+                            func_name, set, layout_u64, validation_error_map[VALIDATION_ERROR_1be002da]);
+            }
+        } else {
+            skip = log_msg(device_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_PIPELINE_LAYOUT_EXT,
+                           layout_u64, __LINE__, VALIDATION_ERROR_1be002d8, "DS",
+                           "%s: Set index %" PRIu32 " is outside of range for VkPipelineLayout 0x%" PRIxLEAST64 " (set < %" PRIu32
+                           "). %s",
+                           func_name, set, layout_u64, static_cast<uint32_t>(set_layouts.size()),
+                           validation_error_map[VALIDATION_ERROR_1be002d8]);
+        }
+    }
+
+    return skip;
+}
+static void PreCallRecordCmdPushDescriptorSetKHR(layer_data *device_data, GLOBAL_CB_NODE *cb_state,
                                                  VkPipelineBindPoint pipelineBindPoint, VkPipelineLayout layout, uint32_t set,
                                                  uint32_t descriptorWriteCount, const VkWriteDescriptorSet *pDescriptorWrites) {
-    auto cb_state = GetCBNode(device_data, commandBuffer);
-
     if (set >= cb_state->lastBound[pipelineBindPoint].boundDescriptorSets.size()) {
         cb_state->lastBound[pipelineBindPoint].boundDescriptorSets.resize(set + 1);
         cb_state->lastBound[pipelineBindPoint].dynamicOffsets.resize(set + 1);
@@ -6066,11 +6129,16 @@ VKAPI_ATTR void VKAPI_CALL CmdPushDescriptorSetKHR(VkCommandBuffer commandBuffer
                                                    const VkWriteDescriptorSet *pDescriptorWrites) {
     layer_data *device_data = GetLayerDataPtr(get_dispatch_key(commandBuffer), layer_data_map);
     unique_lock_t lock(global_lock);
-    PreCallRecordCmdPushDescriptorSetKHR(device_data, commandBuffer, pipelineBindPoint, layout, set, descriptorWriteCount,
-                                         pDescriptorWrites);
-    lock.unlock();
-    device_data->dispatch_table.CmdPushDescriptorSetKHR(commandBuffer, pipelineBindPoint, layout, set, descriptorWriteCount,
-                                                        pDescriptorWrites);
+    auto cb_state = GetCBNode(device_data, commandBuffer);
+    bool skip = PreCallValidateCmdPushDescriptorSetKHR(device_data, cb_state, pipelineBindPoint, layout, set, descriptorWriteCount,
+                                                       pDescriptorWrites, "vkCmdPushDescriptorSetKHR()");
+    if (!skip) {
+        PreCallRecordCmdPushDescriptorSetKHR(device_data, cb_state, pipelineBindPoint, layout, set, descriptorWriteCount,
+                                             pDescriptorWrites);
+        lock.unlock();
+        device_data->dispatch_table.CmdPushDescriptorSetKHR(commandBuffer, pipelineBindPoint, layout, set, descriptorWriteCount,
+                                                            pDescriptorWrites);
+    }
 }
 
 static VkDeviceSize GetIndexAlignment(VkIndexType indexType) {
