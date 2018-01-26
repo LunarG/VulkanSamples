@@ -213,14 +213,14 @@ class ValidationSource:
                         continue
                     # Find enums
                     #if 'VALIDATION_ERROR_' in line and True not in [ignore in line for ignore in ['[VALIDATION_ERROR_', 'UNIQUE_VALIDATION_ERROR_CODE']]:
-                    if ' VALIDATION_ERROR_' in line:
+                    if 'VALIDATION_ERROR_' in line:
                         # Need to isolate the validation error enum
                         #print("Line has check:%s" % (line))
                         line_list = line.split()
                         enum_list = []
                         for str in line_list:
                             if 'VALIDATION_ERROR_' in str and True not in [ignore_str in str for ignore_str in ['[VALIDATION_ERROR_', 'VALIDATION_ERROR_UNDEFINED', 'UNIQUE_VALIDATION_ERROR_CODE']]:
-                                enum_list.append(str.strip(',);'))
+                                enum_list.append(str.strip(',);{}'))
                                 #break
                         for enum in enum_list:
                             if enum != '':
