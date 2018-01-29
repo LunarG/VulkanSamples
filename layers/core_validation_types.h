@@ -852,9 +852,8 @@ bool ValidateCmd(layer_data *dev_data, const GLOBAL_CB_NODE *cb_state, const CMD
 
 // Prototypes for layer_data accessor functions.  These should be in their own header file at some point
 VkFormatProperties GetFormatProperties(core_validation::layer_data *device_data, VkFormat format);
-VkImageFormatProperties GetImageFormatProperties(core_validation::layer_data *device_data, VkFormat format,
-                                                        VkImageType image_type, VkImageTiling tiling, VkImageUsageFlags usage,
-                                                        VkImageCreateFlags flags);
+VkResult GetImageFormatProperties(core_validation::layer_data *device_data, const VkImageCreateInfo *image_ci,
+                                  VkImageFormatProperties *image_format_properties);
 const debug_report_data *GetReportData(const layer_data *);
 const VkPhysicalDeviceProperties *GetPhysicalDeviceProperties(layer_data *);
 const CHECK_DISABLED *GetDisables(layer_data *);

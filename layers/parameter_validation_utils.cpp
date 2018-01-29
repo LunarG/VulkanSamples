@@ -770,13 +770,22 @@ bool pv_vkCreateImage(VkDevice device, const VkImageCreateInfo *pCreateInfo, con
         skip |= ValidateGreaterThanZero(pCreateInfo->mipLevels, "pCreateInfo->mipLevels", VALIDATION_ERROR_09e00766, log_misc);
         skip |= ValidateGreaterThanZero(pCreateInfo->arrayLayers, "pCreateInfo->arrayLayers", VALIDATION_ERROR_09e00768, log_misc);
 
+        // InitialLayout must be PREINITIALIZED or UNDEFINED
+        if ((pCreateInfo->initialLayout != VK_IMAGE_LAYOUT_UNDEFINED) && (pCreateInfo->initialLayout != VK_IMAGE_LAYOUT_PREINITIALIZED)) 
+        {
+            skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
+                VALIDATION_ERROR_09e007c2, LayerName,
+                "vkCreateImage(): initialLayout is %s, must be VK_IMAGE_LAYOUT_UNDEFINED or VK_IMAGE_LAYOUT_PREINITIALIZED. %s",
+                string_VkImageLayout(pCreateInfo->initialLayout), validation_error_map[VALIDATION_ERROR_09e007c2]);
+        }
+
         // If imageType is VK_IMAGE_TYPE_1D, both extent.height and extent.depth must be 1
         if ((pCreateInfo->imageType == VK_IMAGE_TYPE_1D) && (pCreateInfo->extent.height != 1) && (pCreateInfo->extent.depth != 1)) {
             skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
-                            VALIDATION_ERROR_09e00778, LayerName,
-                            "vkCreateImage(): if pCreateInfo->imageType is VK_IMAGE_TYPE_1D, both "
-                            "pCreateInfo->extent.height and pCreateInfo->extent.depth must be 1. %s",
-                            validation_error_map[VALIDATION_ERROR_09e00778]);
+                VALIDATION_ERROR_09e00778, LayerName,
+                "vkCreateImage(): if pCreateInfo->imageType is VK_IMAGE_TYPE_1D, both "
+                "pCreateInfo->extent.height and pCreateInfo->extent.depth must be 1. %s",
+                validation_error_map[VALIDATION_ERROR_09e00778]);
         }
 
         if (pCreateInfo->imageType == VK_IMAGE_TYPE_2D) {
@@ -798,6 +807,45 @@ bool pv_vkCreateImage(VkDevice device, const VkImageCreateInfo *pCreateInfo, con
                     VALIDATION_ERROR_09e0077a, LayerName,
                     "vkCreateImage(): if pCreateInfo->imageType is VK_IMAGE_TYPE_2D, pCreateInfo->extent.depth must be 1. %s",
                     validation_error_map[VALIDATION_ERROR_09e0077a]);
+            }
+        }
+
+        // 3D image may have only 1 layer
+        if ((pCreateInfo->imageType == VK_IMAGE_TYPE_3D) && (pCreateInfo->arrayLayers != 1)) {
+            skip |=
+                log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
+                        VALIDATION_ERROR_09e00782, LayerName,
+                        "vkCreateImage(): if pCreateInfo->imageType is VK_IMAGE_TYPE_3D, pCreateInfo->arrayLayers must be 1. %s",
+                        validation_error_map[VALIDATION_ERROR_09e00782]);
+        }
+
+        // If multi-sample, validate type, usage, tiling and mip levels.
+        if ((pCreateInfo->samples != VK_SAMPLE_COUNT_1_BIT) &&
+            ((pCreateInfo->imageType != VK_IMAGE_TYPE_2D) || (pCreateInfo->flags & VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT) ||
+             (pCreateInfo->tiling != VK_IMAGE_TILING_OPTIMAL) || (pCreateInfo->mipLevels != 1))) {
+            skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
+                            VALIDATION_ERROR_09e00784, LayerName,
+                            "vkCreateImage(): Multi-sample image with incompatible type, usage, tiling, or mips. %s",
+                            validation_error_map[VALIDATION_ERROR_09e00784]);
+        }
+
+        if (0 != (pCreateInfo->usage & VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT)) {
+            VkImageUsageFlags legal_flags = (VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT |
+                                             VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT);
+            // At least one of the legal attachment bits must be set
+            if (0 == (pCreateInfo->usage & legal_flags)) {
+                skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
+                                VALIDATION_ERROR_09e0078c, LayerName,
+                                "vkCreateImage(): Transient attachment image without a compatible attachment flag set. %s",
+                                validation_error_map[VALIDATION_ERROR_09e0078c]);
+            }
+            // No flags other than the legal attachment bits may be set
+            legal_flags |= VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT;
+            if (0 != (pCreateInfo->usage & ~legal_flags)) {
+                skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
+                                VALIDATION_ERROR_09e00786, LayerName,
+                                "vkCreateImage(): Transient attachment image with incompatible usage flags set. %s",
+                                validation_error_map[VALIDATION_ERROR_09e00786]);
             }
         }
 

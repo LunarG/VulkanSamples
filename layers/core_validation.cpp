@@ -4532,14 +4532,13 @@ VkFormatProperties GetFormatProperties(core_validation::layer_data *device_data,
     return format_properties;
 }
 
-VkImageFormatProperties GetImageFormatProperties(core_validation::layer_data *device_data, VkFormat format, VkImageType image_type,
-                                                 VkImageTiling tiling, VkImageUsageFlags usage, VkImageCreateFlags flags) {
-    VkImageFormatProperties image_format_properties;
+VkResult GetImageFormatProperties(core_validation::layer_data *device_data, const VkImageCreateInfo *image_ci,
+                                  VkImageFormatProperties *pImageFormatProperties) {
     instance_layer_data *instance_data =
         GetLayerDataPtr(get_dispatch_key(device_data->instance_data->instance), instance_layer_data_map);
-    instance_data->dispatch_table.GetPhysicalDeviceImageFormatProperties(device_data->physical_device, format, image_type, tiling,
-                                                                         usage, flags, &image_format_properties);
-    return image_format_properties;
+    return instance_data->dispatch_table.GetPhysicalDeviceImageFormatProperties(
+        device_data->physical_device, image_ci->format, image_ci->imageType, image_ci->tiling, image_ci->usage, image_ci->flags,
+        pImageFormatProperties);
 }
 
 const debug_report_data *GetReportData(const core_validation::layer_data *device_data) { return device_data->report_data; }
