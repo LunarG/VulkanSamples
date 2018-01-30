@@ -80,7 +80,7 @@ else()
     endif()
 endif()
 
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/demos)
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/..)
 
 add_executable(smoketest ${sources})
 target_compile_definitions(smoketest ${definitions})
