@@ -5632,7 +5632,7 @@ VKAPI_ATTR VkResult VKAPI_CALL EndCommandBuffer(VkCommandBuffer commandBuffer) {
             // https://github.com/KhronosGroup/Vulkan-LoaderAndValidationLayers/pull/516#discussion_r63013756
             skip |= insideRenderPass(dev_data, pCB, "vkEndCommandBuffer()", VALIDATION_ERROR_27400078);
         }
-        skip |= ValidateCmd(dev_data, pCB, CMD_END, "vkEndCommandBuffer()");
+        skip |= ValidateCmd(dev_data, pCB, CMD_ENDCOMMANDBUFFER, "vkEndCommandBuffer()");
         for (auto query : pCB->activeQueries) {
             skip |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
                             HandleToUint64(commandBuffer), __LINE__, VALIDATION_ERROR_2740007a, "DS",
@@ -5715,7 +5715,7 @@ VKAPI_ATTR void VKAPI_CALL CmdSetViewport(VkCommandBuffer commandBuffer, uint32_
     GLOBAL_CB_NODE *pCB = GetCBNode(dev_data, commandBuffer);
     if (pCB) {
         skip |= ValidateCmdQueueFlags(dev_data, pCB, "vkCmdSetViewport()", VK_QUEUE_GRAPHICS_BIT, VALIDATION_ERROR_1e002415);
-        skip |= ValidateCmd(dev_data, pCB, CMD_SETVIEWPORTSTATE, "vkCmdSetViewport()");
+        skip |= ValidateCmd(dev_data, pCB, CMD_SETVIEWPORT, "vkCmdSetViewport()");
         if (pCB->static_status & CBSTATUS_VIEWPORT_SET) {
             skip |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
                             HandleToUint64(commandBuffer), __LINE__, VALIDATION_ERROR_1e00098a, "DS",
@@ -5739,7 +5739,7 @@ VKAPI_ATTR void VKAPI_CALL CmdSetScissor(VkCommandBuffer commandBuffer, uint32_t
     GLOBAL_CB_NODE *pCB = GetCBNode(dev_data, commandBuffer);
     if (pCB) {
         skip |= ValidateCmdQueueFlags(dev_data, pCB, "vkCmdSetScissor()", VK_QUEUE_GRAPHICS_BIT, VALIDATION_ERROR_1d802415);
-        skip |= ValidateCmd(dev_data, pCB, CMD_SETSCISSORSTATE, "vkCmdSetScissor()");
+        skip |= ValidateCmd(dev_data, pCB, CMD_SETSCISSOR, "vkCmdSetScissor()");
         if (pCB->static_status & CBSTATUS_SCISSOR_SET) {
             skip |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
                             HandleToUint64(commandBuffer), __LINE__, VALIDATION_ERROR_1d80049c, "DS",
@@ -5762,7 +5762,7 @@ VKAPI_ATTR void VKAPI_CALL CmdSetLineWidth(VkCommandBuffer commandBuffer, float 
     GLOBAL_CB_NODE *pCB = GetCBNode(dev_data, commandBuffer);
     if (pCB) {
         skip |= ValidateCmdQueueFlags(dev_data, pCB, "vkCmdSetLineWidth()", VK_QUEUE_GRAPHICS_BIT, VALIDATION_ERROR_1d602415);
-        skip |= ValidateCmd(dev_data, pCB, CMD_SETLINEWIDTHSTATE, "vkCmdSetLineWidth()");
+        skip |= ValidateCmd(dev_data, pCB, CMD_SETLINEWIDTH, "vkCmdSetLineWidth()");
 
         if (pCB->static_status & CBSTATUS_LINE_WIDTH_SET) {
             skip |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
@@ -5787,7 +5787,7 @@ VKAPI_ATTR void VKAPI_CALL CmdSetDepthBias(VkCommandBuffer commandBuffer, float 
     GLOBAL_CB_NODE *pCB = GetCBNode(dev_data, commandBuffer);
     if (pCB) {
         skip |= ValidateCmdQueueFlags(dev_data, pCB, "vkCmdSetDepthBias()", VK_QUEUE_GRAPHICS_BIT, VALIDATION_ERROR_1cc02415);
-        skip |= ValidateCmd(dev_data, pCB, CMD_SETDEPTHBIASSTATE, "vkCmdSetDepthBias()");
+        skip |= ValidateCmd(dev_data, pCB, CMD_SETDEPTHBIAS, "vkCmdSetDepthBias()");
         if (pCB->static_status & CBSTATUS_DEPTH_BIAS_SET) {
             skip |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
                             HandleToUint64(commandBuffer), __LINE__, VALIDATION_ERROR_1cc0062a, "DS",
@@ -5817,7 +5817,7 @@ VKAPI_ATTR void VKAPI_CALL CmdSetBlendConstants(VkCommandBuffer commandBuffer, c
     GLOBAL_CB_NODE *pCB = GetCBNode(dev_data, commandBuffer);
     if (pCB) {
         skip |= ValidateCmdQueueFlags(dev_data, pCB, "vkCmdSetBlendConstants()", VK_QUEUE_GRAPHICS_BIT, VALIDATION_ERROR_1ca02415);
-        skip |= ValidateCmd(dev_data, pCB, CMD_SETBLENDSTATE, "vkCmdSetBlendConstants()");
+        skip |= ValidateCmd(dev_data, pCB, CMD_SETBLENDCONSTANTS, "vkCmdSetBlendConstants()");
         if (pCB->static_status & CBSTATUS_BLEND_CONSTANTS_SET) {
             skip |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
                             HandleToUint64(commandBuffer), __LINE__, VALIDATION_ERROR_1ca004c8, "DS",
@@ -5839,7 +5839,7 @@ VKAPI_ATTR void VKAPI_CALL CmdSetDepthBounds(VkCommandBuffer commandBuffer, floa
     GLOBAL_CB_NODE *pCB = GetCBNode(dev_data, commandBuffer);
     if (pCB) {
         skip |= ValidateCmdQueueFlags(dev_data, pCB, "vkCmdSetDepthBounds()", VK_QUEUE_GRAPHICS_BIT, VALIDATION_ERROR_1ce02415);
-        skip |= ValidateCmd(dev_data, pCB, CMD_SETDEPTHBOUNDSSTATE, "vkCmdSetDepthBounds()");
+        skip |= ValidateCmd(dev_data, pCB, CMD_SETDEPTHBOUNDS, "vkCmdSetDepthBounds()");
         if (pCB->static_status & CBSTATUS_DEPTH_BOUNDS_SET) {
             skip |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
                             HandleToUint64(commandBuffer), __LINE__, VALIDATION_ERROR_1ce004ae, "DS",
@@ -5863,7 +5863,7 @@ VKAPI_ATTR void VKAPI_CALL CmdSetStencilCompareMask(VkCommandBuffer commandBuffe
     if (pCB) {
         skip |=
             ValidateCmdQueueFlags(dev_data, pCB, "vkCmdSetStencilCompareMask()", VK_QUEUE_GRAPHICS_BIT, VALIDATION_ERROR_1da02415);
-        skip |= ValidateCmd(dev_data, pCB, CMD_SETSTENCILREADMASKSTATE, "vkCmdSetStencilCompareMask()");
+        skip |= ValidateCmd(dev_data, pCB, CMD_SETSTENCILCOMPAREMASK, "vkCmdSetStencilCompareMask()");
         if (pCB->static_status & CBSTATUS_STENCIL_READ_MASK_SET) {
             skip |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
                             HandleToUint64(commandBuffer), __LINE__, VALIDATION_ERROR_1da004b4, "DS",
@@ -5886,7 +5886,7 @@ VKAPI_ATTR void VKAPI_CALL CmdSetStencilWriteMask(VkCommandBuffer commandBuffer,
     if (pCB) {
         skip |=
             ValidateCmdQueueFlags(dev_data, pCB, "vkCmdSetStencilWriteMask()", VK_QUEUE_GRAPHICS_BIT, VALIDATION_ERROR_1de02415);
-        skip |= ValidateCmd(dev_data, pCB, CMD_SETSTENCILWRITEMASKSTATE, "vkCmdSetStencilWriteMask()");
+        skip |= ValidateCmd(dev_data, pCB, CMD_SETSTENCILWRITEMASK, "vkCmdSetStencilWriteMask()");
         if (pCB->static_status & CBSTATUS_STENCIL_WRITE_MASK_SET) {
             skip |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
                             HandleToUint64(commandBuffer), __LINE__, VALIDATION_ERROR_1de004b6, "DS",
@@ -5909,7 +5909,7 @@ VKAPI_ATTR void VKAPI_CALL CmdSetStencilReference(VkCommandBuffer commandBuffer,
     if (pCB) {
         skip |=
             ValidateCmdQueueFlags(dev_data, pCB, "vkCmdSetStencilReference()", VK_QUEUE_GRAPHICS_BIT, VALIDATION_ERROR_1dc02415);
-        skip |= ValidateCmd(dev_data, pCB, CMD_SETSTENCILREFERENCESTATE, "vkCmdSetStencilReference()");
+        skip |= ValidateCmd(dev_data, pCB, CMD_SETSTENCILREFERENCE, "vkCmdSetStencilReference()");
         if (pCB->static_status & CBSTATUS_STENCIL_REFERENCE_SET) {
             skip |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
                             HandleToUint64(commandBuffer), __LINE__, VALIDATION_ERROR_1dc004b8, "DS",
@@ -6142,7 +6142,7 @@ static bool PreCallValidateCmdPushDescriptorSetKHR(layer_data *device_data, GLOB
                                                    const uint32_t set, const uint32_t descriptor_write_count,
                                                    const VkWriteDescriptorSet *descriptor_writes, const char *func_name) {
     bool skip = false;
-    skip |= ValidateCmd(device_data, cb_state, CMD_PUSHDESCRIPTORSET, func_name);
+    skip |= ValidateCmd(device_data, cb_state, CMD_PUSHDESCRIPTORSETKHR, func_name);
     skip |= ValidateCmdQueueFlags(device_data, cb_state, func_name, (VK_QUEUE_GRAPHICS_BIT | VK_QUEUE_COMPUTE_BIT),
                                   VALIDATION_ERROR_1be02415);
     skip |= ValidatePipelineBindPoint(device_data, cb_state, bind_point, func_name,
@@ -6279,7 +6279,7 @@ VKAPI_ATTR void VKAPI_CALL CmdBindVertexBuffers(VkCommandBuffer commandBuffer, u
     assert(cb_node);
 
     skip |= ValidateCmdQueueFlags(dev_data, cb_node, "vkCmdBindVertexBuffers()", VK_QUEUE_GRAPHICS_BIT, VALIDATION_ERROR_18202415);
-    skip |= ValidateCmd(dev_data, cb_node, CMD_BINDVERTEXBUFFER, "vkCmdBindVertexBuffers()");
+    skip |= ValidateCmd(dev_data, cb_node, CMD_BINDVERTEXBUFFERS, "vkCmdBindVertexBuffers()");
     for (uint32_t i = 0; i < bindingCount; ++i) {
         auto buffer_state = GetBufferState(dev_data, pBuffers[i]);
         assert(buffer_state);
