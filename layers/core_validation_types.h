@@ -848,8 +848,7 @@ bool rangesIntersect(layer_data const *dev_data, MEMORY_RANGE const *range1, VkD
 bool ValidateBufferMemoryIsValid(layer_data *dev_data, BUFFER_STATE *buffer_state, const char *functionName);
 void SetBufferMemoryValid(layer_data *dev_data, BUFFER_STATE *buffer_state, bool valid);
 bool ValidateCmdSubpassState(const layer_data *dev_data, const GLOBAL_CB_NODE *pCB, const CMD_TYPE cmd_type);
-
-
+bool ValidateCmd(layer_data *dev_data, const GLOBAL_CB_NODE *cb_state, const CMD_TYPE cmd, const char *caller_name);
 
 // Prototypes for layer_data accessor functions.  These should be in their own header file at some point
 VkFormatProperties GetFormatProperties(core_validation::layer_data *device_data, VkFormat format);

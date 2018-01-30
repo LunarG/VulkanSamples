@@ -1670,6 +1670,73 @@ static bool ReportInvalidCommandBuffer(layer_data *dev_data, const GLOBAL_CB_NOD
     return skip;
 }
 
+// 'commandBuffer must be in the recording state' valid usage error code for each command
+// Note: grepping for ^^^^^^^^^ in vk_validation_databate is easily massaged into the following list
+// Note: C++11 doesn't automatically devolve enum types to the underlying type for hash traits purposes (fixed in C++14)
+using CmdTypeHashType = std::underlying_type<CMD_TYPE>::type;
+static const std::unordered_map<CmdTypeHashType, UNIQUE_VALIDATION_ERROR_CODE> must_be_recording_map = {
+    {CMD_NONE, VALIDATION_ERROR_UNDEFINED},  // UNMATCHED
+    {CMD_BEGINQUERY, VALIDATION_ERROR_17802413},
+    {CMD_BEGINRENDERPASS, VALIDATION_ERROR_17a02413},
+    {CMD_BINDDESCRIPTORSETS, VALIDATION_ERROR_17c02413},
+    {CMD_BINDINDEXBUFFER, VALIDATION_ERROR_17e02413},
+    {CMD_BINDPIPELINE, VALIDATION_ERROR_18002413},
+    {CMD_BINDVERTEXBUFFERS, VALIDATION_ERROR_18202413},
+    {CMD_BLITIMAGE, VALIDATION_ERROR_18402413},
+    {CMD_CLEARATTACHMENTS, VALIDATION_ERROR_18602413},
+    {CMD_CLEARCOLORIMAGE, VALIDATION_ERROR_18802413},
+    {CMD_CLEARDEPTHSTENCILIMAGE, VALIDATION_ERROR_18a02413},
+    {CMD_COPYBUFFER, VALIDATION_ERROR_18c02413},
+    {CMD_COPYBUFFERTOIMAGE, VALIDATION_ERROR_18e02413},
+    {CMD_COPYIMAGE, VALIDATION_ERROR_19002413},
+    {CMD_COPYIMAGETOBUFFER, VALIDATION_ERROR_19202413},
+    {CMD_COPYQUERYPOOLRESULTS, VALIDATION_ERROR_19402413},
+    {CMD_DEBUGMARKERBEGINEXT, VALIDATION_ERROR_19602413},
+    {CMD_DEBUGMARKERENDEXT, VALIDATION_ERROR_19802413},
+    {CMD_DEBUGMARKERINSERTEXT, VALIDATION_ERROR_19a02413},
+    {CMD_DISPATCH, VALIDATION_ERROR_19c02413},
+    // Exclude KHX (if not already present) { CMD_DISPATCHBASEKHX, VALIDATION_ERROR_19e02413 },
+    {CMD_DISPATCHINDIRECT, VALIDATION_ERROR_1a002413},
+    {CMD_DRAW, VALIDATION_ERROR_1a202413},
+    {CMD_DRAWINDEXED, VALIDATION_ERROR_1a402413},
+    {CMD_DRAWINDEXEDINDIRECT, VALIDATION_ERROR_1a602413},
+    // Exclude vendor ext (if not already present) { CMD_DRAWINDEXEDINDIRECTCOUNTAMD, VALIDATION_ERROR_1a802413 },
+    {CMD_DRAWINDIRECT, VALIDATION_ERROR_1aa02413},
+    // Exclude vendor ext (if not already present) { CMD_DRAWINDIRECTCOUNTAMD, VALIDATION_ERROR_1ac02413 },
+    {CMD_ENDCOMMANDBUFFER, VALIDATION_ERROR_27400076},
+    {CMD_ENDQUERY, VALIDATION_ERROR_1ae02413},
+    {CMD_ENDRENDERPASS, VALIDATION_ERROR_1b002413},
+    {CMD_EXECUTECOMMANDS, VALIDATION_ERROR_1b202413},
+    {CMD_FILLBUFFER, VALIDATION_ERROR_1b402413},
+    {CMD_NEXTSUBPASS, VALIDATION_ERROR_1b602413},
+    {CMD_PIPELINEBARRIER, VALIDATION_ERROR_1b802413},
+    // Exclude vendor ext (if not already present) { CMD_PROCESSCOMMANDSNVX, VALIDATION_ERROR_1ba02413 },
+    {CMD_PUSHCONSTANTS, VALIDATION_ERROR_1bc02413},
+    {CMD_PUSHDESCRIPTORSETKHR, VALIDATION_ERROR_1be02413},
+    {CMD_PUSHDESCRIPTORSETWITHTEMPLATEKHR, VALIDATION_ERROR_1c002413},
+    // Exclude vendor ext (if not already present) { CMD_RESERVESPACEFORCOMMANDSNVX, VALIDATION_ERROR_1c202413 },
+    {CMD_RESETEVENT, VALIDATION_ERROR_1c402413},
+    {CMD_RESETQUERYPOOL, VALIDATION_ERROR_1c602413},
+    {CMD_RESOLVEIMAGE, VALIDATION_ERROR_1c802413},
+    {CMD_SETBLENDCONSTANTS, VALIDATION_ERROR_1ca02413},
+    {CMD_SETDEPTHBIAS, VALIDATION_ERROR_1cc02413},
+    {CMD_SETDEPTHBOUNDS, VALIDATION_ERROR_1ce02413},
+    // Exclude KHX (if not already present) { CMD_SETDEVICEMASKKHX, VALIDATION_ERROR_1d002413 },
+    {CMD_SETDISCARDRECTANGLEEXT, VALIDATION_ERROR_1d202413},
+    {CMD_SETEVENT, VALIDATION_ERROR_1d402413},
+    {CMD_SETLINEWIDTH, VALIDATION_ERROR_1d602413},
+    {CMD_SETSAMPLELOCATIONSEXT, VALIDATION_ERROR_3e202413},
+    {CMD_SETSCISSOR, VALIDATION_ERROR_1d802413},
+    {CMD_SETSTENCILCOMPAREMASK, VALIDATION_ERROR_1da02413},
+    {CMD_SETSTENCILREFERENCE, VALIDATION_ERROR_1dc02413},
+    {CMD_SETSTENCILWRITEMASK, VALIDATION_ERROR_1de02413},
+    {CMD_SETVIEWPORT, VALIDATION_ERROR_1e002413},
+    // Exclude vendor ext (if not already present) { CMD_SETVIEWPORTWSCALINGNV, VALIDATION_ERROR_1e202413 },
+    {CMD_UPDATEBUFFER, VALIDATION_ERROR_1e402413},
+    {CMD_WAITEVENTS, VALIDATION_ERROR_1e602413},
+    {CMD_WRITETIMESTAMP, VALIDATION_ERROR_1e802413},
+};
+
 // Validate the given command being added to the specified cmd buffer, flagging errors if CB is not in the recording state or if
 // there's an issue with the Cmd ordering
 bool ValidateCmd(layer_data *dev_data, const GLOBAL_CB_NODE *cb_state, const CMD_TYPE cmd, const char *caller_name) {
@@ -1682,9 +1749,17 @@ bool ValidateCmd(layer_data *dev_data, const GLOBAL_CB_NODE *cb_state, const CMD
             return ReportInvalidCommandBuffer(dev_data, cb_state, caller_name);
 
         default:
+            auto error_it = must_be_recording_map.find(cmd);
+            // This assert lets us know that a vkCmd.* entrypoint has been added without enabling it in the map
+            assert(error_it != must_be_recording_map.cend());
+            if (error_it == must_be_recording_map.cend()) {
+                error_it = must_be_recording_map.find(CMD_NONE);  // But we'll handle the asserting case, in case of a test gap
+            }
+            const auto error = error_it->second;
             return log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
-                           HandleToUint64(cb_state->commandBuffer), __LINE__, DRAWSTATE_NO_BEGIN_COMMAND_BUFFER, "DS",
-                           "You must call vkBeginCommandBuffer() before this call to %s", caller_name);
+                           HandleToUint64(cb_state->commandBuffer), __LINE__, error, "DS",
+                           "You must call vkBeginCommandBuffer() before this call to %s. %s", caller_name,
+                           validation_error_map[error]);
     }
 }
 
@@ -11521,7 +11596,18 @@ VKAPI_ATTR void VKAPI_CALL CmdPushDescriptorSetWithTemplateKHR(VkCommandBuffer c
                                                                VkDescriptorUpdateTemplateKHR descriptorUpdateTemplate,
                                                                VkPipelineLayout layout, uint32_t set, const void *pData) {
     layer_data *dev_data = GetLayerDataPtr(get_dispatch_key(commandBuffer), layer_data_map);
-    dev_data->dispatch_table.CmdPushDescriptorSetWithTemplateKHR(commandBuffer, descriptorUpdateTemplate, layout, set, pData);
+    unique_lock_t lock(global_lock);
+    bool skip = false;
+    GLOBAL_CB_NODE *cb_state = GetCBNode(dev_data, commandBuffer);
+    // Minimal validation for command buffer state
+    if (cb_state) {
+        skip |= ValidateCmd(dev_data, cb_state, CMD_PUSHDESCRIPTORSETWITHTEMPLATEKHR, "vkCmdPushDescriptorSetWithTemplateKHR()");
+    }
+    lock.unlock();
+
+    if (!skip) {
+        dev_data->dispatch_table.CmdPushDescriptorSetWithTemplateKHR(commandBuffer, descriptorUpdateTemplate, layout, set, pData);
+    }
 }
 
 static void PostCallRecordGetPhysicalDeviceDisplayPlanePropertiesKHR(instance_layer_data *instanceData,
@@ -11645,17 +11731,72 @@ VKAPI_ATTR VkResult VKAPI_CALL DebugMarkerSetObjectTagEXT(VkDevice device, VkDeb
 
 VKAPI_ATTR void VKAPI_CALL CmdDebugMarkerBeginEXT(VkCommandBuffer commandBuffer, VkDebugMarkerMarkerInfoEXT *pMarkerInfo) {
     layer_data *device_data = GetLayerDataPtr(get_dispatch_key(commandBuffer), layer_data_map);
-    device_data->dispatch_table.CmdDebugMarkerBeginEXT(commandBuffer, pMarkerInfo);
+    unique_lock_t lock(global_lock);
+    bool skip = false;
+    GLOBAL_CB_NODE *cb_state = GetCBNode(device_data, commandBuffer);
+    // Minimal validation for command buffer state
+    if (cb_state) {
+        skip |= ValidateCmd(device_data, cb_state, CMD_DEBUGMARKERBEGINEXT, "vkCmdDebugMarkerBeginEXT()");
+    }
+    lock.unlock();
+    if (!skip) {
+        device_data->dispatch_table.CmdDebugMarkerBeginEXT(commandBuffer, pMarkerInfo);
+    }
 }
 
 VKAPI_ATTR void VKAPI_CALL CmdDebugMarkerEndEXT(VkCommandBuffer commandBuffer) {
     layer_data *device_data = GetLayerDataPtr(get_dispatch_key(commandBuffer), layer_data_map);
-    device_data->dispatch_table.CmdDebugMarkerEndEXT(commandBuffer);
+    unique_lock_t lock(global_lock);
+    bool skip = false;
+    GLOBAL_CB_NODE *cb_state = GetCBNode(device_data, commandBuffer);
+    // Minimal validation for command buffer state
+    if (cb_state) {
+        skip |= ValidateCmd(device_data, cb_state, CMD_DEBUGMARKERENDEXT, "vkCmdDebugMarkerEndEXT()");
+    }
+    lock.unlock();
+    if (!skip) {
+        device_data->dispatch_table.CmdDebugMarkerEndEXT(commandBuffer);
+    }
 }
 
 VKAPI_ATTR void VKAPI_CALL CmdDebugMarkerInsertEXT(VkCommandBuffer commandBuffer, VkDebugMarkerMarkerInfoEXT *pMarkerInfo) {
     layer_data *device_data = GetLayerDataPtr(get_dispatch_key(commandBuffer), layer_data_map);
     device_data->dispatch_table.CmdDebugMarkerInsertEXT(commandBuffer, pMarkerInfo);
+}
+
+VKAPI_ATTR void VKAPI_CALL CmdSetDiscardRectangleEXT(VkCommandBuffer commandBuffer, uint32_t firstDiscardRectangle,
+                                                     uint32_t discardRectangleCount, const VkRect2D *pDiscardRectangles) {
+    layer_data *dev_data = GetLayerDataPtr(get_dispatch_key(commandBuffer), layer_data_map);
+    unique_lock_t lock(global_lock);
+    bool skip = false;
+    GLOBAL_CB_NODE *cb_state = GetCBNode(dev_data, commandBuffer);
+    // Minimal validation for command buffer state
+    if (cb_state) {
+        skip |= ValidateCmd(dev_data, cb_state, CMD_SETDISCARDRECTANGLEEXT, "vkCmdSetDiscardRectangleEXT()");
+    }
+    lock.unlock();
+
+    if (!skip) {
+        dev_data->dispatch_table.CmdSetDiscardRectangleEXT(commandBuffer, firstDiscardRectangle, discardRectangleCount,
+                                                           pDiscardRectangles);
+    }
+}
+
+VKAPI_ATTR void VKAPI_CALL CmdSetSampleLocationsEXT(VkCommandBuffer commandBuffer,
+                                                    const VkSampleLocationsInfoEXT *pSampleLocationsInfo) {
+    layer_data *dev_data = GetLayerDataPtr(get_dispatch_key(commandBuffer), layer_data_map);
+    unique_lock_t lock(global_lock);
+    bool skip = false;
+    GLOBAL_CB_NODE *cb_state = GetCBNode(dev_data, commandBuffer);
+    // Minimal validation for command buffer state
+    if (cb_state) {
+        skip |= ValidateCmd(dev_data, cb_state, CMD_SETSAMPLELOCATIONSEXT, "vkCmdSetSampleLocationsEXT()");
+    }
+    lock.unlock();
+
+    if (!skip) {
+        dev_data->dispatch_table.CmdSetSampleLocationsEXT(commandBuffer, pSampleLocationsInfo);
+    }
 }
 
 VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL GetDeviceProcAddr(VkDevice device, const char *funcName);
@@ -11862,6 +12003,8 @@ static const std::unordered_map<std::string, void *> name_to_funcptr_map = {
     {"vkDestroyValidationCacheEXT", (void *)DestroyValidationCacheEXT},
     {"vkGetValidationCacheDataEXT", (void *)GetValidationCacheDataEXT},
     {"vkMergeValidationCachesEXT", (void *)MergeValidationCachesEXT},
+    {"vkCmdSetDiscardRectangleEXT", (void *)CmdSetDiscardRectangleEXT},
+    {"vkCmdSetSampleLocationsEXT", (void *)CmdSetSampleLocationsEXT},
 };
 
 VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL GetDeviceProcAddr(VkDevice device, const char *funcName) {

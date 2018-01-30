@@ -2261,6 +2261,9 @@ bool PreCallValidateCmdBlitImage(layer_data *device_data, GLOBAL_CB_NODE *cb_nod
     const debug_report_data *report_data = core_validation::GetReportData(device_data);
 
     bool skip = false;
+    if (cb_node) {
+        skip |= ValidateCmd(device_data, cb_node, CMD_BLITIMAGE, "vkCmdBlitImage()");
+    }
     if (cb_node && src_image_state && dst_image_state) {
         skip |= ValidateImageSampleCount(device_data, src_image_state, VK_SAMPLE_COUNT_1_BIT, "vkCmdBlitImage(): srcImage",
                                          VALIDATION_ERROR_184001d2);
@@ -3951,14 +3954,7 @@ bool PreCallValidateCmdCopyImageToBuffer(layer_data *device_data, VkImageLayout 
     bool skip = ValidateBufferImageCopyData(report_data, regionCount, pRegions, src_image_state, "vkCmdCopyImageToBuffer");
 
     // Validate command buffer state
-    if (CB_RECORDING != cb_node->state) {
-        skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
-                        HandleToUint64(cb_node->commandBuffer), __LINE__, VALIDATION_ERROR_19202413, "DS",
-                        "Cannot call vkCmdCopyImageToBuffer() on command buffer which is not in recording state. %s.",
-                        validation_error_map[VALIDATION_ERROR_19202413]);
-    } else {
-        skip |= ValidateCmdSubpassState(device_data, cb_node, CMD_COPYIMAGETOBUFFER);
-    }
+    skip |= ValidateCmd(device_data, cb_node, CMD_COPYIMAGETOBUFFER, "vkCmdCopyImageToBuffer()");
 
     // Command pool must support graphics, compute, or transfer operations
     auto pPool = GetCommandPoolNode(device_data, cb_node->createInfo.commandPool);
@@ -4027,14 +4023,7 @@ bool PreCallValidateCmdCopyBufferToImage(layer_data *device_data, VkImageLayout 
     bool skip = ValidateBufferImageCopyData(report_data, regionCount, pRegions, dst_image_state, "vkCmdCopyBufferToImage");
 
     // Validate command buffer state
-    if (CB_RECORDING != cb_node->state) {
-        skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
-                        HandleToUint64(cb_node->commandBuffer), __LINE__, VALIDATION_ERROR_18e02413, "DS",
-                        "Cannot call vkCmdCopyBufferToImage() on command buffer which is not in recording state. %s.",
-                        validation_error_map[VALIDATION_ERROR_18e02413]);
-    } else {
-        skip |= ValidateCmdSubpassState(device_data, cb_node, CMD_COPYBUFFERTOIMAGE);
-    }
+    skip |= ValidateCmd(device_data, cb_node, CMD_COPYBUFFERTOIMAGE, "vkCmdCopyBufferToImage()");
 
     // Command pool must support graphics, compute, or transfer operations
     auto pPool = GetCommandPoolNode(device_data, cb_node->createInfo.commandPool);
