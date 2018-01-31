@@ -19199,6 +19199,216 @@ TEST_F(VkLayerTest, ImageFormatLimits) {
     image_create_info.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 }
 
+VkResult GPDIFPHelper(VkPhysicalDevice dev, VkImageCreateInfo *ci, VkImageFormatProperties *limits) {
+    return vkGetPhysicalDeviceImageFormatProperties(dev, ci->format, ci->imageType, ci->tiling, ci->usage, ci->flags, limits);
+}
+
+TEST_F(VkLayerTest, ImageCreateInfoStructErrors) {
+    TEST_DESCRIPTION("Misc valid usage errors in vkImageCreateInfo struct");
+
+    ASSERT_NO_FATAL_FAILURE(Init());
+
+    VkFormat format = VK_FORMAT_B8G8R8A8_UNORM;
+    VkFormatProperties fmt_props;
+    vkGetPhysicalDeviceFormatProperties(m_device->phy().handle(), format, &fmt_props);
+    if ((fmt_props.linearTilingFeatures == 0) || (fmt_props.optimalTilingFeatures == 0)) {
+        format = VK_FORMAT_R8G8B8A8_UNORM;
+        vkGetPhysicalDeviceFormatProperties(m_device->phy().handle(), format, &fmt_props);
+        if ((fmt_props.linearTilingFeatures == 0) || (fmt_props.optimalTilingFeatures == 0)) {
+            printf("             Image format not supported, test skipped.\n");
+            return;
+        }
+    }
+
+    VkImage image;
+    VkImageCreateInfo image_ci = {};
+    image_ci.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+    image_ci.pNext = NULL;
+    image_ci.flags = 0;
+    image_ci.imageType = VK_IMAGE_TYPE_1D;
+    image_ci.format = format;
+    image_ci.extent = {64, 1, 1};
+    image_ci.mipLevels = 1;
+    image_ci.arrayLayers = 1;
+    image_ci.samples = VK_SAMPLE_COUNT_1_BIT;
+    image_ci.tiling = VK_IMAGE_TILING_OPTIMAL;
+    image_ci.usage = VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
+    image_ci.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+
+    VkImageFormatProperties img_limits = {};
+    const VkPhysicalDeviceLimits dev_limits = m_device->props.limits;
+
+    // InitialLayout not VK_IMAGE_LAYOUT_UNDEFINED or VK_IMAGE_LAYOUT_PREDEFINED
+    image_ci.initialLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_09e007c2);
+    vkCreateImage(m_device->handle(), &image_ci, NULL, &image);
+    m_errorMonitor->VerifyFound();
+    image_ci.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+
+    // 1D with CUBE_COMPATIBLE
+    image_ci.flags = VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT;
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_09e0076a);
+    vkCreateImage(m_device->handle(), &image_ci, NULL, &image);
+    m_errorMonitor->VerifyFound();
+    image_ci.flags = 0;
+
+    // 1D width
+    GPDIFPHelper(gpu(), &image_ci, &img_limits);
+    image_ci.extent.width = std::max(img_limits.maxExtent.width, dev_limits.maxImageDimension1D) + 1;
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_09e0076e);
+    vkCreateImage(m_device->handle(), &image_ci, NULL, &image);
+    m_errorMonitor->VerifyFound();
+
+    // 2D CUBE_COMPATIBLE extents
+    image_ci.imageType = VK_IMAGE_TYPE_2D;
+    image_ci.flags = VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT;
+    GPDIFPHelper(gpu(), &image_ci, &img_limits);
+    uint32_t dim = std::max({img_limits.maxExtent.width, img_limits.maxExtent.height, dev_limits.maxImageDimensionCube}) + 1;
+    image_ci.extent = {dim, dim, 1};
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_09e00772);
+    vkCreateImage(m_device->handle(), &image_ci, NULL, &image);
+    m_errorMonitor->VerifyFound();
+    image_ci.flags = 0;
+
+    // 3D extents
+    image_ci.imageType = VK_IMAGE_TYPE_3D;
+    GPDIFPHelper(gpu(), &image_ci, &img_limits);
+    image_ci.extent = {(std::max(img_limits.maxExtent.width, dev_limits.maxImageDimension3D) + 1), 4, 4};
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_09e00776);
+    vkCreateImage(m_device->handle(), &image_ci, NULL, &image);
+    m_errorMonitor->VerifyFound();
+    image_ci.extent = {4, (std::max(img_limits.maxExtent.height, dev_limits.maxImageDimension3D) + 1), 4};
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_09e00776);
+    vkCreateImage(m_device->handle(), &image_ci, NULL, &image);
+    m_errorMonitor->VerifyFound();
+    image_ci.extent = {4, 4, (std::max(img_limits.maxExtent.depth, dev_limits.maxImageDimension3D) + 1)};
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_09e00776);
+    vkCreateImage(m_device->handle(), &image_ci, NULL, &image);
+    m_errorMonitor->VerifyFound();
+
+    // 3D arrayLayers
+    image_ci.extent = {4, 4, 4};
+    image_ci.arrayLayers = 2;
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_09e00782);
+    vkCreateImage(m_device->handle(), &image_ci, NULL, &image);
+    m_errorMonitor->VerifyFound();
+    image_ci.arrayLayers = 1;
+
+    // Multi-sample
+    image_ci.samples = VK_SAMPLE_COUNT_4_BIT;
+    image_ci.imageType = VK_IMAGE_TYPE_3D;
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_09e00784);
+    vkCreateImage(m_device->handle(), &image_ci, NULL, &image);
+    m_errorMonitor->VerifyFound();
+    image_ci.imageType = VK_IMAGE_TYPE_2D;
+    image_ci.extent = {64, 64, 1};
+    image_ci.flags = VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT;
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_09e00784);
+    vkCreateImage(m_device->handle(), &image_ci, NULL, &image);
+    m_errorMonitor->VerifyFound();
+    image_ci.flags = 0;
+    image_ci.tiling = VK_IMAGE_TILING_LINEAR;
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_09e00784);
+    vkCreateImage(m_device->handle(), &image_ci, NULL, &image);
+    m_errorMonitor->VerifyFound();
+    image_ci.tiling = VK_IMAGE_TILING_OPTIMAL;
+    image_ci.mipLevels = 7;
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_09e00784);
+    vkCreateImage(m_device->handle(), &image_ci, NULL, &image);
+    m_errorMonitor->VerifyFound();
+    image_ci.mipLevels = 1;
+    image_ci.samples = VK_SAMPLE_COUNT_1_BIT;
+
+    // TRANSIENT with a non-attachment flag
+    image_ci.usage =
+        VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_09e00786);
+    vkCreateImage(m_device->handle(), &image_ci, NULL, &image);
+    m_errorMonitor->VerifyFound();
+
+    // TRANSIENT without another attachment flag
+    image_ci.usage = VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT;
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_09e0078c);
+    vkCreateImage(m_device->handle(), &image_ci, NULL, &image);
+    m_errorMonitor->VerifyFound();
+
+    // Frame buffer width
+    image_ci.usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;  // (any attachment bit)
+    GPDIFPHelper(gpu(), &image_ci, &img_limits);
+    image_ci.extent.width = dev_limits.maxFramebufferWidth + 1;
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_09e00788);
+    if (image_ci.extent.width > std::max(dev_limits.maxImageDimension2D, img_limits.maxExtent.width)) {
+        // Image/device limits are <= framebuffer limit - will also trip 770
+        m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_09e00770);
+    }
+    vkCreateImage(m_device->handle(), &image_ci, NULL, &image);
+    m_errorMonitor->VerifyFound();
+
+    // Frame buffer height
+    image_ci.usage = VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT;  // (any attachment bit)
+    image_ci.extent.width = 64;
+    image_ci.extent.height = dev_limits.maxFramebufferHeight + 1;
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_09e0078a);
+    if (image_ci.extent.height > std::max(dev_limits.maxImageDimension2D, img_limits.maxExtent.height)) {
+        // Image/device limits are <= framebuffer limit - will also trip 770
+        m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_09e00770);
+    }
+    vkCreateImage(m_device->handle(), &image_ci, NULL, &image);
+    m_errorMonitor->VerifyFound();
+
+    image_ci.format = VK_FORMAT_R8_SRGB;  // pick an 'unlikely' format
+    VkFormatProperties format_props;
+    vkGetPhysicalDeviceFormatProperties(gpu(), image_ci.format, &format_props);
+
+    // Linear tiling with unsupported feature
+    image_ci.tiling = VK_IMAGE_TILING_LINEAR;
+    bool unsupported = (VK_ERROR_FORMAT_NOT_SUPPORTED == GPDIFPHelper(gpu(), &image_ci, &img_limits));
+    if (format_props.linearTilingFeatures && (0 == (format_props.linearTilingFeatures & VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT))) {
+        image_ci.tiling = VK_IMAGE_TILING_LINEAR;
+        image_ci.usage = VK_IMAGE_USAGE_SAMPLED_BIT;
+        m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_09e007a4);
+        if (unsupported) {
+            m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_09e00758);
+        }
+        vkCreateImage(m_device->handle(), &image_ci, NULL, &image);
+        m_errorMonitor->VerifyFound();
+    }
+    if (format_props.linearTilingFeatures && (0 == (format_props.linearTilingFeatures & VK_FORMAT_FEATURE_STORAGE_IMAGE_BIT))) {
+        image_ci.tiling = VK_IMAGE_TILING_LINEAR;
+        image_ci.usage = VK_IMAGE_USAGE_STORAGE_BIT;
+        m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_09e007a6);
+        if (unsupported) {
+            m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_09e00758);
+        }
+        vkCreateImage(m_device->handle(), &image_ci, NULL, &image);
+        m_errorMonitor->VerifyFound();
+    }
+
+    // Optimal tiling with unsupported feature
+    image_ci.tiling = VK_IMAGE_TILING_OPTIMAL;
+    unsupported = (VK_ERROR_FORMAT_NOT_SUPPORTED == GPDIFPHelper(gpu(), &image_ci, &img_limits));
+    if (format_props.optimalTilingFeatures && (0 == (format_props.optimalTilingFeatures & VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT))) {
+        image_ci.tiling = VK_IMAGE_TILING_OPTIMAL;
+        image_ci.usage = VK_IMAGE_USAGE_SAMPLED_BIT;
+        m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_09e007ae);
+        if (unsupported) {
+            m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_09e00758);
+        }
+        vkCreateImage(m_device->handle(), &image_ci, NULL, &image);
+        m_errorMonitor->VerifyFound();
+    }
+    if (format_props.optimalTilingFeatures && (0 == (format_props.optimalTilingFeatures & VK_FORMAT_FEATURE_STORAGE_IMAGE_BIT))) {
+        image_ci.tiling = VK_IMAGE_TILING_OPTIMAL;
+        image_ci.usage = VK_IMAGE_USAGE_STORAGE_BIT;
+        m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_09e007b0);
+        if (unsupported) {
+            m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_09e00758);
+        }
+        vkCreateImage(m_device->handle(), &image_ci, NULL, &image);
+        m_errorMonitor->VerifyFound();
+    }
+}
+
 TEST_F(VkLayerTest, CopyImageTypeExtentMismatch) {
     // Image copy tests where format type and extents don't match
     ASSERT_NO_FATAL_FAILURE(Init());
