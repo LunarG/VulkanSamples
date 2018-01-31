@@ -13155,13 +13155,9 @@ TEST_F(VkLayerTest, RenderPassIncompatible) {
     VkShaderObj fs(m_device, bindStateFragShaderText, VK_SHADER_STAGE_FRAGMENT_BIT, this);  // We shouldn't need a fragment shader
     // but add it to be able to run on more devices
     // Create a renderpass that will be incompatible with default renderpass
-    VkAttachmentReference attach = {};
-    attach.layout = VK_IMAGE_LAYOUT_GENERAL;
     VkAttachmentReference color_att = {};
     color_att.layout = VK_IMAGE_LAYOUT_GENERAL;
     VkSubpassDescription subpass = {};
-    subpass.inputAttachmentCount = 1;
-    subpass.pInputAttachments = &attach;
     subpass.colorAttachmentCount = 1;
     subpass.pColorAttachments = &color_att;
     VkRenderPassCreateInfo rpci = {};
@@ -13187,7 +13183,7 @@ TEST_F(VkLayerTest, RenderPassIncompatible) {
     VkRect2D rect = {};
     m_scissors.push_back(rect);
     pipe.SetScissor(m_scissors);
-    pipe.CreateVKPipeline(pipeline_layout.handle(), renderPass());
+    pipe.CreateVKPipeline(pipeline_layout.handle(), rp);
 
     VkCommandBufferInheritanceInfo cbii = {};
     cbii.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_INFO;
@@ -13197,11 +13193,7 @@ TEST_F(VkLayerTest, RenderPassIncompatible) {
     cbbi.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
     cbbi.pInheritanceInfo = &cbii;
     vkBeginCommandBuffer(m_commandBuffer->handle(), &cbbi);
-    VkRenderPassBeginInfo rpbi = {};
-    rpbi.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-    rpbi.framebuffer = m_framebuffer;
-    rpbi.renderPass = rp;
-    vkCmdBeginRenderPass(m_commandBuffer->handle(), &rpbi, VK_SUBPASS_CONTENTS_INLINE);
+    vkCmdBeginRenderPass(m_commandBuffer->handle(), &m_renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
     vkCmdBindPipeline(m_commandBuffer->handle(), VK_PIPELINE_BIND_POINT_GRAPHICS, pipe.handle());
 
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_1a200366);
