@@ -18,14 +18,17 @@
 	dh $@ 
 
 override_dh_auto_build:
-	cd API-Samples/Tutorial
-	OUTDIR=../../debian/tmp/Tutorial ./build.sh
+	cd API-Samples/Tutorial && \
+	(OUTDIR=../../debian/tmp/Tutorial ./build.sh)
 
 override_dh_installdocs:
 	dh_installdocs debian/tmp/Tutorial
 
 override_dh_installexamples:
 	dh_installexamples API-Samples
+
+override_dh_auto_configure:
+	
 
 gentarball: SOURCE=vulkan-samples
 gentarball: UV=$(shell dpkg-parsechangelog|awk '/^Version:/ {print $$2}'|sed 's/-.*$$//')
