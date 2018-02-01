@@ -27,8 +27,9 @@ override_dh_installdocs:
 override_dh_installexamples:
 	dh_installexamples API-Samples
 
-# dh_make generated override targets
-# This is example for Cmake (See https://bugs.debian.org/641051 )
-#override_dh_auto_configure:
-#	dh_auto_configure -- #	-DCMAKE_LIBRARY_PATH=$(DEB_HOST_MULTIARCH)
-
+gentarball: SOURCE=vulkan-samples
+gentarball: UV=$(shell dpkg-parsechangelog|awk '/^Version:/ {print $$2}'|sed 's/-.*$$//')
+gentarball:
+	tar --transform 's,^,$(SOURCE)-$(UV)/,' \
+		--exclude 'debian' --exclude-vcs \
+		-cJf ../$(SOURCE)_$(UV).orig.tar.xz .
