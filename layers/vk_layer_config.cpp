@@ -69,11 +69,11 @@ std::string getEnvironment(const char *variable) {
 #endif
 }
 
-const char *getLayerOption(const char *_option) { return g_configFileObj.getOption(_option); }
+VK_LAYER_EXPORT const char *getLayerOption(const char *_option) { return g_configFileObj.getOption(_option); }
 
 // If option is NULL or stdout, return stdout, otherwise try to open option
 // as a filename. If successful, return file handle, otherwise stdout
-FILE *getLayerLogOutput(const char *_option, const char *layerName) {
+VK_LAYER_EXPORT FILE *getLayerLogOutput(const char *_option, const char *layerName) {
     FILE *log_output = NULL;
     if (!_option || !strcmp("stdout", _option))
         log_output = stdout;
@@ -92,8 +92,8 @@ FILE *getLayerLogOutput(const char *_option, const char *layerName) {
 }
 
 // Map option strings to flag enum values
-VkFlags GetLayerOptionFlags(std::string _option, std::unordered_map<std::string, VkFlags> const &enum_data,
-                            uint32_t option_default) {
+VK_LAYER_EXPORT VkFlags GetLayerOptionFlags(std::string _option, std::unordered_map<std::string, VkFlags> const &enum_data,
+                                            uint32_t option_default) {
     VkDebugReportFlagsEXT flags = option_default;
     std::string option_list = g_configFileObj.getOption(_option.c_str());
 
@@ -128,7 +128,7 @@ VkFlags GetLayerOptionFlags(std::string _option, std::unordered_map<std::string,
     return flags;
 }
 
-void setLayerOption(const char *_option, const char *_val) { g_configFileObj.setOption(_option, _val); }
+VK_LAYER_EXPORT void setLayerOption(const char *_option, const char *_val) { g_configFileObj.setOption(_option, _val); }
 
 // Constructor for ConfigFile. Initialize layers to log error messages to stdout by default. If a vk_layer_settings file is present,
 // its settings will override the defaults.
@@ -244,7 +244,7 @@ void ConfigFile::parseFile(const char *filename) {
     }
 }
 
-void print_msg_flags(VkFlags msgFlags, char *msg_flags) {
+VK_LAYER_EXPORT void print_msg_flags(VkFlags msgFlags, char *msg_flags) {
     bool separator = false;
 
     msg_flags[0] = 0;
