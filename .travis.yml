@@ -77,7 +77,7 @@ script:
       ./update_external_sources.sh --glslang --no-build
       # Build as few components as possible
       cmake -H. -Bbuild -DBUILD_LOADER=NO -DBUILD_TESTS=NO \
-          -DBUILD_LAYERS=NO -DBUILD_DEMOS=NO -DBUILD_VKTRACE=NO \
+          -DBUILD_DEMOS=NO -DBUILD_VKTRACE=NO \
           -DBUILD_VKJSON=NO -DBUILD_VIA=NO -DBUILD_ICD=NO
       make -C build -j $core_count
       cd ${TRAVIS_BUILD_DIR}
