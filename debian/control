@@ -1,0 +1,18 @@
+Source: vulkan-samples
+Section: doc
+Priority: optional
+Maintainer: Brett Johnson <brett@linuxturtle.net>
+Build-Depends: debhelper (>=9)
+Standards-Version: 3.9.6
+Homepage: https://github.com/LunarG/VulkanSamples
+#Vcs-Git: git://anonscm.debian.org/collab-maint/vulkan-samples.git
+#Vcs-Browser: https://anonscm.debian.org/cgit/collab-maint/vulkan-samples.git
+
+Package: lunarg-vulkan-tutorial
+Architecture: all
+Depends: ${misc:Depends}
+Description: LunarG Vulkan API Samples Tutorial
+ This tutorial is organized into sections that walk you through the steps to
+ create a simple Vulkan program. Each tutorial section corresponds directly to a
+ sample program in the LunarG samples progression and is designed to be read as
+ you look at and experiment with real code from the progression.
