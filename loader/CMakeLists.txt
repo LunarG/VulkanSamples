@@ -104,6 +104,7 @@ if (WIN32)
         add_dependencies(asm_offset generate_helper_files loader_gen_files)
         add_custom_command(OUTPUT gen_defines.asm DEPENDS asm_offset COMMAND asm_offset MASM)
         add_custom_target(loader_asm_gen_files DEPENDS gen_defines.asm)
+        set_target_properties(loader_asm_gen_files PROPERTIES FOLDER ${LVL_TARGET_FOLDER})
     else()
         message(WARNING "Could not find working MASM assebler\n${ASM_FAILURE_MSG}")
         set(OPT_LOADER_SRCS ${OPT_LOADER_SRCS} unknown_ext_chain.c)
@@ -137,6 +138,7 @@ add_custom_target(loader_gen_files DEPENDS
         vk_loader_extensions.h
         vk_loader_extensions.c
     )
+set_target_properties(loader_gen_files PROPERTIES FOLDER ${LVL_TARGET_FOLDER})
 
 if (WIN32)
     # Use static MSVCRT libraries

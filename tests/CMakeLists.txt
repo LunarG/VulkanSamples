@@ -97,6 +97,7 @@ else()
             COMMAND ${CMAKE_COMMAND} -E copy_if_different ${VALIDATE_DOC} vkvalidatelayerdoc.ps1
             VERBATIM
             )
+        set_target_properties(binary-dir-symlinks PROPERTIES FOLDER ${LVL_TARGET_FOLDER})
     endif()
 endif()
 

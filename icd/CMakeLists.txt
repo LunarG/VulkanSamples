@@ -37,6 +37,7 @@ if (WIN32)
                     COMMAND copy ${src_json} ${dst_json}
                     VERBATIM
                     )
+                set_target_properties(${config_file}-json PROPERTIES FOLDER ${LVL_TARGET_FOLDER})
             endforeach(config_file)
         else()
             foreach (config_file ${ICD_JSON_FILES})
@@ -71,6 +72,7 @@ add_custom_target(generate_icd_files DEPENDS
     mock_icd.h
     mock_icd.cpp
     )
+set_target_properties(generate_icd_files PROPERTIES FOLDER ${LVL_TARGET_FOLDER})
 
 if (WIN32)
     macro(add_vk_icd target)
@@ -79,6 +81,7 @@ if (WIN32)
         COMMAND ${CMAKE_COMMAND} -E copy_if_different ${DEF_FILE} VkICD_${target}.def
         VERBATIM
     )
+    set_target_properties(copy-${target}-def-file PROPERTIES FOLDER ${LVL_TARGET_FOLDER})
     add_library(VkICD_${target} SHARED ${ARGN} VkICD_${target}.def)
     add_dependencies(VkICD_${target} generate_icd_files)
     #target_link_Libraries(VkICD_${target} VkICD_utils)

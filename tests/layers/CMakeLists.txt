@@ -22,7 +22,8 @@ if (WIN32)
                 COMMAND copy ${src_json} ${dst_json}
                 VERBATIM
                 )
-                add_dependencies(${config_file}-json ${config_file})
+            add_dependencies(${config_file}-json ${config_file})
+            set_target_properties(${config_file}-json PROPERTIES FOLDER ${LVL_TARGET_FOLDER})
         endforeach(config_file)
     endif()
 else()
@@ -44,6 +45,7 @@ if (WIN32)
         COMMAND ${CMAKE_COMMAND} -E copy_if_different ${DEF_FILE} VkLayer_${target}.def
         VERBATIM
     )
+    set_target_properties(copy-${target}-def-file PROPERTIES FOLDER ${LVL_TARGET_FOLDER})
     add_library(VkLayer_${target} SHARED ${ARGN} VkLayer_${target}.def)
     add_dependencies(VkLayer_${target} generate_helper_files VkLayer_utils)
     endmacro()

@@ -48,6 +48,7 @@ if (WIN32)
                     COMMAND copy ${src_json} ${dst_json}
                     VERBATIM
                     )
+                set_target_properties(${config_file}-json PROPERTIES FOLDER ${LVL_TARGET_FOLDER})
             endforeach(config_file)
         else()
             foreach (config_file ${LAYER_JSON_FILES})
@@ -67,6 +68,7 @@ if (WIN32)
             COMMAND copy ${src_val_msgs} ${dst_val_msgs}
             VERBATIM
             )
+        set_target_properties(vk_validation_error_messages PROPERTIES FOLDER ${LVL_TARGET_FOLDER})
     endif()
 else()
     # extra setup for out-of-tree builds
@@ -119,6 +121,7 @@ if (WIN32)
         COMMAND ${CMAKE_COMMAND} -E copy_if_different ${DEF_FILE} VkLayer_${target}.def
         VERBATIM
     )
+    set_target_properties(copy-${target}-def-file PROPERTIES FOLDER ${LVL_TARGET_FOLDER})
     add_library(VkLayer_${target} SHARED ${ARGN} VkLayer_${target}.def)
     add_dependencies(VkLayer_${target} generate_helper_files)
     target_link_Libraries(VkLayer_${target} VkLayer_utils)

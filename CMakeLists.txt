@@ -24,6 +24,10 @@ if (USE_CCACHE)
     endif(CCACHE_FOUND)
 endif()
 
+# Enable cmake folders
+set_property(GLOBAL PROPERTY USE_FOLDERS ON)
+set(LVL_TARGET_FOLDER lvl_cmake_targets)
+
 if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
     set(FALLBACK_CONFIG_DIRS "/etc/xdg" CACHE STRING
         "Search path to use when XDG_CONFIG_DIRS is unset or empty or the current process is SUID/SGID. Default is freedesktop compliant.")
@@ -337,6 +341,7 @@ add_custom_target(generate_helper_files DEPENDS
     vk_typemap_helper.h
     spirv_tools_commit_id.h
     )
+set_target_properties(generate_helper_files PROPERTIES FOLDER ${LVL_TARGET_FOLDER})
 
 # Rules to build generated helper files
 run_vk_xml_generate(loader_extension_generator.py vk_layer_dispatch_table.h)
