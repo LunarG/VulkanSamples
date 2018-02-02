@@ -31,6 +31,10 @@
 #include <sys/stat.h>
 #include <vulkan/vk_layer.h>
 
+#if defined(_WIN32)
+#include <Windows.h>
+#endif
+
 #define MAX_CHARS_PER_LINE 4096
 
 class ConfigFile {

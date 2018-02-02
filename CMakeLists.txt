@@ -359,6 +359,8 @@ run_vk_xml_generate(helper_file_generator.py vk_extension_helper.h)
 run_vk_xml_generate(helper_file_generator.py vk_typemap_helper.h)
 run_external_revision_generate(${EXTERNAL_SOURCE_ROOT}/glslang/External/spirv-tools SPIRV_TOOLS_COMMIT_ID spirv_tools_commit_id.h)
 
+
+
 if(NOT WIN32)
     include(GNUInstallDirs)
 
@@ -387,6 +389,32 @@ configure_file(
 add_custom_target(uninstall
     COMMAND ${CMAKE_COMMAND} -P ${CMAKE_CURRENT_BINARY_DIR}/cmake_uninstall.cmake)
 endif()
+
+# Layer Utils Library
+# For Windows, we use a static lib because the Windows loader has a fairly restrictive loader search
+# path that can't be easily modified to point it to the same directory that contains the layers.
+set(VKLAYER_UTILS_VLF_SOURCES
+    layers/vk_layer_config.cpp
+    layers/vk_layer_extension_utils.cpp
+    layers/vk_layer_utils.cpp
+    layers/vk_format_utils.cpp
+    )
+if (WIN32)
+    add_library(VkLayer_utils STATIC ${VKLAYER_UTILS_VLF_SOURCES})
+    target_compile_definitions(VkLayer_utils PUBLIC _CRT_SECURE_NO_WARNINGS)
+else()
+    add_library(VkLayer_utils SHARED ${VKLAYER_UTILS_VLF_SOURCES})
+    if(INSTALL_LVL_FILES)
+        install(TARGETS VkLayer_utils DESTINATION ${CMAKE_INSTALL_LIBDIR})
+    endif()
+endif()
+add_dependencies(VkLayer_utils generate_helper_files)
+target_include_directories(
+    VkLayer_utils PUBLIC
+    ${CMAKE_CURRENT_SOURCE_DIR}/loader
+    ${CMAKE_CURRENT_SOURCE_DIR}/include/vulkan
+    ${CMAKE_CURRENT_BINARY_DIR}
+    )
 
 add_definitions(-DAPI_NAME="${API_NAME}")
 
