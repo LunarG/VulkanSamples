@@ -19129,7 +19129,7 @@ TEST_F(VkLayerTest, ImageFormatLimits) {
         image_create_info.extent.width = 1;
     }
 
-    uint32_t maxDim = std::max({ image_create_info.extent.width, image_create_info.extent.height, image_create_info.extent.depth });
+    uint32_t maxDim = std::max({image_create_info.extent.width, image_create_info.extent.height, image_create_info.extent.depth});
     // If max mip levels exceeds image extents, skip the max mip levels test
     if ((imgFmtProps.maxMipLevels + 1) <= (floor(log2(maxDim)) + 1)) {
         m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_09e0077e);
@@ -19162,7 +19162,7 @@ TEST_F(VkLayerTest, ImageFormatLimits) {
 
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_09e0b801);
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_09e007c2);
-    image_create_info.initialLayout = VK_IMAGE_LAYOUT_MAX_ENUM; // Not a legal layout value
+    image_create_info.initialLayout = VK_IMAGE_LAYOUT_MAX_ENUM;  // Not a legal layout value
     vkCreateImage(m_device->handle(), &image_create_info, NULL, &nullImg);
     m_errorMonitor->VerifyFound();
     image_create_info.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;

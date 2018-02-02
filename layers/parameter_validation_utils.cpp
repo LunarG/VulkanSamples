@@ -771,9 +771,10 @@ bool pv_vkCreateImage(VkDevice device, const VkImageCreateInfo *pCreateInfo, con
         skip |= ValidateGreaterThanZero(pCreateInfo->arrayLayers, "pCreateInfo->arrayLayers", VALIDATION_ERROR_09e00768, log_misc);
 
         // InitialLayout must be PREINITIALIZED or UNDEFINED
-        if ((pCreateInfo->initialLayout != VK_IMAGE_LAYOUT_UNDEFINED) && (pCreateInfo->initialLayout != VK_IMAGE_LAYOUT_PREINITIALIZED)) 
-        {
-            skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
+        if ((pCreateInfo->initialLayout != VK_IMAGE_LAYOUT_UNDEFINED) &&
+            (pCreateInfo->initialLayout != VK_IMAGE_LAYOUT_PREINITIALIZED)) {
+            skip |= log_msg(
+                report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
                 VALIDATION_ERROR_09e007c2, LayerName,
                 "vkCreateImage(): initialLayout is %s, must be VK_IMAGE_LAYOUT_UNDEFINED or VK_IMAGE_LAYOUT_PREINITIALIZED. %s",
                 string_VkImageLayout(pCreateInfo->initialLayout), validation_error_map[VALIDATION_ERROR_09e007c2]);
@@ -782,10 +783,10 @@ bool pv_vkCreateImage(VkDevice device, const VkImageCreateInfo *pCreateInfo, con
         // If imageType is VK_IMAGE_TYPE_1D, both extent.height and extent.depth must be 1
         if ((pCreateInfo->imageType == VK_IMAGE_TYPE_1D) && (pCreateInfo->extent.height != 1) && (pCreateInfo->extent.depth != 1)) {
             skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
-                VALIDATION_ERROR_09e00778, LayerName,
-                "vkCreateImage(): if pCreateInfo->imageType is VK_IMAGE_TYPE_1D, both "
-                "pCreateInfo->extent.height and pCreateInfo->extent.depth must be 1. %s",
-                validation_error_map[VALIDATION_ERROR_09e00778]);
+                            VALIDATION_ERROR_09e00778, LayerName,
+                            "vkCreateImage(): if pCreateInfo->imageType is VK_IMAGE_TYPE_1D, both "
+                            "pCreateInfo->extent.height and pCreateInfo->extent.depth must be 1. %s",
+                            validation_error_map[VALIDATION_ERROR_09e00778]);
         }
 
         if (pCreateInfo->imageType == VK_IMAGE_TYPE_2D) {
