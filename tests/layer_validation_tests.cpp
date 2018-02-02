@@ -17704,48 +17704,6 @@ TEST_F(VkLayerTest, DrawTimeImageMultisampleMismatchWithPipeline) {
     m_commandBuffer->end();
 }
 
-TEST_F(VkLayerTest, CreateImageLimitsViolationMaxWidth) {
-    ASSERT_NO_FATAL_FAILURE(Init());
-
-    VkFormat const format = VK_FORMAT_B8G8R8A8_UNORM;
-    {
-        VkFormatProperties properties;
-        vkGetPhysicalDeviceFormatProperties(m_device->phy().handle(), format, &properties);
-        if (properties.optimalTilingFeatures == 0) {
-            printf("             Image format not supported; skipped.\n");
-            return;
-        }
-    }
-
-    VkImageCreateInfo info = {};
-    info.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
-    info.pNext = NULL;
-    info.imageType = VK_IMAGE_TYPE_2D;
-    info.format = format;
-    info.extent.height = 32;
-    info.extent.depth = 1;
-    info.mipLevels = 1;
-    info.arrayLayers = 1;
-    info.samples = VK_SAMPLE_COUNT_1_BIT;
-    info.tiling = VK_IMAGE_TILING_OPTIMAL;
-    info.usage = VK_IMAGE_USAGE_SAMPLED_BIT;
-    info.flags = 0;
-
-    // Introduce error by sending down a bogus width extent
-    {
-        VkImageFormatProperties properties;
-        auto const result = vkGetPhysicalDeviceImageFormatProperties(m_device->phy().handle(), info.format, info.imageType,
-                                                                     info.tiling, info.usage, info.flags, &properties);
-        ASSERT_VK_SUCCESS(result);
-        info.extent.width = properties.maxExtent.width + 1;
-    }
-
-    VkImage image;
-    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_09e00770);
-    vkCreateImage(m_device->device(), &info, NULL, &image);
-    m_errorMonitor->VerifyFound();
-}
-
 TEST_F(VkLayerTest, CreateImageMinLimitsViolation) {
     TEST_DESCRIPTION("Create invalid image with invalid parameters of zero.");
 
@@ -19151,14 +19109,25 @@ TEST_F(VkLayerTest, ImageFormatLimits) {
 
     VkImage nullImg;
     VkImageFormatProperties imgFmtProps;
-    vkGetPhysicalDeviceImageFormatProperties(gpu(), image_create_info.format, image_create_info.imageType, image_create_info.tiling,
-                                             image_create_info.usage, image_create_info.flags, &imgFmtProps);
-    image_create_info.extent.width = imgFmtProps.maxExtent.width + 1;
-    // Expect INVALID_FORMAT_LIMITS_VIOLATION
-    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_09e00770);
-    vkCreateImage(m_device->handle(), &image_create_info, NULL, &nullImg);
-    m_errorMonitor->VerifyFound();
-    image_create_info.extent.width = 1;
+    VkResult err = vkGetPhysicalDeviceImageFormatProperties(gpu(), image_create_info.format, image_create_info.imageType,
+                                                            image_create_info.tiling, image_create_info.usage,
+                                                            image_create_info.flags, &imgFmtProps);
+    if (VK_SUCCESS != err) {
+        printf("             Image format not supported; skipped.\n");
+        return;
+    }
+
+    VkPhysicalDeviceProperties device_props;
+    vkGetPhysicalDeviceProperties(gpu(), &device_props);
+    uint32_t max_width = std::max(imgFmtProps.maxExtent.width, device_props.limits.maxImageDimension2D);
+    if (max_width < UINT32_MAX) {
+        image_create_info.extent.width = max_width + 1;
+        // Expect INVALID_FORMAT_LIMITS_VIOLATION
+        m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_09e00770);
+        vkCreateImage(m_device->handle(), &image_create_info, NULL, &nullImg);
+        m_errorMonitor->VerifyFound();
+        image_create_info.extent.width = 1;
+    }
 
     uint32_t maxDim = std::max({ image_create_info.extent.width, image_create_info.extent.height, image_create_info.extent.depth });
     // If max mip levels exceeds image extents, skip the max mip levels test
