@@ -17,6 +17,10 @@
 %:
 	dh $@ 
 
+override_dh_clean:
+	dh_clean
+	rm -rf debian/build
+
 override_dh_auto_build:
 	cd API-Samples/Tutorial && \
 	(OUTDIR=../../debian/build/Tutorial ./build.sh)
