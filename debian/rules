@@ -19,13 +19,7 @@
 
 override_dh_auto_build:
 	cd API-Samples/Tutorial && \
-	(OUTDIR=../../debian/tmp/Tutorial ./build.sh)
-
-override_dh_installdocs:
-	dh_installdocs debian/tmp/Tutorial
-
-override_dh_installexamples:
-	dh_installexamples API-Samples
+	(OUTDIR=../../debian/build/Tutorial ./build.sh)
 
 override_dh_auto_configure:
 	
