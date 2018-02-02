@@ -322,7 +322,10 @@ endmacro()
 # Define macro used for generating header files containing commit IDs for external dependencies
 macro(run_external_revision_generate source_dir symbol_name output)
     add_custom_command(OUTPUT ${output}
-    COMMAND ${PYTHON_CMD} ${SCRIPTS_DIR}/external_revision_generator.py ${source_dir} ${symbol_name} ${output}
+    # NOTE: If you modify this call to use --rev_file instead of --git_dir (to read the commit ID from a file instead of
+    # parsing from a Git repository), you probably also want to add the revision file to the list of DEPENDS on the
+    # subsequent line (to ensure that the script is re-run when the revision file is modified).
+    COMMAND ${PYTHON_CMD} ${SCRIPTS_DIR}/external_revision_generator.py --git_dir ${source_dir} -s ${symbol_name} -o ${output}
     DEPENDS ${SCRIPTS_DIR}/external_revision_generator.py ${source_dir}/.git/HEAD ${source_dir}/.git/index
     )
 endmacro()

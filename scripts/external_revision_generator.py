@@ -18,14 +18,13 @@
 # limitations under the License.
 #
 # Author: Cort Stratton <cort@google.com>
+# Author: Jean-Francois Roy <jfroy@google.com>
 
-import os
+import argparse
+import hashlib
 import subprocess
-import sys
 
-def generate(git_binary):
-    commit_id = subprocess.check_output([git_binary, "rev-parse", "HEAD"], cwd=source_dir).decode('utf-8').strip()
-
+def generate(symbol_name, commit_id, output_header_file):
     # Write commit ID to output header file
     with open(output_header_file, "w") as header_file:
          # File Comment
@@ -64,18 +63,52 @@ def generate(git_binary):
         contents += '#define %s "%s"\n' % (symbol_name, commit_id)
         header_file.write(contents)
 
+def get_commit_id_from_git(git_binary, source_dir):
+    return subprocess.check_output([git_binary, "rev-parse", "HEAD"], cwd=source_dir).decode('utf-8').strip()
+
+def is_sha1(str):
+    try: str_as_int = int(str, 16)
+    except ValueError: return False
+    return len(str) == 40
+
+def get_commit_id_from_file(rev_file):
+    with open(rev_file, 'r') as rev_stream:
+        rev_contents = rev_stream.read()
+        rev_contents_stripped = rev_contents.strip()
+        if is_sha1(rev_contents_stripped):
+            return rev_contents_stripped;
+        # otherwise, SHA1 the entire (unstripped) file contents
+        sha1 = hashlib.sha1();
+        sha1.update(rev_contents.encode('utf-8'))
+        return sha1.hexdigest()
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-s", "--symbol_name", metavar="SYMBOL_NAME", required=True, help="C symbol name")
+    parser.add_argument("-o", "--output_header_file", metavar="OUTPUT_HEADER_FILE", required=True, help="output header file path")
+    rev_method_group = parser.add_mutually_exclusive_group(required=True)
+    rev_method_group.add_argument("--git_dir", metavar="SOURCE_DIR", help="git working copy directory")
+    rev_method_group.add_argument("--rev_file", metavar="REVISION_FILE", help="source revision file path (must contain a SHA1 hash")
+    args = parser.parse_args()
+
+    # We can either parse the latest Git commit ID out of the specified repository (preferred where possible),
+    # or computing the SHA1 hash of the contents of a file passed on the command line and (where necessary --
+    # e.g. when building the layers outside of a Git environment).
+    if args.git_dir is not None:
+        # Extract commit ID from the specified source directory
+        try:
+            commit_id = get_commit_id_from_git('git', args.git_dir)
+        except WindowsError:
+            # Call git.bat on Windows for compatiblity.
+            commit_id = get_commit_id_from_git('git.bat', args.git_dir)
+    elif args.rev_file is not None:
+        # Read the commit ID from a file.
+        commit_id = get_commit_id_from_file(args.rev_file)
+
+    if not is_sha1(commit_id):
+        raise ValueError("commit ID for " + args.symbol_name + " must be a SHA1 hash.")
+
+    generate(args.symbol_name, commit_id, args.output_header_file)
+
 if __name__ == '__main__':
-    if (len(sys.argv) != 4):
-        print("Usage: %s <SOURCE_DIR> <SYMBOL_NAME> <OUTPUT_HEADER_FILE>" % sys.argv[0])
-        sys.exit(os.EX_USAGE)
-    
-    source_dir = sys.argv[1]
-    symbol_name = sys.argv[2]
-    output_header_file = sys.argv[3]
-    
-    # Extract commit ID from the specified source directory
-    try:
-        generate('git')
-    except WindowsError:
-        # Call git.bat on Windows for compatiblity.
-        generate('git.bat')
+    main()
