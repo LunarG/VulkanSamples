@@ -16026,7 +16026,8 @@ TEST_F(VkLayerTest, CreateShaderModuleCheckBadCapability) {
         "   gl_Position = vec4(1);\n"
         "}\n";
 
-    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, "Capability value 53 is not allowed by Vulkan");
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
+                                         "Capability TransformFeedback is not allowed by Vulkan");
 
     std::vector<unsigned int> spv;
     VkShaderModuleCreateInfo module_create_info;
