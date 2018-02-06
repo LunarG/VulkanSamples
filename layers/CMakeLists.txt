@@ -39,14 +39,6 @@ set(LAYER_JSON_FILES_NO_DEPENDENCIES
 
 set(LAYER_JSON_FILES ${LAYER_JSON_FILES_WITH_DEPENDENCIES} ${LAYER_JSON_FILES_NO_DEPENDENCIES})
 
-set(LAYER_BINARY_JSON_FILES
-    VkLayer_device_simulation
-    )
-
-set(LAYER_BINARY_FILES
-    libVkLayer_device_simulation
-    )
-
 if (WIN32)
         if (CMAKE_GENERATOR MATCHES "^Visual Studio.*")
             foreach (config_file ${LAYER_JSON_FILES})
@@ -56,6 +48,7 @@ if (WIN32)
                     COMMAND copy ${src_json} ${dst_json}
                     VERBATIM
                     )
+                set_target_properties(${config_file}-json PROPERTIES FOLDER ${LVL_TARGET_FOLDER})
             endforeach(config_file)
         else()
             foreach (config_file ${LAYER_JSON_FILES})
@@ -75,6 +68,7 @@ if (WIN32)
             COMMAND copy ${src_val_msgs} ${dst_val_msgs}
             VERBATIM
             )
+        set_target_properties(vk_validation_error_messages PROPERTIES FOLDER ${LVL_TARGET_FOLDER})
     endif()
 else()
     # extra setup for out-of-tree builds
@@ -82,18 +76,6 @@ else()
         foreach (config_file ${LAYER_JSON_FILES})
             add_custom_target(${config_file}-json ALL
                 COMMAND ln -sf ${CMAKE_CURRENT_SOURCE_DIR}/linux/${config_file}.json
-                VERBATIM
-                )
-        endforeach(config_file)
-        foreach (config_file ${LAYER_BINARY_JSON_FILES})
-            add_custom_target(${config_file}-bin-json ALL
-                COMMAND ln -sf ${CMAKE_CURRENT_SOURCE_DIR}/linux/${config_file}.json
-                VERBATIM
-                )
-        endforeach(config_file)
-        foreach (config_file ${LAYER_BINARY_FILES})
-            add_custom_target(${config_file}-so ALL
-                COMMAND ln -sf ${CMAKE_CURRENT_SOURCE_DIR}/linux/${config_file}.so
                 VERBATIM
                 )
         endforeach(config_file)
@@ -113,14 +95,6 @@ if ((Win32) OR (NOT (CMAKE_CURRENT_SOURCE_DIR STREQUAL CMAKE_CURRENT_BINARY_DIR)
     foreach (config_file ${LAYER_JSON_FILES_NO_DEPENDENCIES})
         add_dependencies(${config_file}-json VkLayer_utils)
     endforeach(config_file)
-    if(UNIX)
-        foreach (config_file ${LAYER_BINARY_JSON_FILES})
-            add_dependencies(${config_file}-bin-json VkLayer_utils)
-        endforeach(config_file)
-        foreach (config_file ${LAYER_BINARY_FILES})
-            add_dependencies(${config_file}-so VkLayer_utils)
-        endforeach(config_file)
-    endif()
 endif()
 
 # Add targets for JSON file install on Linux.
@@ -147,6 +121,7 @@ if (WIN32)
         COMMAND ${CMAKE_COMMAND} -E copy_if_different ${DEF_FILE} VkLayer_${target}.def
         VERBATIM
     )
+    set_target_properties(copy-${target}-def-file PROPERTIES FOLDER ${LVL_TARGET_FOLDER})
     add_library(VkLayer_${target} SHARED ${ARGN} VkLayer_${target}.def)
     add_dependencies(VkLayer_${target} generate_helper_files)
     target_link_Libraries(VkLayer_${target} VkLayer_utils)
@@ -169,17 +144,16 @@ include_directories(
     ${CMAKE_CURRENT_SOURCE_DIR}/../loader
     ${CMAKE_CURRENT_SOURCE_DIR}/../include/vulkan
     ${CMAKE_CURRENT_BINARY_DIR}
-    ${CMAKE_PROJECT_BINARY_DIR}
+    ${PROJECT_BINARY_DIR}
     ${CMAKE_BINARY_DIR}
 )
 
 if (WIN32)
-    set (CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -D_CRT_SECURE_NO_WARNINGS")
-    set (CMAKE_C_FLAGS_RELEASE   "${CMAKE_C_FLAGS_RELEASE} -D_CRT_SECURE_NO_WARNINGS")
-    set (CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_RELWITHDEBINFO} -D_CRT_SECURE_NO_WARNINGS")
-    set (CMAKE_C_FLAGS_RELWITHDEBINFO "${CMAKE_C_FLAGS_RELWITHDEBINFO} -D_CRT_SECURE_NO_WARNINGS")
-    set (CMAKE_CXX_FLAGS_DEBUG   "${CMAKE_CXX_FLAGS_DEBUG} -D_CRT_SECURE_NO_WARNINGS /bigobj")
-    set (CMAKE_C_FLAGS_DEBUG     "${CMAKE_C_FLAGS_DEBUG} -D_CRT_SECURE_NO_WARNINGS /bigobj")
+    # Applies to all configurations
+    add_definitions(-D_CRT_SECURE_NO_WARNINGS)
+    # Avoid: fatal error C1128: number of sections exceeded object file format limit: compile with /bigobj
+    set_source_files_properties(core_validation.cpp threading.cpp
+        PROPERTIES COMPILE_FLAGS "/bigobj")
     # Turn off transitional "changed behavior" warning message for Visual Studio versions prior to 2015.
     # The changed behavior is that constructor initializers are now fixed to clear the struct members.
     add_compile_options("$<$<AND:$<CXX_COMPILER_ID:MSVC>,$<VERSION_LESS:$<CXX_COMPILER_VERSION>,19>>:/wd4351>")
@@ -201,19 +175,6 @@ run_vk_xml_generate(parameter_validation_generator.py parameter_validation.cpp)
 run_vk_xml_generate(unique_objects_generator.py unique_objects_wrappers.h)
 run_vk_xml_generate(dispatch_table_helper_generator.py vk_dispatch_table_helper.h)
 run_vk_xml_generate(object_tracker_generator.py object_tracker.cpp)
-
-# Layer Utils Library
-# For Windows, we use a static lib because the Windows loader has a fairly restrictive loader search
-# path that can't be easily modified to point it to the same directory that contains the layers.
-if (WIN32)
-    add_library(VkLayer_utils STATIC vk_layer_config.cpp vk_layer_extension_utils.cpp vk_layer_utils.cpp vk_format_utils.cpp)
-else()
-    add_library(VkLayer_utils SHARED vk_layer_config.cpp vk_layer_extension_utils.cpp vk_layer_utils.cpp vk_format_utils.cpp)
-    if(INSTALL_LVL_FILES)
-        install(TARGETS VkLayer_utils DESTINATION ${CMAKE_INSTALL_LIBDIR})
-    endif()
-endif()
-add_dependencies(VkLayer_utils generate_helper_files)
 
 add_vk_layer(core_validation core_validation.cpp vk_layer_table.cpp descriptor_sets.cpp buffer_validation.cpp shader_validation.cpp xxhash.c)
 add_vk_layer(object_tracker object_tracker.cpp object_tracker_utils.cpp vk_layer_table.cpp)

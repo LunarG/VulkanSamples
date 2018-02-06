@@ -46,6 +46,7 @@
 #include "vk_enum_string_helper.h"
 #include "vk_validation_error_messages.h"
 #include "vk_object_types.h"
+#include "vk_extension_helper.h"
 #include "vulkan/vk_layer.h"
 
 // This intentionally includes a cpp file
@@ -67,7 +68,7 @@ static void InstanceExtensionWhitelist(const VkInstanceCreateInfo *pCreateInfo, 
 
     for (uint32_t i = 0; i < pCreateInfo->enabledExtensionCount; i++) {
         // Check for recognized instance extensions
-        if (!white_list(pCreateInfo->ppEnabledExtensionNames[i], kUniqueObjectsSupportedInstanceExtensions)) {
+        if (!white_list(pCreateInfo->ppEnabledExtensionNames[i], kInstanceExtensionNames)) {
             log_msg(instance_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
                     VALIDATION_ERROR_UNDEFINED, "UniqueObjects",
                     "Instance Extension %s is not supported by this layer.  Using this extension may adversely affect "
@@ -83,7 +84,7 @@ static void DeviceExtensionWhitelist(const VkDeviceCreateInfo *pCreateInfo, VkDe
 
     for (uint32_t i = 0; i < pCreateInfo->enabledExtensionCount; i++) {
         // Check for recognized device extensions
-        if (!white_list(pCreateInfo->ppEnabledExtensionNames[i], kUniqueObjectsSupportedDeviceExtensions)) {
+        if (!white_list(pCreateInfo->ppEnabledExtensionNames[i], kDeviceExtensionNames)) {
             log_msg(device_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
                     VALIDATION_ERROR_UNDEFINED, "UniqueObjects",
                     "Device Extension %s is not supported by this layer.  Using this extension may adversely affect "

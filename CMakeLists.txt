@@ -24,6 +24,10 @@ if (USE_CCACHE)
     endif(CCACHE_FOUND)
 endif()
 
+# Enable cmake folders
+set_property(GLOBAL PROPERTY USE_FOLDERS ON)
+set(LVL_TARGET_FOLDER lvl_cmake_targets)
+
 if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
     set(FALLBACK_CONFIG_DIRS "/etc/xdg" CACHE STRING
         "Search path to use when XDG_CONFIG_DIRS is unset or empty or the current process is SUID/SGID. Default is freedesktop compliant.")
@@ -144,7 +148,7 @@ set(SPIRV_TOOLS_BINARY_ROOT "${CMAKE_BINARY_DIR}/../SPIRV-Tools" CACHE STRING "U
 set(SPIRV_TOOLS_OPT_BINARY_ROOT "${CMAKE_BINARY_DIR}/../SPIRV-Tools/opt" CACHE STRING "User defined path to the SPIRV-Tools-opt binaries for this project")
 
 # Define a variable for a default root location to the gslang, SPIRV-Tools and other external sources and cache it to allow the user to customize it as needed
-set(EXTERNAL_SOURCE_ROOT "${CMAKE_SOURCE_DIR}/external" CACHE STRING "Root path to external sources such as glslang and SPIRV-Tools")
+set(EXTERNAL_SOURCE_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/external" CACHE STRING "Root path to external sources such as glslang and SPIRV-Tools")
 
 
 if (WIN32)
@@ -210,7 +214,7 @@ else()
 endif()
 
 find_program(GLSLANG_VALIDATOR NAMES glslangValidator
-             HINTS "${CMAKE_SOURCE_DIR}/external/glslang/${BUILDTGT_DIR}/install/bin"
+             HINTS "${EXTERNAL_SOURCE_ROOT}/glslang/${BUILDTGT_DIR}/install/bin"
                    "${GLSLANG_BINARY_ROOT}/StandAlone"
                    "${PROJECT_SOURCE_DIR}/external/${BINDATA_DIR}")
 
@@ -320,7 +324,10 @@ endmacro()
 # Define macro used for generating header files containing commit IDs for external dependencies
 macro(run_external_revision_generate source_dir symbol_name output)
     add_custom_command(OUTPUT ${output}
-    COMMAND ${PYTHON_CMD} ${SCRIPTS_DIR}/external_revision_generator.py ${source_dir} ${symbol_name} ${output}
+    # NOTE: If you modify this call to use --rev_file instead of --git_dir (to read the commit ID from a file instead of
+    # parsing from a Git repository), you probably also want to add the revision file to the list of DEPENDS on the
+    # subsequent line (to ensure that the script is re-run when the revision file is modified).
+    COMMAND ${PYTHON_CMD} ${SCRIPTS_DIR}/external_revision_generator.py --git_dir ${source_dir} -s ${symbol_name} -o ${output}
     DEPENDS ${SCRIPTS_DIR}/external_revision_generator.py ${source_dir}/.git/HEAD ${source_dir}/.git/index
     )
 endmacro()
@@ -339,6 +346,7 @@ add_custom_target(generate_helper_files DEPENDS
     vk_typemap_helper.h
     spirv_tools_commit_id.h
     )
+set_target_properties(generate_helper_files PROPERTIES FOLDER ${LVL_TARGET_FOLDER})
 
 # Rules to build generated helper files
 run_vk_xml_generate(loader_extension_generator.py vk_layer_dispatch_table.h)
@@ -352,6 +360,8 @@ run_vk_xml_generate(helper_file_generator.py vk_object_types.h)
 run_vk_xml_generate(helper_file_generator.py vk_extension_helper.h)
 run_vk_xml_generate(helper_file_generator.py vk_typemap_helper.h)
 run_external_revision_generate(${EXTERNAL_SOURCE_ROOT}/glslang/External/spirv-tools SPIRV_TOOLS_COMMIT_ID spirv_tools_commit_id.h)
+
+
 
 if(NOT WIN32)
     include(GNUInstallDirs)
@@ -381,6 +391,32 @@ configure_file(
 add_custom_target(uninstall
     COMMAND ${CMAKE_COMMAND} -P ${CMAKE_CURRENT_BINARY_DIR}/cmake_uninstall.cmake)
 endif()
+
+# Layer Utils Library
+# For Windows, we use a static lib because the Windows loader has a fairly restrictive loader search
+# path that can't be easily modified to point it to the same directory that contains the layers.
+set(VKLAYER_UTILS_VLF_SOURCES
+    layers/vk_layer_config.cpp
+    layers/vk_layer_extension_utils.cpp
+    layers/vk_layer_utils.cpp
+    layers/vk_format_utils.cpp
+    )
+if (WIN32)
+    add_library(VkLayer_utils STATIC ${VKLAYER_UTILS_VLF_SOURCES})
+    target_compile_definitions(VkLayer_utils PUBLIC _CRT_SECURE_NO_WARNINGS)
+else()
+    add_library(VkLayer_utils SHARED ${VKLAYER_UTILS_VLF_SOURCES})
+    if(INSTALL_LVL_FILES)
+        install(TARGETS VkLayer_utils DESTINATION ${CMAKE_INSTALL_LIBDIR})
+    endif()
+endif()
+add_dependencies(VkLayer_utils generate_helper_files)
+target_include_directories(
+    VkLayer_utils PUBLIC
+    ${CMAKE_CURRENT_SOURCE_DIR}/loader
+    ${CMAKE_CURRENT_SOURCE_DIR}/include/vulkan
+    ${CMAKE_CURRENT_BINARY_DIR}
+    )
 
 add_definitions(-DAPI_NAME="${API_NAME}")
 

@@ -8,11 +8,11 @@
 # build version format
 version: "{build}"
 
-# Probably not useful for free accounts, but ask anyway.
+# Free accounts have a max of 1, but ask anyway.
 max_jobs: 4
 
 os:
-  - Visual Studio 2015
+  - Visual Studio 2013
 
 environment:
   PYTHON_PATH: "C:/Python35"
@@ -28,69 +28,27 @@ branches:
     - master
 
 before_build:
-# These steps are a replacement for
-# - update_external_sources.bat --all
-# Instead of using the above script to build glslang/spirv-tools
-# for all platform configs, build only the job's selected platform config.
-# Since the script doesn't support building a single platform config,
-# use parts of the script to build only the selected platform config.
-#
-# Also always build the x64 Release platform config in order to
-# get the shader compiler binary which is used to build the repo.
-#
-# For a 4 platform config setup:
-# All this results in 7 builds of glslang per commit, which isn't
-# as good as building 4 when building all 4 platform configs in
-# a single job, but is necessary when splitting the build into 4 jobs.
-# It is still better than 16 glslang builds.
-#
   - "SET PATH=C:\\Python35;C:\\Python35\\Scripts;%PATH%"
-  - setlocal EnableDelayedExpansion
-  # Set up some useful vars.
-  - set TOP_DIR="%APPVEYOR_BUILD_FOLDER%\"
-  - set EXT_DIR=%TOP_DIR%external
-  - set REVISION_DIR=%TOP_DIR%external_revisions
-  - set GLSLANG_DIR=%EXT_DIR%\glslang
-  - set /p GLSLANG_GITURL= < %REVISION_DIR%\glslang_giturl
-  - set /p GLSLANG_REVISION= < %REVISION_DIR%\glslang_revision
-  # Clone and checkout glslang.
-  - echo.
-  - echo Creating local glslang repository %GLSLANG_DIR%
-  - echo GLSLANG_GITURL=%GLSLANG_GITURL%
-  - echo GLSLANG_REVISION=%GLSLANG_REVISION%
-  - if not exist %GLSLANG_DIR% (mkdir %GLSLANG_DIR%)
-  - cd %GLSLANG_DIR%
-  # If this dir is not empty, then a build cache was restored. Update it by fetching any updates.
-  # If the dir is empty, clone the repo.
-  - dir /b /a | findstr .  > nul && (git fetch --all) || (git clone %GLSLANG_GITURL% . )
-  - git checkout %GLSLANG_REVISION%
-  - python.exe .\update_glslang_sources.py
-  # Build glslang.
-  - echo.
-  - echo Building %GLSLANG_DIR%
-  # We always need the x64 Release version of the shader compiler for building the repo.
-  - cd  %GLSLANG_DIR%
-  - if not exist build (mkdir build)
-  - cd build
-  - cmake -G "Visual Studio 14 2015 Win64" -DCMAKE_INSTALL_PREFIX=install ..
-  - msbuild INSTALL.vcxproj /p:Platform=x64 /p:Configuration=Release /verbosity:quiet
-  # Build the x64 debug version if selected.
-  - if %PLATFORM% == x64 (if %CONFIGURATION% == Debug (msbuild INSTALL.vcxproj /p:Platform=x64 /p:Configuration=Debug /verbosity:quiet))
-  # Build 32-bit platform configs if selected.
-  - cd %GLSLANG_DIR%
-  - if not exist build32 (mkdir build32)
-  - cd build32
-  - if %PLATFORM% == Win32 (cmake -G "Visual Studio 14 2015" -DCMAKE_INSTALL_PREFIX=install ..)
-  - if %PLATFORM% == Win32 (msbuild INSTALL.vcxproj /p:Platform=x86 /p:Configuration=%CONFIGURATION% /verbosity:quiet)
-  # Generate build files using CMake for the build step.
   - echo.
   - echo Starting build for %APPVEYOR_REPO_NAME%
-  - if %PLATFORM% == Win32 (set GENERATOR="Visual Studio 14 2015")
-  - if %PLATFORM% == x64 (set GENERATOR="Visual Studio 14 2015 Win64")
+  - echo Update external sources
+  - if %PLATFORM% == Win32 (if %CONFIGURATION% == Debug (update_external_sources.bat --32 --debug))
+  - if %PLATFORM% == Win32 (if %CONFIGURATION% == Release (update_external_sources.bat --32 --release))
+  - if %PLATFORM% == x64 (if %CONFIGURATION% == Debug (update_external_sources.bat --64 --debug))
+  - if %PLATFORM% == x64 (if %CONFIGURATION% == Release (update_external_sources.bat --64 --release))
+  # Determine the appropriate CMake generator for the current version of Visual Studio
+  - echo Determining VS version
+  - python .\scripts\determine_vs_version.py > vsversion.tmp
+  - set /p VS_VERSION=< vsversion.tmp
+  - echo Detected Visual Studio Version as %VS_VERSION%
+  - del /Q /F vsversion.tmp
+  - if %PLATFORM% == Win32 (set GENERATOR="Visual Studio %VS_VERSION%")
+  - if %PLATFORM% == x64 (set GENERATOR="Visual Studio %VS_VERSION% Win64")
+  # Generate build files using CMake for the build step.
+  - echo Generating CMake files for %GENERATOR%
   - cd %TOP_DIR%
   - mkdir build
   - cd build
-  - echo Generating CMake files for %GENERATOR%
   - cmake -G %GENERATOR% ..
   - echo Building platform=%PLATFORM% configuration=%CONFIGURATION%
 

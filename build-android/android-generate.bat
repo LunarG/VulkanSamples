@@ -34,6 +34,33 @@ py -3 ../../../scripts/lvl_genvk.py -registry ../../../scripts/vk.xml vk_layer_d
 py -3 ../../../scripts/lvl_genvk.py -registry ../../../scripts/vk.xml vk_extension_helper.h
 py -3 ../../../scripts/lvl_genvk.py -registry ../../../scripts/vk.xml object_tracker.cpp
 py -3 ../../../scripts/lvl_genvk.py -registry ../../../scripts/vk.xml vk_typemap_helper.h
-py -3 ../../../scripts/external_revision_generator.py ../../third_party/shaderc/third_party/spirv-tools SPIRV_TOOLS_COMMIT_ID spirv_tools_commit_id.h
+
+set SPIRV_TOOLS_PATH=../../third_party/shaderc/third_party/spirv-tools
+set SPIRV_TOOLS_UUID=spirv_tools_uuid.txt
+
+if exist %SPIRV_TOOLS_PATH% (
+
+  echo Found spirv-tools, using git_dir for external_revision_generator.py
+  py -3 ../../../scripts/external_revision_generator.py ^
+    --git_dir %SPIRV_TOOLS_PATH% ^
+    -s SPIRV_TOOLS_COMMIT_ID ^
+    -o spirv_tools_commit_id.h
+
+) else (
+
+  echo No spirv-tools git_dir found, generating UUID for external_revision_generator.py
+
+  REM Ensure uuidgen is installed, this should error if not found
+  uuidgen.exe -v
+
+  uuidgen.exe > %SPIRV_TOOLS_UUID%
+  type %SPIRV_TOOLS_UUID%
+  py -3 ../../../scripts/external_revision_generator.py ^
+    --rev_file %SPIRV_TOOLS_UUID% ^
+    -s SPIRV_TOOLS_COMMIT_ID ^
+    -o spirv_tools_commit_id.h
+
+)
+
 cd ../..
 

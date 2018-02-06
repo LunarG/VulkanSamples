@@ -18,10 +18,6 @@ if ($args[0] -eq "-Debug") {
     $dPath = "Release"
 }
 
-if (($args[0] -eq "terse_mode") -Or ($args[1] -eq "terse_mode")) {
-    $output_mode = "terse_mode"
-}
-
 write-host -background black -foreground green "[  RUN     ] " -nonewline
 write-host "vkvalidatelayerdoc.ps1: Validate layer documentation"
 
@@ -29,7 +25,7 @@ write-host "vkvalidatelayerdoc.ps1: Validate layer documentation"
 push-location ..\..\scripts
 
 # Validate that layer documentation matches source contents
-python vk_validation_stats.py $output_mode
+python vk_validation_stats.py
 
 # Report result based on exit code
 if (!$LASTEXITCODE) {

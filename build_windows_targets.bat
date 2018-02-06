@@ -13,30 +13,75 @@ REM Argument contains:
 REM     cmake (case insensitive): Deletes build and build32 and runs just CMake on both
 REM     32: Deletes build32, runs CMake and builds 32-bit versions
 REM     64: Deletes build, runs CMake and builds 64-bit versions
-REM Example:
+REM     debug (case insensitive): Builds just the debug config of a 32 and/or 64-bit build
+REM     release (case insensitive): Builds just the release config of a 32 and/or 64-bit build
+REM Notes:
+REM cmake: When specified, generate the CMake build files only - don't compile
+REM 32/64: Specifying neither or both builds both
+REM debug/release: Specifying neither or both builds both
+REM Examples:
 REM build_windows_targets.bat 64
-REM deletes build, creates build, runs CMake and compiles 64-bit Debug and Release.
+REM   -- deletes build, creates build, runs CMake and compiles 64-bit Debug and Release.
+REM build_windows_targets.bat 64 debug
+REM   -- deletes build, creates build, runs CMake and compiles 64-bit Debug.
+
+set arg_cmake=0
+set arg_32=0
+set arg_64=0
+set arg_debug=0
+set arg_release=0
 
 set do_cmake=1
 set do_32=1
 set do_64=1
 if "%1"=="" goto no_args
+
 set do_cmake=0
 set do_32=0
 set do_64=0
+set do_debug=0
+set do_release=0
+
 for %%a in (%*) do (
-    echo.%%a | %WINDIR%\system32\find.exe /I "cmake">Nul && (set do_cmake=1)
-    echo.%%a | %WINDIR%\system32\find.exe "32">Nul && (set do_32=1)
-    echo.%%a | %WINDIR%\system32\find.exe "64">Nul && (set do_64=1)
+    echo.%%a | %WINDIR%\system32\find.exe /I "cmake">Nul && (set arg_cmake=1)
+    echo.%%a | %WINDIR%\system32\find.exe "32">Nul && (set arg_32=1)
+    echo.%%a | %WINDIR%\system32\find.exe "64">Nul && (set arg_64=1)
+    echo.%%a | %WINDIR%\system32\find.exe /I "debug">Nul && (set arg_debug=1)
+    echo.%%a | %WINDIR%\system32\find.exe /I "release">Nul && (set arg_release=1)
 )
-:no_args
-if %do_cmake%==0 (
-    if %do_32%==0 (
-        if %do_64%==0 (
-            echo No valid parameters specified.
-            exit /b 1
-        )
+
+if %arg_32%==1 (
+    set do_32=1
+)
+if %arg_64%==1 (
+    set do_64=1
+)
+if %arg_32%==0 (
+    if %arg_64%==0 (
+        set do_32=1
+        set do_64=1
     )
+)
+
+if %arg_debug%==1 (
+    set do_debug=1
+)
+if %arg_release%==1 (
+    set do_release=1
+)
+if %arg_debug%==0 (
+    if %arg_release%==0 (
+        set do_debug=1
+        set do_release=1
+    )
+)
+
+if %arg_cmake%==1 (
+    set do_cmake=1
+    set do_32=0
+    set do_64=0
+    set do_debug=0
+    set do_release=0
 )
 
 REM Determine the appropriate CMake strings for the current version of Visual Studio

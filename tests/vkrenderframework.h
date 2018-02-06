@@ -52,7 +52,11 @@ class VkDeviceObj : public vk_testing::Device {
     VkDeviceObj(uint32_t id, VkPhysicalDevice obj, std::vector<const char *> &extension_names,
                 VkPhysicalDeviceFeatures *features = nullptr);
 
-    uint32_t QueueFamilyWithoutCapabilities(VkQueueFlags capabilities);
+    uint32_t QueueFamilyMatching(VkQueueFlags with, VkQueueFlags without, bool all_bits = true);
+    uint32_t QueueFamilyWithoutCapabilities(VkQueueFlags capabilities) {
+        // an all_bits match with 0 matches all
+        return QueueFamilyMatching(VkQueueFlags(0), capabilities, true /* all_bits with */);
+    }
 
     VkDevice device() { return handle(); }
     void get_device_queue();
@@ -240,12 +244,14 @@ class VkImageObj : public vk_testing::Image {
 
    public:
     void Init(uint32_t const width, uint32_t const height, uint32_t const mipLevels, VkFormat const format, VkFlags const usage,
-              VkImageTiling const tiling = VK_IMAGE_TILING_LINEAR, VkMemoryPropertyFlags const reqs = 0);
+              VkImageTiling const tiling = VK_IMAGE_TILING_LINEAR, VkMemoryPropertyFlags const reqs = 0,
+              const std::vector<uint32_t> *queue_families = nullptr);
 
     void init(const VkImageCreateInfo *create_info);
 
     void InitNoLayout(uint32_t const width, uint32_t const height, uint32_t const mipLevels, VkFormat const format,
-                      VkFlags const usage, VkImageTiling tiling = VK_IMAGE_TILING_LINEAR, VkMemoryPropertyFlags reqs = 0);
+                      VkFlags const usage, VkImageTiling tiling = VK_IMAGE_TILING_LINEAR, VkMemoryPropertyFlags reqs = 0,
+                      const std::vector<uint32_t> *queue_families = nullptr);
 
     //    void clear( CommandBuffer*, uint32_t[4] );
 

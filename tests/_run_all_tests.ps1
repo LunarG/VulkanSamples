@@ -34,6 +34,6 @@ if ($lastexitcode -ne 0) {
    exit 1
 }
 
-& .\vkvalidatelayerdoc.ps1 terse_mode
+& .\vkvalidatelayerdoc.ps1
 
 exit $lastexitcode

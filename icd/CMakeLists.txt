@@ -37,6 +37,7 @@ if (WIN32)
                     COMMAND copy ${src_json} ${dst_json}
                     VERBATIM
                     )
+                set_target_properties(${config_file}-json PROPERTIES FOLDER ${LVL_TARGET_FOLDER})
             endforeach(config_file)
         else()
             foreach (config_file ${ICD_JSON_FILES})
@@ -71,23 +72,7 @@ add_custom_target(generate_icd_files DEPENDS
     mock_icd.h
     mock_icd.cpp
     )
-
-# Add targets for JSON file install on Linux.
-# Need to remove the "./" from the library path before installing to /etc.
-if(UNIX)
-    if(INSTALL_LVL_FILES)
-        foreach (config_file ${ICD_JSON_FILES})
-            add_custom_target(${config_file}-staging-json ALL
-                COMMAND mkdir -p ${CMAKE_CURRENT_BINARY_DIR}/staging-json
-                COMMAND cp ${CMAKE_CURRENT_SOURCE_DIR}/linux/${config_file}.json ${CMAKE_CURRENT_BINARY_DIR}/staging-json
-                COMMAND sed -i -e "/\"library_path\":/s$./libVkICD$libVkICD$" ${CMAKE_CURRENT_BINARY_DIR}/staging-json/${config_file}.json
-                VERBATIM
-                DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/linux/${config_file}.json
-                )
-            install(FILES ${CMAKE_CURRENT_BINARY_DIR}/staging-json/${config_file}.json DESTINATION ${CMAKE_INSTALL_SYSCONFDIR}/vulkan/icd.d)
-        endforeach(config_file)
-    endif()
-endif()
+set_target_properties(generate_icd_files PROPERTIES FOLDER ${LVL_TARGET_FOLDER})
 
 if (WIN32)
     macro(add_vk_icd target)
@@ -96,6 +81,7 @@ if (WIN32)
         COMMAND ${CMAKE_COMMAND} -E copy_if_different ${DEF_FILE} VkICD_${target}.def
         VERBATIM
     )
+    set_target_properties(copy-${target}-def-file PROPERTIES FOLDER ${LVL_TARGET_FOLDER})
     add_library(VkICD_${target} SHARED ${ARGN} VkICD_${target}.def)
     add_dependencies(VkICD_${target} generate_icd_files)
     #target_link_Libraries(VkICD_${target} VkICD_utils)
@@ -118,7 +104,7 @@ include_directories(
     ${CMAKE_CURRENT_SOURCE_DIR}/../loader
     ${CMAKE_CURRENT_SOURCE_DIR}/../include/vulkan
     ${CMAKE_CURRENT_BINARY_DIR}
-    ${CMAKE_PROJECT_BINARY_DIR}
+    ${PROJECT_BINARY_DIR}
     ${CMAKE_BINARY_DIR}
 )
 
@@ -140,30 +126,5 @@ endif()
 run_vk_xml_generate(mock_icd_generator.py mock_icd.h)
 run_vk_xml_generate(mock_icd_generator.py mock_icd.cpp)
 
-# Layer Utils Library
-# For Windows, we use a static lib because the Windows loader has a fairly restrictive loader search
-# path that can't be easily modified to point it to the same directory that contains the layers.
-#if (WIN32)
-#    add_library(VkLayer_utils STATIC vk_layer_config.cpp vk_layer_extension_utils.cpp vk_layer_utils.cpp vk_format_utils.cpp)
-#else()
-#    add_library(VkLayer_utils SHARED vk_layer_config.cpp vk_layer_extension_utils.cpp vk_layer_utils.cpp vk_format_utils.cpp)
-#    if(INSTALL_LVL_FILES)
-#        install(TARGETS VkLayer_utils DESTINATION ${CMAKE_INSTALL_LIBDIR})
-#    endif()
-#endif()
-#add_dependencies(VkLayer_utils generate_helper_files)
-
-#add_vk_layer(core_validation core_validation.cpp vk_layer_table.cpp descriptor_sets.cpp buffer_validation.cpp shader_validation.cpp)
-#add_vk_layer(object_tracker object_tracker.cpp object_tracker_utils.cpp vk_layer_table.cpp)
-# generated
-#add_vk_layer(threading threading.cpp thread_check.h vk_layer_table.cpp)
-#add_vk_layer(unique_objects unique_objects.cpp unique_objects_wrappers.h vk_layer_table.cpp)
-#add_vk_layer(parameter_validation parameter_validation.cpp parameter_validation_utils.cpp parameter_validation.h vk_layer_table.cpp vk_validation_error_messages.h)
-#add_vk_layer(mock_layer mock_layer.cpp mock_layer.h vk_layer_table.cpp)
-
 add_vk_icd(mock_icd mock_icd.cpp mock_icd.h)
 
-# Core validation has additional dependencies
-#target_include_directories(VkLayer_core_validation PRIVATE ${GLSLANG_SPIRV_INCLUDE_DIR})
-#target_include_directories(VkLayer_core_validation PRIVATE ${SPIRV_TOOLS_INCLUDE_DIR})
-#target_link_libraries(VkLayer_core_validation ${SPIRV_TOOLS_LIBRARIES})

@@ -1,7 +1,9 @@
-Build Validation Layers with Android CMake
-=========================================
-Gradle's CMake library project in this directory builds layers into AAR;
-the project could be directly added into application's gradle projects
+Build Validation Layers with Android CMake Plugin
+=================================================
+Gradle project in this directory builds layers into AAR.
+The project could be directly added into application's gradle projects.
+[Android Studio 3.0.0+](https://developer.android.com/studio/index.html)
+IS required: earlier versions only publish release libs by default.
 
 Pre-requirements
 ----------------
@@ -14,21 +16,21 @@ Build ShaderC binary
 Extra Steps if building from NDK's source tree
 ```
    cd ${your ANDROID_NDK_ROOT}/sources/third_party/shaderc
-   ndk-build  APP_ABI=armeabi-v7a APP_STL=gnustl_static NDK_TOOLCHAIN_VERSION=clang NDK_PROJECT_PATH=. APP_BUILD_SCRIPT=Android.mk libshaderc_combined
+   ndk-build  APP_ABI=all APP_STL=c++_static NDK_TOOLCHAIN_VERSION=clang NDK_PROJECT_PATH=. APP_BUILD_SCRIPT=Android.mk libshaderc_combined
 ```
 
 Adding layer module into Android Studio application project
 --------------------------------------------------------
 1. app's settings.gradle, add 
-```java
+```
     include ':layerLib'
     project(':layerLib').projectDir = new File('/path/to/cmake/layerlib')
 ```
 2. app's build.gradle:
-```java
+```
 dependencies {
-    // force debug layer lib for packing
-    compile project(path: ':layerlib', configuration: 'debug')
+    // Android Studio 3.0.0+ is required
+    implementation project(':layerLib')
 }
 ```
 BUILD_IN_NDK variable in layerlib/CMakeLists.txt could detect whether the source is
@@ -36,5 +38,6 @@ from NDK or github repo clone, and would configure the file paths accordingly
 
 Tested
 -----
-  Build on Mac OS, Nexus 5X test phone. Equvilaent build scripts for Windows OS are at the same directory.
+Build on Mac OS, tested on Google Pixel XL with Android Oreo.
+Equvilaent build scripts for Windows OS are at the same directory.
 

@@ -57,13 +57,13 @@ const std::unordered_map<std::string, VkFlags> report_flags_option_definitions =
     {std::string("error"), VK_DEBUG_REPORT_ERROR_BIT_EXT},
     {std::string("debug"), VK_DEBUG_REPORT_DEBUG_BIT_EXT}};
 
-const char *getLayerOption(const char *_option);
-FILE *getLayerLogOutput(const char *_option, const char *layerName);
-VkFlags GetLayerOptionFlags(std::string _option, std::unordered_map<std::string, VkFlags> const &enum_data,
-                            uint32_t option_default);
+VK_LAYER_EXPORT const char *getLayerOption(const char *_option);
+VK_LAYER_EXPORT FILE *getLayerLogOutput(const char *_option, const char *layerName);
+VK_LAYER_EXPORT VkFlags GetLayerOptionFlags(std::string _option, std::unordered_map<std::string, VkFlags> const &enum_data,
+                                            uint32_t option_default);
 
-void setLayerOption(const char *_option, const char *_val);
-void print_msg_flags(VkFlags msgFlags, char *msg_flags);
+VK_LAYER_EXPORT void setLayerOption(const char *_option, const char *_val);
+VK_LAYER_EXPORT void print_msg_flags(VkFlags msgFlags, char *msg_flags);
 
 #ifdef __cplusplus
 }

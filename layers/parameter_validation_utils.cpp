@@ -91,7 +91,10 @@ static void init_parameter_validation(instance_layer_data *instance_data, const 
 static const VkExtensionProperties instance_extensions[] = {{VK_EXT_DEBUG_REPORT_EXTENSION_NAME, VK_EXT_DEBUG_REPORT_SPEC_VERSION}};
 
 static const VkLayerProperties global_layer = {
-    "VK_LAYER_LUNARG_parameter_validation", VK_LAYER_API_VERSION, 1, "LunarG Validation Layer",
+    "VK_LAYER_LUNARG_parameter_validation",
+    VK_LAYER_API_VERSION,
+    1,
+    "LunarG Validation Layer",
 };
 
 static const int MaxParamCheckerStringLength = 256;
@@ -476,7 +479,7 @@ VKAPI_ATTR VkResult VKAPI_CALL vkCreateDevice(VkPhysicalDevice physicalDevice, c
                 }
             }
             if (enabled_features_found) {
-                    my_device_data->physical_device_features = *enabled_features_found;
+                my_device_data->physical_device_features = *enabled_features_found;
             } else {
                 memset(&my_device_data->physical_device_features, 0, sizeof(VkPhysicalDeviceFeatures));
             }
@@ -577,7 +580,8 @@ VKAPI_ATTR VkResult VKAPI_CALL vkCreateRenderPass(VkDevice device, const VkRende
         std::unique_lock<std::mutex> lock(global_lock);
         skip |= parameter_validation_vkCreateRenderPass(device, pCreateInfo, pAllocator, pRenderPass);
 
-        typedef bool (*PFN_manual_vkCreateRenderPass)(VkDevice device, const VkRenderPassCreateInfo* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkRenderPass* pRenderPass);
+        typedef bool (*PFN_manual_vkCreateRenderPass)(VkDevice device, const VkRenderPassCreateInfo *pCreateInfo,
+                                                      const VkAllocationCallbacks *pAllocator, VkRenderPass *pRenderPass);
         PFN_manual_vkCreateRenderPass custom_func = (PFN_manual_vkCreateRenderPass)custom_functions["vkCreateRenderPass"];
         if (custom_func != nullptr) {
             skip |= custom_func(device, pCreateInfo, pAllocator, pRenderPass);
@@ -619,7 +623,8 @@ VKAPI_ATTR void VKAPI_CALL vkDestroyRenderPass(VkDevice device, VkRenderPass ren
         std::unique_lock<std::mutex> lock(global_lock);
         skip |= parameter_validation_vkDestroyRenderPass(device, renderPass, pAllocator);
 
-        typedef bool (*PFN_manual_vkDestroyRenderPass)(VkDevice device, VkRenderPass renderPass, const VkAllocationCallbacks* pAllocator);
+        typedef bool (*PFN_manual_vkDestroyRenderPass)(VkDevice device, VkRenderPass renderPass,
+                                                       const VkAllocationCallbacks *pAllocator);
         PFN_manual_vkDestroyRenderPass custom_func = (PFN_manual_vkDestroyRenderPass)custom_functions["vkDestroyRenderPass"];
         if (custom_func != nullptr) {
             skip |= custom_func(device, renderPass, pAllocator);
@@ -643,10 +648,10 @@ bool pv_vkCreateBuffer(VkDevice device, const VkBufferCreateInfo *pCreateInfo, c
     layer_data *device_data = GetLayerDataPtr(get_dispatch_key(device), layer_data_map);
     debug_report_data *report_data = device_data->report_data;
 
+    const LogMiscParams log_misc{report_data, VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT, VK_NULL_HANDLE, LayerName, "vkCreateBuffer"};
+
     if (pCreateInfo != nullptr) {
-        // Buffer size must be greater than 0 (error 00663)
-        skip |=
-            ValidateGreaterThan(report_data, "vkCreateBuffer", "pCreateInfo->size", pCreateInfo->size, static_cast<VkDeviceSize>(0));
+        skip |= ValidateGreaterThanZero(pCreateInfo->size, "pCreateInfo->size", VALIDATION_ERROR_01400720, log_misc);
 
         // Validation for parameters excluded from the generated validation code due to a 'noautovalidity' tag in vk.xml
         if (pCreateInfo->sharingMode == VK_SHARING_MODE_CONCURRENT) {
@@ -696,6 +701,8 @@ bool pv_vkCreateImage(VkDevice device, const VkImageCreateInfo *pCreateInfo, con
     bool skip = false;
     layer_data *device_data = GetLayerDataPtr(get_dispatch_key(device), layer_data_map);
     debug_report_data *report_data = device_data->report_data;
+
+    const LogMiscParams log_misc{report_data, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT, VK_NULL_HANDLE, LayerName, "vkCreateImage"};
 
     if (pCreateInfo != nullptr) {
         if ((device_data->physical_device_features.textureCompressionETC2 == false) &&
@@ -753,16 +760,25 @@ bool pv_vkCreateImage(VkDevice device, const VkImageCreateInfo *pCreateInfo, con
             }
         }
 
-        // width, height, and depth members of extent must be greater than 0
-        skip |= ValidateGreaterThan(report_data, "vkCreateImage", "pCreateInfo->extent.width", pCreateInfo->extent.width, 0u);
-        skip |= ValidateGreaterThan(report_data, "vkCreateImage", "pCreateInfo->extent.height", pCreateInfo->extent.height, 0u);
-        skip |= ValidateGreaterThan(report_data, "vkCreateImage", "pCreateInfo->extent.depth", pCreateInfo->extent.depth, 0u);
+        skip |=
+            ValidateGreaterThanZero(pCreateInfo->extent.width, "pCreateInfo->extent.width", VALIDATION_ERROR_09e00760, log_misc);
+        skip |=
+            ValidateGreaterThanZero(pCreateInfo->extent.height, "pCreateInfo->extent.height", VALIDATION_ERROR_09e00762, log_misc);
+        skip |=
+            ValidateGreaterThanZero(pCreateInfo->extent.depth, "pCreateInfo->extent.depth", VALIDATION_ERROR_09e00764, log_misc);
 
-        // mipLevels must be greater than 0
-        skip |= ValidateGreaterThan(report_data, "vkCreateImage", "pCreateInfo->mipLevels", pCreateInfo->mipLevels, 0u);
+        skip |= ValidateGreaterThanZero(pCreateInfo->mipLevels, "pCreateInfo->mipLevels", VALIDATION_ERROR_09e00766, log_misc);
+        skip |= ValidateGreaterThanZero(pCreateInfo->arrayLayers, "pCreateInfo->arrayLayers", VALIDATION_ERROR_09e00768, log_misc);
 
-        // arrayLayers must be greater than 0
-        skip |= ValidateGreaterThan(report_data, "vkCreateImage", "pCreateInfo->arrayLayers", pCreateInfo->arrayLayers, 0u);
+        // InitialLayout must be PREINITIALIZED or UNDEFINED
+        if ((pCreateInfo->initialLayout != VK_IMAGE_LAYOUT_UNDEFINED) &&
+            (pCreateInfo->initialLayout != VK_IMAGE_LAYOUT_PREINITIALIZED)) {
+            skip |= log_msg(
+                report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
+                VALIDATION_ERROR_09e007c2, LayerName,
+                "vkCreateImage(): initialLayout is %s, must be VK_IMAGE_LAYOUT_UNDEFINED or VK_IMAGE_LAYOUT_PREINITIALIZED. %s",
+                string_VkImageLayout(pCreateInfo->initialLayout), validation_error_map[VALIDATION_ERROR_09e007c2]);
+        }
 
         // If imageType is VK_IMAGE_TYPE_1D, both extent.height and extent.depth must be 1
         if ((pCreateInfo->imageType == VK_IMAGE_TYPE_1D) && (pCreateInfo->extent.height != 1) && (pCreateInfo->extent.depth != 1)) {
@@ -795,9 +811,48 @@ bool pv_vkCreateImage(VkDevice device, const VkImageCreateInfo *pCreateInfo, con
             }
         }
 
+        // 3D image may have only 1 layer
+        if ((pCreateInfo->imageType == VK_IMAGE_TYPE_3D) && (pCreateInfo->arrayLayers != 1)) {
+            skip |=
+                log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
+                        VALIDATION_ERROR_09e00782, LayerName,
+                        "vkCreateImage(): if pCreateInfo->imageType is VK_IMAGE_TYPE_3D, pCreateInfo->arrayLayers must be 1. %s",
+                        validation_error_map[VALIDATION_ERROR_09e00782]);
+        }
+
+        // If multi-sample, validate type, usage, tiling and mip levels.
+        if ((pCreateInfo->samples != VK_SAMPLE_COUNT_1_BIT) &&
+            ((pCreateInfo->imageType != VK_IMAGE_TYPE_2D) || (pCreateInfo->flags & VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT) ||
+             (pCreateInfo->tiling != VK_IMAGE_TILING_OPTIMAL) || (pCreateInfo->mipLevels != 1))) {
+            skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
+                            VALIDATION_ERROR_09e00784, LayerName,
+                            "vkCreateImage(): Multi-sample image with incompatible type, usage, tiling, or mips. %s",
+                            validation_error_map[VALIDATION_ERROR_09e00784]);
+        }
+
+        if (0 != (pCreateInfo->usage & VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT)) {
+            VkImageUsageFlags legal_flags = (VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT |
+                                             VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT);
+            // At least one of the legal attachment bits must be set
+            if (0 == (pCreateInfo->usage & legal_flags)) {
+                skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
+                                VALIDATION_ERROR_09e0078c, LayerName,
+                                "vkCreateImage(): Transient attachment image without a compatible attachment flag set. %s",
+                                validation_error_map[VALIDATION_ERROR_09e0078c]);
+            }
+            // No flags other than the legal attachment bits may be set
+            legal_flags |= VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT;
+            if (0 != (pCreateInfo->usage & ~legal_flags)) {
+                skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
+                                VALIDATION_ERROR_09e00786, LayerName,
+                                "vkCreateImage(): Transient attachment image with incompatible usage flags set. %s",
+                                validation_error_map[VALIDATION_ERROR_09e00786]);
+            }
+        }
+
         // mipLevels must be less than or equal to floor(log2(max(extent.width,extent.height,extent.depth)))+1
         uint32_t maxDim = std::max(std::max(pCreateInfo->extent.width, pCreateInfo->extent.height), pCreateInfo->extent.depth);
-        if (pCreateInfo->mipLevels > (floor(log2(maxDim)) + 1)) {
+        if (maxDim > 0 && pCreateInfo->mipLevels > (floor(log2(maxDim)) + 1)) {
             skip |=
                 log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
                         VALIDATION_ERROR_09e0077c, LayerName,
@@ -974,6 +1029,9 @@ bool pv_vkCreateGraphicsPipelines(VkDevice device, VkPipelineCache pipelineCache
             bool has_dynamic_viewport = false;
             bool has_dynamic_scissor = false;
             bool has_dynamic_line_width = false;
+            bool has_dynamic_viewport_w_scaling_nv = false;
+            bool has_dynamic_discard_rectangle_ext = false;
+            bool has_dynamic_sample_locations_ext = false;
             if (pCreateInfos[i].pDynamicState != nullptr) {
                 const auto &dynamic_state_info = *pCreateInfos[i].pDynamicState;
                 for (uint32_t state_index = 0; state_index < dynamic_state_info.dynamicStateCount; ++state_index) {
@@ -981,6 +1039,9 @@ bool pv_vkCreateGraphicsPipelines(VkDevice device, VkPipelineCache pipelineCache
                     if (dynamic_state == VK_DYNAMIC_STATE_VIEWPORT) has_dynamic_viewport = true;
                     if (dynamic_state == VK_DYNAMIC_STATE_SCISSOR) has_dynamic_scissor = true;
                     if (dynamic_state == VK_DYNAMIC_STATE_LINE_WIDTH) has_dynamic_line_width = true;
+                    if (dynamic_state == VK_DYNAMIC_STATE_VIEWPORT_W_SCALING_NV) has_dynamic_viewport_w_scaling_nv = true;
+                    if (dynamic_state == VK_DYNAMIC_STATE_DISCARD_RECTANGLE_EXT) has_dynamic_discard_rectangle_ext = true;
+                    if (dynamic_state == VK_DYNAMIC_STATE_SAMPLE_LOCATIONS_EXT) has_dynamic_sample_locations_ext = true;
                 }
             }
 
@@ -1220,6 +1281,36 @@ bool pv_vkCreateGraphicsPipelines(VkDevice device, VkPipelineCache pipelineCache
                     }
 
                     // TODO: validate the VkViewports in pViewports here
+
+                    if (has_dynamic_viewport_w_scaling_nv && !device_data->extensions.vk_nv_clip_space_w_scaling) {
+                        skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_PIPELINE_EXT,
+                                        VK_NULL_HANDLE, __LINE__, EXTENSION_NOT_ENABLED, LayerName,
+                                        "vkCreateGraphicsPipelines: pCreateInfos[%" PRIu32
+                                        "].pDynamicState->pDynamicStates "
+                                        "contains VK_DYNAMIC_STATE_VIEWPORT_W_SCALING_NV, but "
+                                        "VK_NV_clip_space_w_scaling extension is not enabled.",
+                                        i);
+                    }
+
+                    if (has_dynamic_discard_rectangle_ext && !device_data->extensions.vk_ext_discard_rectangles) {
+                        skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_PIPELINE_EXT,
+                                        VK_NULL_HANDLE, __LINE__, EXTENSION_NOT_ENABLED, LayerName,
+                                        "vkCreateGraphicsPipelines: pCreateInfos[%" PRIu32
+                                        "].pDynamicState->pDynamicStates "
+                                        "contains VK_DYNAMIC_STATE_DISCARD_RECTANGLE_EXT, but "
+                                        "VK_EXT_discard_rectangles extension is not enabled.",
+                                        i);
+                    }
+
+                    if (has_dynamic_sample_locations_ext && !device_data->extensions.vk_ext_sample_locations) {
+                        skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_PIPELINE_EXT,
+                                        VK_NULL_HANDLE, __LINE__, EXTENSION_NOT_ENABLED, LayerName,
+                                        "vkCreateGraphicsPipelines: pCreateInfos[%" PRIu32
+                                        "].pDynamicState->pDynamicStates "
+                                        "contains VK_DYNAMIC_STATE_SAMPLE_LOCATIONS_EXT, but "
+                                        "VK_EXT_sample_locations extension is not enabled.",
+                                        i);
+                    }
                 }
 
                 if (pCreateInfos[i].pMultisampleState == nullptr) {
@@ -1229,10 +1320,9 @@ bool pv_vkCreateGraphicsPipelines(VkDevice device, VkPipelineCache pipelineCache
                                     "is VK_FALSE, pCreateInfos[%d].pMultisampleState must not be NULL. %s",
                                     i, i, validation_error_map[VALIDATION_ERROR_096005de]);
                 } else {
-                    const VkStructureType valid_next_stypes[] = {
-                        LvlTypeMap<VkPipelineCoverageModulationStateCreateInfoNV>::kSType,
-                        LvlTypeMap<VkPipelineCoverageToColorStateCreateInfoNV>::kSType,
-                        LvlTypeMap<VkPipelineSampleLocationsStateCreateInfoEXT>::kSType};
+                    const VkStructureType valid_next_stypes[] = {LvlTypeMap<VkPipelineCoverageModulationStateCreateInfoNV>::kSType,
+                                                                 LvlTypeMap<VkPipelineCoverageToColorStateCreateInfoNV>::kSType,
+                                                                 LvlTypeMap<VkPipelineSampleLocationsStateCreateInfoEXT>::kSType};
                     const char *valid_struct_names =
                         "VkPipelineCoverageModulationStateCreateInfoNV, "
                         "VkPipelineCoverageToColorStateCreateInfoNV, "
@@ -2359,6 +2449,9 @@ bool pv_vkCreateSwapchainKHR(VkDevice device, const VkSwapchainCreateInfoKHR *pC
     layer_data *device_data = GetLayerDataPtr(get_dispatch_key(device), layer_data_map);
     debug_report_data *report_data = device_data->report_data;
 
+    const LogMiscParams log_misc{report_data, VK_DEBUG_REPORT_OBJECT_TYPE_SWAPCHAIN_KHR_EXT, VK_NULL_HANDLE, LayerName,
+                                 "vkCreateSwapchainKHR"};
+
     if (pCreateInfo != nullptr) {
         if ((device_data->physical_device_features.textureCompressionETC2 == false) &&
             FormatIsCompressed_ETC2_EAC(pCreateInfo->imageFormat)) {
@@ -2416,9 +2509,8 @@ bool pv_vkCreateSwapchainKHR(VkDevice device, const VkSwapchainCreateInfoKHR *pC
             }
         }
 
-        // imageArrayLayers must be greater than 0
-        skip |= ValidateGreaterThan(report_data, "vkCreateSwapchainKHR", "pCreateInfo->imageArrayLayers",
-                                    pCreateInfo->imageArrayLayers, 0u);
+        skip |= ValidateGreaterThanZero(pCreateInfo->imageArrayLayers, "pCreateInfo->imageArrayLayers", VALIDATION_ERROR_146009f6,
+                                        log_misc);
     }
 
     return skip;
@@ -2515,6 +2607,94 @@ bool pv_vkCreateDescriptorPool(VkDevice device, const VkDescriptorPoolCreateInfo
     return skip;
 }
 
+bool pv_vkCmdDispatch(VkCommandBuffer commandBuffer, uint32_t groupCountX, uint32_t groupCountY, uint32_t groupCountZ) {
+    bool skip = false;
+    layer_data *device_data = GetLayerDataPtr(get_dispatch_key(commandBuffer), layer_data_map);
+
+    if (groupCountX > device_data->device_limits.maxComputeWorkGroupCount[0]) {
+        skip |= log_msg(
+            device_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
+            HandleToUint64(commandBuffer), __LINE__, VALIDATION_ERROR_19c00304, LayerName,
+            "vkCmdDispatch(): groupCountX (%" PRIu32 ") exceeds device limit maxComputeWorkGroupCount[0] (%" PRIu32 "). %s",
+            groupCountX, device_data->device_limits.maxComputeWorkGroupCount[0], validation_error_map[VALIDATION_ERROR_19c00304]);
+    }
+
+    if (groupCountY > device_data->device_limits.maxComputeWorkGroupCount[1]) {
+        skip |= log_msg(
+            device_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
+            HandleToUint64(commandBuffer), __LINE__, VALIDATION_ERROR_19c00306, LayerName,
+            "vkCmdDispatch(): groupCountY (%" PRIu32 ") exceeds device limit maxComputeWorkGroupCount[1] (%" PRIu32 "). %s",
+            groupCountY, device_data->device_limits.maxComputeWorkGroupCount[1], validation_error_map[VALIDATION_ERROR_19c00306]);
+    }
+
+    if (groupCountZ > device_data->device_limits.maxComputeWorkGroupCount[2]) {
+        skip |= log_msg(
+            device_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
+            HandleToUint64(commandBuffer), __LINE__, VALIDATION_ERROR_19c00308, LayerName,
+            "vkCmdDispatch(): groupCountZ (%" PRIu32 ") exceeds device limit maxComputeWorkGroupCount[2] (%" PRIu32 "). %s",
+            groupCountZ, device_data->device_limits.maxComputeWorkGroupCount[2], validation_error_map[VALIDATION_ERROR_19c00308]);
+    }
+
+    return skip;
+}
+
+bool pv_vkCmdDispatchBaseKHX(VkCommandBuffer commandBuffer, uint32_t baseGroupX, uint32_t baseGroupY, uint32_t baseGroupZ,
+                             uint32_t groupCountX, uint32_t groupCountY, uint32_t groupCountZ) {
+    bool skip = false;
+    layer_data *device_data = GetLayerDataPtr(get_dispatch_key(commandBuffer), layer_data_map);
+
+    // Paired if {} else if {} tests used to avoid any possible uint underflow
+    uint32_t limit = device_data->device_limits.maxComputeWorkGroupCount[0];
+    if (baseGroupX >= limit) {
+        skip |= log_msg(device_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
+                        HandleToUint64(commandBuffer), __LINE__, VALIDATION_ERROR_19e0034a, LayerName,
+                        "vkCmdDispatch(): baseGroupX (%" PRIu32
+                        ") equals or exceeds device limit maxComputeWorkGroupCount[0] (%" PRIu32 "). %s",
+                        baseGroupX, limit, validation_error_map[VALIDATION_ERROR_19e0034a]);
+    } else if (groupCountX > (limit - baseGroupX)) {
+        skip |= log_msg(device_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
+                        HandleToUint64(commandBuffer), __LINE__, VALIDATION_ERROR_19e00350, LayerName,
+                        "vkCmdDispatchBaseKHX(): baseGroupX (%" PRIu32 ") + groupCountX (%" PRIu32
+                        ") exceeds device limit "
+                        "maxComputeWorkGroupCount[0] (%" PRIu32 "). %s",
+                        baseGroupX, groupCountX, limit, validation_error_map[VALIDATION_ERROR_19e00350]);
+    }
+
+    limit = device_data->device_limits.maxComputeWorkGroupCount[1];
+    if (baseGroupY >= limit) {
+        skip |= log_msg(device_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
+                        HandleToUint64(commandBuffer), __LINE__, VALIDATION_ERROR_19e0034c, LayerName,
+                        "vkCmdDispatch(): baseGroupY (%" PRIu32
+                        ") equals or exceeds device limit maxComputeWorkGroupCount[1] (%" PRIu32 "). %s",
+                        baseGroupY, limit, validation_error_map[VALIDATION_ERROR_19e0034c]);
+    } else if (groupCountY > (limit - baseGroupY)) {
+        skip |= log_msg(device_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
+                        HandleToUint64(commandBuffer), __LINE__, VALIDATION_ERROR_19e00352, LayerName,
+                        "vkCmdDispatchBaseKHX(): baseGroupY (%" PRIu32 ") + groupCountY (%" PRIu32
+                        ") exceeds device limit "
+                        "maxComputeWorkGroupCount[1] (%" PRIu32 "). %s",
+                        baseGroupY, groupCountY, limit, validation_error_map[VALIDATION_ERROR_19e00352]);
+    }
+
+    limit = device_data->device_limits.maxComputeWorkGroupCount[2];
+    if (baseGroupZ >= limit) {
+        skip |= log_msg(device_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
+                        HandleToUint64(commandBuffer), __LINE__, VALIDATION_ERROR_19e0034e, LayerName,
+                        "vkCmdDispatch(): baseGroupZ (%" PRIu32
+                        ") equals or exceeds device limit maxComputeWorkGroupCount[2] (%" PRIu32 "). %s",
+                        baseGroupZ, limit, validation_error_map[VALIDATION_ERROR_19e0034e]);
+    } else if (groupCountZ > (limit - baseGroupZ)) {
+        skip |= log_msg(device_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
+                        HandleToUint64(commandBuffer), __LINE__, VALIDATION_ERROR_19e00354, LayerName,
+                        "vkCmdDispatchBaseKHX(): baseGroupZ (%" PRIu32 ") + groupCountZ (%" PRIu32
+                        ") exceeds device limit "
+                        "maxComputeWorkGroupCount[2] (%" PRIu32 "). %s",
+                        baseGroupZ, groupCountZ, limit, validation_error_map[VALIDATION_ERROR_19e00354]);
+    }
+
+    return skip;
+}
+
 VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL vkGetDeviceProcAddr(VkDevice device, const char *funcName) {
     const auto item = name_to_funcptr_map.find(funcName);
     if (item != name_to_funcptr_map.end()) {
@@ -2550,33 +2730,35 @@ VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL vkGetPhysicalDeviceProcAddr(VkInstance 
 // If additional validation is needed outside of the generated checks, a manual routine can be added to this file
 // and the address filled in here. The autogenerated source will call these routines if the pointers are not NULL.
 void InitializeManualParameterValidationFunctionPointers() {
-    custom_functions["vkGetDeviceQueue"] = (void*)pv_vkGetDeviceQueue;
-    custom_functions["vkCreateBuffer"] = (void*)pv_vkCreateBuffer;
-    custom_functions["vkCreateImage"] = (void*)pv_vkCreateImage;
-    custom_functions["vkCreateImageView"] = (void*)pv_vkCreateImageView;
-    custom_functions["vkCreateGraphicsPipelines"] = (void*)pv_vkCreateGraphicsPipelines;
-    custom_functions["vkCreateComputePipelines"] = (void*)pv_vkCreateComputePipelines;
-    custom_functions["vkCreateSampler"] = (void*)pv_vkCreateSampler;
-    custom_functions["vkCreateDescriptorSetLayout"] = (void*)pv_vkCreateDescriptorSetLayout;
-    custom_functions["vkFreeDescriptorSets"] = (void*)pv_vkFreeDescriptorSets;
-    custom_functions["vkUpdateDescriptorSets"] = (void*)pv_vkUpdateDescriptorSets;
-    custom_functions["vkCreateRenderPass"] = (void*)pv_vkCreateRenderPass;
-    custom_functions["vkBeginCommandBuffer"] = (void*)pv_vkBeginCommandBuffer;
-    custom_functions["vkCmdSetViewport"] = (void*)pv_vkCmdSetViewport;
-    custom_functions["vkCmdSetScissor"] = (void*)pv_vkCmdSetScissor;
+    custom_functions["vkGetDeviceQueue"] = (void *)pv_vkGetDeviceQueue;
+    custom_functions["vkCreateBuffer"] = (void *)pv_vkCreateBuffer;
+    custom_functions["vkCreateImage"] = (void *)pv_vkCreateImage;
+    custom_functions["vkCreateImageView"] = (void *)pv_vkCreateImageView;
+    custom_functions["vkCreateGraphicsPipelines"] = (void *)pv_vkCreateGraphicsPipelines;
+    custom_functions["vkCreateComputePipelines"] = (void *)pv_vkCreateComputePipelines;
+    custom_functions["vkCreateSampler"] = (void *)pv_vkCreateSampler;
+    custom_functions["vkCreateDescriptorSetLayout"] = (void *)pv_vkCreateDescriptorSetLayout;
+    custom_functions["vkFreeDescriptorSets"] = (void *)pv_vkFreeDescriptorSets;
+    custom_functions["vkUpdateDescriptorSets"] = (void *)pv_vkUpdateDescriptorSets;
+    custom_functions["vkCreateRenderPass"] = (void *)pv_vkCreateRenderPass;
+    custom_functions["vkBeginCommandBuffer"] = (void *)pv_vkBeginCommandBuffer;
+    custom_functions["vkCmdSetViewport"] = (void *)pv_vkCmdSetViewport;
+    custom_functions["vkCmdSetScissor"] = (void *)pv_vkCmdSetScissor;
     custom_functions["vkCmdSetLineWidth"] = (void *)pv_vkCmdSetLineWidth;
-    custom_functions["vkCmdDraw"] = (void*)pv_vkCmdDraw;
-    custom_functions["vkCmdDrawIndirect"] = (void*)pv_vkCmdDrawIndirect;
-    custom_functions["vkCmdDrawIndexedIndirect"] = (void*)pv_vkCmdDrawIndexedIndirect;
-    custom_functions["vkCmdCopyImage"] = (void*)pv_vkCmdCopyImage;
-    custom_functions["vkCmdBlitImage"] = (void*)pv_vkCmdBlitImage;
-    custom_functions["vkCmdCopyBufferToImage"] = (void*)pv_vkCmdCopyBufferToImage;
-    custom_functions["vkCmdCopyImageToBuffer"] = (void*)pv_vkCmdCopyImageToBuffer;
-    custom_functions["vkCmdUpdateBuffer"] = (void*)pv_vkCmdUpdateBuffer;
-    custom_functions["vkCmdFillBuffer"] = (void*)pv_vkCmdFillBuffer;
-    custom_functions["vkCreateSwapchainKHR"] = (void*)pv_vkCreateSwapchainKHR;
-    custom_functions["vkQueuePresentKHR"] = (void*)pv_vkQueuePresentKHR;
-    custom_functions["vkCreateDescriptorPool"] = (void*)pv_vkCreateDescriptorPool;
+    custom_functions["vkCmdDraw"] = (void *)pv_vkCmdDraw;
+    custom_functions["vkCmdDrawIndirect"] = (void *)pv_vkCmdDrawIndirect;
+    custom_functions["vkCmdDrawIndexedIndirect"] = (void *)pv_vkCmdDrawIndexedIndirect;
+    custom_functions["vkCmdCopyImage"] = (void *)pv_vkCmdCopyImage;
+    custom_functions["vkCmdBlitImage"] = (void *)pv_vkCmdBlitImage;
+    custom_functions["vkCmdCopyBufferToImage"] = (void *)pv_vkCmdCopyBufferToImage;
+    custom_functions["vkCmdCopyImageToBuffer"] = (void *)pv_vkCmdCopyImageToBuffer;
+    custom_functions["vkCmdUpdateBuffer"] = (void *)pv_vkCmdUpdateBuffer;
+    custom_functions["vkCmdFillBuffer"] = (void *)pv_vkCmdFillBuffer;
+    custom_functions["vkCreateSwapchainKHR"] = (void *)pv_vkCreateSwapchainKHR;
+    custom_functions["vkQueuePresentKHR"] = (void *)pv_vkQueuePresentKHR;
+    custom_functions["vkCreateDescriptorPool"] = (void *)pv_vkCreateDescriptorPool;
+    custom_functions["vkCmdDispatch"] = (void *)pv_vkCmdDispatch;
+    custom_functions["vkCmdDispatchBaseKHX"] = (void *)pv_vkCmdDispatchBaseKHX;
 }
 
 }  // namespace parameter_validation

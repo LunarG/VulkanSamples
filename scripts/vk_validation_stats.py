@@ -24,6 +24,13 @@ import sys
 import platform
 
 # vk_validation_stats.py overview
+#
+# usage:
+#    python vk_validation_stats.py [verbose]
+#
+#    Arguments:
+#        verbose - enables verbose output, including VUID duplicates
+#
 # This script is intended to generate statistics on the state of validation code
 #  based on information parsed from the source files and the database file
 # Here's what it currently does:
@@ -185,12 +192,12 @@ class ValidationSource:
                     filepath = '../%s/layers/%s' % (build_dir, source)
                     if os.path.isfile(filepath):
                         qualified_paths.append(filepath)
-                        continue
+                        break
             if len(self.generated_source_files) != len(qualified_paths):
                 print("Error: Unable to locate one or more of the following source files in the %s directories" % (", ".join(generated_source_directories)))
                 print(self.generated_source_files)
                 print("Skipping documentation validation test")
-                quit()
+                exit(1)
             else:
                 self.source_files.extend(qualified_paths)
 
@@ -206,14 +213,14 @@ class ValidationSource:
                         continue
                     # Find enums
                     #if 'VALIDATION_ERROR_' in line and True not in [ignore in line for ignore in ['[VALIDATION_ERROR_', 'UNIQUE_VALIDATION_ERROR_CODE']]:
-                    if ' VALIDATION_ERROR_' in line:
+                    if 'VALIDATION_ERROR_' in line:
                         # Need to isolate the validation error enum
                         #print("Line has check:%s" % (line))
                         line_list = line.split()
                         enum_list = []
                         for str in line_list:
                             if 'VALIDATION_ERROR_' in str and True not in [ignore_str in str for ignore_str in ['[VALIDATION_ERROR_', 'VALIDATION_ERROR_UNDEFINED', 'UNIQUE_VALIDATION_ERROR_CODE']]:
-                                enum_list.append(str.strip(',);'))
+                                enum_list.append(str.strip(',);{}'))
                                 #break
                         for enum in enum_list:
                             if enum != '':
@@ -303,7 +310,7 @@ class bcolors:
 
 def main(argv):
     result = 0 # Non-zero result indicates an error case
-    terse_mode = 'terse_mode' in sys.argv
+    verbose_mode = 'verbose' in sys.argv
     # parse db
     val_db = ValidationDatabase()
     val_db.read()
@@ -320,14 +327,14 @@ def main(argv):
     # Process stats - Just doing this inline in main, could make a fancy class to handle
     #   all the processing of data and then get results from that
     txt_color = bcolors()
-    if terse_mode == False:
+    if verbose_mode:
         print("Validation Statistics")
     else:
-        print("Validation/Documentation Consistency Test)")
+        print("Validation/Documentation Consistency Test")
     # First give number of checks in db & header and report any discrepancies
     db_enums = len(val_db.db_dict.keys())
     hdr_enums = len(val_header.enums)
-    if not terse_mode:
+    if verbose_mode:
         print(" Database file includes %d unique checks" % (db_enums))
         print(" Header file declares %d unique checks" % (hdr_enums))
 
@@ -346,7 +353,7 @@ def main(argv):
         if not tmp_db_dict.pop(enum, False):
             db_missing.append(enum)
     if db_enums == hdr_enums and len(db_missing) == 0 and len(tmp_db_dict.keys()) == 0:
-        if not terse_mode:
+        if verbose_mode:
             print(txt_color.green() + "  Database and Header match, GREAT!" + txt_color.endc())
     else:
         print(txt_color.red() + "  Uh oh, Database doesn't match Header :(" + txt_color.endc())
@@ -372,15 +379,15 @@ def main(argv):
             multiple_uses = True
         if src_enum not in val_db.db_implemented_enums:
             imp_not_claimed.append(src_enum)
-    if not terse_mode:
+    if verbose_mode:
         print(" Database file claims that %d checks (%s) are implemented in source." % (len(val_db.db_implemented_enums), "{0:.0f}%".format(float(len(val_db.db_implemented_enums))/db_enums * 100)))
 
-    if len(val_db.db_unimplemented_implicit) > 0 and not terse_mode:
+    if len(val_db.db_unimplemented_implicit) > 0 and verbose_mode:
         print(" Database file claims %d implicit checks (%s) that are not implemented." % (len(val_db.db_unimplemented_implicit), "{0:.0f}%".format(float(len(val_db.db_unimplemented_implicit))/db_enums * 100)))
         total_checks = len(val_db.db_implemented_enums) + len(val_db.db_unimplemented_implicit)
         print(" If all implicit checks are handled by parameter validation this is a total of %d (%s) checks covered." % (total_checks, "{0:.0f}%".format(float(total_checks)/db_enums * 100)))
     if len(imp_not_found) == 0 and len(imp_not_claimed) == 0:
-        if not terse_mode:
+        if verbose_mode:
             print(txt_color.green() + "  All claimed Database implemented checks have been found in source, and no source checks aren't claimed in Database, GREAT!" + txt_color.endc())
     else:
         result = 1
@@ -394,7 +401,7 @@ def main(argv):
             for imp_enum in imp_not_claimed:
                 print(txt_color.red() + "    %s" % (imp_enum) + txt_color.endc())
 
-    if multiple_uses and not terse_mode:
+    if multiple_uses and verbose_mode:
         print(txt_color.yellow() + "  Note that some checks are used multiple times. These may be good candidates for new valid usage spec language." + txt_color.endc())
         print(txt_color.yellow() + "  Here is a list of each check used multiple times with its number of uses:" + txt_color.endc())
         for enum in val_source.enum_count_dict:
@@ -421,7 +428,7 @@ def main(argv):
                     if testname not in tests_missing_enum:
                         tests_missing_enum[testname] = []
                     tests_missing_enum[testname].append(enum)
-    if tests_missing_enum and not terse_mode:
+    if tests_missing_enum and verbose_mode:
         print(txt_color.yellow() + "  \nThe following tests do not use their reported enums to check for the validation error. You may want to update these to pass the expected enum to SetDesiredFailureMsg:" + txt_color.endc())
         for testname in tests_missing_enum:
             print(txt_color.yellow() + "   Testname %s does not explicitly check for these ids:" % (testname) + txt_color.endc())
@@ -429,10 +436,10 @@ def main(argv):
                 print(txt_color.yellow() + "    %s" % (enum) + txt_color.endc())
 
     # TODO : Go through all enums found in the test file and make sure they're correctly documented in the database file
-    if not terse_mode:
+    if verbose_mode:
         print(" Database file claims that %d checks have tests written." % len(val_db.db_enum_to_tests))
     if len(bad_testnames) == 0:
-        if not terse_mode:
+        if verbose_mode:
             print(txt_color.green() + "  All claimed tests have valid names. That's good!" + txt_color.endc())
     else:
         print(txt_color.red() + "  The following testnames in Database appear to be invalid:")

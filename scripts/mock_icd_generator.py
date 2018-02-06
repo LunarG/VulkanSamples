@@ -663,6 +663,10 @@ CUSTOM_C_INTERCEPTS = {
     }
     mapped_memory_map.erase(memory);
 ''',
+'vkGetImageSubresourceLayout': '''
+    // Need safe values. Callers are computing memory offsets from pLayout, with no return code to flag failure. 
+    *pLayout = VkSubresourceLayout(); // Default constructor zero values.
+''',
 }
 
 # MockICDGeneratorOptions - subclass of GeneratorOptions.
@@ -820,11 +824,11 @@ class MockICDOutputGenerator(OutputGenerator):
         if self.header:
             write('#include <unordered_map>', file=self.outFile)
             write('#include <mutex>', file=self.outFile)
+            write('#include <string>', file=self.outFile)
             write('#include <cstring>', file=self.outFile)
             write('#include "vulkan/vk_icd.h"', file=self.outFile)
         else:
             write('#include "mock_icd.h"', file=self.outFile)
-            write('#include <string.h>', file=self.outFile)
             write('#include <stdlib.h>', file=self.outFile)
             write('#include <vector>', file=self.outFile)
 
@@ -835,8 +839,8 @@ class MockICDOutputGenerator(OutputGenerator):
             # Include all of the extensions in ICD except specific ignored ones
             device_exts = []
             instance_exts = []
-            # Ignore extensions that ICDs should not implement
-            ignore_exts = ['VK_EXT_validation_cache']
+            # Ignore extensions that ICDs should not implement or are not safe to report
+            ignore_exts = ['VK_EXT_validation_cache', 'VK_KHR_push_descriptor']
             for ext in self.registry.tree.findall("extensions/extension"):
                 if '0' != ext[0][0].attrib['value']: # Only include implemented extensions
                     if (ext.attrib['name'] in ignore_exts):

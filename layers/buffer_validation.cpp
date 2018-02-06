@@ -228,6 +228,7 @@ void SetLayout(layer_data *device_data, GLOBAL_CB_NODE *pCB, ImageSubresourcePai
 void SetImageLayout(layer_data *device_data, GLOBAL_CB_NODE *cb_node, const IMAGE_STATE *image_state,
                     VkImageSubresourceRange image_subresource_range, const VkImageLayout &layout) {
     assert(image_state);
+    cb_node->image_layout_change_count++;  // Change the version of this data to force revalidation
     for (uint32_t level_index = 0; level_index < image_subresource_range.levelCount; ++level_index) {
         uint32_t level = image_subresource_range.baseMipLevel + level_index;
         for (uint32_t layer_index = 0; layer_index < image_subresource_range.layerCount; layer_index++) {
@@ -385,6 +386,7 @@ void TransitionImageAspectLayout(layer_data *device_data, GLOBAL_CB_NODE *pCB, c
     VkImageSubresource sub = {aspect, level, layer};
     IMAGE_CMD_BUF_LAYOUT_NODE node;
     if (!FindCmdBufLayout(device_data, pCB, mem_barrier->image, sub, node)) {
+        pCB->image_layout_change_count++;  // Change the version of this data to force revalidation
         SetLayout(device_data, pCB, mem_barrier->image, sub,
                   IMAGE_CMD_BUF_LAYOUT_NODE(mem_barrier->oldLayout, mem_barrier->newLayout));
         return;
@@ -632,148 +634,195 @@ bool PreCallValidateCreateImage(layer_data *device_data, const VkImageCreateInfo
         return skip;
     }
 
+    bool optimal_tiling = (VK_IMAGE_TILING_OPTIMAL == pCreateInfo->tiling);
+    const char *tiling_string = string_VkImageTiling(pCreateInfo->tiling);
+    const char *format_string = string_VkFormat(pCreateInfo->format);
     VkFormatProperties properties = GetFormatProperties(device_data, pCreateInfo->format);
+    VkFormatFeatureFlags features = (optimal_tiling ? properties.optimalTilingFeatures : properties.linearTilingFeatures);
 
-    if ((pCreateInfo->tiling == VK_IMAGE_TILING_LINEAR) && (properties.linearTilingFeatures == 0)) {
+    if (0 == features) {
         std::stringstream ss;
-        ss << "vkCreateImage format parameter (" << string_VkFormat(pCreateInfo->format) << ") is an unsupported format";
-        skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
-                        VALIDATION_ERROR_09e007a2, "IMAGE", "%s. %s", ss.str().c_str(),
-                        validation_error_map[VALIDATION_ERROR_09e007a2]);
-
+        UNIQUE_VALIDATION_ERROR_CODE vuid = (optimal_tiling ? VALIDATION_ERROR_09e007ac : VALIDATION_ERROR_09e007a2);
+        ss << "vkCreateImage format parameter " << format_string << " is an unsupported format";
+        skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__, vuid,
+                        "IMAGE", "%s. %s", ss.str().c_str(), validation_error_map[vuid]);
         return skip;
     }
 
-    if ((pCreateInfo->tiling == VK_IMAGE_TILING_OPTIMAL) && (properties.optimalTilingFeatures == 0)) {
+    if ((pCreateInfo->usage & VK_IMAGE_USAGE_SAMPLED_BIT) && !(features & VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT)) {
         std::stringstream ss;
-        ss << "vkCreateImage format parameter (" << string_VkFormat(pCreateInfo->format) << ") is an unsupported format";
-        skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
-                        VALIDATION_ERROR_09e007ac, "IMAGE", "%s. %s", ss.str().c_str(),
-                        validation_error_map[VALIDATION_ERROR_09e007ac]);
+        UNIQUE_VALIDATION_ERROR_CODE vuid = (optimal_tiling ? VALIDATION_ERROR_09e007ae : VALIDATION_ERROR_09e007a4);
+        ss << "vkCreateImage: usage bit VK_IMAGE_USAGE_SAMPLED_BIT is not supported for format " << format_string << " with tiling "
+           << tiling_string;
+        skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__, vuid,
+                        "IMAGE", "%s. %s", ss.str().c_str(), validation_error_map[vuid]);
+    }
 
-        return skip;
+    if ((pCreateInfo->usage & VK_IMAGE_USAGE_STORAGE_BIT) && !(features & VK_FORMAT_FEATURE_STORAGE_IMAGE_BIT)) {
+        std::stringstream ss;
+        UNIQUE_VALIDATION_ERROR_CODE vuid = (optimal_tiling ? VALIDATION_ERROR_09e007b0 : VALIDATION_ERROR_09e007a6);
+        ss << "vkCreateImage: usage bit VK_IMAGE_USAGE_STORAGE_BIT is not supported for format " << format_string << " with tiling "
+           << tiling_string;
+        skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__, vuid,
+                        "IMAGE", "%s. %s", ss.str().c_str(), validation_error_map[vuid]);
     }
 
     // TODO: Add checks for EXTENDED_USAGE images to validate images are compatible
     // For EXTENDED_USAGE images, format can match any image COMPATIBLE with original image
     if (!GetDeviceExtensions(device_data)->vk_khr_maintenance2 || !(pCreateInfo->flags & VK_IMAGE_CREATE_EXTENDED_USAGE_BIT_KHR)) {
         // Validate that format supports usage as color attachment
-        if (pCreateInfo->usage & VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT) {
-            if ((pCreateInfo->tiling == VK_IMAGE_TILING_OPTIMAL) &&
-                ((properties.optimalTilingFeatures & VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT) == 0)) {
-                std::stringstream ss;
-                ss << "vkCreateImage: VkFormat for TILING_OPTIMAL image (" << string_VkFormat(pCreateInfo->format)
-                    << ") does not support requested Image usage type VK_IMAGE_USAGE_COLOR_ATTACHMENT";
-                skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
-                    VALIDATION_ERROR_09e007b2, "IMAGE", "%s. %s", ss.str().c_str(),
-                    validation_error_map[VALIDATION_ERROR_09e007b2]);
-            }
-            if ((pCreateInfo->tiling == VK_IMAGE_TILING_LINEAR) &&
-                ((properties.linearTilingFeatures & VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT) == 0)) {
-                std::stringstream ss;
-                ss << "vkCreateImage: VkFormat for TILING_LINEAR image (" << string_VkFormat(pCreateInfo->format)
-                    << ") does not support requested Image usage type VK_IMAGE_USAGE_COLOR_ATTACHMENT";
-                skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
-                    VALIDATION_ERROR_09e007a8, "IMAGE", "%s. %s", ss.str().c_str(),
-                    validation_error_map[VALIDATION_ERROR_09e007a8]);
-            }
+        if ((pCreateInfo->usage & VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT) &&
+            (0 == (features & VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT))) {
+            UNIQUE_VALIDATION_ERROR_CODE vuid = (optimal_tiling ? VALIDATION_ERROR_09e007b2 : VALIDATION_ERROR_09e007a8);
+            std::stringstream ss;
+            ss << "vkCreateImage: usage bit VK_IMAGE_USAGE_COLOR_ATTACHMENT is not supported for format " << format_string
+               << " with tiling " << tiling_string;
+            skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__, vuid,
+                            "IMAGE", "%s. %s", ss.str().c_str(), validation_error_map[vuid]);
         }
 
         // Validate that format supports usage as depth/stencil attachment
-        if (pCreateInfo->usage & VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT) {
-            if ((pCreateInfo->tiling == VK_IMAGE_TILING_OPTIMAL) &&
-                ((properties.optimalTilingFeatures & VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT) == 0)) {
+        if ((pCreateInfo->usage & VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT) &&
+            (0 == (features & VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT))) {
+            UNIQUE_VALIDATION_ERROR_CODE vuid = (optimal_tiling ? VALIDATION_ERROR_09e007b4 : VALIDATION_ERROR_09e007aa);
+            std::stringstream ss;
+            ss << "vkCreateImage: usage bit VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT is not supported for format " << format_string
+               << " with tiling " << tiling_string;
+            skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__, vuid,
+                            "IMAGE", "%s. %s", ss.str().c_str(), validation_error_map[vuid]);
+        }
+    }
+
+    if ((pCreateInfo->flags & VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT) && (VK_IMAGE_TYPE_2D != pCreateInfo->imageType)) {
+        std::stringstream ss;
+        ss << "vkCreateImage: Image type must be VK_IMAGE_TYPE_2D when VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT flag bit is set";
+        skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
+                        VALIDATION_ERROR_09e0076a, "IMAGE", "%s. %s", ss.str().c_str(),
+                        validation_error_map[VALIDATION_ERROR_09e0076a]);
+    }
+
+    const VkPhysicalDeviceLimits *device_limits = &(GetPhysicalDeviceProperties(device_data)->limits);
+    VkImageFormatProperties format_limits;  // Format limits may exceed general device limits
+    VkResult err = GetImageFormatProperties(device_data, pCreateInfo, &format_limits);
+    if (VK_SUCCESS != err) {
+        std::stringstream ss;
+        ss << "vkCreateImage: The combination of format, type, tiling, usage and flags supplied in the VkImageCreateInfo struct is "
+              "reported by vkGetPhysicalDeviceImageFormatProperties() as unsupported";
+        skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
+                        VALIDATION_ERROR_09e00758, "IMAGE", "%s. %s", ss.str().c_str(),
+                        validation_error_map[VALIDATION_ERROR_09e00758]);
+        return skip;
+    }
+
+    if ((VK_IMAGE_TYPE_1D == pCreateInfo->imageType) &&
+        (pCreateInfo->extent.width > std::max(device_limits->maxImageDimension1D, format_limits.maxExtent.width))) {
+        std::stringstream ss;
+        ss << "vkCreateImage: 1D image width exceeds maximum supported width for format " << format_string;
+        skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
+                        VALIDATION_ERROR_09e0076e, "IMAGE", "%s. %s", ss.str().c_str(),
+                        validation_error_map[VALIDATION_ERROR_09e0076e]);
+    }
+
+    if (VK_IMAGE_TYPE_2D == pCreateInfo->imageType) {
+        if (0 == (pCreateInfo->flags & VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT)) {
+            if (pCreateInfo->extent.width > std::max(device_limits->maxImageDimension2D, format_limits.maxExtent.width) ||
+                pCreateInfo->extent.height > std::max(device_limits->maxImageDimension2D, format_limits.maxExtent.height)) {
                 std::stringstream ss;
-                ss << "vkCreateImage: VkFormat for TILING_OPTIMAL image (" << string_VkFormat(pCreateInfo->format)
-                    << ") does not support requested Image usage type VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT";
+                ss << "vkCreateImage: 2D image extent exceeds maximum supported width or height for format " << format_string;
                 skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
-                    VALIDATION_ERROR_09e007b4, "IMAGE", "%s. %s", ss.str().c_str(),
-                    validation_error_map[VALIDATION_ERROR_09e007b4]);
+                                VALIDATION_ERROR_09e00770, "IMAGE", "%s. %s", ss.str().c_str(),
+                                validation_error_map[VALIDATION_ERROR_09e00770]);
             }
-            if ((pCreateInfo->tiling == VK_IMAGE_TILING_LINEAR) &&
-                ((properties.linearTilingFeatures & VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT) == 0)) {
+        } else {
+            if (pCreateInfo->extent.width > std::max(device_limits->maxImageDimensionCube, format_limits.maxExtent.width) ||
+                pCreateInfo->extent.height > std::max(device_limits->maxImageDimensionCube, format_limits.maxExtent.height)) {
                 std::stringstream ss;
-                ss << "vkCreateImage: VkFormat for TILING_LINEAR image (" << string_VkFormat(pCreateInfo->format)
-                    << ") does not support requested Image usage type VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT";
+                ss << "vkCreateImage: 2D image extent exceeds maximum supported width or height for cube-compatible images with "
+                      "format "
+                   << format_string;
                 skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
-                    VALIDATION_ERROR_09e007aa, "IMAGE", "%s. %s", ss.str().c_str(),
-                    validation_error_map[VALIDATION_ERROR_09e007aa]);
+                                VALIDATION_ERROR_09e00772, "IMAGE", "%s. %s", ss.str().c_str(),
+                                validation_error_map[VALIDATION_ERROR_09e00772]);
             }
         }
     }
 
-    VkImageFormatProperties ImageFormatProperties = GetImageFormatProperties(
-        device_data, pCreateInfo->format, pCreateInfo->imageType, pCreateInfo->tiling, pCreateInfo->usage, pCreateInfo->flags);
+    if (VK_IMAGE_TYPE_3D == pCreateInfo->imageType) {
+        if ((pCreateInfo->extent.width > std::max(device_limits->maxImageDimension3D, format_limits.maxExtent.width)) ||
+            (pCreateInfo->extent.height > std::max(device_limits->maxImageDimension3D, format_limits.maxExtent.height)) ||
+            (pCreateInfo->extent.depth > std::max(device_limits->maxImageDimension3D, format_limits.maxExtent.depth))) {
+            std::stringstream ss;
+            ss << "vkCreateImage: 3D image extent exceeds maximum supported width, height, or depth for format " << format_string;
+            skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
+                            VALIDATION_ERROR_09e00776, "IMAGE", "%s. %s", ss.str().c_str(),
+                            validation_error_map[VALIDATION_ERROR_09e00776]);
+        }
+    }
 
+    // NOTE: As of 1/30/2018 the spec VU language is as in the commented code below. I believe this is an
+    // error in the spec, and have submitted Gitlab Vulkan issue #1151 to have it changed to match the
+    // implementation shown.  DJH
+    //
+    // if ((pCreateInfo->mipLevels > format_limits.maxMipLevels) &&
+    //    (std::max({ pCreateInfo->extent.width, pCreateInfo->extent.height, pCreateInfo->extent.depth }) >
+    //        device_limits->maxImageDimension3D)) {
+    if (pCreateInfo->mipLevels > format_limits.maxMipLevels) {
+        std::stringstream ss;
+        ss << "vkCreateImage: Image mip levels exceed image format maxMipLevels for format " << format_string;
+        skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
+                        VALIDATION_ERROR_09e0077e, "IMAGE", "%s. %s", ss.str().c_str(),
+                        validation_error_map[VALIDATION_ERROR_09e0077e]);
+    }
+
+    VkImageUsageFlags attach_flags = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT |
+                                     VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT | VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT;
+    if ((pCreateInfo->usage & attach_flags) && (pCreateInfo->extent.width > device_limits->maxFramebufferWidth)) {
+        std::stringstream ss;
+        ss << "vkCreateImage: Image usage flags include a frame buffer attachment bit and image width exceeds device "
+              "maxFramebufferWidth";
+        skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
+                        VALIDATION_ERROR_09e00788, "IMAGE", "%s. %s", ss.str().c_str(),
+                        validation_error_map[VALIDATION_ERROR_09e00788]);
+    }
+
+    if ((pCreateInfo->usage & attach_flags) && (pCreateInfo->extent.height > device_limits->maxFramebufferHeight)) {
+        std::stringstream ss;
+        ss << "vkCreateImage: Image usage flags include a frame buffer attachment bit and image height exceeds device "
+              "maxFramebufferHeight";
+        skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
+                        VALIDATION_ERROR_09e0078a, "IMAGE", "%s. %s", ss.str().c_str(),
+                        validation_error_map[VALIDATION_ERROR_09e0078a]);
+    }
+
+    uint64_t total_size = (uint64_t)pCreateInfo->extent.width * (uint64_t)pCreateInfo->extent.height *
+                          (uint64_t)pCreateInfo->extent.depth * (uint64_t)pCreateInfo->arrayLayers *
+                          (uint64_t)pCreateInfo->samples * (uint64_t)FormatSize(pCreateInfo->format);
+
+    // Round up to imageGranularity boundary
     VkDeviceSize imageGranularity = GetPhysicalDeviceProperties(device_data)->limits.bufferImageGranularity;
-    imageGranularity = imageGranularity == 1 ? 0 : imageGranularity;
-    // TODO : This is also covering 2918 & 2919. Break out into separate checks
-    if ((pCreateInfo->extent.width <= 0) || (pCreateInfo->extent.height <= 0) || (pCreateInfo->extent.depth <= 0)) {
-        skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT, 0, __LINE__,
-                        VALIDATION_ERROR_09e007b8, "Image",
-                        "CreateImage extent is 0 for at least one required dimension for image: "
-                        "Width = %d Height = %d Depth = %d. %s",
-                        pCreateInfo->extent.width, pCreateInfo->extent.height, pCreateInfo->extent.depth,
-                        validation_error_map[VALIDATION_ERROR_09e007b8]);
-    }
+    uint64_t ig_mask = imageGranularity - 1;
+    total_size = (total_size + ig_mask) & ~ig_mask;
 
-    // TODO: VALIDATION_ERROR_09e00770 VALIDATION_ERROR_09e00772 VALIDATION_ERROR_09e00776 VALIDATION_ERROR_09e0076e
-    // All these extent-related VUs should be checked here
-    if ((pCreateInfo->extent.depth > ImageFormatProperties.maxExtent.depth) ||
-        (pCreateInfo->extent.width > ImageFormatProperties.maxExtent.width) ||
-        (pCreateInfo->extent.height > ImageFormatProperties.maxExtent.height)) {
-        skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT, 0, __LINE__,
-                        IMAGE_INVALID_FORMAT_LIMITS_VIOLATION, "Image",
-                        "CreateImage extents exceed allowable limits for format: "
-                        "Width = %d Height = %d Depth = %d:  Limits for Width = %d Height = %d Depth = %d for format %s.",
-                        pCreateInfo->extent.width, pCreateInfo->extent.height, pCreateInfo->extent.depth,
-                        ImageFormatProperties.maxExtent.width, ImageFormatProperties.maxExtent.height,
-                        ImageFormatProperties.maxExtent.depth, string_VkFormat(pCreateInfo->format));
-    }
-
-    uint64_t totalSize =
-        ((uint64_t)pCreateInfo->extent.width * (uint64_t)pCreateInfo->extent.height * (uint64_t)pCreateInfo->extent.depth *
-             (uint64_t)pCreateInfo->arrayLayers * (uint64_t)pCreateInfo->samples * (uint64_t)FormatSize(pCreateInfo->format) +
-         (uint64_t)imageGranularity) &
-        ~(uint64_t)imageGranularity;
-
-    if (totalSize > ImageFormatProperties.maxResourceSize) {
+    if (total_size > format_limits.maxResourceSize) {
         skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT, 0, __LINE__,
                         IMAGE_INVALID_FORMAT_LIMITS_VIOLATION, "Image",
                         "CreateImage resource size exceeds allowable maximum "
                         "Image resource size = 0x%" PRIxLEAST64 ", maximum resource size = 0x%" PRIxLEAST64 " ",
-                        totalSize, ImageFormatProperties.maxResourceSize);
+                        total_size, format_limits.maxResourceSize);
     }
 
-    // TODO: VALIDATION_ERROR_09e0077e
-    if (pCreateInfo->mipLevels > ImageFormatProperties.maxMipLevels) {
+    if (pCreateInfo->arrayLayers > format_limits.maxArrayLayers) {
         skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT, 0, __LINE__,
-                        IMAGE_INVALID_FORMAT_LIMITS_VIOLATION, "Image",
-                        "CreateImage mipLevels=%d exceeds allowable maximum supported by format of %d", pCreateInfo->mipLevels,
-                        ImageFormatProperties.maxMipLevels);
+                        VALIDATION_ERROR_09e00780, "Image",
+                        "CreateImage arrayLayers=%d exceeds allowable maximum supported by format of %d. %s",
+                        pCreateInfo->arrayLayers, format_limits.maxArrayLayers, validation_error_map[VALIDATION_ERROR_09e00780]);
     }
 
-    if (pCreateInfo->arrayLayers > ImageFormatProperties.maxArrayLayers) {
-        skip |=
-            log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT, 0, __LINE__,
-                    VALIDATION_ERROR_09e00780, "Image",
-                    "CreateImage arrayLayers=%d exceeds allowable maximum supported by format of %d. %s", pCreateInfo->arrayLayers,
-                    ImageFormatProperties.maxArrayLayers, validation_error_map[VALIDATION_ERROR_09e00780]);
-    }
-
-    if ((pCreateInfo->samples & ImageFormatProperties.sampleCounts) == 0) {
+    if ((pCreateInfo->samples & format_limits.sampleCounts) == 0) {
         skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT, 0, __LINE__,
                         VALIDATION_ERROR_09e0078e, "Image", "CreateImage samples %s is not supported by format 0x%.8X. %s",
-                        string_VkSampleCountFlagBits(pCreateInfo->samples), ImageFormatProperties.sampleCounts,
+                        string_VkSampleCountFlagBits(pCreateInfo->samples), format_limits.sampleCounts,
                         validation_error_map[VALIDATION_ERROR_09e0078e]);
-    }
-
-    if (pCreateInfo->initialLayout != VK_IMAGE_LAYOUT_UNDEFINED && pCreateInfo->initialLayout != VK_IMAGE_LAYOUT_PREINITIALIZED) {
-        skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT, 0, __LINE__,
-                        VALIDATION_ERROR_09e0b801, "Image",
-                        "vkCreateImage parameter, pCreateInfo->initialLayout, must be VK_IMAGE_LAYOUT_UNDEFINED or "
-                        "VK_IMAGE_LAYOUT_PREINITIALIZED. %s",
-                        validation_error_map[VALIDATION_ERROR_09e0b801]);
     }
 
     if ((pCreateInfo->flags & VK_IMAGE_CREATE_SPARSE_BINDING_BIT) && (!GetEnabledFeatures(device_data)->sparseBinding)) {
@@ -2268,6 +2317,9 @@ bool PreCallValidateCmdBlitImage(layer_data *device_data, GLOBAL_CB_NODE *cb_nod
     const debug_report_data *report_data = core_validation::GetReportData(device_data);
 
     bool skip = false;
+    if (cb_node) {
+        skip |= ValidateCmd(device_data, cb_node, CMD_BLITIMAGE, "vkCmdBlitImage()");
+    }
     if (cb_node && src_image_state && dst_image_state) {
         skip |= ValidateImageSampleCount(device_data, src_image_state, VK_SAMPLE_COUNT_1_BIT, "vkCmdBlitImage(): srcImage",
                                          VALIDATION_ERROR_184001d2);
@@ -3958,14 +4010,7 @@ bool PreCallValidateCmdCopyImageToBuffer(layer_data *device_data, VkImageLayout 
     bool skip = ValidateBufferImageCopyData(report_data, regionCount, pRegions, src_image_state, "vkCmdCopyImageToBuffer");
 
     // Validate command buffer state
-    if (CB_RECORDING != cb_node->state) {
-        skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
-                        HandleToUint64(cb_node->commandBuffer), __LINE__, VALIDATION_ERROR_19202413, "DS",
-                        "Cannot call vkCmdCopyImageToBuffer() on command buffer which is not in recording state. %s.",
-                        validation_error_map[VALIDATION_ERROR_19202413]);
-    } else {
-        skip |= ValidateCmdSubpassState(device_data, cb_node, CMD_COPYIMAGETOBUFFER);
-    }
+    skip |= ValidateCmd(device_data, cb_node, CMD_COPYIMAGETOBUFFER, "vkCmdCopyImageToBuffer()");
 
     // Command pool must support graphics, compute, or transfer operations
     auto pPool = GetCommandPoolNode(device_data, cb_node->createInfo.commandPool);
@@ -4034,14 +4079,7 @@ bool PreCallValidateCmdCopyBufferToImage(layer_data *device_data, VkImageLayout 
     bool skip = ValidateBufferImageCopyData(report_data, regionCount, pRegions, dst_image_state, "vkCmdCopyBufferToImage");
 
     // Validate command buffer state
-    if (CB_RECORDING != cb_node->state) {
-        skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
-                        HandleToUint64(cb_node->commandBuffer), __LINE__, VALIDATION_ERROR_18e02413, "DS",
-                        "Cannot call vkCmdCopyBufferToImage() on command buffer which is not in recording state. %s.",
-                        validation_error_map[VALIDATION_ERROR_18e02413]);
-    } else {
-        skip |= ValidateCmdSubpassState(device_data, cb_node, CMD_COPYBUFFERTOIMAGE);
-    }
+    skip |= ValidateCmd(device_data, cb_node, CMD_COPYBUFFERTOIMAGE, "vkCmdCopyBufferToImage()");
 
     // Command pool must support graphics, compute, or transfer operations
     auto pPool = GetCommandPoolNode(device_data, cb_node->createInfo.commandPool);
@@ -4100,7 +4138,7 @@ bool PreCallValidateGetImageSubresourceLayout(layer_data *device_data, VkImage i
     bool skip = false;
     const VkImageAspectFlags sub_aspect = pSubresource->aspectMask;
 
-    // VU 00733: The aspectMask member of pSubresource must only have a single bit set
+    // The aspectMask member of pSubresource must only have a single bit set
     const int num_bits = sizeof(sub_aspect) * CHAR_BIT;
     std::bitset<num_bits> aspect_mask_bits(sub_aspect);
     if (aspect_mask_bits.count() != 1) {
@@ -4115,7 +4153,7 @@ bool PreCallValidateGetImageSubresourceLayout(layer_data *device_data, VkImage i
         return skip;
     }
 
-    // VU 00732: image must have been created with tiling equal to VK_IMAGE_TILING_LINEAR
+    // image must have been created with tiling equal to VK_IMAGE_TILING_LINEAR
     if (image_entry->createInfo.tiling != VK_IMAGE_TILING_LINEAR) {
         skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT, HandleToUint64(image),
                         __LINE__, VALIDATION_ERROR_2a6007c8, "IMAGE",
@@ -4123,7 +4161,7 @@ bool PreCallValidateGetImageSubresourceLayout(layer_data *device_data, VkImage i
                         validation_error_map[VALIDATION_ERROR_2a6007c8]);
     }
 
-    // VU 00739: mipLevel must be less than the mipLevels specified in VkImageCreateInfo when the image was created
+    // mipLevel must be less than the mipLevels specified in VkImageCreateInfo when the image was created
     if (pSubresource->mipLevel >= image_entry->createInfo.mipLevels) {
         skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT, HandleToUint64(image),
                         __LINE__, VALIDATION_ERROR_0a4007cc, "IMAGE",
@@ -4131,7 +4169,7 @@ bool PreCallValidateGetImageSubresourceLayout(layer_data *device_data, VkImage i
                         pSubresource->mipLevel, image_entry->createInfo.mipLevels, validation_error_map[VALIDATION_ERROR_0a4007cc]);
     }
 
-    // VU 00740: arrayLayer must be less than the arrayLayers specified in VkImageCreateInfo when the image was created
+    // arrayLayer must be less than the arrayLayers specified in VkImageCreateInfo when the image was created
     if (pSubresource->arrayLayer >= image_entry->createInfo.arrayLayers) {
         skip |=
             log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT, HandleToUint64(image),
@@ -4140,9 +4178,23 @@ bool PreCallValidateGetImageSubresourceLayout(layer_data *device_data, VkImage i
                     pSubresource->arrayLayer, image_entry->createInfo.arrayLayers, validation_error_map[VALIDATION_ERROR_0a4007ce]);
     }
 
-    // VU 00741: subresource's aspect must be compatible with image's format.
+    // subresource's aspect must be compatible with image's format.
     const VkFormat img_format = image_entry->createInfo.format;
-    if (FormatIsColor(img_format)) {
+    if (FormatIsMultiplane(img_format)) {
+        VkImageAspectFlags allowed_flags = (VK_IMAGE_ASPECT_PLANE_0_BIT_KHR | VK_IMAGE_ASPECT_PLANE_1_BIT_KHR);
+        UNIQUE_VALIDATION_ERROR_CODE vuid = VALIDATION_ERROR_2a600c5a;  // 2-plane version
+        if (FormatPlaneCount(img_format) > 2u) {
+            allowed_flags |= VK_IMAGE_ASPECT_PLANE_2_BIT_KHR;
+            vuid = VALIDATION_ERROR_2a600c5c;  // 3-plane version
+        }
+        if (sub_aspect != (sub_aspect & allowed_flags)) {
+            skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT,
+                            HandleToUint64(image), __LINE__, vuid, "IMAGE",
+                            "vkGetImageSubresourceLayout(): For multi-planar images, VkImageSubresource.aspectMask (0x%" PRIx32
+                            ") must be a single-plane specifier flag. %s",
+                            sub_aspect, validation_error_map[vuid]);
+        }
+    } else if (FormatIsColor(img_format)) {
         if (sub_aspect != VK_IMAGE_ASPECT_COLOR_BIT) {
             skip |= log_msg(
                 report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT, HandleToUint64(image), __LINE__,

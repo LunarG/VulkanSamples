@@ -118,7 +118,8 @@ public:
     }
 
     void Load(VkValidationCacheCreateInfoEXT const *pCreateInfo) {
-        auto size = 8u + VK_UUID_SIZE;
+        const auto headerSize = 2 * sizeof(uint32_t) + VK_UUID_SIZE;
+        auto size = headerSize;
         if (!pCreateInfo->pInitialData || pCreateInfo->initialDataSize < size)
             return;
 
@@ -127,12 +128,12 @@ public:
             return;
         if (data[1] != VK_VALIDATION_CACHE_HEADER_VERSION_ONE_EXT)
             return;
-        uint8_t expected_uuid[16];
-        CommitIdToUuid(SPIRV_TOOLS_COMMIT_ID, expected_uuid);
-        if (memcmp(&data[2], expected_uuid, 16) != 0)
+        uint8_t expected_uuid[VK_UUID_SIZE];
+        Sha1ToVkUuid(SPIRV_TOOLS_COMMIT_ID, expected_uuid);
+        if (memcmp(&data[2], expected_uuid, VK_UUID_SIZE) != 0)
             return;  // different version
 
-        data += 6;
+        data = (uint32_t const*)(reinterpret_cast<uint8_t const *>(data) + headerSize);
 
         for (;size < pCreateInfo->initialDataSize;
              data++, size += sizeof(uint32_t)) {
@@ -141,7 +142,7 @@ public:
     }
 
     void Write(size_t *pDataSize, void *pData) {
-        auto headerSize = 8u + VK_UUID_SIZE; // 4 bytes for header size + 4 bytes for version number + UUID
+        const auto headerSize = 2*sizeof(uint32_t) + VK_UUID_SIZE; // 4 bytes for header size + 4 bytes for version number + UUID
         if (!pData) {
             *pDataSize = headerSize + good_shader_hashes.size() * sizeof(uint32_t);
             return;
@@ -158,10 +159,8 @@ public:
         // Write the header
         *out++ = headerSize;
         *out++ = VK_VALIDATION_CACHE_HEADER_VERSION_ONE_EXT;
-        // Convert SPIRV-Tools commit ID (as a string of hexadecimal digits) into bytes,
-        // and write as many bytes as will fit into the header as a UUID.
-        CommitIdToUuid(SPIRV_TOOLS_COMMIT_ID, reinterpret_cast<uint8_t*>(out));
-        out += 4;
+        Sha1ToVkUuid(SPIRV_TOOLS_COMMIT_ID, reinterpret_cast<uint8_t*>(out));
+        out = (uint32_t*)(reinterpret_cast<uint8_t*>(out) + VK_UUID_SIZE);
 
         for (auto it = good_shader_hashes.begin();
              it != good_shader_hashes.end() && actualSize < *pDataSize;
@@ -188,13 +187,17 @@ public:
         good_shader_hashes.insert(hash);
     }
 private:
-    void CommitIdToUuid(const char* commitId, uint8_t uuid[VK_UUID_SIZE]) {
-      assert(strlen(commitId)/2 >= VK_UUID_SIZE);
-      char str[3] = {};
+    void Sha1ToVkUuid(const char* sha1_str, uint8_t uuid[VK_UUID_SIZE]) {
+      // Convert sha1_str from a hex string to binary. We only need VK_UUID_BYTES of
+      // output, so pad with zeroes if the input string is shorter than that, and truncate
+      // if it's longer.
+      char padded_sha1_str[2 * VK_UUID_SIZE + 1] = {};
+      strncpy(padded_sha1_str, sha1_str, 2 * VK_UUID_SIZE + 1);
+      char byte_str[3] = {};
       for (uint32_t i = 0; i < VK_UUID_SIZE; ++i) {
-        str[0] = commitId[2 * i + 0];
-        str[1] = commitId[2 * i + 1];
-        uuid[i] = static_cast<uint8_t>(strtol(str, NULL, 16));
+        byte_str[0] = padded_sha1_str[2 * i + 0];
+        byte_str[1] = padded_sha1_str[2 * i + 1];
+        uuid[i] = static_cast<uint8_t>(strtol(byte_str, NULL, 16));
       }
     }
 };
