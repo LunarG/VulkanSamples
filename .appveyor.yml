@@ -38,7 +38,7 @@ before_build:
   - if %PLATFORM% == x64 (if %CONFIGURATION% == Release (update_external_sources.bat --64 --release))
   # Determine the appropriate CMake generator for the current version of Visual Studio
   - echo Determining VS version
-  - python .\scripts\determine_vs_version.py > vsversion.tmp
+  - python .\submodules\Vulkan-LoaderAndValidationLayers\scripts\determine_vs_version.py > vsversion.tmp
   - set /p VS_VERSION=< vsversion.tmp
   - echo Detected Visual Studio Version as %VS_VERSION%
   - del /Q /F vsversion.tmp

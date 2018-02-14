@@ -19,21 +19,25 @@ if exist generated (
 )
 mkdir generated\include generated\common
 
+set LVL_SCRIPTS=../../../submodules/Vulkan-LoaderAndValidationLayers/scripts
+set VS_SCRIPTS=../../../scripts
+set REGISTRY=../../../submodules/Vulkan-LoaderAndValidationLayers/scripts/vk.xml
+
 cd generated/include
-py -3 ../../../scripts/lvl_genvk.py -registry ../../../scripts/vk.xml vk_safe_struct.h
-py -3 ../../../scripts/lvl_genvk.py -registry ../../../scripts/vk.xml vk_safe_struct.cpp
-py -3 ../../../scripts/lvl_genvk.py -registry ../../../scripts/vk.xml vk_struct_size_helper.h
-py -3 ../../../scripts/lvl_genvk.py -registry ../../../scripts/vk.xml vk_struct_size_helper.c
-py -3 ../../../scripts/lvl_genvk.py -registry ../../../scripts/vk.xml vk_enum_string_helper.h
-py -3 ../../../scripts/lvl_genvk.py -registry ../../../scripts/vk.xml vk_object_types.h
-py -3 ../../../scripts/lvl_genvk.py -registry ../../../scripts/vk.xml vk_dispatch_table_helper.h
-py -3 ../../../scripts/lvl_genvk.py -registry ../../../scripts/vk.xml thread_check.h
-py -3 ../../../scripts/lvl_genvk.py -registry ../../../scripts/vk.xml parameter_validation.cpp
-py -3 ../../../scripts/lvl_genvk.py -registry ../../../scripts/vk.xml unique_objects_wrappers.h
-py -3 ../../../scripts/lvl_genvk.py -registry ../../../scripts/vk.xml vk_layer_dispatch_table.h
-py -3 ../../../scripts/lvl_genvk.py -registry ../../../scripts/vk.xml vk_extension_helper.h
-py -3 ../../../scripts/lvl_genvk.py -registry ../../../scripts/vk.xml object_tracker.cpp
-py -3 ../../../scripts/lvl_genvk.py -registry ../../../scripts/vk.xml vk_typemap_helper.h
+py -3 %LVL_SCRIPTS%/lvl_genvk.py -registry %REGISTRY% vk_safe_struct.h
+py -3 %LVL_SCRIPTS%/lvl_genvk.py -registry %REGISTRY% vk_safe_struct.cpp
+py -3 %LVL_SCRIPTS%/lvl_genvk.py -registry %REGISTRY% vk_struct_size_helper.h
+py -3 %LVL_SCRIPTS%/lvl_genvk.py -registry %REGISTRY% vk_struct_size_helper.c
+py -3 %LVL_SCRIPTS%/lvl_genvk.py -registry %REGISTRY% vk_enum_string_helper.h
+py -3 %LVL_SCRIPTS%/lvl_genvk.py -registry %REGISTRY% vk_object_types.h
+py -3 %LVL_SCRIPTS%/lvl_genvk.py -registry %REGISTRY% vk_dispatch_table_helper.h
+py -3 %LVL_SCRIPTS%/lvl_genvk.py -registry %REGISTRY% thread_check.h
+py -3 %LVL_SCRIPTS%/lvl_genvk.py -registry %REGISTRY% parameter_validation.cpp
+py -3 %LVL_SCRIPTS%/lvl_genvk.py -registry %REGISTRY% unique_objects_wrappers.h
+py -3 %LVL_SCRIPTS%/lvl_genvk.py -registry %REGISTRY% vk_layer_dispatch_table.h
+py -3 %LVL_SCRIPTS%/lvl_genvk.py -registry %REGISTRY% vk_extension_helper.h
+py -3 %LVL_SCRIPTS%/lvl_genvk.py -registry %REGISTRY% object_tracker.cpp
+py -3 %LVL_SCRIPTS%/lvl_genvk.py -registry %REGISTRY% vk_typemap_helper.h
 
 set SPIRV_TOOLS_PATH=../../third_party/shaderc/third_party/spirv-tools
 set SPIRV_TOOLS_UUID=spirv_tools_uuid.txt
@@ -41,7 +45,7 @@ set SPIRV_TOOLS_UUID=spirv_tools_uuid.txt
 if exist %SPIRV_TOOLS_PATH% (
 
   echo Found spirv-tools, using git_dir for external_revision_generator.py
-  py -3 ../../../scripts/external_revision_generator.py ^
+  py -3 %LVL_SCRIPTS%/external_revision_generator.py ^
     --git_dir %SPIRV_TOOLS_PATH% ^
     -s SPIRV_TOOLS_COMMIT_ID ^
     -o spirv_tools_commit_id.h
@@ -55,7 +59,7 @@ if exist %SPIRV_TOOLS_PATH% (
 
   uuidgen.exe > %SPIRV_TOOLS_UUID%
   type %SPIRV_TOOLS_UUID%
-  py -3 ../../../scripts/external_revision_generator.py ^
+  py -3 %LVL_SCRIPTS%/external_revision_generator.py ^
     --rev_file %SPIRV_TOOLS_UUID% ^
     -s SPIRV_TOOLS_COMMIT_ID ^
     -o spirv_tools_commit_id.h

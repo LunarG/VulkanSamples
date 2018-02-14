@@ -66,29 +66,6 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
     option(INSTALL_LVL_FILES "Install content from LoaderAndValidationLayers repo" ON)
 endif()
 
-set(SCRIPTS_DIR "${CMAKE_CURRENT_SOURCE_DIR}/scripts")
-
-# Header file for CMake settings
-include_directories("${PROJECT_SOURCE_DIR}/include")
-
-if (CMAKE_COMPILER_IS_GNUCC OR CMAKE_C_COMPILER_ID MATCHES "Clang")
-    set(COMMON_COMPILE_FLAGS "-Wall -Wextra -Wno-unused-parameter -Wno-missing-field-initializers")
-    set(COMMON_COMPILE_FLAGS "${COMMON_COMPILE_FLAGS} -fno-strict-aliasing -fno-builtin-memcmp")
-
-    # For GCC version 7.1 or greater, we need to disable the implicit fallthrough warning since
-    # there's no consistent way to satisfy all compilers until they all accept the C++17 standard
-    if (CMAKE_COMPILER_IS_GNUCC AND NOT (CMAKE_CXX_COMPILER_VERSION LESS 7.1))
-        set(COMMON_COMPILE_FLAGS "${COMMON_COMPILE_FLAGS} -Wimplicit-fallthrough=0")
-    endif()
-
-    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=c99 ${COMMON_COMPILE_FLAGS}")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${COMMON_COMPILE_FLAGS} -std=c++11 -fno-rtti")
-    if (UNIX)
-        set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fvisibility=hidden")
-        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fvisibility=hidden")
-    endif()
-endif()
-
 if(WIN32)
     # Treat warnings as errors
     add_compile_options("$<$<CXX_COMPILER_ID:MSVC>:/WX>")
@@ -132,24 +109,16 @@ else()
     endif()
 endif()
 
-option(BUILD_LOADER "Build loader" ON)
-option(BUILD_TESTS "Build tests" ON)
-option(BUILD_LAYERS "Build layers" ON)
-option(BUILD_DEMOS "Build demos" ON)
-option(BUILD_VKJSON "Build vkjson" ON)
 option(BUILD_UTILITIES "Build WSIWindow and Teapots" ON)
-option(BUILD_ICD "Build icd" ON)
-option(CUSTOM_GLSLANG_BIN_ROOT "Use the user defined GLSLANG_BINARY_ROOT" OFF)
-option(CUSTOM_SPIRV_TOOLS_BIN_ROOT "Use the user defined SPIRV_TOOLS*BINARY_ROOT paths" OFF)
 
-#Choose natural default paths for glslang and SPIRV-Tools binaries to support custom definition by the user on the CMake command line or in the GUI
-set(GLSLANG_BINARY_ROOT "${CMAKE_BINARY_DIR}/../glslang" CACHE STRING "User defined path to the glslang binaries for this project")
-set(SPIRV_TOOLS_BINARY_ROOT "${CMAKE_BINARY_DIR}/../SPIRV-Tools" CACHE STRING "User defined path to the SPIRV-Tools binaries for this project")
-set(SPIRV_TOOLS_OPT_BINARY_ROOT "${CMAKE_BINARY_DIR}/../SPIRV-Tools/opt" CACHE STRING "User defined path to the SPIRV-Tools-opt binaries for this project")
+set (V_LVL_RELATIVE_LOCATION submodules/Vulkan-LoaderAndValidationLayers)
+set (SUBPROJECTS_DIR ${CMAKE_CURRENT_SOURCE_DIR}/submodules)
 
-# Define a variable for a default root location to the gslang, SPIRV-Tools and other external sources and cache it to allow the user to customize it as needed
-set(EXTERNAL_SOURCE_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/external" CACHE STRING "Root path to external sources such as glslang and SPIRV-Tools")
+set(EXTERNAL_SOURCE_ROOT "${SUBPROJECTS_DIR}/Vulkan-LoaderAndValidationLayers/external" CACHE STRING "Root path to external sources such as glslang and SPIRV-Tools")
 
+add_definitions(-DAPI_NAME="${API_NAME}")
+
+add_subdirectory(${V_LVL_RELATIVE_LOCATION})
 
 if (WIN32)
     if(CUSTOM_GLSLANG_BIN_ROOT)
@@ -203,6 +172,7 @@ else()
     else()
         set (GLSLANG_SEARCH_PATH "${EXTERNAL_SOURCE_ROOT}/glslang/${BUILDTGT_DIR}/install/lib" "${CMAKE_SOURCE_DIR}/../x86_64/lib/glslang" )
     endif()
+    
 
     if(CUSTOM_SPIRV_TOOLS_BIN_ROOT)
         set (SPIRV_TOOLS_SEARCH_PATH "${SPIRV_TOOLS_BINARY_ROOT}/source" )
@@ -213,18 +183,34 @@ else()
     endif()
 endif()
 
-find_program(GLSLANG_VALIDATOR NAMES glslangValidator
-             HINTS "${EXTERNAL_SOURCE_ROOT}/glslang/${BUILDTGT_DIR}/install/bin"
-                   "${GLSLANG_BINARY_ROOT}/StandAlone"
-                   "${PROJECT_SOURCE_DIR}/external/${BINDATA_DIR}")
+set (V_LVL_ROOT_DIR ${CMAKE_CURRENT_SOURCE_DIR}/${V_LVL_RELATIVE_LOCATION})
 
-find_path(GLSLANG_SPIRV_INCLUDE_DIR SPIRV/spirv.hpp HINTS "${EXTERNAL_SOURCE_ROOT}/glslang"
-                                                    "${CMAKE_SOURCE_DIR}/../glslang"
-                                              DOC "Path to SPIRV/spirv.hpp")
+set(VS_SCRIPTS_DIR "${CMAKE_CURRENT_SOURCE_DIR}/scripts")
+set(LVL_SCRIPTS_DIR "${V_LVL_ROOT_DIR}/scripts")
 
-find_path(SPIRV_TOOLS_INCLUDE_DIR spirv-tools/libspirv.h HINTS "${EXTERNAL_SOURCE_ROOT}/glslang/External/spirv-tools/include"
-                                                   "${CMAKE_SOURCE_DIR}/../glslang/External/spirv-tools/include"
-                                             DOC "Path to spirv-tools/libspirv.h")
+# Vulkan header files located in LVL
+include_directories("${V_LVL_ROOT_DIR}/include")
+
+# Define a variable for a default root location to the gslang, SPIRV-Tools and other external sources and cache it to allow the user to customize it as needed
+set(SUBPROJECT_SOURCE_ROOT ${V_LVL_ROOT_DIR}/submodules CACHE STRING "Root path to VulkanSamples submodule repositories")
+
+if (CMAKE_COMPILER_IS_GNUCC OR CMAKE_C_COMPILER_ID MATCHES "Clang")
+    set(COMMON_COMPILE_FLAGS "-Wall -Wextra -Wno-unused-parameter -Wno-missing-field-initializers")
+    set(COMMON_COMPILE_FLAGS "${COMMON_COMPILE_FLAGS} -fno-strict-aliasing -fno-builtin-memcmp")
+
+    # For GCC version 7.1 or greater, we need to disable the implicit fallthrough warning since
+    # there's no consistent way to satisfy all compilers until they all accept the C++17 standard
+    if (CMAKE_COMPILER_IS_GNUCC AND NOT (CMAKE_CXX_COMPILER_VERSION LESS 7.1))
+        set(COMMON_COMPILE_FLAGS "${COMMON_COMPILE_FLAGS} -Wimplicit-fallthrough=0")
+    endif()
+
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=c99 ${COMMON_COMPILE_FLAGS}")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${COMMON_COMPILE_FLAGS} -std=c++11 -fno-rtti")
+    if (UNIX)
+        set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fvisibility=hidden")
+        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fvisibility=hidden")
+    endif()
+endif()
 
 find_library(GLSLANG_LIB NAMES glslang
              HINTS ${GLSLANG_SEARCH_PATH} )
@@ -313,135 +299,6 @@ endif()
 
 set (PYTHON_CMD ${PYTHON_EXECUTABLE})
 
-# Define macro used for building vkxml generated files
-macro(run_vk_xml_generate dependency output)
-    add_custom_command(OUTPUT ${output}
-    COMMAND ${PYTHON_CMD} ${SCRIPTS_DIR}/lvl_genvk.py -registry ${SCRIPTS_DIR}/vk.xml ${output}
-    DEPENDS ${SCRIPTS_DIR}/vk.xml ${SCRIPTS_DIR}/generator.py ${SCRIPTS_DIR}/${dependency} ${SCRIPTS_DIR}/lvl_genvk.py ${SCRIPTS_DIR}/reg.py
-    )
-endmacro()
-
-# Define macro used for generating header files containing commit IDs for external dependencies
-macro(run_external_revision_generate source_dir symbol_name output)
-    add_custom_command(OUTPUT ${output}
-    # NOTE: If you modify this call to use --rev_file instead of --git_dir (to read the commit ID from a file instead of
-    # parsing from a Git repository), you probably also want to add the revision file to the list of DEPENDS on the
-    # subsequent line (to ensure that the script is re-run when the revision file is modified).
-    COMMAND ${PYTHON_CMD} ${SCRIPTS_DIR}/external_revision_generator.py --git_dir ${source_dir} -s ${symbol_name} -o ${output}
-    DEPENDS ${SCRIPTS_DIR}/external_revision_generator.py ${source_dir}/.git/HEAD ${source_dir}/.git/index
-    )
-endmacro()
-
-# Custom target for generated vulkan helper file dependencies
-add_custom_target(generate_helper_files DEPENDS
-    vk_enum_string_helper.h
-    vk_struct_size_helper.h
-    vk_struct_size_helper.c
-    vk_safe_struct.h
-    vk_safe_struct.cpp
-    vk_object_types.h
-    vk_layer_dispatch_table.h
-    vk_dispatch_table_helper.h
-    vk_extension_helper.h
-    vk_typemap_helper.h
-    spirv_tools_commit_id.h
-    )
-set_target_properties(generate_helper_files PROPERTIES FOLDER ${LVL_TARGET_FOLDER})
-
-# Rules to build generated helper files
-run_vk_xml_generate(loader_extension_generator.py vk_layer_dispatch_table.h)
-run_vk_xml_generate(dispatch_table_helper_generator.py vk_dispatch_table_helper.h)
-run_vk_xml_generate(helper_file_generator.py vk_safe_struct.h)
-run_vk_xml_generate(helper_file_generator.py vk_safe_struct.cpp)
-run_vk_xml_generate(helper_file_generator.py vk_struct_size_helper.h)
-run_vk_xml_generate(helper_file_generator.py vk_struct_size_helper.c)
-run_vk_xml_generate(helper_file_generator.py vk_enum_string_helper.h)
-run_vk_xml_generate(helper_file_generator.py vk_object_types.h)
-run_vk_xml_generate(helper_file_generator.py vk_extension_helper.h)
-run_vk_xml_generate(helper_file_generator.py vk_typemap_helper.h)
-run_external_revision_generate(${EXTERNAL_SOURCE_ROOT}/glslang/External/spirv-tools SPIRV_TOOLS_COMMIT_ID spirv_tools_commit_id.h)
-
-
-
-if(NOT WIN32)
-    include(GNUInstallDirs)
-
-    add_definitions(-DFALLBACK_CONFIG_DIRS="${FALLBACK_CONFIG_DIRS}")
-    add_definitions(-DFALLBACK_DATA_DIRS="${FALLBACK_DATA_DIRS}")
-    add_definitions(-DSYSCONFDIR="${CMAKE_INSTALL_FULL_SYSCONFDIR}")
-
-    # Make sure /etc is searched by the loader
-    if(NOT (CMAKE_INSTALL_FULL_SYSCONFDIR STREQUAL "/etc"))
-        add_definitions(-DEXTRASYSCONFDIR="/etc")
-    endif()
-endif()
-
-if(UNIX)
-    if(INSTALL_LVL_FILES)
-        install(DIRECTORY "${PROJECT_SOURCE_DIR}/include/vulkan" DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
-        install(FILES "${CMAKE_CURRENT_BINARY_DIR}/vk_layer_dispatch_table.h" DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/vulkan")
-    endif()
-
-# uninstall target
-configure_file(
-    "${CMAKE_CURRENT_SOURCE_DIR}/cmake/cmake_uninstall.cmake.in"
-    "${CMAKE_CURRENT_BINARY_DIR}/cmake_uninstall.cmake"
-    IMMEDIATE @ONLY)
-
-add_custom_target(uninstall
-    COMMAND ${CMAKE_COMMAND} -P ${CMAKE_CURRENT_BINARY_DIR}/cmake_uninstall.cmake)
-endif()
-
-# Layer Utils Library
-# For Windows, we use a static lib because the Windows loader has a fairly restrictive loader search
-# path that can't be easily modified to point it to the same directory that contains the layers.
-set(VKLAYER_UTILS_VLF_SOURCES
-    layers/vk_layer_config.cpp
-    layers/vk_layer_extension_utils.cpp
-    layers/vk_layer_utils.cpp
-    layers/vk_format_utils.cpp
-    )
-if (WIN32)
-    add_library(VkLayer_utils STATIC ${VKLAYER_UTILS_VLF_SOURCES})
-    target_compile_definitions(VkLayer_utils PUBLIC _CRT_SECURE_NO_WARNINGS)
-else()
-    add_library(VkLayer_utils SHARED ${VKLAYER_UTILS_VLF_SOURCES})
-    if(INSTALL_LVL_FILES)
-        install(TARGETS VkLayer_utils DESTINATION ${CMAKE_INSTALL_LIBDIR})
-    endif()
-endif()
-add_dependencies(VkLayer_utils generate_helper_files)
-target_include_directories(
-    VkLayer_utils PUBLIC
-    ${CMAKE_CURRENT_SOURCE_DIR}/loader
-    ${CMAKE_CURRENT_SOURCE_DIR}/include/vulkan
-    ${CMAKE_CURRENT_BINARY_DIR}
-    )
-
-add_definitions(-DAPI_NAME="${API_NAME}")
-
-# loader: Generic VULKAN ICD loader
-# tests: VULKAN tests
-if(BUILD_LOADER)
-    add_subdirectory(loader)
-endif()
-
-if(BUILD_TESTS)
-    add_subdirectory(tests)
-endif()
-
-if(BUILD_LAYERS)
-    add_subdirectory(layers)
-endif()
-
-if(BUILD_DEMOS)
-    add_subdirectory(demos)
-endif()
-
-if(BUILD_VKJSON)
-    add_subdirectory(libs/vkjson)
-endif()
-
 set (UTILS_NAME vsamputils)
 
 if (CMAKE_COMPILER_IS_GNUCC OR CMAKE_C_COMPILER_ID MATCHES "Clang")
@@ -480,6 +337,14 @@ if((CMAKE_SYSTEM_NAME STREQUAL "Linux") AND (NOT BUILD_WSI_XCB_SUPPORT) AND (NOT
     set(BUILD_UTILITIES OFF)
 endif()
 
+# Define macro used for building vkxml generated files
+macro(run_vk_xml_generate dependency output)
+    add_custom_command(OUTPUT ${output}
+    COMMAND ${PYTHON_CMD} ${VS_SCRIPTS_DIR}/lvl_genvk.py -registry ${LVL_SCRIPTS_DIR}/vk.xml ${output}
+    DEPENDS ${LVL_SCRIPTS_DIR}/vk.xml ${LVL_SCRIPTS_DIR}/generator.py ${VS_SCRIPTS_DIR}/${dependency} ${VS_SCRIPTS_DIR}/lvl_genvk.py ${LVL_SCRIPTS_DIR}/reg.py
+    )
+endmacro()
+
 if(BUILD_UTILITIES)
     add_subdirectory(Utilities)
 endif()
@@ -492,7 +357,4 @@ add_subdirectory(Sample-Programs/Hologram)
 
 if (BUILD_SAMPLE_LAYERS)
     add_subdirectory(Layer-Samples/Overlay)
-endif()
-if(BUILD_ICD)
-    add_subdirectory(icd)
 endif()

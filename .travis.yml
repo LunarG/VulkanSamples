@@ -91,18 +91,20 @@ script:
   - |
     if [[ "$VULKAN_BUILD_TARGET" == "LINUX" ]]; then
       # Run Tests
-      (cd dbuild/tests; ./vkvalidatelayerdoc.sh)
-      export LD_LIBRARY_PATH=dbuild/loader:$LD_LIBRARY_PATH
-      export VK_LAYER_PATH=external/VulkanTools/build/layersvt:dbuild/layers
-      export VK_ICD_FILENAMES=dbuild/icd/VkICD_mock_icd.json
-      dbuild/tests/vk_layer_validation_tests
-      VK_DEVSIM_FILENAME=tests/device_profiles/adreno_540.json dbuild/tests/vk_layer_validation_tests --devsim
-      VK_DEVSIM_FILENAME=tests/device_profiles/amd_radv_polaris10.json dbuild/tests/vk_layer_validation_tests --devsim
-      VK_DEVSIM_FILENAME=tests/device_profiles/geforce_940m.json dbuild/tests/vk_layer_validation_tests --devsim
-      VK_DEVSIM_FILENAME=tests/device_profiles/intel_hd_graphics_520_skylake_gt2.json dbuild/tests/vk_layer_validation_tests --devsim
-      VK_DEVSIM_FILENAME=tests/device_profiles/mali-t760.json dbuild/tests/vk_layer_validation_tests --devsim
-      VK_DEVSIM_FILENAME=tests/device_profiles/nvidia_tegra_x1.json dbuild/tests/vk_layer_validation_tests --devsim
-      VK_DEVSIM_FILENAME=tests/device_profiles/powervr_rogue_ge8300.json dbuild/tests/vk_layer_validation_tests --devsim
+      LVL_BUILD=$TRAVIS_BUILD_DIR/dbuild/submodules/Vulkan-LoaderAndValidationLayers
+      LVL_PROFILES=$TRAVIS_BUILD_DIR/submodules/Vulkan-LoaderAndValidationLayers/tests/device_profiles
+      (cd $LVL_BUILD/tests; ./vkvalidatelayerdoc.sh)
+      export LD_LIBRARY_PATH=$LVL_BUILD/loader:$LD_LIBRARY_PATH
+      export VK_LAYER_PATH=$LVL_BUILD/layers:external/VulkanTools/build/layersvt
+      export VK_ICD_FILENAMES=$LVL_BUILD/icd/VkICD_mock_icd.json
+      $LVL_BUILD/tests/vk_layer_validation_tests
+      VK_DEVSIM_FILENAME=$LVL_PROFILES/adreno_540.json $LVL_BUILD/tests/vk_layer_validation_tests --devsim
+      VK_DEVSIM_FILENAME=$LVL_PROFILES/amd_radv_polaris10.json $LVL_BUILD/tests/vk_layer_validation_tests --devsim
+      VK_DEVSIM_FILENAME=$LVL_PROFILES/geforce_940m.json $LVL_BUILD/tests/vk_layer_validation_tests --devsim
+      VK_DEVSIM_FILENAME=$LVL_PROFILES/intel_hd_graphics_520_skylake_gt2.json $LVL_BUILD/tests/vk_layer_validation_tests --devsim
+      VK_DEVSIM_FILENAME=$LVL_PROFILES/mali-t760.json $LVL_BUILD/tests/vk_layer_validation_tests --devsim
+      VK_DEVSIM_FILENAME=$LVL_PROFILES/nvidia_tegra_x1.json $LVL_BUILD/tests/vk_layer_validation_tests --devsim
+      VK_DEVSIM_FILENAME=$LVL_PROFILES/powervr_rogue_ge8300.json $LVL_BUILD/tests/vk_layer_validation_tests --devsim
     fi
   - |
     if [[ "$VULKAN_BUILD_TARGET" == "ANDROID" ]]; then
@@ -118,7 +120,7 @@ script:
         # Run the clang format check only for pull request builds because the
         # master branch is needed to do the git diff.
         echo "Checking clang-format between TRAVIS_BRANCH=$TRAVIS_BRANCH and TRAVIS_PULL_REQUEST_BRANCH=$TRAVIS_PULL_REQUEST_BRANCH"
-        ./scripts/check_code_format.sh
+        ./submodules/Vulkan-LoaderAndValidationLayers/scripts/check_code_format.sh
       else
         echo "Skipping clang-format check since this is not a pull request."
       fi

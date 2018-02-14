@@ -45,7 +45,7 @@ findtool jarsigner
 set -ev
 
 LAYER_BUILD_DIR=$PWD
-DEMO_BUILD_DIR=$PWD/../demos/android
+DEMO_BUILD_DIR=$PWD/../submodules/Vulkan-LoaderAndValidationLayers/demos/android
 echo LAYER_BUILD_DIR="${LAYER_BUILD_DIR}"
 echo DEMO_BUILD_DIR="${DEMO_BUILD_DIR}"
 
@@ -55,6 +55,11 @@ function create_APK() {
     jarsigner -verbose -keystore ~/.android/debug.keystore -storepass android -keypass android  bin/$1-unaligned.apk androiddebugkey
     zipalign -f 4 bin/$1-unaligned.apk bin/$1.apk
 }
+
+#
+# Init base submodules
+#
+(pushd ..; git submodule update --init --recursive; popd)
 
 #
 # build layers
