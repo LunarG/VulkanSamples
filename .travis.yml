@@ -26,7 +26,7 @@ matrix:
       compiler: clang
       env: VULKAN_BUILD_TARGET=LINUX
     # Check for proper clang formatting in the pull request.
-    - env: CHECK_FORMAT=ON
+    - env: CHECK_FORMAT=OFF
 
 cache: ccache
 
@@ -67,42 +67,10 @@ script:
   - set -e
   - |
     if [[ "$VULKAN_BUILD_TARGET" == "LINUX" ]]; then
-      # Get VulkanTools and build DevSim
-      mkdir -p external
-      cd external
-      git clone https://github.com/LunarG/VulkanTools.git
-      cd VulkanTools
-      # Get as little as possible from external sources
-      ./update_external_sources.sh --glslang --no-build
-      # Build as few components as possible
-      cmake -H. -Bbuild -DBUILD_LOADER=NO -DBUILD_TESTS=NO \
-          -DBUILD_LAYERS=NO -DBUILD_DEMOS=NO -DBUILD_VKTRACE=NO \
-          -DBUILD_VKJSON=NO -DBUILD_VIA=NO -DBUILD_ICD=NO
-      make -C build -j $core_count
-      cd ${TRAVIS_BUILD_DIR}
-    fi
-  - |
-    if [[ "$VULKAN_BUILD_TARGET" == "LINUX" ]]; then
       # Build LVL
       ./update_external_sources.sh
       cmake -H. -Bdbuild -DCMAKE_BUILD_TYPE=Debug
       make -C dbuild -j $core_count
-    fi
-  - |
-    if [[ "$VULKAN_BUILD_TARGET" == "LINUX" ]]; then
-      # Run Tests
-      (cd dbuild/tests; ./vkvalidatelayerdoc.sh)
-      export LD_LIBRARY_PATH=dbuild/loader:$LD_LIBRARY_PATH
-      export VK_LAYER_PATH=external/VulkanTools/build/layersvt:dbuild/layers
-      export VK_ICD_FILENAMES=dbuild/icd/VkICD_mock_icd.json
-      dbuild/tests/vk_layer_validation_tests
-      VK_DEVSIM_FILENAME=tests/device_profiles/adreno_540.json dbuild/tests/vk_layer_validation_tests --devsim
-      VK_DEVSIM_FILENAME=tests/device_profiles/amd_radv_polaris10.json dbuild/tests/vk_layer_validation_tests --devsim
-      VK_DEVSIM_FILENAME=tests/device_profiles/geforce_940m.json dbuild/tests/vk_layer_validation_tests --devsim
-      VK_DEVSIM_FILENAME=tests/device_profiles/intel_hd_graphics_520_skylake_gt2.json dbuild/tests/vk_layer_validation_tests --devsim
-      VK_DEVSIM_FILENAME=tests/device_profiles/mali-t760.json dbuild/tests/vk_layer_validation_tests --devsim
-      VK_DEVSIM_FILENAME=tests/device_profiles/nvidia_tegra_x1.json dbuild/tests/vk_layer_validation_tests --devsim
-      VK_DEVSIM_FILENAME=tests/device_profiles/powervr_rogue_ge8300.json dbuild/tests/vk_layer_validation_tests --devsim
     fi
   - |
     if [[ "$VULKAN_BUILD_TARGET" == "ANDROID" ]]; then
@@ -128,9 +96,6 @@ script:
 notifications:
   email:
     recipients:
-      - karl@lunarg.com
-      - cnorthrop@google.com
-      - tobine@google.com
-      - chrisforbes@google.com
+      - mark@lunarg.com
     on_success: change
     on_failure: always
