@@ -1,0 +1,3 @@
+[submodule "submodules/Vulkan-LoaderAndValidationLayers"]
+	path = submodules/Vulkan-LoaderAndValidationLayers
+	url = https://github.com/KhronosGroup/Vulkan-LoaderAndValidationLayers.git
