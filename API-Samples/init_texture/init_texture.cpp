@@ -24,6 +24,7 @@ Inititalize Texture
 
 /* This is part of the draw cube progression */
 
+#include <sys/stat.h>
 #include <util_init.hpp>
 #include <assert.h>
 #include <cstdlib>
@@ -65,6 +66,10 @@ int sample_main(int argc, char *argv[]) {
     struct texture_object texObj;
     std::string filename = get_base_data_dir();
     filename.append("lunarg.ppm");
+    struct stat statstruct;
+    if (stat(filename.c_str(), &statstruct)){
+        filename = "../../API-Samples/data/lunarg.ppm";
+    }
     if (!read_ppm(filename.c_str(), texObj.tex_width, texObj.tex_height, 0, NULL)) {
         std::cout << "Could not read texture file lunarg.ppm\n";
         exit(-1);
@@ -144,7 +149,6 @@ int sample_main(int argc, char *argv[]) {
 
     res = vkMapMemory(info.device, mappableMemory, 0, mem_reqs.size, 0, &data);
     assert(res == VK_SUCCESS);
-
     /* Read the ppm file into the mappable image's memory */
     if (!read_ppm(filename.c_str(), texObj.tex_width, texObj.tex_height, layout.rowPitch, (unsigned char *)data)) {
         std::cout << "Could not load texture file lunarg.ppm\n";

@@ -1722,8 +1722,16 @@ void init_image(struct sample_info &info, texture_object &texObj, const char *te
         filename.append(textureName);
 
     if (!read_ppm(filename.c_str(), texObj.tex_width, texObj.tex_height, 0, NULL)) {
-        std::cout << "Could not read texture file lunarg.ppm\n";
-        exit(-1);
+        std::cout << "Try relative path\n";
+        filename = "../../API-Samples/data/";
+        if (textureName == nullptr)
+            filename.append("lunarg.ppm");
+        else
+            filename.append(textureName);
+        if (!read_ppm(filename.c_str(), texObj.tex_width, texObj.tex_height, 0, NULL)) {
+            std::cout << "Could not read texture file " << filename;
+            exit(-1);
+        }
     }
 
     VkFormatProperties formatProps;

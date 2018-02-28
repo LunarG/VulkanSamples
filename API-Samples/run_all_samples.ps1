@@ -29,8 +29,8 @@ function Exec
     }
 }
 
-if (Test-Path ..\loader\$dPath\vulkan-1.dll) {
-    Copy-Item -force ..\loader\$dPath\vulkan-1.dll $dPath
+if (Test-Path ..\submodules\Vulkan-LoaderAndValidationLayers\loader\$dPath\vulkan-1.dll) {
+    Copy-Item -force ..\submodules\Vulkan-LoaderAndValidationLayers\loader\$dPath\vulkan-1.dll $dPath
 }
 
 echo "Initialize Instance"
