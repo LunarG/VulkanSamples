@@ -467,9 +467,9 @@ enum CBStatusFlagBits {
 
 struct TEMPLATE_STATE {
     VkDescriptorUpdateTemplateKHR desc_update_template;
-    safe_VkDescriptorUpdateTemplateCreateInfoKHR create_info;
+    safe_VkDescriptorUpdateTemplateCreateInfo create_info;
 
-    TEMPLATE_STATE(VkDescriptorUpdateTemplateKHR update_template, safe_VkDescriptorUpdateTemplateCreateInfoKHR *pCreateInfo)
+    TEMPLATE_STATE(VkDescriptorUpdateTemplateKHR update_template, safe_VkDescriptorUpdateTemplateCreateInfo *pCreateInfo)
         : desc_update_template(update_template), create_info(*pCreateInfo) {}
 };
 

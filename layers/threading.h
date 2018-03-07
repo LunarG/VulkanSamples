@@ -225,13 +225,19 @@ struct layer_data {
 
     debug_report_data *report_data;
     std::vector<VkDebugReportCallbackEXT> logging_callback;
+    std::vector<VkDebugUtilsMessengerEXT> logging_messenger;
     VkLayerDispatchTable *device_dispatch_table;
     VkLayerInstanceDispatchTable *instance_dispatch_table;
+
     // The following are for keeping track of the temporary callbacks that can
     // be used in vkCreateInstance and vkDestroyInstance:
-    uint32_t num_tmp_callbacks;
-    VkDebugReportCallbackCreateInfoEXT *tmp_dbg_create_infos;
-    VkDebugReportCallbackEXT *tmp_callbacks;
+    uint32_t num_tmp_report_callbacks;
+    VkDebugReportCallbackCreateInfoEXT *tmp_report_create_infos;
+    VkDebugReportCallbackEXT *tmp_report_callbacks;
+    uint32_t num_tmp_debug_messengers;
+    VkDebugUtilsMessengerCreateInfoEXT *tmp_messenger_create_infos;
+    VkDebugUtilsMessengerEXT *tmp_debug_messengers;
+
     counter<VkCommandBuffer> c_VkCommandBuffer;
     counter<VkDevice> c_VkDevice;
     counter<VkInstance> c_VkInstance;
@@ -267,15 +273,19 @@ struct layer_data {
     counter<VkDescriptorUpdateTemplateKHR> c_VkDescriptorUpdateTemplateKHR;
     counter<VkValidationCacheEXT> c_VkValidationCacheEXT;
     counter<VkSamplerYcbcrConversionKHR> c_VkSamplerYcbcrConversionKHR;
+    counter<VkDebugUtilsMessengerEXT> c_VkDebugUtilsMessengerEXT;
 #else   // DISTINCT_NONDISPATCHABLE_HANDLES
     counter<uint64_t> c_uint64_t;
 #endif  // DISTINCT_NONDISPATCHABLE_HANDLES
 
     layer_data()
         : report_data(nullptr),
-          num_tmp_callbacks(0),
-          tmp_dbg_create_infos(nullptr),
-          tmp_callbacks(nullptr),
+          num_tmp_report_callbacks(0),
+          tmp_report_create_infos(nullptr),
+          tmp_report_callbacks(nullptr),
+          num_tmp_debug_messengers(0),
+          tmp_messenger_create_infos(nullptr),
+          tmp_debug_messengers(nullptr),
           c_VkCommandBuffer("VkCommandBuffer", VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT),
           c_VkDevice("VkDevice", VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT),
           c_VkInstance("VkInstance", VK_DEBUG_REPORT_OBJECT_TYPE_INSTANCE_EXT),
@@ -309,7 +319,8 @@ struct layer_data {
           c_VkSurfaceKHR("VkSurfaceKHR", VK_DEBUG_REPORT_OBJECT_TYPE_SURFACE_KHR_EXT),
           c_VkSwapchainKHR("VkSwapchainKHR", VK_DEBUG_REPORT_OBJECT_TYPE_SWAPCHAIN_KHR_EXT),
           c_VkDescriptorUpdateTemplateKHR("VkDescriptorUpdateTemplateKHR", VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_UPDATE_TEMPLATE_KHR_EXT),
-          c_VkSamplerYcbcrConversionKHR("VkSamplerYcbcrConversionKHR", VK_DEBUG_REPORT_OBJECT_TYPE_SAMPLER_YCBCR_CONVERSION_KHR_EXT)
+          c_VkSamplerYcbcrConversionKHR("VkSamplerYcbcrConversionKHR", VK_DEBUG_REPORT_OBJECT_TYPE_SAMPLER_YCBCR_CONVERSION_KHR_EXT),
+          c_VkDebugUtilsMessengerEXT("VkDebugUtilsMessengerEXT", VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT)
 #else   // DISTINCT_NONDISPATCHABLE_HANDLES
           c_uint64_t("NON_DISPATCHABLE_HANDLE", VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT)
 #endif  // DISTINCT_NONDISPATCHABLE_HANDLES
@@ -360,6 +371,7 @@ WRAPPER(VkSwapchainKHR)
 WRAPPER(VkDescriptorUpdateTemplateKHR)
 WRAPPER(VkValidationCacheEXT)
 WRAPPER(VkSamplerYcbcrConversionKHR)
+WRAPPER(VkDebugUtilsMessengerEXT)
 #else   // DISTINCT_NONDISPATCHABLE_HANDLES
 WRAPPER(uint64_t)
 #endif  // DISTINCT_NONDISPATCHABLE_HANDLES

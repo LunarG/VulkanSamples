@@ -22,6 +22,7 @@
 
 import os,re,sys
 from generator import *
+from common_codegen import *
 
 # ThreadGeneratorOptions - subclass of GeneratorOptions.
 #
@@ -67,34 +68,34 @@ class ThreadGeneratorOptions(GeneratorOptions):
                  defaultExtensions = None,
                  addExtensions = None,
                  removeExtensions = None,
+                 emitExtensions = None,
                  sortProcedure = regSortFeatures,
                  prefixText = "",
                  genFuncPointers = True,
                  protectFile = True,
                  protectFeature = True,
-                 protectProto = None,
-                 protectProtoStr = None,
                  apicall = '',
                  apientry = '',
                  apientryp = '',
                  indentFuncProto = True,
                  indentFuncPointer = False,
-                 alignFuncParam = 0):
+                 alignFuncParam = 0,
+                 expandEnumerants = True):
         GeneratorOptions.__init__(self, filename, directory, apiname, profile,
                                   versions, emitversions, defaultExtensions,
-                                  addExtensions, removeExtensions, sortProcedure)
+                                  addExtensions, removeExtensions, emitExtensions, sortProcedure)
         self.prefixText      = prefixText
         self.genFuncPointers = genFuncPointers
         self.protectFile     = protectFile
         self.protectFeature  = protectFeature
-        self.protectProto    = protectProto
-        self.protectProtoStr = protectProtoStr
         self.apicall         = apicall
         self.apientry        = apientry
         self.apientryp       = apientryp
         self.indentFuncProto = indentFuncProto
         self.indentFuncPointer = indentFuncPointer
         self.alignFuncParam  = alignFuncParam
+        self.expandEnumerants = expandEnumerants
+
 
 # ThreadOutputGenerator - subclass of OutputGenerator.
 # Generates Thread checking framework
@@ -291,6 +292,7 @@ class ThreadOutputGenerator(OutputGenerator):
         # Accumulate includes, defines, types, enums, function pointer typedefs,
         # end function prototypes separately for this feature. They're only
         # printed in endFeature().
+        self.featureExtraProtect = GetFeatureProtect(interface)
         self.sections = dict([(section, []) for section in self.ALL_SECTIONS])
         #write('// ending beginFeature', file=self.outFile)
     def endFeature(self):
@@ -332,7 +334,7 @@ class ThreadOutputGenerator(OutputGenerator):
         self.sections[section].append(text)
     #
     # Type generation
-    def genType(self, typeinfo, name):
+    def genType(self, typeinfo, name, alias):
         pass
     #
     # Struct (e.g. C "struct" type) generation.
@@ -342,8 +344,8 @@ class ThreadOutputGenerator(OutputGenerator):
     # tags - they are a declaration of a struct or union member.
     # Only simple member declarations are supported (no nested
     # structs etc.)
-    def genStruct(self, typeinfo, typeName):
-        OutputGenerator.genStruct(self, typeinfo, typeName)
+    def genStruct(self, typeinfo, typeName, alias):
+        OutputGenerator.genStruct(self, typeinfo, typeName, alias)
         body = 'typedef ' + typeinfo.elem.get('category') + ' ' + typeName + ' {\n'
         # paramdecl = self.makeCParamDecl(typeinfo.elem, self.genOpts.alignFuncParam)
         for member in typeinfo.elem.findall('.//member'):
@@ -354,16 +356,16 @@ class ThreadOutputGenerator(OutputGenerator):
     #
     # Group (e.g. C "enum" type) generation.
     # These are concatenated together with other types.
-    def genGroup(self, groupinfo, groupName):
+    def genGroup(self, groupinfo, groupName, alias):
         pass
     # Enumerant generation
     # <enum> tags may specify their values in several ways, but are usually
     # just integers.
-    def genEnum(self, enuminfo, name):
+    def genEnum(self, enuminfo, name, alias):
         pass
     #
     # Command generation
-    def genCmd(self, cmdinfo, name):
+    def genCmd(self, cmdinfo, name, alias):
         # Commands shadowed by interface functions and are not implemented
         special_functions = [
             'vkGetDeviceProcAddr',
@@ -382,6 +384,8 @@ class ThreadOutputGenerator(OutputGenerator):
             'vkEnumerateInstanceExtensionProperties',
             'vkEnumerateDeviceLayerProperties',
             'vkEnumerateDeviceExtensionProperties',
+            'vkCreateDebugUtilsMessengerEXT',
+            'vkDestroyDebugUtilsMessengerEXT',
         ]
         if name in special_functions:
             decls = self.makeCDecls(cmdinfo.elem)
@@ -390,7 +394,7 @@ class ThreadOutputGenerator(OutputGenerator):
             self.appendSection('command', decls[0])
             self.intercepts += [ '    {"%s", (void*)%s},' % (name,name[2:]) ]
             return
-        if "QueuePresentKHR" in name or ("DebugMarker" in name and "EXT" in name):
+        if "QueuePresentKHR" in name or (("DebugMarker" in name or "DebugUtilsObject" in name) and "EXT" in name):
             self.appendSection('command', '// TODO - not wrapping EXT function ' + name)
             return
         # Determine first if this function needs to be intercepted
@@ -405,7 +409,7 @@ class ThreadOutputGenerator(OutputGenerator):
         if (self.featureExtraProtect != None):
             self.intercepts += [ '#endif' ]
 
-        OutputGenerator.genCmd(self, cmdinfo, name)
+        OutputGenerator.genCmd(self, cmdinfo, name, alias)
         #
         decls = self.makeCDecls(cmdinfo.elem)
         self.appendSection('command', '')

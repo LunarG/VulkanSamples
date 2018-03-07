@@ -42,7 +42,8 @@ namespace threading {
 static uint32_t loader_layer_if_version = CURRENT_LOADER_LAYER_INTERFACE_VERSION;
 
 static void initThreading(layer_data *my_data, const VkAllocationCallbacks *pAllocator) {
-    layer_debug_actions(my_data->report_data, my_data->logging_callback, pAllocator, "google_threading");
+    layer_debug_report_actions(my_data->report_data, my_data->logging_callback, pAllocator, "google_threading");
+    layer_debug_messenger_actions(my_data->report_data, my_data->logging_messenger, pAllocator, "google_threading");
 }
 
 VKAPI_ATTR VkResult VKAPI_CALL CreateInstance(const VkInstanceCreateInfo *pCreateInfo, const VkAllocationCallbacks *pAllocator,
@@ -67,14 +68,16 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateInstance(const VkInstanceCreateInfo *pCreat
     my_data->instance_dispatch_table = new VkLayerInstanceDispatchTable;
     layer_init_instance_dispatch_table(*pInstance, my_data->instance_dispatch_table, fpGetInstanceProcAddr);
 
-    my_data->report_data = debug_report_create_instance(my_data->instance_dispatch_table, *pInstance,
-                                                        pCreateInfo->enabledExtensionCount, pCreateInfo->ppEnabledExtensionNames);
+    my_data->report_data = debug_utils_create_instance(my_data->instance_dispatch_table, *pInstance,
+                                                       pCreateInfo->enabledExtensionCount, pCreateInfo->ppEnabledExtensionNames);
     initThreading(my_data, pAllocator);
 
     // Look for one or more debug report create info structures, and copy the
     // callback(s) for each one found (for use by vkDestroyInstance)
-    layer_copy_tmp_callbacks(pCreateInfo->pNext, &my_data->num_tmp_callbacks, &my_data->tmp_dbg_create_infos,
-                             &my_data->tmp_callbacks);
+    layer_copy_tmp_debug_messengers(pCreateInfo->pNext, &my_data->num_tmp_debug_messengers, &my_data->tmp_messenger_create_infos,
+                                    &my_data->tmp_debug_messengers);
+    layer_copy_tmp_report_callbacks(pCreateInfo->pNext, &my_data->num_tmp_report_callbacks, &my_data->tmp_report_create_infos,
+                                    &my_data->tmp_report_callbacks);
     return result;
 }
 
@@ -85,9 +88,15 @@ VKAPI_ATTR void VKAPI_CALL DestroyInstance(VkInstance instance, const VkAllocati
 
     // Enable the temporary callback(s) here to catch cleanup issues:
     bool callback_setup = false;
-    if (my_data->num_tmp_callbacks > 0) {
-        if (!layer_enable_tmp_callbacks(my_data->report_data, my_data->num_tmp_callbacks, my_data->tmp_dbg_create_infos,
-                                        my_data->tmp_callbacks)) {
+    if (my_data->num_tmp_debug_messengers > 0) {
+        if (!layer_enable_tmp_debug_messengers(my_data->report_data, my_data->num_tmp_debug_messengers,
+                                               my_data->tmp_messenger_create_infos, my_data->tmp_debug_messengers)) {
+            callback_setup = true;
+        }
+    }
+    if (my_data->num_tmp_report_callbacks > 0) {
+        if (!layer_enable_tmp_report_callbacks(my_data->report_data, my_data->num_tmp_report_callbacks,
+                                               my_data->tmp_report_create_infos, my_data->tmp_report_callbacks)) {
             callback_setup = true;
         }
     }
@@ -105,21 +114,31 @@ VKAPI_ATTR void VKAPI_CALL DestroyInstance(VkInstance instance, const VkAllocati
 
     // Disable and cleanup the temporary callback(s):
     if (callback_setup) {
-        layer_disable_tmp_callbacks(my_data->report_data, my_data->num_tmp_callbacks, my_data->tmp_callbacks);
+        layer_disable_tmp_debug_messengers(my_data->report_data, my_data->num_tmp_debug_messengers, my_data->tmp_debug_messengers);
+        layer_disable_tmp_report_callbacks(my_data->report_data, my_data->num_tmp_report_callbacks, my_data->tmp_report_callbacks);
     }
-    if (my_data->num_tmp_callbacks > 0) {
-        layer_free_tmp_callbacks(my_data->tmp_dbg_create_infos, my_data->tmp_callbacks);
-        my_data->num_tmp_callbacks = 0;
+    if (my_data->num_tmp_debug_messengers > 0) {
+        layer_free_tmp_debug_messengers(my_data->tmp_messenger_create_infos, my_data->tmp_debug_messengers);
+        my_data->num_tmp_debug_messengers = 0;
+    }
+    if (my_data->num_tmp_report_callbacks > 0) {
+        layer_free_tmp_report_callbacks(my_data->tmp_report_create_infos, my_data->tmp_report_callbacks);
+        my_data->num_tmp_report_callbacks = 0;
     }
 
-    // Clean up logging callback, if any
+    // Clean up logging callbacks, if any
+    while (my_data->logging_messenger.size() > 0) {
+        VkDebugUtilsMessengerEXT messenger = my_data->logging_messenger.back();
+        layer_destroy_messenger_callback(my_data->report_data, messenger, pAllocator);
+        my_data->logging_messenger.pop_back();
+    }
     while (my_data->logging_callback.size() > 0) {
         VkDebugReportCallbackEXT callback = my_data->logging_callback.back();
-        layer_destroy_msg_callback(my_data->report_data, callback, pAllocator);
+        layer_destroy_report_callback(my_data->report_data, callback, pAllocator);
         my_data->logging_callback.pop_back();
     }
 
-    layer_debug_report_destroy_instance(my_data->report_data);
+    layer_debug_utils_destroy_instance(my_data->report_data);
     delete my_data->instance_dispatch_table;
     FreeLayerDataPtr(key, layer_data_map);
 }
@@ -151,7 +170,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateDevice(VkPhysicalDevice gpu, const VkDevice
     my_device_data->device_dispatch_table = new VkLayerDispatchTable;
     layer_init_device_dispatch_table(*pDevice, my_device_data->device_dispatch_table, fpGetDeviceProcAddr);
 
-    my_device_data->report_data = layer_debug_report_create_device(my_instance_data->report_data, *pDevice);
+    my_device_data->report_data = layer_debug_utils_create_device(my_instance_data->report_data, *pDevice);
     return result;
 }
 
@@ -194,8 +213,8 @@ VKAPI_ATTR VkResult VKAPI_CALL GetSwapchainImagesKHR(VkDevice device, VkSwapchai
     return result;
 }
 
-static const VkExtensionProperties threading_extensions[] = {
-    {VK_EXT_DEBUG_REPORT_EXTENSION_NAME, VK_EXT_DEBUG_REPORT_SPEC_VERSION}};
+static const VkExtensionProperties threading_extensions[] = {{VK_EXT_DEBUG_REPORT_EXTENSION_NAME, VK_EXT_DEBUG_REPORT_SPEC_VERSION},
+                                                             {VK_EXT_DEBUG_UTILS_EXTENSION_NAME, VK_EXT_DEBUG_UTILS_SPEC_VERSION}};
 
 static const VkLayerProperties layerProps = {
     "VK_LAYER_GOOGLE_threading",
@@ -271,6 +290,52 @@ VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL GetPhysicalDeviceProcAddr(VkInstance in
     return pTable->GetPhysicalDeviceProcAddr(instance, funcName);
 }
 
+// VK_EXT_debug_utils commands
+VKAPI_ATTR VkResult VKAPI_CALL CreateDebugUtilsMessengerEXT(VkInstance instance,
+                                                            const VkDebugUtilsMessengerCreateInfoEXT *pCreateInfo,
+                                                            const VkAllocationCallbacks *pAllocator,
+                                                            VkDebugUtilsMessengerEXT *pMessenger) {
+    layer_data *my_data = GetLayerDataPtr(get_dispatch_key(instance), layer_data_map);
+    bool threadChecks = startMultiThread();
+    if (threadChecks) {
+        startReadObject(my_data, instance);
+    }
+    VkResult result = my_data->instance_dispatch_table->CreateDebugUtilsMessengerEXT(instance, pCreateInfo, pAllocator, pMessenger);
+
+    if (VK_SUCCESS == result) {
+        result = layer_create_messenger_callback(my_data->report_data, false, pCreateInfo, pAllocator, pMessenger);
+        // If something happened during this call, clean up the message callback that was created earlier in the lower levels
+        if (VK_SUCCESS != result) {
+            my_data->instance_dispatch_table->DestroyDebugUtilsMessengerEXT(instance, *pMessenger, pAllocator);
+        }
+    }
+    if (threadChecks) {
+        finishReadObject(my_data, instance);
+    } else {
+        finishMultiThread();
+    }
+    return result;
+}
+
+VKAPI_ATTR void VKAPI_CALL DestroyDebugUtilsMessengerEXT(VkInstance instance, VkDebugUtilsMessengerEXT messenger,
+                                                         const VkAllocationCallbacks *pAllocator) {
+    layer_data *my_data = GetLayerDataPtr(get_dispatch_key(instance), layer_data_map);
+    bool threadChecks = startMultiThread();
+    if (threadChecks) {
+        startReadObject(my_data, instance);
+        startWriteObject(my_data, messenger);
+    }
+    my_data->instance_dispatch_table->DestroyDebugUtilsMessengerEXT(instance, messenger, pAllocator);
+    layer_destroy_messenger_callback(my_data->report_data, messenger, pAllocator);
+    if (threadChecks) {
+        finishReadObject(my_data, instance);
+        finishWriteObject(my_data, messenger);
+    } else {
+        finishMultiThread();
+    }
+}
+
+// VK_EXT_debug_report commands
 VKAPI_ATTR VkResult VKAPI_CALL CreateDebugReportCallbackEXT(VkInstance instance,
                                                             const VkDebugReportCallbackCreateInfoEXT *pCreateInfo,
                                                             const VkAllocationCallbacks *pAllocator,
@@ -283,7 +348,11 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateDebugReportCallbackEXT(VkInstance instance,
     VkResult result =
         my_data->instance_dispatch_table->CreateDebugReportCallbackEXT(instance, pCreateInfo, pAllocator, pMsgCallback);
     if (VK_SUCCESS == result) {
-        result = layer_create_msg_callback(my_data->report_data, false, pCreateInfo, pAllocator, pMsgCallback);
+        result = layer_create_report_callback(my_data->report_data, false, pCreateInfo, pAllocator, pMsgCallback);
+        // If something happened during this call, clean up the message callback that was created earlier in the lower levels
+        if (VK_SUCCESS != result) {
+            my_data->instance_dispatch_table->DestroyDebugReportCallbackEXT(instance, *pMsgCallback, pAllocator);
+        }
     }
     if (threadChecks) {
         finishReadObject(my_data, instance);
@@ -302,7 +371,7 @@ VKAPI_ATTR void VKAPI_CALL DestroyDebugReportCallbackEXT(VkInstance instance, Vk
         startWriteObject(my_data, callback);
     }
     my_data->instance_dispatch_table->DestroyDebugReportCallbackEXT(instance, callback, pAllocator);
-    layer_destroy_msg_callback(my_data->report_data, callback, pAllocator);
+    layer_destroy_report_callback(my_data->report_data, callback, pAllocator);
     if (threadChecks) {
         finishReadObject(my_data, instance);
         finishWriteObject(my_data, callback);
@@ -399,6 +468,21 @@ VKAPI_ATTR void VKAPI_CALL FreeCommandBuffers(VkDevice device, VkCommandPool com
 }  // namespace threading
 
 // vk_layer_logging.h expects these to be defined
+VKAPI_ATTR VkResult VKAPI_CALL vkCreateDebugUtilsMessengerEXT(VkInstance instance, const VkDebugUtilsMessengerCreateInfoEXT *pCreateInfo,
+                                                         const VkAllocationCallbacks *pAllocator, VkDebugUtilsMessengerEXT *pMessenger) {
+    return threading::CreateDebugUtilsMessengerEXT(instance, pCreateInfo, pAllocator, pMessenger);
+}
+
+VKAPI_ATTR void VKAPI_CALL vkDestroyDebugUtilsMessengerEXT(VkInstance instance, VkDebugUtilsMessengerEXT messenger,
+                                                      const VkAllocationCallbacks *pAllocator) {
+    threading::DestroyDebugUtilsMessengerEXT(instance, messenger, pAllocator);
+}
+
+VKAPI_ATTR void VKAPI_CALL vkSubmitDebugUtilsMessageEXT(VkInstance instance, VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
+                                                   VkDebugUtilsMessageTypeFlagsEXT messageTypes,
+                                                   const VkDebugUtilsMessengerCallbackDataEXT *pCallbackData) {
+    threading::SubmitDebugUtilsMessageEXT(instance, messageSeverity, messageTypes, pCallbackData);
+}
 
 VKAPI_ATTR VkResult VKAPI_CALL vkCreateDebugReportCallbackEXT(VkInstance instance,
                                                               const VkDebugReportCallbackCreateInfoEXT *pCreateInfo,

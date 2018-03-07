@@ -26,6 +26,8 @@
 
 import os,re,sys
 from generator import *
+from common_codegen import *
+
 
 # Mock header code
 HEADER_C_CODE = '''
@@ -349,21 +351,21 @@ EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateWin32SurfaceKHR(
 }
 #endif /* VK_USE_PLATFORM_WIN32_KHR */
 
-EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkGetDeviceGroupSurfacePresentModesKHX(
+EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkGetDeviceGroupSurfacePresentModesKHR(
     VkDevice                                    device,
     VkSurfaceKHR                                surface,
-    VkDeviceGroupPresentModeFlagsKHX*           pModes)
+    VkDeviceGroupPresentModeFlagsKHR*           pModes)
 {
-    return vkmock::GetDeviceGroupSurfacePresentModesKHX(device, surface, pModes);
+    return vkmock::GetDeviceGroupSurfacePresentModesKHR(device, surface, pModes);
 }
 
-EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkGetPhysicalDevicePresentRectanglesKHX(
+EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkGetPhysicalDevicePresentRectanglesKHR(
     VkPhysicalDevice                            physicalDevice,
     VkSurfaceKHR                                surface,
     uint32_t*                                   pRectCount,
     VkRect2D*                                   pRects)
 {
-    return vkmock::GetPhysicalDevicePresentRectanglesKHX(physicalDevice, surface, pRectCount, pRects);
+    return vkmock::GetPhysicalDevicePresentRectanglesKHR(physicalDevice, surface, pRectCount, pRects);
 }
 
 #ifdef VK_USE_PLATFORM_VI_NN
@@ -713,6 +715,7 @@ class MockICDGeneratorOptions(GeneratorOptions):
                  defaultExtensions = None,
                  addExtensions = None,
                  removeExtensions = None,
+                 emitExtensions = None,
                  sortProcedure = regSortFeatures,
                  prefixText = "",
                  genFuncPointers = True,
@@ -726,10 +729,11 @@ class MockICDGeneratorOptions(GeneratorOptions):
                  indentFuncProto = True,
                  indentFuncPointer = False,
                  alignFuncParam = 0,
+                 expandEnumerants = True,
                  helper_file_type = ''):
         GeneratorOptions.__init__(self, filename, directory, apiname, profile,
                                   versions, emitversions, defaultExtensions,
-                                  addExtensions, removeExtensions, sortProcedure)
+                                  addExtensions, removeExtensions, emitExtensions, sortProcedure)
         self.prefixText      = prefixText
         self.genFuncPointers = genFuncPointers
         self.protectFile     = protectFile
@@ -842,7 +846,7 @@ class MockICDOutputGenerator(OutputGenerator):
             # Ignore extensions that ICDs should not implement or are not safe to report
             ignore_exts = ['VK_EXT_validation_cache', 'VK_KHR_push_descriptor']
             for ext in self.registry.tree.findall("extensions/extension"):
-                if '0' != ext[0][0].attrib['value']: # Only include implemented extensions
+                if ext.attrib['supported'] != 'disabled': # Only include enabled extensions
                     if (ext.attrib['name'] in ignore_exts):
                         pass
                     elif (ext.attrib.get('type') and 'instance' == ext.attrib['type']):
@@ -884,6 +888,7 @@ class MockICDOutputGenerator(OutputGenerator):
         #write('// starting beginFeature', file=self.outFile)
         # Start processing in superclass
         OutputGenerator.beginFeature(self, interface, emit)
+        self.featureExtraProtect = GetFeatureProtect(interface)
         # C-specific
         # Accumulate includes, defines, types, enums, function pointer typedefs,
         # end function prototypes separately for this feature. They're only
@@ -929,7 +934,7 @@ class MockICDOutputGenerator(OutputGenerator):
         self.sections[section].append(text)
     #
     # Type generation
-    def genType(self, typeinfo, name):
+    def genType(self, typeinfo, name, alias):
         pass
     #
     # Struct (e.g. C "struct" type) generation.
@@ -939,8 +944,8 @@ class MockICDOutputGenerator(OutputGenerator):
     # tags - they are a declaration of a struct or union member.
     # Only simple member declarations are supported (no nested
     # structs etc.)
-    def genStruct(self, typeinfo, typeName):
-        OutputGenerator.genStruct(self, typeinfo, typeName)
+    def genStruct(self, typeinfo, typeName, alias):
+        OutputGenerator.genStruct(self, typeinfo, typeName, alias)
         body = 'typedef ' + typeinfo.elem.get('category') + ' ' + typeName + ' {\n'
         # paramdecl = self.makeCParamDecl(typeinfo.elem, self.genOpts.alignFuncParam)
         for member in typeinfo.elem.findall('.//member'):
@@ -951,16 +956,16 @@ class MockICDOutputGenerator(OutputGenerator):
     #
     # Group (e.g. C "enum" type) generation.
     # These are concatenated together with other types.
-    def genGroup(self, groupinfo, groupName):
+    def genGroup(self, groupinfo, groupName, alias):
         pass
     # Enumerant generation
     # <enum> tags may specify their values in several ways, but are usually
     # just integers.
-    def genEnum(self, enuminfo, name):
+    def genEnum(self, enuminfo, name, alias):
         pass
     #
     # Command generation
-    def genCmd(self, cmdinfo, name):
+    def genCmd(self, cmdinfo, name, alias):
         decls = self.makeCDecls(cmdinfo.elem)
         if self.header: # In the header declare all intercepts
             self.appendSection('command', '')
@@ -1005,7 +1010,7 @@ class MockICDOutputGenerator(OutputGenerator):
         if (self.featureExtraProtect != None):
             self.intercepts += [ '#endif' ]
 
-        OutputGenerator.genCmd(self, cmdinfo, name)
+        OutputGenerator.genCmd(self, cmdinfo, name, alias)
         #
         self.appendSection('command', '')
         self.appendSection('command', 'static %s' % (decls[0][:-1]))

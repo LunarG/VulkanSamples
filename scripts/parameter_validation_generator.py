@@ -25,6 +25,7 @@ import xml.etree.ElementTree as etree
 from generator import *
 from collections import namedtuple
 from vuid_mapping import *
+from common_codegen import *
 
 # This is a workaround to use a Python 2.7 and 3.x compatible syntax.
 from io import open
@@ -72,34 +73,27 @@ class ParameterValidationGeneratorOptions(GeneratorOptions):
                  defaultExtensions = None,
                  addExtensions = None,
                  removeExtensions = None,
+                 emitExtensions = None,
                  sortProcedure = regSortFeatures,
                  prefixText = "",
-                 genFuncPointers = True,
-                 protectFile = True,
-                 protectFeature = True,
-                 protectProto = None,
-                 protectProtoStr = None,
                  apicall = '',
                  apientry = '',
                  apientryp = '',
                  indentFuncProto = True,
                  indentFuncPointer = False,
-                 alignFuncParam = 0):
+                 alignFuncParam = 0,
+                 expandEnumerants = True):
         GeneratorOptions.__init__(self, filename, directory, apiname, profile,
                                   versions, emitversions, defaultExtensions,
-                                  addExtensions, removeExtensions, sortProcedure)
+                                  addExtensions, removeExtensions, emitExtensions, sortProcedure)
         self.prefixText      = prefixText
-        self.genFuncPointers = genFuncPointers
-        self.protectFile     = protectFile
-        self.protectFeature  = protectFeature
-        self.protectProto    = protectProto
-        self.protectProtoStr = protectProtoStr
         self.apicall         = apicall
         self.apientry        = apientry
         self.apientryp       = apientryp
         self.indentFuncProto = indentFuncProto
         self.indentFuncPointer = indentFuncPointer
         self.alignFuncParam  = alignFuncParam
+        self.expandEnumerants = expandEnumerants
 
 # ParameterValidationOutputGenerator - subclass of OutputGenerator.
 # Generates param checker layer code.
@@ -133,17 +127,12 @@ class ParameterValidationOutputGenerator(OutputGenerator):
         self.blacklist = [
             'vkGetInstanceProcAddr',
             'vkGetDeviceProcAddr',
-            'vkEnumerateInstanceLayerProperties',
-            'vkEnumerateInstanceExtensionsProperties',
-            'vkEnumerateDeviceLayerProperties',
-            'vkEnumerateDeviceExtensionsProperties',
-            'vkCreateDebugReportCallbackKHR',
-            'vkDestroyDebugReportCallbackKHR',
+            'vkEnumerateInstanceVersion',
             'vkEnumerateInstanceLayerProperties',
             'vkEnumerateInstanceExtensionProperties',
             'vkEnumerateDeviceLayerProperties',
-            'vkCmdDebugMarkerEndEXT',
             'vkEnumerateDeviceExtensionProperties',
+            'vkCmdDebugMarkerEndEXT',
             ]
         self.validate_only = [
             'vkCreateInstance',
@@ -156,6 +145,8 @@ class ParameterValidationOutputGenerator(OutputGenerator):
             'vkCreateCommandPool',
             'vkCreateRenderPass',
             'vkDestroyRenderPass',
+            'vkCreateDebugUtilsMessengerEXT',
+            'vkDestroyDebugUtilsMessengerEXT',
             ]
         # Structure fields to ignore
         self.structMemberBlacklist = { 'VkWriteDescriptorSet' : ['dstSet'] }
@@ -349,14 +340,13 @@ class ParameterValidationOutputGenerator(OutputGenerator):
         self.headerVersion = None
         self.structNames = []
         self.stypes = []
-        self.structTypes = dict()
         self.commands = []
         self.structMembers = []
         self.newFlags = set()
-
+        self.featureExtraProtect = GetFeatureProtect(interface)
         # Get base list of extension dependencies for all items in this extension
         base_required_extensions = []
-        if self.featureName != "VK_VERSION_1_0":
+        if "VK_VERSION_1" not in self.featureName:
             # Save Name Define to get correct enable name later
             nameElem = interface[0][1]
             name = nameElem.get('name')
@@ -367,7 +357,6 @@ class ParameterValidationOutputGenerator(OutputGenerator):
         requires = interface.get('requires')
         if requires is not None:
             base_required_extensions.extend(requires.split(','))
-
         # Build dictionary of extension dependencies for each item in this extension
         self.required_extensions = dict()
         for require_element in interface.findall('require'):
@@ -421,14 +410,14 @@ class ParameterValidationOutputGenerator(OutputGenerator):
         OutputGenerator.endFeature(self)
     #
     # Type generation
-    def genType(self, typeinfo, name):
-        OutputGenerator.genType(self, typeinfo, name)
+    def genType(self, typeinfo, name, alias):
+        OutputGenerator.genType(self, typeinfo, name, alias)
         typeElem = typeinfo.elem
         # If the type is a struct type, traverse the imbedded <member> tags generating a structure. Otherwise, emit the tag text.
         category = typeElem.get('category')
         if (category == 'struct' or category == 'union'):
             self.structNames.append(name)
-            self.genStruct(typeinfo, name)
+            self.genStruct(typeinfo, name, alias)
         elif (category == 'handle'):
             self.handleTypes.add(name)
         elif (category == 'bitmask'):
@@ -443,8 +432,10 @@ class ParameterValidationOutputGenerator(OutputGenerator):
     # This is a special case of the <type> tag where the contents are interpreted as a set of <member> tags instead of freeform C
     # type declarations. The <member> tags are just like <param> tags - they are a declaration of a struct or union member.
     # Only simple member declarations are supported (no nested structs etc.)
-    def genStruct(self, typeinfo, typeName):
-        OutputGenerator.genStruct(self, typeinfo, typeName)
+    def genStruct(self, typeinfo, typeName, alias):
+        if alias:
+            print("genStruct {} {}".format(typeName, alias))
+        OutputGenerator.genStruct(self, typeinfo, typeName, alias)
         conditions = self.structMemberValidationConditions[typeName] if typeName in self.structMemberValidationConditions else None
         members = typeinfo.elem.findall('.//member')
         #
@@ -508,8 +499,10 @@ class ParameterValidationOutputGenerator(OutputGenerator):
     #
     # Capture group (e.g. C "enum" type) info to be used for param check code generation.
     # These are concatenated together with other types.
-    def genGroup(self, groupinfo, groupName):
-        OutputGenerator.genGroup(self, groupinfo, groupName)
+    def genGroup(self, groupinfo, groupName, alias):
+        if alias:
+            print("genGroup {} {}".format(groupName, alias))
+        OutputGenerator.genGroup(self, groupinfo, groupName, alias)
         groupElem = groupinfo.elem
         # Store the sType values
         if groupName == 'VkStructureType':
@@ -544,8 +537,10 @@ class ParameterValidationOutputGenerator(OutputGenerator):
                 self.enumValueLists += enum_entry
     #
     # Capture command parameter info to be used for param check code generation.
-    def genCmd(self, cmdinfo, name):
-        OutputGenerator.genCmd(self, cmdinfo, name)
+    def genCmd(self, cmdinfo, name, alias):
+        if alias:
+            print("genCmd {} {}".format(name, alias))
+        OutputGenerator.genCmd(self, cmdinfo, name, alias)
         decls = self.makeCDecls(cmdinfo.elem)
         typedef = decls[1]
         typedef = typedef.split(')',1)[1]

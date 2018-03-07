@@ -298,7 +298,7 @@ REM // ======== Functions ======== //
    cd %GLSLANG_DIR%
    git clone %GLSLANG_GITURL% .
    git checkout %GLSLANG_REVISION%
-   python.exe .\update_glslang_sources.py
+   C:\Python27\python.exe .\update_glslang_sources.py
    if not exist %GLSLANG_DIR%\SPIRV (
        echo glslang source download failed!
        set errorCode=1
@@ -311,7 +311,7 @@ goto:eof
    cd %GLSLANG_DIR%
    git fetch --all
    git checkout %GLSLANG_REVISION%
-   python.exe .\update_glslang_sources.py
+   C:\Python27\python.exe .\update_glslang_sources.py
 goto:eof
 
 :build_glslang

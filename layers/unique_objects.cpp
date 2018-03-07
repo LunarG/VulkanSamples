@@ -59,7 +59,9 @@ namespace unique_objects {
 static uint32_t loader_layer_if_version = CURRENT_LOADER_LAYER_INTERFACE_VERSION;
 
 static void initUniqueObjects(instance_layer_data *instance_data, const VkAllocationCallbacks *pAllocator) {
-    layer_debug_actions(instance_data->report_data, instance_data->logging_callback, pAllocator, "google_unique_objects");
+    layer_debug_report_actions(instance_data->report_data, instance_data->logging_callback, pAllocator, "google_unique_objects");
+    layer_debug_messenger_actions(instance_data->report_data, instance_data->logging_messenger, pAllocator,
+                                  "google_unique_objects");
 }
 
 // Check enabled instance extensions against supported instance extension whitelist
@@ -118,18 +120,27 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateInstance(const VkInstanceCreateInfo *pCreat
     layer_init_instance_dispatch_table(*pInstance, &instance_data->dispatch_table, fpGetInstanceProcAddr);
 
     instance_data->instance = *pInstance;
-    instance_data->report_data =
-        debug_report_create_instance(&instance_data->dispatch_table, *pInstance, pCreateInfo->enabledExtensionCount,
-                                     pCreateInfo->ppEnabledExtensionNames);
+    instance_data->report_data = debug_utils_create_instance(
+        &instance_data->dispatch_table, *pInstance, pCreateInfo->enabledExtensionCount, pCreateInfo->ppEnabledExtensionNames);
 
     // Set up temporary debug callbacks to output messages at CreateInstance-time
-    if (!layer_copy_tmp_callbacks(pCreateInfo->pNext, &instance_data->num_tmp_callbacks, &instance_data->tmp_dbg_create_infos,
-                                  &instance_data->tmp_callbacks)) {
-        if (instance_data->num_tmp_callbacks > 0) {
-            if (layer_enable_tmp_callbacks(instance_data->report_data, instance_data->num_tmp_callbacks,
-                                           instance_data->tmp_dbg_create_infos, instance_data->tmp_callbacks)) {
-                layer_free_tmp_callbacks(instance_data->tmp_dbg_create_infos, instance_data->tmp_callbacks);
-                instance_data->num_tmp_callbacks = 0;
+    if (!layer_copy_tmp_debug_messengers(pCreateInfo->pNext, &instance_data->num_tmp_debug_messengers,
+                                         &instance_data->tmp_messenger_create_infos, &instance_data->tmp_debug_messengers)) {
+        if (instance_data->num_tmp_debug_messengers > 0) {
+            if (layer_enable_tmp_debug_messengers(instance_data->report_data, instance_data->num_tmp_debug_messengers,
+                                                  instance_data->tmp_messenger_create_infos, instance_data->tmp_debug_messengers)) {
+                layer_free_tmp_debug_messengers(instance_data->tmp_messenger_create_infos, instance_data->tmp_debug_messengers);
+                instance_data->num_tmp_debug_messengers = 0;
+            }
+        }
+    }
+    if (!layer_copy_tmp_report_callbacks(pCreateInfo->pNext, &instance_data->num_tmp_report_callbacks,
+                                         &instance_data->tmp_report_create_infos, &instance_data->tmp_report_callbacks)) {
+        if (instance_data->num_tmp_report_callbacks > 0) {
+            if (layer_enable_tmp_report_callbacks(instance_data->report_data, instance_data->num_tmp_report_callbacks,
+                                                  instance_data->tmp_report_create_infos, instance_data->tmp_report_callbacks)) {
+                layer_free_tmp_report_callbacks(instance_data->tmp_report_create_infos, instance_data->tmp_report_callbacks);
+                instance_data->num_tmp_report_callbacks = 0;
             }
         }
     }
@@ -138,10 +149,17 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateInstance(const VkInstanceCreateInfo *pCreat
     InstanceExtensionWhitelist(pCreateInfo, *pInstance);
 
     // Disable and free tmp callbacks, no longer necessary
-    if (instance_data->num_tmp_callbacks > 0) {
-        layer_disable_tmp_callbacks(instance_data->report_data, instance_data->num_tmp_callbacks, instance_data->tmp_callbacks);
-        layer_free_tmp_callbacks(instance_data->tmp_dbg_create_infos, instance_data->tmp_callbacks);
-        instance_data->num_tmp_callbacks = 0;
+    if (instance_data->num_tmp_debug_messengers > 0) {
+        layer_disable_tmp_debug_messengers(instance_data->report_data, instance_data->num_tmp_debug_messengers,
+                                           instance_data->tmp_debug_messengers);
+        layer_free_tmp_debug_messengers(instance_data->tmp_messenger_create_infos, instance_data->tmp_debug_messengers);
+        instance_data->num_tmp_debug_messengers = 0;
+    }
+    if (instance_data->num_tmp_report_callbacks > 0) {
+        layer_disable_tmp_report_callbacks(instance_data->report_data, instance_data->num_tmp_report_callbacks,
+                                           instance_data->tmp_report_callbacks);
+        layer_free_tmp_report_callbacks(instance_data->tmp_report_create_infos, instance_data->tmp_report_callbacks);
+        instance_data->num_tmp_report_callbacks = 0;
     }
 
     return result;
@@ -154,13 +172,18 @@ VKAPI_ATTR void VKAPI_CALL DestroyInstance(VkInstance instance, const VkAllocati
     disp_table->DestroyInstance(instance, pAllocator);
 
     // Clean up logging callback, if any
+    while (instance_data->logging_messenger.size() > 0) {
+        VkDebugUtilsMessengerEXT messenger = instance_data->logging_messenger.back();
+        layer_destroy_messenger_callback(instance_data->report_data, messenger, pAllocator);
+        instance_data->logging_messenger.pop_back();
+    }
     while (instance_data->logging_callback.size() > 0) {
         VkDebugReportCallbackEXT callback = instance_data->logging_callback.back();
-        layer_destroy_msg_callback(instance_data->report_data, callback, pAllocator);
+        layer_destroy_report_callback(instance_data->report_data, callback, pAllocator);
         instance_data->logging_callback.pop_back();
     }
 
-    layer_debug_report_destroy_instance(instance_data->report_data);
+    layer_debug_utils_destroy_instance(instance_data->report_data);
     FreeLayerDataPtr(key, instance_layer_data_map);
 }
 
@@ -186,7 +209,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateDevice(VkPhysicalDevice gpu, const VkDevice
     }
 
     layer_data *my_device_data = GetLayerDataPtr(get_dispatch_key(*pDevice), layer_data_map);
-    my_device_data->report_data = layer_debug_report_create_device(my_instance_data->report_data, *pDevice);
+    my_device_data->report_data = layer_debug_utils_create_device(my_instance_data->report_data, *pDevice);
 
     // Setup layer's device dispatch table
     layer_init_device_dispatch_table(*pDevice, &my_device_data->dispatch_table, fpGetDeviceProcAddr);
@@ -203,7 +226,7 @@ VKAPI_ATTR void VKAPI_CALL DestroyDevice(VkDevice device, const VkAllocationCall
     dispatch_key key = get_dispatch_key(device);
     layer_data *dev_data = GetLayerDataPtr(key, layer_data_map);
 
-    layer_debug_report_destroy_device(device);
+    layer_debug_utils_destroy_device(device);
     dev_data->dispatch_table.DestroyDevice(device, pAllocator);
 
     FreeLayerDataPtr(key, layer_data_map);
@@ -269,7 +292,6 @@ VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL GetInstanceProcAddr(VkInstance instance
     if (!table.GetInstanceProcAddr) return nullptr;
     return table.GetInstanceProcAddr(instance, funcName);
 }
-
 
 VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL GetPhysicalDeviceProcAddr(VkInstance instance, const char *funcName) {
     instance_layer_data *instance_data = GetLayerDataPtr(get_dispatch_key(instance), instance_layer_data_map);
@@ -542,16 +564,17 @@ VKAPI_ATTR VkResult VKAPI_CALL QueuePresentKHR(VkQueue queue, const VkPresentInf
     return result;
 }
 
-VKAPI_ATTR VkResult VKAPI_CALL CreateDescriptorUpdateTemplateKHR(VkDevice device,
-                                                                 const VkDescriptorUpdateTemplateCreateInfoKHR *pCreateInfo,
-                                                                 const VkAllocationCallbacks *pAllocator,
-                                                                 VkDescriptorUpdateTemplateKHR *pDescriptorUpdateTemplate) {
+// This is the core version of this routine.  The extension version is below.
+VKAPI_ATTR VkResult VKAPI_CALL CreateDescriptorUpdateTemplate(VkDevice device,
+                                                              const VkDescriptorUpdateTemplateCreateInfoKHR *pCreateInfo,
+                                                              const VkAllocationCallbacks *pAllocator,
+                                                              VkDescriptorUpdateTemplateKHR *pDescriptorUpdateTemplate) {
     layer_data *dev_data = GetLayerDataPtr(get_dispatch_key(device), layer_data_map);
-    safe_VkDescriptorUpdateTemplateCreateInfoKHR *local_create_info = NULL;
+    safe_VkDescriptorUpdateTemplateCreateInfo *local_create_info = NULL;
     {
         std::lock_guard<std::mutex> lock(global_lock);
         if (pCreateInfo) {
-            local_create_info = new safe_VkDescriptorUpdateTemplateCreateInfoKHR(pCreateInfo);
+            local_create_info = new safe_VkDescriptorUpdateTemplateCreateInfo(pCreateInfo);
             if (pCreateInfo->descriptorSetLayout) {
                 local_create_info->descriptorSetLayout = Unwrap(dev_data, pCreateInfo->descriptorSetLayout);
             }
@@ -560,8 +583,8 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateDescriptorUpdateTemplateKHR(VkDevice device
             }
         }
     }
-    VkResult result = dev_data->dispatch_table.CreateDescriptorUpdateTemplateKHR(
-        device, local_create_info->ptr(), pAllocator, pDescriptorUpdateTemplate);
+    VkResult result = dev_data->dispatch_table.CreateDescriptorUpdateTemplate(device, local_create_info->ptr(), pAllocator,
+                                                                              pDescriptorUpdateTemplate);
     if (VK_SUCCESS == result) {
         std::lock_guard<std::mutex> lock(global_lock);
         *pDescriptorUpdateTemplate = WrapNew(dev_data, *pDescriptorUpdateTemplate);
@@ -573,6 +596,52 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateDescriptorUpdateTemplateKHR(VkDevice device
     return result;
 }
 
+// This is the extension version of this routine.  The core version is above.
+VKAPI_ATTR VkResult VKAPI_CALL CreateDescriptorUpdateTemplateKHR(VkDevice device,
+                                                                 const VkDescriptorUpdateTemplateCreateInfoKHR *pCreateInfo,
+                                                                 const VkAllocationCallbacks *pAllocator,
+                                                                 VkDescriptorUpdateTemplateKHR *pDescriptorUpdateTemplate) {
+    layer_data *dev_data = GetLayerDataPtr(get_dispatch_key(device), layer_data_map);
+    safe_VkDescriptorUpdateTemplateCreateInfo *local_create_info = NULL;
+    {
+        std::lock_guard<std::mutex> lock(global_lock);
+        if (pCreateInfo) {
+            local_create_info = new safe_VkDescriptorUpdateTemplateCreateInfo(pCreateInfo);
+            if (pCreateInfo->descriptorSetLayout) {
+                local_create_info->descriptorSetLayout = Unwrap(dev_data, pCreateInfo->descriptorSetLayout);
+            }
+            if (pCreateInfo->pipelineLayout) {
+                local_create_info->pipelineLayout = Unwrap(dev_data, pCreateInfo->pipelineLayout);
+            }
+        }
+    }
+    VkResult result = dev_data->dispatch_table.CreateDescriptorUpdateTemplateKHR(device, local_create_info->ptr(), pAllocator,
+                                                                                 pDescriptorUpdateTemplate);
+    if (VK_SUCCESS == result) {
+        std::lock_guard<std::mutex> lock(global_lock);
+        *pDescriptorUpdateTemplate = WrapNew(dev_data, *pDescriptorUpdateTemplate);
+
+        // Shadow template createInfo for later updates
+        std::unique_ptr<TEMPLATE_STATE> template_state(new TEMPLATE_STATE(*pDescriptorUpdateTemplate, local_create_info));
+        dev_data->desc_template_map[(uint64_t)*pDescriptorUpdateTemplate] = std::move(template_state);
+    }
+    return result;
+}
+
+// This is the core version of this routine.  The extension version is below.
+VKAPI_ATTR void VKAPI_CALL DestroyDescriptorUpdateTemplate(VkDevice device, VkDescriptorUpdateTemplateKHR descriptorUpdateTemplate,
+                                                           const VkAllocationCallbacks *pAllocator) {
+    layer_data *dev_data = GetLayerDataPtr(get_dispatch_key(device), layer_data_map);
+    std::unique_lock<std::mutex> lock(global_lock);
+    uint64_t descriptor_update_template_id = reinterpret_cast<uint64_t &>(descriptorUpdateTemplate);
+    dev_data->desc_template_map.erase(descriptor_update_template_id);
+    descriptorUpdateTemplate = (VkDescriptorUpdateTemplate)dev_data->unique_id_mapping[descriptor_update_template_id];
+    dev_data->unique_id_mapping.erase(descriptor_update_template_id);
+    lock.unlock();
+    dev_data->dispatch_table.DestroyDescriptorUpdateTemplate(device, descriptorUpdateTemplate, pAllocator);
+}
+
+// This is the extension version of this routine.  The core version is above.
 VKAPI_ATTR void VKAPI_CALL DestroyDescriptorUpdateTemplateKHR(VkDevice device,
                                                               VkDescriptorUpdateTemplateKHR descriptorUpdateTemplate,
                                                               const VkAllocationCallbacks *pAllocator) {
@@ -580,7 +649,7 @@ VKAPI_ATTR void VKAPI_CALL DestroyDescriptorUpdateTemplateKHR(VkDevice device,
     std::unique_lock<std::mutex> lock(global_lock);
     uint64_t descriptor_update_template_id = reinterpret_cast<uint64_t &>(descriptorUpdateTemplate);
     dev_data->desc_template_map.erase(descriptor_update_template_id);
-    descriptorUpdateTemplate = (VkDescriptorUpdateTemplateKHR)dev_data->unique_id_mapping[descriptor_update_template_id];
+    descriptorUpdateTemplate = (VkDescriptorUpdateTemplate)dev_data->unique_id_mapping[descriptor_update_template_id];
     dev_data->unique_id_mapping.erase(descriptor_update_template_id);
     lock.unlock();
     dev_data->dispatch_table.DestroyDescriptorUpdateTemplateKHR(device, descriptorUpdateTemplate, pAllocator);
@@ -668,6 +737,23 @@ void *BuildUnwrappedUpdateTemplateBuffer(layer_data *dev_data, uint64_t descript
     return (void *)unwrapped_data;
 }
 
+// This is the core version of this routine.  The extension version is below.
+VKAPI_ATTR void VKAPI_CALL UpdateDescriptorSetWithTemplate(VkDevice device, VkDescriptorSet descriptorSet,
+                                                           VkDescriptorUpdateTemplateKHR descriptorUpdateTemplate,
+                                                           const void *pData) {
+    layer_data *dev_data = GetLayerDataPtr(get_dispatch_key(device), layer_data_map);
+    uint64_t template_handle = reinterpret_cast<uint64_t &>(descriptorUpdateTemplate);
+    {
+        std::lock_guard<std::mutex> lock(global_lock);
+        descriptorSet = Unwrap(dev_data, descriptorSet);
+        descriptorUpdateTemplate = (VkDescriptorUpdateTemplate)dev_data->unique_id_mapping[template_handle];
+    }
+    void *unwrapped_buffer = BuildUnwrappedUpdateTemplateBuffer(dev_data, template_handle, pData);
+    dev_data->dispatch_table.UpdateDescriptorSetWithTemplate(device, descriptorSet, descriptorUpdateTemplate, unwrapped_buffer);
+    free(unwrapped_buffer);
+}
+
+// This is the extension version of this routine.  The core version is above.
 VKAPI_ATTR void VKAPI_CALL UpdateDescriptorSetWithTemplateKHR(VkDevice device, VkDescriptorSet descriptorSet,
                                                               VkDescriptorUpdateTemplateKHR descriptorUpdateTemplate,
                                                               const void *pData) {
@@ -677,8 +763,7 @@ VKAPI_ATTR void VKAPI_CALL UpdateDescriptorSetWithTemplateKHR(VkDevice device, V
     {
         std::lock_guard<std::mutex> lock(global_lock);
         descriptorSet = Unwrap(dev_data, descriptorSet);
-        descriptorUpdateTemplate = (VkDescriptorUpdateTemplateKHR)dev_data->unique_id_mapping[template_handle];
-        unwrapped_buffer = BuildUnwrappedUpdateTemplateBuffer(dev_data, template_handle, pData);
+        descriptorUpdateTemplate = (VkDescriptorUpdateTemplate)dev_data->unique_id_mapping[template_handle];
     }
     dev_data->dispatch_table.UpdateDescriptorSetWithTemplateKHR(device, descriptorSet, descriptorUpdateTemplate,
                                                                         unwrapped_buffer);
@@ -796,6 +881,37 @@ VKAPI_ATTR VkResult VKAPI_CALL DebugMarkerSetObjectNameEXT(VkDevice device, cons
     }
     VkResult result = device_data->dispatch_table.DebugMarkerSetObjectNameEXT(
         device, reinterpret_cast<VkDebugMarkerObjectNameInfoEXT *>(local_name_info));
+    return result;
+}
+
+// VK_EXT_debug_utils
+VKAPI_ATTR VkResult VKAPI_CALL SetDebugUtilsObjectTagEXT(VkDevice device, const VkDebugUtilsObjectTagInfoEXT *pTagInfo) {
+    layer_data *device_data = GetLayerDataPtr(get_dispatch_key(device), layer_data_map);
+    auto local_tag_info = new safe_VkDebugUtilsObjectTagInfoEXT(pTagInfo);
+    {
+        std::lock_guard<std::mutex> lock(global_lock);
+        auto it = device_data->unique_id_mapping.find(reinterpret_cast<uint64_t &>(local_tag_info->objectHandle));
+        if (it != device_data->unique_id_mapping.end()) {
+            local_tag_info->objectHandle = it->second;
+        }
+    }
+    VkResult result = device_data->dispatch_table.SetDebugUtilsObjectTagEXT(
+        device, reinterpret_cast<const VkDebugUtilsObjectTagInfoEXT *>(local_tag_info));
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL SetDebugUtilsObjectNameEXT(VkDevice device, const VkDebugUtilsObjectNameInfoEXT *pNameInfo) {
+    layer_data *device_data = GetLayerDataPtr(get_dispatch_key(device), layer_data_map);
+    auto local_name_info = new safe_VkDebugUtilsObjectNameInfoEXT(pNameInfo);
+    {
+        std::lock_guard<std::mutex> lock(global_lock);
+        auto it = device_data->unique_id_mapping.find(reinterpret_cast<uint64_t &>(local_name_info->objectHandle));
+        if (it != device_data->unique_id_mapping.end()) {
+            local_name_info->objectHandle = it->second;
+        }
+    }
+    VkResult result = device_data->dispatch_table.SetDebugUtilsObjectNameEXT(
+        device, reinterpret_cast<const VkDebugUtilsObjectNameInfoEXT *>(local_name_info));
     return result;
 }
 

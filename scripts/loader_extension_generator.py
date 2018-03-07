@@ -18,11 +18,14 @@
 # limitations under the License.
 #
 # Author: Mark Young <marky@lunarg.com>
+# Author: Mark Lobodzinski <mark@lunarg.com>
 
 import os,re,sys
 import xml.etree.ElementTree as etree
 from generator import *
 from collections import namedtuple
+from common_codegen import *
+
 
 WSI_EXT_NAMES = ['VK_KHR_surface',
                  'VK_KHR_display',
@@ -35,17 +38,43 @@ WSI_EXT_NAMES = ['VK_KHR_surface',
                  'VK_KHR_swapchain',
                  'VK_KHR_display_swapchain']
 
+ADD_INST_CMDS = ['vkCreateInstance',
+                 'vkEnumerateInstanceExtensionProperties',
+                 'vkEnumerateInstanceLayerProperties',
+                 'vkEnumerateInstanceVersion']
+
 AVOID_EXT_NAMES = ['VK_EXT_debug_report']
+
+AVOID_CMD_NAMES = ['vkCreateDebugUtilsMessengerEXT',
+                   'vkDestroyDebugUtilsMessengerEXT',
+                   'vkSubmitDebugUtilsMessageEXT']
 
 DEVICE_CMDS_NEED_TERM = ['vkGetDeviceProcAddr',
                          'vkCreateSwapchainKHR',
                          'vkCreateSharedSwapchainsKHR',
-                         'vkGetDeviceGroupSurfacePresentModesKHX',
+                         'vkGetDeviceGroupSurfacePresentModesKHR',
                          'vkDebugMarkerSetObjectTagEXT',
-                         'vkDebugMarkerSetObjectNameEXT']
+                         'vkDebugMarkerSetObjectNameEXT',
+                         'vkSetDebugUtilsObjectNameEXT',
+                         'vkSetDebugUtilsObjectTagEXT']
+                         
+ALIASED_CMDS = {
+    'vkEnumeratePhysicalDeviceGroupsKHR':                   'vkEnumeratePhysicalDeviceGroups',
+    'vkGetPhysicalDeviceFeatures2KHR':                      'vkGetPhysicalDeviceFeatures2',
+    'vkGetPhysicalDeviceProperties2KHR':                    'vkGetPhysicalDeviceProperties2',
+    'vkGetPhysicalDeviceFormatProperties2KHR':              'vkGetPhysicalDeviceFormatProperties2',
+    'vkGetPhysicalDeviceImageFormatProperties2KHR':         'vkGetPhysicalDeviceImageFormatProperties2',
+    'vkGetPhysicalDeviceQueueFamilyProperties2KHR':         'vkGetPhysicalDeviceQueueFamilyProperties2',
+    'vkGetPhysicalDeviceMemoryProperties2KHR':              'vkGetPhysicalDeviceMemoryProperties2',
+    'vkGetPhysicalDeviceSparseImageFormatProperties2KHR':   'vkGetPhysicalDeviceSparseImageFormatProperties2',
+    'vkGetPhysicalDeviceExternalBufferPropertiesKHR':       'vkGetPhysicalDeviceExternalBufferProperties',
+    'vkGetPhysicalDeviceExternalSemaphorePropertiesKHR':    'vkGetPhysicalDeviceExternalSemaphoreProperties',
+    'vkGetPhysicalDeviceExternalFencePropertiesKHR':        'vkGetPhysicalDeviceExternalFenceProperties',
+}
 
 PRE_INSTANCE_FUNCTIONS = ['vkEnumerateInstanceExtensionProperties',
-                          'vkEnumerateInstanceLayerProperties']
+                          'vkEnumerateInstanceLayerProperties',
+                          'vkEnumerateInstanceVersion']
 
 #
 # LoaderExtensionGeneratorOptions - subclass of GeneratorOptions.
@@ -60,33 +89,30 @@ class LoaderExtensionGeneratorOptions(GeneratorOptions):
                  defaultExtensions = None,
                  addExtensions = None,
                  removeExtensions = None,
+                 emitExtensions = None,
                  sortProcedure = regSortFeatures,
                  prefixText = "",
                  genFuncPointers = True,
                  protectFile = True,
                  protectFeature = True,
-                 protectProto = None,
-                 protectProtoStr = None,
                  apicall = '',
                  apientry = '',
                  apientryp = '',
+                 indentFuncProto = True,
+                 indentFuncPointer = False,
                  alignFuncParam = 0,
-                 currentExtension = '',
-                 extensionOfInterest = 0):
+                 expandEnumerants = True):
         GeneratorOptions.__init__(self, filename, directory, apiname, profile,
                                   versions, emitversions, defaultExtensions,
-                                  addExtensions, removeExtensions, sortProcedure)
+                                  addExtensions, removeExtensions, emitExtensions, sortProcedure)
         self.prefixText      = prefixText
-        self.genFuncPointers = genFuncPointers
         self.prefixText      = None
-        self.protectFile     = protectFile
-        self.protectFeature  = protectFeature
-        self.protectProto    = protectProto
-        self.protectProtoStr = protectProtoStr
         self.apicall         = apicall
         self.apientry        = apientry
         self.apientryp       = apientryp
         self.alignFuncParam  = alignFuncParam
+        self.expandEnumerants = expandEnumerants
+
 #
 # LoaderExtensionOutputGenerator - subclass of OutputGenerator.
 # Generates dispatch table helper header files for LVL
@@ -160,7 +186,7 @@ class LoaderExtensionOutputGenerator(OutputGenerator):
             preamble += '#include "vk_loader_extensions.h"\n'
             preamble += '#include <vulkan/vk_icd.h>\n'
             preamble += '#include "wsi.h"\n'
-            preamble += '#include "debug_report.h"\n'
+            preamble += '#include "debug_utils.h"\n'
             preamble += '#include "extension_manual.h"\n'
 
         elif self.genOpts.filename == 'vk_layer_dispatch_table.h':
@@ -206,6 +232,7 @@ class LoaderExtensionOutputGenerator(OutputGenerator):
     def beginFeature(self, interface, emit):
         # Start processing in superclass
         OutputGenerator.beginFeature(self, interface, emit)
+        self.featureExtraProtect = GetFeatureProtect(interface)
 
         enums = interface[0].findall('enum')
         self.currentExtension = ''
@@ -223,8 +250,8 @@ class LoaderExtensionOutputGenerator(OutputGenerator):
 
     #
     # Process commands, adding to appropriate dispatch tables
-    def genCmd(self, cmdinfo, name):
-        OutputGenerator.genCmd(self, cmdinfo, name)
+    def genCmd(self, cmdinfo, name, alias):
+        OutputGenerator.genCmd(self, cmdinfo, name, alias)
 
         # Get first param type
         params = cmdinfo.elem.findall('param')
@@ -450,7 +477,7 @@ class LoaderExtensionOutputGenerator(OutputGenerator):
                 commands = self.ext_commands
 
             for cur_cmd in commands:
-                is_inst_handle_type = cur_cmd.ext_type == 'instance' or cur_cmd.handle_type == 'VkInstance' or cur_cmd.handle_type == 'VkPhysicalDevice'
+                is_inst_handle_type = cur_cmd.name in ADD_INST_CMDS or cur_cmd.handle_type == 'VkInstance' or cur_cmd.handle_type == 'VkPhysicalDevice'
                 if is_inst_handle_type:
 
                     if cur_cmd.ext_name != cur_extension_name:
@@ -491,7 +518,7 @@ class LoaderExtensionOutputGenerator(OutputGenerator):
                 commands = self.ext_commands
 
             for cur_cmd in commands:
-                is_inst_handle_type = cur_cmd.ext_type == 'instance' or cur_cmd.handle_type == 'VkInstance' or cur_cmd.handle_type == 'VkPhysicalDevice'
+                is_inst_handle_type = cur_cmd.name in ADD_INST_CMDS or cur_cmd.handle_type == 'VkInstance' or cur_cmd.handle_type == 'VkPhysicalDevice'
                 if not is_inst_handle_type:
 
                     if cur_cmd.ext_name != cur_extension_name:
@@ -532,7 +559,7 @@ class LoaderExtensionOutputGenerator(OutputGenerator):
                 commands = self.ext_commands
 
             for cur_cmd in commands:
-                is_inst_handle_type = cur_cmd.ext_type == 'instance' or cur_cmd.handle_type == 'VkInstance' or cur_cmd.handle_type == 'VkPhysicalDevice'
+                is_inst_handle_type = cur_cmd.name in ADD_INST_CMDS or cur_cmd.handle_type == 'VkInstance' or cur_cmd.handle_type == 'VkPhysicalDevice'
                 if ((is_inst_handle_type or cur_cmd.name in DEVICE_CMDS_NEED_TERM) and
                     (cur_cmd.name != 'vkGetInstanceProcAddr' and cur_cmd.name != 'vkEnumerateDeviceLayerProperties')):
 
@@ -583,6 +610,7 @@ class LoaderExtensionOutputGenerator(OutputGenerator):
                               'vkCreateInstance',
                               'vkEnumerateInstanceExtensionProperties',
                               'vkEnumerateInstanceLayerProperties',
+                              'vkEnumerateInstanceVersion',
                              ]
 
         for x in range(0, 2):
@@ -591,15 +619,18 @@ class LoaderExtensionOutputGenerator(OutputGenerator):
             else:
                 commands = self.ext_commands
 
+            required = False
             for cur_cmd in commands:
-                is_inst_handle_type = cur_cmd.ext_type == 'instance' or cur_cmd.handle_type == 'VkInstance' or cur_cmd.handle_type == 'VkPhysicalDevice'
+                is_inst_handle_type = cur_cmd.handle_type == 'VkInstance' or cur_cmd.handle_type == 'VkPhysicalDevice'
                 if ((is_inst_handle_type or cur_cmd.name in DEVICE_CMDS_NEED_TERM) and (cur_cmd.name not in skip_gipa_commands)):
 
                     if cur_cmd.ext_name != cur_extension_name:
                         if 'VK_VERSION_' in cur_cmd.ext_name:
                             table += '\n    // ---- Core %s\n' % cur_cmd.ext_name[11:]
+                            required = cur_cmd.ext_name == 'VK_VERSION_1_0'
                         else:
                             table += '\n    // ---- %s extension commands\n' % cur_cmd.ext_name
+                            required = False
                         cur_extension_name = cur_cmd.ext_name
 
                     # Remove 'vk' from proto name
@@ -610,10 +641,7 @@ class LoaderExtensionOutputGenerator(OutputGenerator):
 
                     # The Core Vulkan code will be wrapped in a feature called VK_VERSION_#_#
                     # For example: VK_VERSION_1_0 wraps the core 1.0 Vulkan functionality
-                    if x == 0:
-                        table += '    LOOKUP_GIPA(%s, true);\n' % (base_name)
-                    else:
-                        table += '    LOOKUP_GIPA(%s, false);\n' % (base_name)
+                    table += '    LOOKUP_GIPA(%s, %s);\n' % (base_name, 'true' if required else 'false')
 
                     if cur_cmd.protect is not None:
                         table += '#endif // %s\n' % cur_cmd.protect
@@ -652,7 +680,7 @@ class LoaderExtensionOutputGenerator(OutputGenerator):
         terminators += '// Loader core instance terminators\n'
 
         for cur_cmd in self.core_commands:
-            is_inst_handle_type = cur_cmd.ext_type == 'instance' or cur_cmd.handle_type == 'VkInstance' or cur_cmd.handle_type == 'VkPhysicalDevice'
+            is_inst_handle_type = cur_cmd.name in ADD_INST_CMDS or cur_cmd.handle_type == 'VkInstance' or cur_cmd.handle_type == 'VkPhysicalDevice'
             if is_inst_handle_type:
                 mod_string = ''
                 new_terminator = cur_cmd.cdecl
@@ -723,7 +751,7 @@ class LoaderExtensionOutputGenerator(OutputGenerator):
                 tables += '                                                                        VkInstance inst) {\n'
 
             for cur_cmd in commands:
-                is_inst_handle_type = cur_cmd.ext_type == 'instance' or cur_cmd.handle_type == 'VkInstance' or cur_cmd.handle_type == 'VkPhysicalDevice'
+                is_inst_handle_type = cur_cmd.handle_type == 'VkInstance' or cur_cmd.handle_type == 'VkPhysicalDevice'
                 if ((cur_type == 'instance' and is_inst_handle_type) or (cur_type == 'device' and not is_inst_handle_type)):
                     if cur_cmd.ext_name != cur_extension_name:
                         if 'VK_VERSION_' in cur_cmd.ext_name:
@@ -738,7 +766,8 @@ class LoaderExtensionOutputGenerator(OutputGenerator):
                     # Names to skip
                     if (base_name == 'CreateInstance' or base_name == 'CreateDevice' or
                         base_name == 'EnumerateInstanceExtensionProperties' or
-                        base_name == 'EnumerateInstanceLayerProperties'):
+                        base_name == 'EnumerateInstanceLayerProperties' or
+                        base_name == 'EnumerateInstanceVersion'):
                         continue
 
                     if cur_cmd.protect is not None:
@@ -798,7 +827,7 @@ class LoaderExtensionOutputGenerator(OutputGenerator):
                     commands = self.ext_commands
 
                 for cur_cmd in commands:
-                    is_inst_handle_type = cur_cmd.ext_type == 'instance' or cur_cmd.handle_type == 'VkInstance' or cur_cmd.handle_type == 'VkPhysicalDevice'
+                    is_inst_handle_type = cur_cmd.handle_type == 'VkInstance' or cur_cmd.handle_type == 'VkPhysicalDevice'
                     if ((cur_type == 'instance' and is_inst_handle_type) or (cur_type == 'device' and not is_inst_handle_type)):
 
                         if cur_cmd.ext_name != cur_extension_name:
@@ -813,7 +842,8 @@ class LoaderExtensionOutputGenerator(OutputGenerator):
 
                         if (base_name == 'CreateInstance' or base_name == 'CreateDevice' or
                             base_name == 'EnumerateInstanceExtensionProperties' or
-                            base_name == 'EnumerateInstanceLayerProperties'):
+                            base_name == 'EnumerateInstanceLayerProperties' or
+                            base_name == 'EnumerateInstanceVersion'):
                             continue
 
                         if cur_cmd.protect is not None:
@@ -840,7 +870,7 @@ class LoaderExtensionOutputGenerator(OutputGenerator):
 
         # Some extensions have to be manually added.  Skip those in the automatic
         # generation.  They will be manually added later.
-        manual_ext_commands = ['vkEnumeratePhysicalDeviceGroupsKHX',
+        manual_ext_commands = ['vkEnumeratePhysicalDeviceGroupsKHR',
                                'vkGetPhysicalDeviceExternalImageFormatPropertiesNV',
                                'vkGetPhysicalDeviceFeatures2KHR',
                                'vkGetPhysicalDeviceProperties2KHR',
@@ -862,6 +892,7 @@ class LoaderExtensionOutputGenerator(OutputGenerator):
         for ext_cmd in self.ext_commands:
             if (ext_cmd.ext_name in WSI_EXT_NAMES or
                 ext_cmd.ext_name in AVOID_EXT_NAMES or
+                ext_cmd.name in AVOID_CMD_NAMES or
                 ext_cmd.name in manual_ext_commands):
                 continue
 
@@ -921,8 +952,9 @@ class LoaderExtensionOutputGenerator(OutputGenerator):
                 return_prefix += 'return '
                 has_return_type = True
 
-            if (ext_cmd.ext_type == 'instance' or ext_cmd.handle_type == 'VkPhysicalDevice' or
-                'DebugMarkerSetObject' in ext_cmd.name or ext_cmd.name in DEVICE_CMDS_NEED_TERM):
+            if (ext_cmd.handle_type == 'VkInstance' or ext_cmd.handle_type == 'VkPhysicalDevice' or
+                'DebugMarkerSetObject' in ext_cmd.name or 'SetDebugUtilsObject' in ext_cmd.name or
+                ext_cmd.name in DEVICE_CMDS_NEED_TERM):
                 requires_terminator = 1
 
             if requires_terminator == 1:
@@ -957,6 +989,22 @@ class LoaderExtensionOutputGenerator(OutputGenerator):
                     funcs += '        struct loader_physical_device_tramp *phys_dev_tramp = (struct loader_physical_device_tramp *)(uintptr_t)pTagInfo->object;\n'
                     funcs += '        local_tag_info.object = (uint64_t)(uintptr_t)phys_dev_tramp->phys_dev;\n'
                     funcs += '    }\n'
+                elif 'SetDebugUtilsObjectName' in ext_cmd.name:
+                    funcs += '    VkDebugUtilsObjectNameInfoEXT local_name_info;\n'
+                    funcs += '    memcpy(&local_name_info, pNameInfo, sizeof(VkDebugUtilsObjectNameInfoEXT));\n'
+                    funcs += '    // If this is a physical device, we have to replace it with the proper one for the next call.\n'
+                    funcs += '    if (pNameInfo->objectType == VK_OBJECT_TYPE_PHYSICAL_DEVICE) {\n'
+                    funcs += '        struct loader_physical_device_tramp *phys_dev_tramp = (struct loader_physical_device_tramp *)(uintptr_t)pNameInfo->objectHandle;\n'
+                    funcs += '        local_name_info.objectHandle = (uint64_t)(uintptr_t)phys_dev_tramp->phys_dev;\n'
+                    funcs += '    }\n'
+                elif 'SetDebugUtilsObjectTag' in ext_cmd.name:
+                    funcs += '    VkDebugUtilsObjectTagInfoEXT local_tag_info;\n'
+                    funcs += '    memcpy(&local_tag_info, pTagInfo, sizeof(VkDebugUtilsObjectTagInfoEXT));\n'
+                    funcs += '    // If this is a physical device, we have to replace it with the proper one for the next call.\n'
+                    funcs += '    if (pTagInfo->objectType == VK_OBJECT_TYPE_PHYSICAL_DEVICE) {\n'
+                    funcs += '        struct loader_physical_device_tramp *phys_dev_tramp = (struct loader_physical_device_tramp *)(uintptr_t)pTagInfo->objectHandle;\n'
+                    funcs += '        local_tag_info.objectHandle = (uint64_t)(uintptr_t)phys_dev_tramp->phys_dev;\n'
+                    funcs += '    }\n'
 
                 funcs += return_prefix
                 funcs += 'disp->'
@@ -969,9 +1017,9 @@ class LoaderExtensionOutputGenerator(OutputGenerator):
 
                     if param.type == 'VkPhysicalDevice':
                         funcs += 'unwrapped_phys_dev'
-                    elif 'DebugMarkerSetObject' in ext_cmd.name and param.name == 'pNameInfo':
+                    elif ('DebugMarkerSetObject' in ext_cmd.name or 'SetDebugUtilsObject' in ext_cmd.name) and param.name == 'pNameInfo':
                             funcs += '&local_name_info'
-                    elif 'DebugMarkerSetObject' in ext_cmd.name and param.name == 'pTagInfo':
+                    elif ('DebugMarkerSetObject' in ext_cmd.name or 'SetDebugUtilsObject' in ext_cmd.name) and param.name == 'pTagInfo':
                             funcs += '&local_tag_info'
                     else:
                         funcs += param.name
@@ -1043,7 +1091,7 @@ class LoaderExtensionOutputGenerator(OutputGenerator):
                         count += 1
                     funcs += ');\n'
 
-                elif has_surface == 1 and ext_cmd.ext_type == 'device':
+                elif has_surface == 1 and not (ext_cmd.handle_type == 'VkPhysicalDevice' or ext_cmd.handle_type == 'VkInstance'):
                     funcs += '    uint32_t icd_index = 0;\n'
                     funcs += '    struct loader_device *dev;\n'
                     funcs += '    struct loader_icd_term *icd_term = loader_get_icd_and_device(device, &dev, &icd_index);\n'
@@ -1080,7 +1128,7 @@ class LoaderExtensionOutputGenerator(OutputGenerator):
 
                 elif ext_cmd.handle_type == 'VkInstance':
                     funcs += '#error("Not implemented. Likely needs to be manually generated!");\n'
-                elif 'DebugMarkerSetObject' in ext_cmd.name:
+                elif 'DebugMarkerSetObject' in ext_cmd.name or 'SetDebugUtilsObject' in ext_cmd.name:
                     funcs += '    uint32_t icd_index = 0;\n'
                     funcs += '    struct loader_device *dev;\n'
                     funcs += '    struct loader_icd_term *icd_term = loader_get_icd_and_device(%s, &dev, &icd_index);\n' % (ext_cmd.params[0].name)
@@ -1115,6 +1163,45 @@ class LoaderExtensionOutputGenerator(OutputGenerator):
                         funcs += '                if (NULL != icd_surface->real_icd_surfaces) {\n'
                         funcs += '                    local_tag_info.object = (uint64_t)icd_surface->real_icd_surfaces[icd_index];\n'
                         funcs += '                }\n'
+                    elif 'SetDebugUtilsObjectName' in ext_cmd.name:
+                        funcs += '        VkDebugUtilsObjectNameInfoEXT local_name_info;\n'
+                        funcs += '        memcpy(&local_name_info, pNameInfo, sizeof(VkDebugUtilsObjectNameInfoEXT));\n'
+                        funcs += '        // If this is a physical device, we have to replace it with the proper one for the next call.\n'
+                        funcs += '        if (pNameInfo->objectType == VK_OBJECT_TYPE_PHYSICAL_DEVICE) {\n'
+                        funcs += '            struct loader_physical_device_term *phys_dev_term = (struct loader_physical_device_term *)(uintptr_t)pNameInfo->objectHandle;\n'
+                        funcs += '            local_name_info.objectHandle = (uint64_t)(uintptr_t)phys_dev_term->phys_dev;\n'
+                        funcs += '        // If this is a KHR_surface, and the ICD has created its own, we have to replace it with the proper one for the next call.\n'
+                        funcs += '        } else if (pNameInfo->objectType == VK_OBJECT_TYPE_SURFACE_KHR) {\n'
+                        funcs += '            if (NULL != icd_term && NULL != icd_term->dispatch.CreateSwapchainKHR) {\n'
+                        funcs += '                VkIcdSurface *icd_surface = (VkIcdSurface *)(uintptr_t)pNameInfo->objectHandle;\n'
+                        funcs += '                if (NULL != icd_surface->real_icd_surfaces) {\n'
+                        funcs += '                    local_name_info.objectHandle = (uint64_t)icd_surface->real_icd_surfaces[icd_index];\n'
+                        funcs += '                }\n'
+                    elif 'SetDebugUtilsObjectTag' in ext_cmd.name:
+                        funcs += '        VkDebugUtilsObjectTagInfoEXT local_tag_info;\n'
+                        funcs += '        memcpy(&local_tag_info, pTagInfo, sizeof(VkDebugUtilsObjectTagInfoEXT));\n'
+                        funcs += '        // If this is a physical device, we have to replace it with the proper one for the next call.\n'
+                        funcs += '        if (pTagInfo->objectType == VK_OBJECT_TYPE_PHYSICAL_DEVICE) {\n'
+                        funcs += '            struct loader_physical_device_term *phys_dev_term = (struct loader_physical_device_term *)(uintptr_t)pTagInfo->objectHandle;\n'
+                        funcs += '            local_tag_info.objectHandle = (uint64_t)(uintptr_t)phys_dev_term->phys_dev;\n'
+                        funcs += '        // If this is a KHR_surface, and the ICD has created its own, we have to replace it with the proper one for the next call.\n'
+                        funcs += '        } else if (pTagInfo->objectType == VK_OBJECT_TYPE_SURFACE_KHR) {\n'
+                        funcs += '            if (NULL != icd_term && NULL != icd_term->dispatch.CreateSwapchainKHR) {\n'
+                        funcs += '                VkIcdSurface *icd_surface = (VkIcdSurface *)(uintptr_t)pTagInfo->objectHandle;\n'
+                        funcs += '                if (NULL != icd_surface->real_icd_surfaces) {\n'
+                        funcs += '                    local_tag_info.objectHandle = (uint64_t)icd_surface->real_icd_surfaces[icd_index];\n'
+                        funcs += '                }\n'
+                    else:
+                        funcs += '        if (%s->objectType == VK_OBJECT_TYPE_PHYSICAL_DEVICE) {\n' % (ext_cmd.params[1].name)
+                        funcs += '            struct loader_physical_device_term *phys_dev_term = (struct loader_physical_device_term *)(uintptr_t)%s->objectHandle;\n' % (ext_cmd.params[1].name)
+                        funcs += '            %s->objectHandle = (uint64_t)(uintptr_t)phys_dev_term->phys_dev;\n' % (ext_cmd.params[1].name)
+                        funcs += '        // If this is a KHR_surface, and the ICD has created its own, we have to replace it with the proper one for the next call.\n'
+                        funcs += '        } else if (%s->objectType == VK_OBJECT_TYPE_SURFACE_KHR) {\n' % (ext_cmd.params[1].name)
+                        funcs += '            if (NULL != icd_term && NULL != icd_term->dispatch.CreateSwapchainKHR) {\n'
+                        funcs += '                VkIcdSurface *icd_surface = (VkIcdSurface *)(uintptr_t)%s->objectHandle;\n' % (ext_cmd.params[1].name)
+                        funcs += '                if (NULL != icd_surface->real_icd_surfaces) {\n'
+                        funcs += '                    %s->objectHandle = (uint64_t)icd_surface->real_icd_surfaces[icd_index];\n' % (ext_cmd.params[1].name)
+                        funcs += '                }\n'
                     funcs += '            }\n'
                     funcs += '        }\n'
                     funcs += '        return icd_term->dispatch.'
@@ -1129,9 +1216,9 @@ class LoaderExtensionOutputGenerator(OutputGenerator):
                             funcs += 'phys_dev_term->phys_dev'
                         elif param.type == 'VkSurfaceKHR':
                             funcs += 'icd_surface->real_icd_surfaces[icd_index]'
-                        elif 'DebugMarkerSetObject' in ext_cmd.name and param.name == 'pNameInfo':
+                        elif ('DebugMarkerSetObject' in ext_cmd.name or 'SetDebugUtilsObject' in ext_cmd.name) and param.name == 'pNameInfo':
                             funcs += '&local_name_info'
-                        elif 'DebugMarkerSetObject' in ext_cmd.name and param.name == 'pTagInfo':
+                        elif ('DebugMarkerSetObject' in ext_cmd.name or 'SetDebugUtilsObject' in ext_cmd.name) and param.name == 'pTagInfo':
                             funcs += '&local_tag_info'
                         else:
                             funcs += param.name
@@ -1186,7 +1273,8 @@ class LoaderExtensionOutputGenerator(OutputGenerator):
         for cur_cmd in self.ext_commands:
             if ('VK_VERSION_' in cur_cmd.ext_name or
                 cur_cmd.ext_name in WSI_EXT_NAMES or
-                cur_cmd.ext_name in AVOID_EXT_NAMES):
+                cur_cmd.ext_name in AVOID_EXT_NAMES or
+                cur_cmd.name in AVOID_CMD_NAMES ):
                 continue
 
             if cur_cmd.ext_name != cur_extension_name:
@@ -1196,7 +1284,8 @@ class LoaderExtensionOutputGenerator(OutputGenerator):
             if cur_cmd.protect is not None:
                 gpa_func += '#ifdef %s\n' % cur_cmd.protect
 
-            base_name = cur_cmd.name[2:]
+            #base_name = cur_cmd.name[2:]
+            base_name = ALIASED_CMDS[cur_cmd.name] if cur_cmd.name in ALIASED_CMDS else cur_cmd.name[2:]
 
             if (cur_cmd.ext_type == 'instance'):
                 gpa_func += '    if (!strcmp("%s", name)) {\n' % (cur_cmd.name)
@@ -1235,8 +1324,8 @@ class LoaderExtensionOutputGenerator(OutputGenerator):
         create_func += '    for (uint32_t i = 0; i < pCreateInfo->enabledExtensionCount; i++) {\n'
         for ext in entries:
             if ('VK_VERSION_' in ext.name or ext.name in WSI_EXT_NAMES or
-                ext.name in AVOID_EXT_NAMES or ext.type == 'device' or
-                ext.num_commands == 0):
+                ext.name in AVOID_EXT_NAMES or ext.name in AVOID_CMD_NAMES or
+                ext.type == 'device' or ext.num_commands == 0):
                 continue
 
             if ext.name != cur_extension_name:
@@ -1330,7 +1419,8 @@ class LoaderExtensionOutputGenerator(OutputGenerator):
                 commands = self.ext_commands
 
             for cur_cmd in commands:
-                if cur_cmd.ext_type == 'instance' or (cur_cmd.ext_type == 'device' and cur_cmd.handle_type == 'VkPhysicalDevice'):
+                
+                if cur_cmd.handle_type == 'VkInstance' or cur_cmd.handle_type == 'VkPhysicalDevice':
                     if cur_cmd.ext_name != cur_extension_name:
                         if 'VK_VERSION_' in cur_cmd.ext_name:
                             table += '\n    // ---- Core %s commands\n' % cur_cmd.ext_name[11:]
@@ -1340,10 +1430,12 @@ class LoaderExtensionOutputGenerator(OutputGenerator):
 
                     # Remove 'vk' from proto name
                     base_name = cur_cmd.name[2:]
+                    aliased_name = ALIASED_CMDS[cur_cmd.name][2:] if cur_cmd.name in ALIASED_CMDS else base_name
 
                     if (base_name == 'CreateInstance' or base_name == 'CreateDevice' or
                         base_name == 'EnumerateInstanceExtensionProperties' or
-                        base_name == 'EnumerateInstanceLayerProperties'):
+                        base_name == 'EnumerateInstanceLayerProperties' or
+                        base_name == 'EnumerateInstanceVersion'):
                         continue
 
                     if cur_cmd.protect is not None:
@@ -1352,7 +1444,7 @@ class LoaderExtensionOutputGenerator(OutputGenerator):
                     if base_name == 'GetInstanceProcAddr':
                         table += '    .%s = %s,\n' % (base_name, cur_cmd.name)
                     else:
-                        table += '    .%s = terminator_%s,\n' % (base_name, base_name)
+                        table += '    .%s = terminator_%s,\n' % (base_name, aliased_name)
 
                     if cur_cmd.protect is not None:
                         table += '#endif // %s\n' % cur_cmd.protect

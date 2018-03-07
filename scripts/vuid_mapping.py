@@ -1103,13 +1103,14 @@ uniqueid_set = set() # store uniqueid to make sure we don't have duplicates
 # Convert a string VUID into numerical value
 #  See "VUID Mapping Details" comment above for more info
 def convertVUID(vuid_string):
-    """Convert a string-based VUID into a numberical value"""
+    """Convert a string-based VUID into a numerical value"""
     #func_struct_update = False
     #imp_param_update = False
     if vuid_string in ['', None]:
         return -1
     vuid_parts = vuid_string.split('-')
     if vuid_parts[1] not in func_struct_id_map:
+        return -1
         print ("ERROR: Missing func/struct map value for '%s'!" % (vuid_parts[1]))
         print (" TODO: Need to add mapping for this to end of func_struct_id_map")
         print ("   replace '### ADD New func/struct mappings above this line' line with \"'%s' : %d,\"" % (vuid_parts[1], len(func_struct_id_map)))
@@ -1123,6 +1124,7 @@ def convertVUID(vuid_string):
         uniqueid = uniqueid + (explicit_id << EXPLICIT_ID_SHIFT) + explicit_bit0
     else: # implicit case
         if vuid_parts[-1] not in implicit_type_map:
+            return -1
             print("ERROR: Missing mapping for implicit type '%s'!\nTODO: Please add new mapping." % (vuid_parts[-1]))
             sys.exit(1)
         else:
@@ -1131,6 +1133,7 @@ def convertVUID(vuid_string):
                 if vuid_parts[-2] in implicit_param_map:
                     param_id = implicit_param_map[vuid_parts[-2]]
                 else:
+                    return -1
                     print ("ERROR: Missing param '%s' from implicit_param_map\n TODO: Please add new mapping." % (vuid_parts[-2]))
                     print ("   replace '### ADD New implicit param mappings above this line' line with \"'%s' : %d,\"" % (vuid_parts[-2], len(implicit_param_map)))
                     implicit_param_map[vuid_parts[-2]] = len(implicit_param_map)

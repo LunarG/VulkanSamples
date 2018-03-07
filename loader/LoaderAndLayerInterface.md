@@ -35,6 +35,7 @@
     * [ICD Discovery](#icd-discovery)
     * [ICD Manifest File Format](#icd-manifest-file-format)
     * [ICD Vulkan Entry-Point Discovery](#icd-vulkan-entry-point-discovery)
+    * [ICD API Version](#icd-api-version)
     * [ICD Unknown Physical Device Extensions](#icd-unknown-physical-device-extensions)
     * [ICD Dispatchable Object Creation](#icd-dispatchable-object-creation)
     * [Handling KHR Surface Objects in WSI Extensions](#handling-khr-surface-objects-in-wsi-extensions)
@@ -1945,6 +1946,7 @@ ICD to properly hand-shake.
     * [ICD Manifest File Versions](#icd-manifest-file-versions)
       * [ICD Manifest File Version 1.0.0](#icd-manifest-file-version-1.0.0)
   * [ICD Vulkan Entry-Point Discovery](#icd-vulkan-entry-point-discovery)
+  * [ICD API Version](#icd-api-version)
   * [ICD Unknown Physical Device Extensions](#icd-unknown-physical-device-extensions)
   * [ICD Dispatchable Object Creation](#icd-dispatchable-object-creation)
   * [Handling KHR Surface Objects in WSI Extensions](#handling-khr-surface-objects-in-wsi-extensions)
@@ -2248,6 +2250,41 @@ application.
 Beware of interposing by dynamic OS library loaders if the official Vulkan
 names are used. On Linux, if official names are used, the ICD library must be
 linked with -Bsymbolic.
+
+
+### ICD API Version
+When an application calls `vkCreateInstance`, it can optionally include a
+`VkApplicationInfo` struct, which includes an `apiVersion` field. A Vulkan 1.0
+ICD was required to return `VK_ERROR_INCOMPATIBLE_DRIVER` if it did not
+support the API version that the user passed. Beginning with Vulkan 1.1, ICDs
+are not allowed to return this error for any value of `apiVersion`. This
+creates a problem when working with multiple ICDs, where one is a 1.0 ICD and
+another is newer.
+
+A loader that is newer than 1.0 will always give the version it supports when
+the application calls `vkEnumerateInstanceVersion`, regardless of the API
+version supported by the ICDs on the system. This means that when the
+application calls `vkCreateInstance`, the loader will be forced to pass a copy
+of the `VkApplicationInfo` struct where `apiVersion` is 1.0 to any 1.0 drivers
+in order to prevent an error. To determine if this must be done, the loader
+will perform the following steps:
+
+1. Load the ICD's dynamic library
+2. Call the ICD's `vkGetInstanceProcAddr` command to get a pointer to
+`vkEnumerateInstanceVersion`
+3. If the pointer to `vkEnumerateInstanceVersion` is not `NULL`, it will be
+called to get the ICD's supported API version
+
+The ICD will be treated as a 1.0 ICD if any of the following conditions are met:
+
+- The function pointer to `vkEnumerateInstanceVersion` is `NULL`
+- The version returned by `vkEnumerateInstanceVersion` is less than 1.1
+- `vkEnumerateInstanceVersion` returns anything other than `VK_SUCCESS`
+
+If the ICD only supports Vulkan 1.0, the loader will ensure that any
+`VkApplicationInfo` struct that is passed to the ICD will have an `apiVersion`
+field set to Vulkan 1.0. Otherwise, the loader will pass the struct to the ICD
+without any changes.
 
 
 ### ICD Unknown Physical Device Extensions

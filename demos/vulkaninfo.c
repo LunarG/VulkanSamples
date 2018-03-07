@@ -2297,9 +2297,17 @@ int main(int argc, char **argv) {
 #ifdef _WIN32
     if (ConsoleIsExclusive()) ConsoleEnlarge();
 #endif
+    PFN_vkEnumerateInstanceVersion enumerate_instance_version =
+        (PFN_vkEnumerateInstanceVersion) vkGetInstanceProcAddr(NULL, "vkEnumerateInstanceVersion");
 
-    vulkan_major = VK_VERSION_MAJOR(VK_API_VERSION_1_0);
-    vulkan_minor = VK_VERSION_MINOR(VK_API_VERSION_1_0);
+    uint32_t instance_version = VK_API_VERSION_1_0;
+
+    if (enumerate_instance_version != NULL) {
+        enumerate_instance_version(&instance_version);
+    }
+
+    vulkan_major = VK_VERSION_MAJOR(instance_version);
+    vulkan_minor = VK_VERSION_MINOR(instance_version);
     vulkan_patch = VK_VERSION_PATCH(VK_HEADER_VERSION);
     for (int i = 1; i < argc; i++) {
         if (strcmp(argv[i], "--html") == 0) {
@@ -2317,7 +2325,7 @@ int main(int argc, char **argv) {
         printf("VULKAN INFO\n");
         printf("===========\n\n");
     }
-    fprintf(out, "Vulkan API Version: ");
+    fprintf(out, "Vulkan Instance Version: ");
     if (html_output) {
         fprintf(out, "<div class='val'>%d.%d.%d</div></summary></details>\n", vulkan_major, vulkan_minor, vulkan_patch);
         fprintf(out, "\t\t\t<br />\n");

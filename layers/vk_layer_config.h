@@ -63,7 +63,9 @@ VK_LAYER_EXPORT VkFlags GetLayerOptionFlags(std::string _option, std::unordered_
                                             uint32_t option_default);
 
 VK_LAYER_EXPORT void setLayerOption(const char *_option, const char *_val);
-VK_LAYER_EXPORT void print_msg_flags(VkFlags msgFlags, char *msg_flags);
+VK_LAYER_EXPORT void PrintMessageFlags(VkFlags vk_flags, char *msg_flags);
+VK_LAYER_EXPORT void PrintMessageSeverity(VkFlags vk_flags, char *msg_flags);
+VK_LAYER_EXPORT void PrintMessageType(VkFlags vk_flags, char *msg_flags);
 
 #ifdef __cplusplus
 }

@@ -248,31 +248,74 @@ void ConfigFile::parseFile(const char *filename) {
     }
 }
 
-VK_LAYER_EXPORT void print_msg_flags(VkFlags msgFlags, char *msg_flags) {
+VK_LAYER_EXPORT void PrintMessageFlags(VkFlags vk_flags, char *msg_flags) {
     bool separator = false;
 
     msg_flags[0] = 0;
-    if (msgFlags & VK_DEBUG_REPORT_DEBUG_BIT_EXT) {
+    if (vk_flags & VK_DEBUG_REPORT_DEBUG_BIT_EXT) {
         strcat(msg_flags, "DEBUG");
         separator = true;
     }
-    if (msgFlags & VK_DEBUG_REPORT_INFORMATION_BIT_EXT) {
+    if (vk_flags & VK_DEBUG_REPORT_INFORMATION_BIT_EXT) {
         if (separator) strcat(msg_flags, ",");
         strcat(msg_flags, "INFO");
         separator = true;
     }
-    if (msgFlags & VK_DEBUG_REPORT_WARNING_BIT_EXT) {
+    if (vk_flags & VK_DEBUG_REPORT_WARNING_BIT_EXT) {
         if (separator) strcat(msg_flags, ",");
         strcat(msg_flags, "WARN");
         separator = true;
     }
-    if (msgFlags & VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT) {
+    if (vk_flags & VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT) {
         if (separator) strcat(msg_flags, ",");
         strcat(msg_flags, "PERF");
         separator = true;
     }
-    if (msgFlags & VK_DEBUG_REPORT_ERROR_BIT_EXT) {
+    if (vk_flags & VK_DEBUG_REPORT_ERROR_BIT_EXT) {
         if (separator) strcat(msg_flags, ",");
         strcat(msg_flags, "ERROR");
+    }
+}
+
+VK_LAYER_EXPORT void PrintMessageSeverity(VkFlags vk_flags, char *msg_flags) {
+    bool separator = false;
+
+    msg_flags[0] = 0;
+    if (vk_flags & VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT) {
+        strcat(msg_flags, "VERBOSE");
+        separator = true;
+    }
+    if (vk_flags & VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT) {
+        if (separator) strcat(msg_flags, ",");
+        strcat(msg_flags, "INFO");
+        separator = true;
+    }
+    if (vk_flags & VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT) {
+        if (separator) strcat(msg_flags, ",");
+        strcat(msg_flags, "WARN");
+        separator = true;
+    }
+    if (vk_flags & VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT) {
+        if (separator) strcat(msg_flags, ",");
+        strcat(msg_flags, "ERROR");
+    }
+}
+
+VK_LAYER_EXPORT void PrintMessageType(VkFlags vk_flags, char *msg_flags) {
+    bool separator = false;
+
+    msg_flags[0] = 0;
+    if (vk_flags & VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT) {
+        strcat(msg_flags, "GEN");
+        separator = true;
+    }
+    if (vk_flags & VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT) {
+        strcat(msg_flags, "SPEC");
+        separator = true;
+    }
+    if (vk_flags & VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT) {
+        if (separator) strcat(msg_flags, ",");
+        strcat(msg_flags, "PERF");
+        separator = true;
     }
 }

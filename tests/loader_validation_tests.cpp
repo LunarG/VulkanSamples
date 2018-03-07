@@ -1504,12 +1504,12 @@ TEST(Allocation, CreateInstanceDeviceIntentionalAllocFail) {
     }
 }
 
-// Used by run_loader_tests.sh to test that calling vkEnumeratePhysicalDeviceGroupsKHX without first querying
+// Used by run_loader_tests.sh to test that calling vkEnumeratePhysicalDeviceGroupsKHR without first querying
 // the count, works.  And, that it also returns only physical devices made available by the standard
 // enumerate call
-TEST(EnumeratePhysicalDeviceGroupsKHX, OneCall) {
+TEST(EnumeratePhysicalDeviceGroupsKHR, OneCall) {
     VkInstance instance = VK_NULL_HANDLE;
-    char const *const names[] = {VK_KHX_DEVICE_GROUP_CREATION_EXTENSION_NAME};
+    char const *const names[] = {VK_KHR_DEVICE_GROUP_CREATION_EXTENSION_NAME};
     auto const info = VK::InstanceCreateInfo().enabledExtensionCount(1).ppEnabledExtensionNames(names);
     uint32_t group;
     uint32_t dev;
@@ -1520,8 +1520,8 @@ TEST(EnumeratePhysicalDeviceGroupsKHX, OneCall) {
     if (result == VK_ERROR_EXTENSION_NOT_PRESENT) {
         // Extension isn't present, just skip this test
         ASSERT_EQ(result, VK_ERROR_EXTENSION_NOT_PRESENT);
-        std::cout << "Skipping EnumeratePhysicalDeviceGroupsKHX : OneCall due to Instance lacking support"
-                  << " for " << VK_KHX_DEVICE_GROUP_CREATION_EXTENSION_NAME << " extension\n";
+        std::cout << "Skipping EnumeratePhysicalDeviceGroupsKHR : OneCall due to Instance lacking support"
+                  << " for " << VK_KHR_DEVICE_GROUP_CREATION_EXTENSION_NAME << " extension\n";
         return;
     }
 
@@ -1536,22 +1536,22 @@ TEST(EnumeratePhysicalDeviceGroupsKHX, OneCall) {
         phys_dev_normal_found.push_back(std::make_pair(phys_devs[dev], false));
     }
 
-    // Get a pointer to the new vkEnumeratePhysicalDeviceGroupsKHX call
-    PFN_vkEnumeratePhysicalDeviceGroupsKHX p_vkEnumeratePhysicalDeviceGroupsKHX =
-        (PFN_vkEnumeratePhysicalDeviceGroupsKHX)vkGetInstanceProcAddr(instance, "vkEnumeratePhysicalDeviceGroupsKHX");
+    // Get a pointer to the new vkEnumeratePhysicalDeviceGroupsKHR call
+    PFN_vkEnumeratePhysicalDeviceGroupsKHR p_vkEnumeratePhysicalDeviceGroupsKHR =
+        (PFN_vkEnumeratePhysicalDeviceGroupsKHR)vkGetInstanceProcAddr(instance, "vkEnumeratePhysicalDeviceGroupsKHR");
 
     // Setup the group information in preparation for the call
     uint32_t group_count = 30;
-    std::unique_ptr<VkPhysicalDeviceGroupPropertiesKHX[]> phys_dev_groups(new VkPhysicalDeviceGroupPropertiesKHX[group_count]);
+    std::unique_ptr<VkPhysicalDeviceGroupPropertiesKHR[]> phys_dev_groups(new VkPhysicalDeviceGroupPropertiesKHR[group_count]);
     for (group = 0; group < group_count; group++) {
-        phys_dev_groups[group].sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_GROUP_PROPERTIES_KHX;
+        phys_dev_groups[group].sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_GROUP_PROPERTIES_KHR;
         phys_dev_groups[group].pNext = nullptr;
         phys_dev_groups[group].physicalDeviceCount = 0;
-        memset(phys_dev_groups[group].physicalDevices, 0, sizeof(VkPhysicalDevice) * VK_MAX_DEVICE_GROUP_SIZE_KHX);
+        memset(phys_dev_groups[group].physicalDevices, 0, sizeof(VkPhysicalDevice) * VK_MAX_DEVICE_GROUP_SIZE_KHR);
         phys_dev_groups[group].subsetAllocation = VK_FALSE;
     }
 
-    result = p_vkEnumeratePhysicalDeviceGroupsKHX(instance, &group_count, phys_dev_groups.get());
+    result = p_vkEnumeratePhysicalDeviceGroupsKHR(instance, &group_count, phys_dev_groups.get());
     ASSERT_EQ(result, VK_SUCCESS);
     ASSERT_GT(group_count, 0u);
 
@@ -1584,11 +1584,11 @@ TEST(EnumeratePhysicalDeviceGroupsKHX, OneCall) {
 }
 
 // Used by run_loader_tests.sh to test for the expected usage of the
-// vkEnumeratePhysicalDeviceGroupsKHX call in a two call fasion (once with NULL data
+// vkEnumeratePhysicalDeviceGroupsKHR call in a two call fasion (once with NULL data
 // to get count, and then again with data).
-TEST(EnumeratePhysicalDeviceGroupsKHX, TwoCall) {
+TEST(EnumeratePhysicalDeviceGroupsKHR, TwoCall) {
     VkInstance instance = VK_NULL_HANDLE;
-    char const *const names[] = {VK_KHX_DEVICE_GROUP_CREATION_EXTENSION_NAME};
+    char const *const names[] = {VK_KHR_DEVICE_GROUP_CREATION_EXTENSION_NAME};
     auto const info = VK::InstanceCreateInfo().enabledExtensionCount(1).ppEnabledExtensionNames(names);
     uint32_t group;
     uint32_t group_count;
@@ -1600,33 +1600,33 @@ TEST(EnumeratePhysicalDeviceGroupsKHX, TwoCall) {
     if (result == VK_ERROR_EXTENSION_NOT_PRESENT) {
         // Extension isn't present, just skip this test
         ASSERT_EQ(result, VK_ERROR_EXTENSION_NOT_PRESENT);
-        std::cout << "Skipping EnumeratePhysicalDeviceGroupsKHX : TwoCall due to Instance lacking support"
-                  << " for " << VK_KHX_DEVICE_GROUP_CREATION_EXTENSION_NAME << " extension\n";
+        std::cout << "Skipping EnumeratePhysicalDeviceGroupsKHR : TwoCall due to Instance lacking support"
+                  << " for " << VK_KHR_DEVICE_GROUP_CREATION_EXTENSION_NAME << " extension\n";
         return;
     }
 
-    // Get a pointer to the new vkEnumeratePhysicalDeviceGroupsKHX call
-    PFN_vkEnumeratePhysicalDeviceGroupsKHX p_vkEnumeratePhysicalDeviceGroupsKHX =
-        (PFN_vkEnumeratePhysicalDeviceGroupsKHX)vkGetInstanceProcAddr(instance, "vkEnumeratePhysicalDeviceGroupsKHX");
+    // Get a pointer to the new vkEnumeratePhysicalDeviceGroupsKHR call
+    PFN_vkEnumeratePhysicalDeviceGroupsKHR p_vkEnumeratePhysicalDeviceGroupsKHR =
+        (PFN_vkEnumeratePhysicalDeviceGroupsKHR)vkGetInstanceProcAddr(instance, "vkEnumeratePhysicalDeviceGroupsKHR");
 
     // Setup the group information in preparation for the call
     uint32_t array_group_count = 30;
-    std::unique_ptr<VkPhysicalDeviceGroupPropertiesKHX[]> phys_dev_groups(
-        new VkPhysicalDeviceGroupPropertiesKHX[array_group_count]);
+    std::unique_ptr<VkPhysicalDeviceGroupPropertiesKHR[]> phys_dev_groups(
+        new VkPhysicalDeviceGroupPropertiesKHR[array_group_count]);
     for (group = 0; group < array_group_count; group++) {
-        phys_dev_groups[group].sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_GROUP_PROPERTIES_KHX;
+        phys_dev_groups[group].sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_GROUP_PROPERTIES_KHR;
         phys_dev_groups[group].pNext = nullptr;
         phys_dev_groups[group].physicalDeviceCount = 0;
-        memset(phys_dev_groups[group].physicalDevices, 0, sizeof(VkPhysicalDevice) * VK_MAX_DEVICE_GROUP_SIZE_KHX);
+        memset(phys_dev_groups[group].physicalDevices, 0, sizeof(VkPhysicalDevice) * VK_MAX_DEVICE_GROUP_SIZE_KHR);
         phys_dev_groups[group].subsetAllocation = VK_FALSE;
     }
 
-    result = p_vkEnumeratePhysicalDeviceGroupsKHX(instance, &group_count, nullptr);
+    result = p_vkEnumeratePhysicalDeviceGroupsKHR(instance, &group_count, nullptr);
     ASSERT_EQ(result, VK_SUCCESS);
     ASSERT_GT(group_count, 0u);
     ASSERT_LT(group_count, array_group_count);
 
-    result = p_vkEnumeratePhysicalDeviceGroupsKHX(instance, &group_count, phys_dev_groups.get());
+    result = p_vkEnumeratePhysicalDeviceGroupsKHR(instance, &group_count, phys_dev_groups.get());
     ASSERT_EQ(result, VK_SUCCESS);
     ASSERT_GT(group_count, 0u);
     ASSERT_LT(group_count, array_group_count);
@@ -1670,11 +1670,11 @@ TEST(EnumeratePhysicalDeviceGroupsKHX, TwoCall) {
     vkDestroyInstance(instance, nullptr);
 }
 
-// Used by run_loader_tests.sh to test for the expected usage of the EnumeratePhysicalDeviceGroupsKHX
+// Used by run_loader_tests.sh to test for the expected usage of the EnumeratePhysicalDeviceGroupsKHR
 // call if not enough numbers are provided for the final list.
-TEST(EnumeratePhysicalDeviceGroupsKHX, TwoCallIncomplete) {
+TEST(EnumeratePhysicalDeviceGroupsKHR, TwoCallIncomplete) {
     VkInstance instance = VK_NULL_HANDLE;
-    char const *const names[] = {VK_KHX_DEVICE_GROUP_CREATION_EXTENSION_NAME};
+    char const *const names[] = {VK_KHR_DEVICE_GROUP_CREATION_EXTENSION_NAME};
     auto const info = VK::InstanceCreateInfo().enabledExtensionCount(1).ppEnabledExtensionNames(names);
     uint32_t group;
     uint32_t group_count;
@@ -1683,35 +1683,35 @@ TEST(EnumeratePhysicalDeviceGroupsKHX, TwoCallIncomplete) {
     if (result == VK_ERROR_EXTENSION_NOT_PRESENT) {
         // Extension isn't present, just skip this test
         ASSERT_EQ(result, VK_ERROR_EXTENSION_NOT_PRESENT);
-        std::cout << "Skipping EnumeratePhysicalDeviceGroupsKHX : TwoCallIncomplete due to Instance lacking support"
-                  << " for " << VK_KHX_DEVICE_GROUP_CREATION_EXTENSION_NAME << " extension\n";
+        std::cout << "Skipping EnumeratePhysicalDeviceGroupsKHR : TwoCallIncomplete due to Instance lacking support"
+                  << " for " << VK_KHR_DEVICE_GROUP_CREATION_EXTENSION_NAME << " extension\n";
         return;
     }
 
-    // Get a pointer to the new vkEnumeratePhysicalDeviceGroupsKHX call
-    PFN_vkEnumeratePhysicalDeviceGroupsKHX p_vkEnumeratePhysicalDeviceGroupsKHX =
-        (PFN_vkEnumeratePhysicalDeviceGroupsKHX)vkGetInstanceProcAddr(instance, "vkEnumeratePhysicalDeviceGroupsKHX");
+    // Get a pointer to the new vkEnumeratePhysicalDeviceGroupsKHR call
+    PFN_vkEnumeratePhysicalDeviceGroupsKHR p_vkEnumeratePhysicalDeviceGroupsKHR =
+        (PFN_vkEnumeratePhysicalDeviceGroupsKHR)vkGetInstanceProcAddr(instance, "vkEnumeratePhysicalDeviceGroupsKHR");
 
     // Setup the group information in preparation for the call
     uint32_t array_group_count = 30;
-    std::unique_ptr<VkPhysicalDeviceGroupPropertiesKHX[]> phys_dev_groups(
-        new VkPhysicalDeviceGroupPropertiesKHX[array_group_count]);
+    std::unique_ptr<VkPhysicalDeviceGroupPropertiesKHR[]> phys_dev_groups(
+        new VkPhysicalDeviceGroupPropertiesKHR[array_group_count]);
     for (group = 0; group < array_group_count; group++) {
-        phys_dev_groups[group].sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_GROUP_PROPERTIES_KHX;
+        phys_dev_groups[group].sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_GROUP_PROPERTIES_KHR;
         phys_dev_groups[group].pNext = nullptr;
         phys_dev_groups[group].physicalDeviceCount = 0;
-        memset(phys_dev_groups[group].physicalDevices, 0, sizeof(VkPhysicalDevice) * VK_MAX_DEVICE_GROUP_SIZE_KHX);
+        memset(phys_dev_groups[group].physicalDevices, 0, sizeof(VkPhysicalDevice) * VK_MAX_DEVICE_GROUP_SIZE_KHR);
         phys_dev_groups[group].subsetAllocation = VK_FALSE;
     }
 
-    result = p_vkEnumeratePhysicalDeviceGroupsKHX(instance, &group_count, nullptr);
+    result = p_vkEnumeratePhysicalDeviceGroupsKHR(instance, &group_count, nullptr);
     ASSERT_EQ(result, VK_SUCCESS);
     ASSERT_GT(group_count, 0u);
     ASSERT_LT(group_count, array_group_count);
 
     group_count -= 1;
 
-    result = p_vkEnumeratePhysicalDeviceGroupsKHX(instance, &group_count, phys_dev_groups.get());
+    result = p_vkEnumeratePhysicalDeviceGroupsKHR(instance, &group_count, phys_dev_groups.get());
     ASSERT_EQ(result, VK_INCOMPLETE);
 
     vkDestroyInstance(instance, nullptr);

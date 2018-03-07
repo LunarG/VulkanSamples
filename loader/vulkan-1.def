@@ -180,3 +180,31 @@ EXPORTS
    vkCreateSharedSwapchainsKHR
    vkCreateWin32SurfaceKHR
    vkGetPhysicalDeviceWin32PresentationSupportKHR
+
+   vkEnumerateInstanceVersion
+   vkEnumeratePhysicalDeviceGroups
+   vkGetPhysicalDeviceFeatures2
+   vkGetPhysicalDeviceProperties2
+   vkGetPhysicalDeviceFormatProperties2
+   vkGetPhysicalDeviceQueueFamilyProperties2
+   vkGetPhysicalDeviceMemoryProperties2
+   vkGetPhysicalDeviceSparseImageFormatProperties2
+   vkGetPhysicalDeviceExternalBufferProperties
+   vkGetPhysicalDeviceExternalSemaphoreProperties
+   vkGetPhysicalDeviceExternalFenceProperties
+   vkBindBufferMemory2
+   vkBindImageMemory2
+   vkGetDeviceGroupPeerMemoryFeatures
+   vkCmdSetDeviceMask
+   vkCmdDispatchBase
+   vkGetImageMemoryRequirements2
+   vkGetBufferMemoryRequirements2
+   vkTrimCommandPool
+   vkGetDeviceQueue2
+   vkCreateSamplerYcbcrConversion
+   vkDestroySamplerYcbcrConversion
+   vkGetDescriptorSetLayoutSupport
+   vkGetDeviceGroupPresentCapabilitiesKHR
+   vkGetDeviceGroupSurfacePresentModesKHR
+   vkGetPhysicalDevicePresentRectanglesKHR
+   vkAcquireNextImage2KHR

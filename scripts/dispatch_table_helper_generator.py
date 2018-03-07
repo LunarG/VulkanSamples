@@ -23,6 +23,7 @@ import os,re,sys
 import xml.etree.ElementTree as etree
 from generator import *
 from collections import namedtuple
+from common_codegen import *
 
 #
 # DispatchTableHelperOutputGeneratorOptions - subclass of GeneratorOptions.
@@ -37,31 +38,24 @@ class DispatchTableHelperOutputGeneratorOptions(GeneratorOptions):
                  defaultExtensions = None,
                  addExtensions = None,
                  removeExtensions = None,
+                 emitExtensions = None,
                  sortProcedure = regSortFeatures,
                  prefixText = "",
                  genFuncPointers = True,
-                 protectFile = True,
-                 protectFeature = True,
-                 protectProto = None,
-                 protectProtoStr = None,
                  apicall = '',
                  apientry = '',
                  apientryp = '',
-                 alignFuncParam = 0):
+                 alignFuncParam = 0,
+                 expandEnumerants = True):
         GeneratorOptions.__init__(self, filename, directory, apiname, profile,
                                   versions, emitversions, defaultExtensions,
-                                  addExtensions, removeExtensions, sortProcedure)
+                                  addExtensions, removeExtensions, emitExtensions, sortProcedure)
         self.prefixText      = prefixText
         self.genFuncPointers = genFuncPointers
         self.prefixText      = None
-        self.protectFile     = protectFile
-        self.protectFeature  = protectFeature
-        self.protectProto    = protectProto
-        self.protectProtoStr = protectProtoStr
         self.apicall         = apicall
         self.apientry        = apientry
         self.apientryp       = apientryp
-        self.alignFuncParam  = alignFuncParam
 #
 # DispatchTableHelperOutputGenerator - subclass of OutputGenerator.
 # Generates dispatch table helper header files for LVL
@@ -79,14 +73,7 @@ class DispatchTableHelperOutputGenerator(OutputGenerator):
     # Called once at the beginning of each run
     def beginFile(self, genOpts):
         OutputGenerator.beginFile(self, genOpts)
-        # Protect against multiple inclusions
-        self.protect_header = False
-        if (genOpts.protectFile and genOpts.filename):
-            self.protect_header = True
-            headerSym = '__' + re.sub('\.h', '_h_', os.path.basename(genOpts.filename))
-            write('#ifndef', headerSym, file=self.outFile)
-            write('#define', headerSym, '1', file=self.outFile)
-            self.newline()
+        write("#pragma once", file=self.outFile)
         # User-supplied prefix text, if any (list of strings)
         if (genOpts.prefixText):
             for s in genOpts.prefixText:
@@ -138,15 +125,18 @@ class DispatchTableHelperOutputGenerator(OutputGenerator):
         write("\n", file=self.outFile)
         write(instance_table, file=self.outFile);
 
-        if self.protect_header:
-            self.newline()
-            write('#endif', file=self.outFile)
         # Finish processing in superclass
         OutputGenerator.endFile(self)
     #
+    # Processing at beginning of each feature or extension
+    def beginFeature(self, interface, emit):
+        OutputGenerator.beginFeature(self, interface, emit)
+        self.featureExtraProtect = GetFeatureProtect(interface)
+
+    #
     # Process commands, adding to appropriate dispatch tables
-    def genCmd(self, cmdinfo, name):
-        OutputGenerator.genCmd(self, cmdinfo, name)
+    def genCmd(self, cmdinfo, name, alias):
+        OutputGenerator.genCmd(self, cmdinfo, name, alias)
 
         avoid_entries = ['vkCreateInstance',
                          'vkCreateDevice']

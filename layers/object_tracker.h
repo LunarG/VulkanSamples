@@ -35,7 +35,6 @@
 #include "vk_layer_table.h"
 #include "vk_object_types.h"
 #include "vulkan/vk_layer.h"
-#include "vk_object_types.h"
 #include "vk_enum_string_helper.h"
 #include "vk_layer_extension_utils.h"
 #include "vk_layer_table.h"
@@ -96,11 +95,15 @@ struct layer_data {
 
     debug_report_data *report_data;
     std::vector<VkDebugReportCallbackEXT> logging_callback;
+    std::vector<VkDebugUtilsMessengerEXT> logging_messenger;
     // The following are for keeping track of the temporary callbacks that can
     // be used in vkCreateInstance and vkDestroyInstance:
-    uint32_t num_tmp_callbacks;
-    VkDebugReportCallbackCreateInfoEXT *tmp_dbg_create_infos;
-    VkDebugReportCallbackEXT *tmp_callbacks;
+    uint32_t num_tmp_report_callbacks;
+    VkDebugReportCallbackCreateInfoEXT *tmp_report_create_infos;
+    VkDebugReportCallbackEXT *tmp_report_callbacks;
+    uint32_t num_tmp_debug_messengers;
+    VkDebugUtilsMessengerCreateInfoEXT *tmp_messenger_create_infos;
+    VkDebugUtilsMessengerEXT *tmp_debug_messengers;
 
     std::vector<VkQueueFamilyProperties> queue_family_properties;
 
@@ -119,9 +122,12 @@ struct layer_data {
           num_objects{},
           num_total_objects(0),
           report_data(nullptr),
-          num_tmp_callbacks(0),
-          tmp_dbg_create_infos(nullptr),
-          tmp_callbacks(nullptr),
+          num_tmp_report_callbacks(0),
+          tmp_report_create_infos(nullptr),
+          tmp_report_callbacks(nullptr),
+          num_tmp_debug_messengers(0),
+          tmp_messenger_create_infos(nullptr),
+          tmp_debug_messengers(nullptr),
           object_map{},
           dispatch_table{} {
         object_map.resize(kVulkanObjectTypeMax + 1);
