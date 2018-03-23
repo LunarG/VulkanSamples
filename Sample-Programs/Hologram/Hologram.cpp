@@ -282,7 +282,7 @@ void Hologram::create_descriptor_set_layout() {
 
     VkDescriptorSetLayoutBinding layout_binding = {};
     layout_binding.binding = 0;
-    layout_binding.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC;
+    layout_binding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
     layout_binding.descriptorCount = 1;
     layout_binding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
 
@@ -478,7 +478,7 @@ void Hologram::create_command_buffers() {
 
 void Hologram::create_buffers() {
     // align object data to device limit
-    const VkDeviceSize &alignment = physical_dev_props_.limits.minStorageBufferOffsetAlignment;
+    const VkDeviceSize &alignment = physical_dev_props_.limits.minUniformBufferOffsetAlignment;
 
     aligned_object_data_size = sizeof(ShaderParamBlock);
     if (aligned_object_data_size % alignment) aligned_object_data_size += alignment - (aligned_object_data_size % alignment);
@@ -490,7 +490,7 @@ void Hologram::create_buffers() {
     VkBufferCreateInfo buf_info = {};
     buf_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
     buf_info.size = aligned_object_data_size * sim_.objects().size();
-    buf_info.usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
+    buf_info.usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
     buf_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
     for (auto &data : frame_data_) vk::assert_success(vk::CreateBuffer(dev_, &buf_info, nullptr, &data.buf));
@@ -532,7 +532,7 @@ void Hologram::create_buffer_memory() {
 
 void Hologram::create_descriptor_sets() {
     VkDescriptorPoolSize desc_pool_size = {};
-    desc_pool_size.type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC;
+    desc_pool_size.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
     assert(frame_data_.size() <= UINT32_MAX);
     desc_pool_size.descriptorCount = static_cast<uint32_t>(frame_data_.size());
 
@@ -576,7 +576,7 @@ void Hologram::create_descriptor_sets() {
         desc_write.dstBinding = 0;
         desc_write.dstArrayElement = 0;
         desc_write.descriptorCount = 1;
-        desc_write.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC;
+        desc_write.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
         desc_write.pBufferInfo = &desc_bufs[i];
         desc_writes[i] = desc_write;
     }
