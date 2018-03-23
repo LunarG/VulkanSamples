@@ -3,7 +3,7 @@
 layout(location = 0) in vec3 in_pos;
 layout(location = 1) in vec3 in_normal;
 
-layout(std140, set = 0, binding = 0) readonly buffer param_block {
+layout(std140, set = 0, binding = 0) uniform param_block {
 	vec3 light_pos;
 	vec3 light_color;
 	mat4 model;
