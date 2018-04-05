@@ -491,7 +491,14 @@ void Shell::present_back_buffer() {
     present_info.pSwapchains = &ctx_.swapchain;
     present_info.pImageIndices = &buf.image_index;
 
-    vk::assert_success(vk::QueuePresentKHR(ctx_.present_queue, &present_info));
+    VkResult res = vk::QueuePresentKHR(ctx_.present_queue, &present_info);
+    if (res == VK_ERROR_OUT_OF_DATE_KHR) {
+        // Swapchain is out of date (e.g. the window was resized) and
+        // must be recreated:
+        resize_swapchain(0, 0);  // width and height hints should be ignored
+    } else {
+        assert(!res);
+    }
 
     vk::assert_success(vk::QueueSubmit(ctx_.present_queue, 0, nullptr, buf.present_fence));
     ctx_.back_buffers.push(buf);
