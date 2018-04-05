@@ -322,11 +322,6 @@ endif()
 add_definitions(-DVULKAN_SAMPLES_BASE_DIR="${CMAKE_CURRENT_SOURCE_DIR}")
 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/API-Samples/utils)
-if(WIN32)
-    include_directories(${CMAKE_SOURCE_DIR}\\..\\Include)
-else()
-    include_directories("/usr/include/vulkan")
-endif()
 
 option(BUILD_API_SAMPLES "Build API Samples " ON)
 option(BUILD_SAMPLE_LAYERS "Build Sample Layers " ON)
