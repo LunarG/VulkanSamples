@@ -213,7 +213,7 @@ void Hologram::create_render_pass() {
 #ifdef MVK_USE_MOLTENVK_SHADER_CONVERTER
 
 #include <MoltenVK/vk_mvk_moltenvk.h>
-#include <MoltenGLSLToSPIRVConverter/GLSLConversion.h>
+#include <MoltenVKGLSLToSPIRVConverter/GLSLConversion.h>
 void Hologram::create_shader_modules() {
 
 #ifdef DEBUG
@@ -234,7 +234,7 @@ void Hologram::create_shader_modules() {
 
     // Vertex shader
     filename = use_push_constants_ ? "Hologram.push_constant.vert" : "Hologram.vert";
-    wasConverted = mlnConvertGLSLFileToSPIRV(filename, kMLNShaderStageVertex,
+    wasConverted = mvkConvertGLSLFileToSPIRV(filename, kMVKShaderStageVertex,
                                              (uint32_t**)&sh_info.pCode, &sh_info.codeSize,
                                              &spvLog, true, true);
     if ( !wasConverted ) { printf("Could not convert GLSL to SPIRV:\n%s", spvLog); }
@@ -244,7 +244,7 @@ void Hologram::create_shader_modules() {
 
     // Fragment shader
     filename = "Hologram.frag";
-    wasConverted = mlnConvertGLSLFileToSPIRV(filename, kMLNShaderStageFragment,
+    wasConverted = mvkConvertGLSLFileToSPIRV(filename, kMVKShaderStageFragment,
                                              (uint32_t**)&sh_info.pCode, &sh_info.codeSize,
                                              &spvLog, true, true);
     if ( !wasConverted ) { printf("Could not convert GLSL to SPIRV:\n%s", spvLog); }

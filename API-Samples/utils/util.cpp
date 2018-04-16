@@ -43,7 +43,7 @@ samples utility functions
 // Static variable that keeps ANativeWindow and asset manager instances.
 static android_app *Android_application = nullptr;
 #elif (defined(VK_USE_PLATFORM_IOS_MVK) || defined(VK_USE_PLATFORM_MACOS_MVK))
-#	include <MoltenGLSLToSPIRVConverter/GLSLToSPIRVConverter.h>
+#	include <MoltenVKGLSLToSPIRVConverter/GLSLToSPIRVConverter.h>
 #else
 #	include "SPIRV/GlslangToSpv.h"
 #endif
@@ -278,32 +278,32 @@ void finalize_glslang() {}
 
 bool GLSLtoSPV(const VkShaderStageFlagBits shader_type, const char *pshader, std::vector<unsigned int> &spirv) {
 
- 	MLNShaderStage shaderStage;
+ 	MVKShaderStage shaderStage;
  	switch (shader_type) {
 		 		case VK_SHADER_STAGE_VERTEX_BIT:
-		 			shaderStage = kMLNShaderStageVertex;
+		 			shaderStage = kMVKShaderStageVertex;
 		 			break;
 		 		case VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT:
-		 			shaderStage = kMLNShaderStageTessControl;
+		 			shaderStage = kMVKShaderStageTessControl;
 		 			break;
 				case VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT:
-		 			shaderStage = kMLNShaderStageTessEval;
+		 			shaderStage = kMVKShaderStageTessEval;
 		 			break;
 		 		case VK_SHADER_STAGE_GEOMETRY_BIT:
-		 			shaderStage = kMLNShaderStageGeometry;
+		 			shaderStage = kMVKShaderStageGeometry;
 		 			break;
 		 		case VK_SHADER_STAGE_FRAGMENT_BIT:
-		 			shaderStage = kMLNShaderStageFragment;
+		 			shaderStage = kMVKShaderStageFragment;
 		 			break;
 		 		case VK_SHADER_STAGE_COMPUTE_BIT:
-		 			shaderStage = kMLNShaderStageCompute;
+		 			shaderStage = kMVKShaderStageCompute;
 		 			break;
 		 		default:
-		 			shaderStage = kMLNShaderStageAuto;
+		 			shaderStage = kMVKShaderStageAuto;
 		 			break;
 	 	}
 
- 	molten::GLSLToSPIRVConverter glslConverter;
+ 	mvk::GLSLToSPIRVConverter glslConverter;
  	glslConverter.setGLSL(pshader);
  	bool wasConverted = glslConverter.convert(shaderStage, false, false);
  	if (wasConverted) { spirv = glslConverter.getSPIRV(); }
