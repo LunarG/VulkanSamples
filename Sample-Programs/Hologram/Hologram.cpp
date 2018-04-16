@@ -215,42 +215,43 @@ void Hologram::create_render_pass() {
 #include <MoltenVK/vk_mvk_moltenvk.h>
 #include <MoltenVKGLSLToSPIRVConverter/GLSLConversion.h>
 void Hologram::create_shader_modules() {
-
 #ifdef DEBUG
     // If debugging, enable MoltenVK debug mode to enable debugging capabilities,
     // including logging shader conversions from SPIR-V to Metal Shading Language.
     MVKDeviceConfiguration mvkConfig;
-    vkGetMoltenVKDeviceConfigurationMVK(dev_, &mvkConfig );
+    vkGetMoltenVKDeviceConfigurationMVK(dev_, &mvkConfig);
     mvkConfig.debugMode = true;
-    vkSetMoltenVKDeviceConfigurationMVK(dev_, &mvkConfig );
+    vkSetMoltenVKDeviceConfigurationMVK(dev_, &mvkConfig);
 #endif
 
-    char* spvLog;
+    char *spvLog;
     bool wasConverted;
 
-    const char* filename;
+    const char *filename;
     VkShaderModuleCreateInfo sh_info = {};
     sh_info.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
 
     // Vertex shader
     filename = use_push_constants_ ? "Hologram.push_constant.vert" : "Hologram.vert";
-    wasConverted = mvkConvertGLSLFileToSPIRV(filename, kMVKShaderStageVertex,
-                                             (uint32_t**)&sh_info.pCode, &sh_info.codeSize,
+    wasConverted = mvkConvertGLSLFileToSPIRV(filename, kMVKShaderStageVertex, (uint32_t **)&sh_info.pCode, &sh_info.codeSize,
                                              &spvLog, true, true);
-    if ( !wasConverted ) { printf("Could not convert GLSL to SPIRV:\n%s", spvLog); }
+    if (!wasConverted) {
+        printf("Could not convert GLSL to SPIRV:\n%s", spvLog);
+    }
     vk::assert_success(vk::CreateShaderModule(dev_, &sh_info, nullptr, &vs_));
-    free((void*)sh_info.pCode);
-    free((void*)spvLog);
+    free((void *)sh_info.pCode);
+    free((void *)spvLog);
 
     // Fragment shader
     filename = "Hologram.frag";
-    wasConverted = mvkConvertGLSLFileToSPIRV(filename, kMVKShaderStageFragment,
-                                             (uint32_t**)&sh_info.pCode, &sh_info.codeSize,
+    wasConverted = mvkConvertGLSLFileToSPIRV(filename, kMVKShaderStageFragment, (uint32_t **)&sh_info.pCode, &sh_info.codeSize,
                                              &spvLog, true, true);
-    if ( !wasConverted ) { printf("Could not convert GLSL to SPIRV:\n%s", spvLog); }
+    if (!wasConverted) {
+        printf("Could not convert GLSL to SPIRV:\n%s", spvLog);
+    }
     vk::assert_success(vk::CreateShaderModule(dev_, &sh_info, nullptr, &fs_));
-    free((void*)sh_info.pCode);
-    free((void*)spvLog);
+    free((void *)sh_info.pCode);
+    free((void *)spvLog);
 }
 
 #else
@@ -275,7 +276,7 @@ void Hologram::create_shader_modules() {
     vk::assert_success(vk::CreateShaderModule(dev_, &sh_info, nullptr, &fs_));
 }
 
-#endif      // HG_USE_MOLTENVK_SHADER_CONVERTER
+#endif  // HG_USE_MOLTENVK_SHADER_CONVERTER
 
 void Hologram::create_descriptor_set_layout() {
     if (use_push_constants_) return;
