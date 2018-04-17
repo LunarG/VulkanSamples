@@ -96,6 +96,10 @@ int sample_main(int argc, char *argv[]) {
     // The VK_EXT_validation_cache extension is implemented by the validation layers, so
     // they must be enabled in order to use it.
     info.instance_layer_names.push_back("VK_LAYER_LUNARG_standard_validation");
+    if (!demo_check_layers(info.instance_layer_properties, info.instance_layer_names)) {
+        std::cout << "Set the environment variable VK_LAYER_PATH to point to the location of your layers" << std::endl;
+        exit(1);
+    }
     init_instance(info, sample_title);
     init_enumerate_device(info);
     init_window_size(info, 500, 500);
@@ -249,7 +253,6 @@ int sample_main(int argc, char *argv[]) {
         (PFN_vkDestroyValidationCacheEXT)vkGetDeviceProcAddr(info.device, "vkDestroyValidationCacheEXT");
     auto vkGetValidationCacheData =
         (PFN_vkGetValidationCacheDataEXT)vkGetDeviceProcAddr(info.device, "vkGetValidationCacheDataEXT");
-    auto vkMergeValidationCaches = (PFN_vkMergeValidationCachesEXT)vkGetDeviceProcAddr(info.device, "vkMergeValidationCachesEXT");
 
     // Feed the initial cache data into cache creation
     VkValidationCacheCreateInfoEXT validationCacheCreateInfo;
