@@ -109,8 +109,6 @@ else()
     endif()
 endif()
 
-option(BUILD_UTILITIES "Build WSIWindow and Teapots" ON)
-
 set (V_LVL_RELATIVE_LOCATION submodules/Vulkan-LoaderAndValidationLayers)
 set (SUBPROJECTS_DIR ${CMAKE_CURRENT_SOURCE_DIR}/submodules)
 
@@ -329,7 +327,6 @@ option(BUILD_SAMPLE_LAYERS "Build Sample Layers " ON)
 if((CMAKE_SYSTEM_NAME STREQUAL "Linux") AND (NOT BUILD_WSI_XCB_SUPPORT) AND (NOT BUILD_WSI_WAYLAND_SUPPORT))
     set(BUILD_API_SAMPLES OFF)
     set(BUILD_SAMPLE_LAYERS OFF)
-    set(BUILD_UTILITIES OFF)
 endif()
 
 # Define macro used for building vkxml generated files
@@ -339,10 +336,6 @@ macro(run_vk_xml_generate dependency output)
     DEPENDS ${LVL_SCRIPTS_DIR}/vk.xml ${LVL_SCRIPTS_DIR}/generator.py ${VS_SCRIPTS_DIR}/${dependency} ${VS_SCRIPTS_DIR}/lvl_genvk.py ${LVL_SCRIPTS_DIR}/reg.py
     )
 endmacro()
-
-if(BUILD_UTILITIES)
-    add_subdirectory(Utilities)
-endif()
 
 if (BUILD_API_SAMPLES)
     add_subdirectory(API-Samples)
