@@ -68,7 +68,7 @@ a Vulkan 1.1 Instance.  If this fails, your only option is
 creating a Vulkan 1.0 Instance.
 
 
-## Letting Vulkan Know What Version Your Using
+## Letting Vulkan Know What Version You Are Using
 
 When you've determine that you can create a Vulkan Instance
 for a particular version of the API, you should what that
