@@ -1,5 +1,8 @@
 find_package(PythonInterp 3 REQUIRED)
 find_package(Threads REQUIRED)
+find_program(GLSLANG_VALIDATOR names glslangValidator
+    HINTS "${GLSLANG_INSTALL_DIR}/bin"
+    )
 
 macro(generate_dispatch_table out)
     add_custom_command(OUTPUT ${out}
@@ -47,11 +50,13 @@ set(definitions
 
 if(SDK_INCLUDE_PATH)
     set(includes
+        PRIVATE ${Vulkan_INCLUDE_DIR}
         PRIVATE ${GLMINC_PREFIX}
         PRIVATE ${SDK_INCLUDE_PATH}
         PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
 else()
     set(includes
+        PRIVATE ${Vulkan_INCLUDE_DIR}
         PRIVATE ${GLMINC_PREFIX}
         PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
 endif()

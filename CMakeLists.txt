@@ -1,4 +1,4 @@
-# The name of our project is "VULKAN". CMakeLists files in this project can
+# The name of our project is "VULKAN_SAMPLES". CMakeLists files in this project can
 # refer to the root source directory of the project as ${VULKAN_SOURCE_DIR} and
 # to the root binary directory of the project as ${VULKAN_BINARY_DIR}.
 cmake_minimum_required(VERSION 2.8.11)
@@ -11,9 +11,18 @@ project (VULKAN_SAMPLES)
 set(API_NAME "Vulkan" CACHE STRING "API name to use when building")
 set(MAJOR "1")
 string(TOLOWER ${API_NAME} API_LOWERCASE)
-
+set(VULKAN_HEADERS_INSTALL_DIR "HEADERS-NOTFOUND" CACHE PATH "Absolute path to a Vulkan-Headers install directory")
+set(VULKAN_LOADER_INSTALL_DIR "LOADER-NOTFOUND" CACHE PATH "Absolute path to a Vulkan-Loader install directory")
+set(CMAKE_PREFIX_PATH ${CMAKE_PREFIX_PATH};${VULKAN_HEADERS_INSTALL_DIR};${VULKAN_LOADER_INSTALL_DIR};
+                       $ENV{VULKAN_HEADERS_INSTALL_DIR};$ENV{VULKAN_LOADER_INSTALL_DIR})
+  
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 find_package(PythonInterp 3 REQUIRED)
+message(STATUS "Using find_package to locate Vulkan")
+find_package(Vulkan)
+message(STATUS "Vulkan FOUND = ${Vulkan_FOUND}")
+message(STATUS "Vulkan Include = ${Vulkan_INCLUDE_DIR}")
+message(STATUS "Vulkan Lib = ${Vulkan_LIBRARY}")
 
 option(USE_CCACHE "Use ccache" OFF)
 if (USE_CCACHE)
@@ -26,7 +35,6 @@ endif()
 
 # Enable cmake folders
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
-set(LVL_TARGET_FOLDER lvl_cmake_targets)
 
 if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
     set(FALLBACK_CONFIG_DIRS "/etc/xdg" CACHE STRING
@@ -58,12 +66,6 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
     if (BUILD_WSI_MIR_SUPPORT)
         find_package(Mir REQUIRED)
     endif()
-
-    # This option can be used to suppress the installation of artifacts from the
-    # Vulkan-LoaderAndValidationLayers repo while running "make install" for the
-    # VulkanTools and VulkanSamples repos.  This can be used to prevent the
-    # overwriting of LVL artifacts when installing these downstream repos.
-    option(INSTALL_LVL_FILES "Install content from LoaderAndValidationLayers repo" ON)
 endif()
 
 if(WIN32)
@@ -109,14 +111,7 @@ else()
     endif()
 endif()
 
-set (V_LVL_RELATIVE_LOCATION submodules/Vulkan-LoaderAndValidationLayers)
-set (SUBPROJECTS_DIR ${CMAKE_CURRENT_SOURCE_DIR}/submodules)
-
-set(EXTERNAL_SOURCE_ROOT "${SUBPROJECTS_DIR}/Vulkan-LoaderAndValidationLayers/external" CACHE STRING "Root path to external sources such as glslang and SPIRV-Tools")
-
 add_definitions(-DAPI_NAME="${API_NAME}")
-
-add_subdirectory(${V_LVL_RELATIVE_LOCATION})
 
 if (WIN32)
     if(CUSTOM_GLSLANG_BIN_ROOT)
@@ -181,17 +176,6 @@ else()
     endif()
 endif()
 
-set (V_LVL_ROOT_DIR ${CMAKE_CURRENT_SOURCE_DIR}/${V_LVL_RELATIVE_LOCATION})
-
-set(VS_SCRIPTS_DIR "${CMAKE_CURRENT_SOURCE_DIR}/scripts")
-set(LVL_SCRIPTS_DIR "${V_LVL_ROOT_DIR}/scripts")
-
-# Vulkan header files located in LVL
-include_directories("${V_LVL_ROOT_DIR}/include")
-
-# Define a variable for a default root location to the gslang, SPIRV-Tools and other external sources and cache it to allow the user to customize it as needed
-set(SUBPROJECT_SOURCE_ROOT ${V_LVL_ROOT_DIR}/submodules CACHE STRING "Root path to VulkanSamples submodule repositories")
-
 if (CMAKE_COMPILER_IS_GNUCC OR CMAKE_C_COMPILER_ID MATCHES "Clang")
     set(COMMON_COMPILE_FLAGS "-Wall -Wextra -Wno-unused-parameter -Wno-missing-field-initializers")
     set(COMMON_COMPILE_FLAGS "${COMMON_COMPILE_FLAGS} -fno-strict-aliasing -fno-builtin-memcmp")
@@ -210,105 +194,119 @@ if (CMAKE_COMPILER_IS_GNUCC OR CMAKE_C_COMPILER_ID MATCHES "Clang")
     endif()
 endif()
 
-find_library(GLSLANG_LIB NAMES glslang
-             HINTS ${GLSLANG_SEARCH_PATH} )
+set(GLSLANG_INSTALL_DIR "GLSLANG-NOTFOUND" CACHE PATH "Absolute path to a glslang install directory")
+if(NOT GLSLANG_INSTALL_DIR AND NOT DEFINED ENV{GLSLANG_INSTALL_DIR})
+    message(FATAL_ERROR "Must define location of glslang binaries -- see BUILD.md")
+endif()
 
-find_library(OGLCompiler_LIB NAMES OGLCompiler
-             HINTS ${GLSLANG_SEARCH_PATH} )
+# Cmake command line option overrides environment variable
+if(NOT GLSLANG_INSTALL_DIR)
+    set(GLSLANG_INSTALL_DIR $ENV{GLSLANG_INSTALL_DIR})
+endif()
 
-find_library(OSDependent_LIB NAMES OSDependent
-             HINTS ${GLSLANG_SEARCH_PATH} )
+set(VULKAN_HEADERS_INSTALL_DIR "VULKAN-HEADERS-NOTFOUND" CACHE PATH "Absolute path to a Vulkan-Headers install directory")
+if(NOT VULKAN_HEADERS_INSTALL_DIR AND NOT DEFINED ENV{VULKAN_HEADERS_INSTALL_DIR})
+    message(FATAL_ERROR "Must define location of vulkan headers -- see BUILD.md")
+endif()
 
-find_library(HLSL_LIB NAMES HLSL
-             HINTS ${GLSLANG_SEARCH_PATH} )
+# Cmake command line option overrides environment variable
+if(NOT VULKAN_HEADERS_INSTALL_DIR)
+    set(VULKAN_HEADERS_INSTALL_DIR $ENV{VULKAN_HEADERS_INSTALL_DIR})
+endif()
 
-find_library(SPIRV_LIB NAMES SPIRV
-             HINTS ${GLSLANG_SEARCH_PATH} )
+set(VULKAN_LOADER_INSTALL_DIR "VULKAN-LOADER-NOTFOUND" CACHE PATH "Absolute path to a Vulkan-Loader install directory")
+if(NOT VULKAN_LOADER_INSTALL_DIR AND NOT DEFINED ENV{VULKAN_LOADER_INSTALL_DIR})
+    message(FATAL_ERROR "Must define location of vulkan loader -- see BUILD.md")
+endif()
 
-find_library(SPIRV_REMAPPER_LIB NAMES SPVRemapper
-             HINTS ${GLSLANG_SEARCH_PATH} )
+# Cmake command line option overrides environment variable
+if(NOT VULKAN_LOADER_INSTALL_DIR)
+    set(VULKAN_LOADER_INSTALL_DIR $ENV{VULKAN_LOADER_INSTALL_DIR})
+endif()
 
-find_library(SPIRV_TOOLS_LIB NAMES SPIRV-Tools
-             HINTS ${SPIRV_TOOLS_SEARCH_PATH} )
 
-find_library(SPIRV_TOOLS_OPT_LIB NAMES SPIRV-Tools-opt
-             HINTS ${SPIRV_TOOLS_OPT_SEARCH_PATH} )
+message(STATUS "Using glslang install located at ${GLSLANG_INSTALL_DIR}")
+set(SPIRV_TOOLS_BINARY_ROOT "${GLSLANG_INSTALL_DIR}/lib"
+    CACHE PATH "User defined path to the SPIRV-Tools binaries for this project")
+set(SPIRV_TOOLS_OPT_BINARY_ROOT "${GLSLANG_INSTALL_DIR}/lib"
+    CACHE PATH "User defined path to the SPIRV-Tools-opt binaries for this project")
+set(GLSLANG_SPIRV_INCLUDE_DIR "${GLSLANG_INSTALL_DIR}/include" CACHE PATH "Path to glslang spirv headers")
+set(SPIRV_TOOLS_INCLUDE_DIR "${GLSLANG_INSTALL_DIR}/include" CACHE PATH "Path to spirv tools headers")
+set(GLSLANG_SEARCH_PATH "${GLSLANG_INSTALL_DIR}/lib")
+set(GLSLANG_DEBUG_SEARCH_PATH "${GLSLANG_INSTALL_DIR}/lib")
+set(SPIRV_TOOLS_SEARCH_PATH "${GLSLANG_INSTALL_DIR}/lib")
+set(SPIRV_TOOLS_DEBUG_SEARCH_PATH "${GLSLANG_INSTALL_DIR}/lib")
+set(SPIRV_TOOLS_OPT_SEARCH_PATH "${GLSLANG_INSTALL_DIR}/lib")
+set(SPIRV_TOOLS_OPT_DEBUG_SEARCH_PATH "${GLSLANG_INSTALL_DIR}/lib")
 
-if (WIN32)
-    add_library(glslang         STATIC IMPORTED)
-    add_library(OGLCompiler     STATIC IMPORTED)
-    add_library(OSDependent     STATIC IMPORTED)
-    add_library(HLSL            STATIC IMPORTED)
-    add_library(SPIRV           STATIC IMPORTED)
-    add_library(SPVRemapper     STATIC IMPORTED)
-    add_library(Loader          STATIC IMPORTED)
+find_library(GLSLANG_LIB NAMES glslang HINTS ${GLSLANG_SEARCH_PATH})
+
+find_library(OGLCompiler_LIB NAMES OGLCompiler HINTS ${GLSLANG_SEARCH_PATH})
+
+find_library(OSDependent_LIB NAMES OSDependent HINTS ${GLSLANG_SEARCH_PATH})
+
+find_library(HLSL_LIB NAMES HLSL HINTS ${GLSLANG_SEARCH_PATH})
+
+find_library(SPIRV_LIB NAMES SPIRV HINTS ${GLSLANG_SEARCH_PATH})
+
+find_library(SPIRV_REMAPPER_LIB NAMES SPVRemapper HINTS ${GLSLANG_SEARCH_PATH})
+
+find_library(SPIRV_TOOLS_LIB NAMES SPIRV-Tools HINTS ${SPIRV_TOOLS_SEARCH_PATH})
+
+find_library(SPIRV_TOOLS_OPT_LIB NAMES SPIRV-Tools-opt HINTS ${SPIRV_TOOLS_OPT_SEARCH_PATH})
+
+if(WIN32)
+    add_library(glslang STATIC IMPORTED)
+    add_library(OGLCompiler STATIC IMPORTED)
+    add_library(OSDependent STATIC IMPORTED)
+    add_library(HLSL STATIC IMPORTED)
+    add_library(SPIRV STATIC IMPORTED)
+    add_library(SPVRemapper STATIC IMPORTED)
+    add_library(Loader STATIC IMPORTED)
     add_library(SPIRV-Tools-opt STATIC IMPORTED)
-    add_library(SPIRV-Tools     STATIC IMPORTED)
+    add_library(SPIRV-Tools STATIC IMPORTED)
 
-    find_library(GLSLANG_DLIB NAMES glslangd
-                 HINTS ${GLSLANG_DEBUG_SEARCH_PATH} )
-    find_library(OGLCompiler_DLIB NAMES OGLCompilerd
-                 HINTS ${GLSLANG_DEBUG_SEARCH_PATH} )
-    find_library(OSDependent_DLIB NAMES OSDependentd
-                 HINTS ${GLSLANG_DEBUG_SEARCH_PATH} )
-    find_library(HLSL_DLIB NAMES HLSLd
-                 HINTS ${GLSLANG_DEBUG_SEARCH_PATH} )
-    find_library(SPIRV_DLIB NAMES SPIRVd
-                 HINTS ${GLSLANG_DEBUG_SEARCH_PATH} )
-    find_library(SPIRV_REMAPPER_DLIB NAMES SPVRemapperd
-                 HINTS ${GLSLANG_DEBUG_SEARCH_PATH} )
-    find_library(SPIRV_TOOLS_DLIB NAMES SPIRV-Toolsd
-                 HINTS ${SPIRV_TOOLS_DEBUG_SEARCH_PATH} )
-    find_library(SPIRV_TOOLS_OPT_DLIB NAMES SPIRV-Tools-optd
-                 HINTS ${SPIRV_TOOLS_OPT_DEBUG_SEARCH_PATH} )
+    find_library(GLSLANG_DLIB NAMES glslangd HINTS ${GLSLANG_DEBUG_SEARCH_PATH})
+    find_library(OGLCompiler_DLIB NAMES OGLCompilerd HINTS ${GLSLANG_DEBUG_SEARCH_PATH})
+    find_library(OSDependent_DLIB NAMES OSDependentd HINTS ${GLSLANG_DEBUG_SEARCH_PATH})
+    find_library(HLSL_DLIB NAMES HLSLd HINTS ${GLSLANG_DEBUG_SEARCH_PATH})
+    find_library(SPIRV_DLIB NAMES SPIRVd HINTS ${GLSLANG_DEBUG_SEARCH_PATH})
+    find_library(SPIRV_REMAPPER_DLIB NAMES SPVRemapperd HINTS ${GLSLANG_DEBUG_SEARCH_PATH})
+    find_library(SPIRV_TOOLS_DLIB NAMES SPIRV-Toolsd HINTS ${SPIRV_TOOLS_DEBUG_SEARCH_PATH})
+    find_library(SPIRV_TOOLS_OPT_DLIB NAMES SPIRV-Tools-optd HINTS ${SPIRV_TOOLS_OPT_DEBUG_SEARCH_PATH})
+    set_target_properties(glslang PROPERTIES IMPORTED_LOCATION "${GLSLANG_LIB}" IMPORTED_LOCATION_DEBUG "${GLSLANG_DLIB}")
+    set_target_properties(
+        OGLCompiler PROPERTIES IMPORTED_LOCATION "${OGLCompiler_LIB}" IMPORTED_LOCATION_DEBUG "${OGLCompiler_DLIB}")
+    set_target_properties(
+        OSDependent PROPERTIES IMPORTED_LOCATION "${OSDependent_LIB}" IMPORTED_LOCATION_DEBUG "${OSDependent_DLIB}")
+    set_target_properties(HLSL PROPERTIES IMPORTED_LOCATION "${HLSL_LIB}" IMPORTED_LOCATION_DEBUG "${HLSL_DLIB}")
+    set_target_properties(SPIRV PROPERTIES IMPORTED_LOCATION "${SPIRV_LIB}" IMPORTED_LOCATION_DEBUG "${SPIRV_DLIB}")
+    set_target_properties(
+        SPVRemapper PROPERTIES IMPORTED_LOCATION "${SPIRV_REMAPPER_LIB}" IMPORTED_LOCATION_DEBUG "${SPIRV_REMAPPER_DLIB}")
+    set_target_properties(
+        SPIRV-Tools PROPERTIES IMPORTED_LOCATION "${SPIRV_TOOLS_LIB}" IMPORTED_LOCATION_DEBUG "${SPIRV_TOOLS_DLIB}")
+    set_target_properties(
+        SPIRV-Tools-opt PROPERTIES IMPORTED_LOCATION "${SPIRV_TOOLS_OPT_LIB}" IMPORTED_LOCATION_DEBUG "${SPIRV_TOOLS_OPT_DLIB}")
+endif()
 
-    set_target_properties(glslang PROPERTIES
-                         IMPORTED_LOCATION       "${GLSLANG_LIB}"
-                         IMPORTED_LOCATION_DEBUG "${GLSLANG_DLIB}")
-    set_target_properties(OGLCompiler PROPERTIES
-                         IMPORTED_LOCATION       "${OGLCompiler_LIB}"
-                         IMPORTED_LOCATION_DEBUG "${OGLCompiler_DLIB}")
-    set_target_properties(OSDependent PROPERTIES
-                         IMPORTED_LOCATION       "${OSDependent_LIB}"
-                         IMPORTED_LOCATION_DEBUG "${OSDependent_DLIB}")
-    set_target_properties(HLSL PROPERTIES
-                         IMPORTED_LOCATION       "${HLSL_LIB}"
-                         IMPORTED_LOCATION_DEBUG "${HLSL_DLIB}")
-    set_target_properties(SPIRV PROPERTIES
-                         IMPORTED_LOCATION       "${SPIRV_LIB}"
-                         IMPORTED_LOCATION_DEBUG "${SPIRV_DLIB}")
-    set_target_properties(SPVRemapper PROPERTIES
-                         IMPORTED_LOCATION       "${SPIRV_REMAPPER_LIB}"
-                         IMPORTED_LOCATION_DEBUG "${SPIRV_REMAPPER_DLIB}")
-    set_target_properties(SPIRV-Tools PROPERTIES
-                         IMPORTED_LOCATION       "${SPIRV_TOOLS_LIB}"
-                         IMPORTED_LOCATION_DEBUG "${SPIRV_TOOLS_DLIB}")
-    set_target_properties(SPIRV-Tools-opt PROPERTIES
-                         IMPORTED_LOCATION       "${SPIRV_TOOLS_OPT_LIB}"
-                         IMPORTED_LOCATION_DEBUG "${SPIRV_TOOLS_OPT_DLIB}")
-
-    set (SPIRV_TOOLS_LIBRARIES SPIRV-Tools-opt SPIRV-Tools)
-    set (GLSLANG_LIBRARIES glslang OGLCompiler OSDependent HLSL SPIRV SPVRemapper ${SPIRV_TOOLS_LIBRARIES})
-else ()
-    # not WIN32
-    set (SPIRV_TOOLS_LIBRARIES ${SPIRV_TOOLS_OPT_LIB} ${SPIRV_TOOLS_LIB})
-    set (GLSLANG_LIBRARIES ${GLSLANG_LIB} ${OGLCompiler_LIB} ${OSDependent_LIB} ${HLSL_LIB} ${SPIRV_LIB} ${SPIRV_REMAPPER_LIB} ${SPIRV_TOOLS_LIBRARIES})
+if(WIN32)
+    set(SPIRV_TOOLS_LIBRARIES SPIRV-Tools-opt SPIRV-Tools)
+    set(GLSLANG_LIBRARIES glslang OGLCompiler OSDependent HLSL SPIRV SPVRemapper ${SPIRV_TOOLS_LIBRARIES})
+else()
+    set(SPIRV_TOOLS_LIBRARIES ${SPIRV_TOOLS_OPT_LIB} ${SPIRV_TOOLS_LIB})
+    set(GLSLANG_LIBRARIES
+        ${GLSLANG_LIB}
+        ${OGLCompiler_LIB}
+        ${OSDependent_LIB}
+        ${HLSL_LIB}
+        ${SPIRV_LIB}
+        ${SPIRV_REMAPPER_LIB}
+        ${SPIRV_TOOLS_LIBRARIES})
 endif()
 
 set (PYTHON_CMD ${PYTHON_EXECUTABLE})
 
 set (UTILS_NAME vsamputils)
-
-if (CMAKE_COMPILER_IS_GNUCC OR CMAKE_C_COMPILER_ID MATCHES "Clang")
-    set(COMMON_COMPILE_FLAGS "-Wall -Wextra -Wno-unused-parameter -Wno-missing-field-initializers")
-    set(COMMON_COMPILE_FLAGS "${COMMON_COMPILE_FLAGS} -fno-strict-aliasing -fno-builtin-memcmp")
-    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=c99 ${COMMON_COMPILE_FLAGS}")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${COMMON_COMPILE_FLAGS} -std=c++11")
-    if (UNIX)
-        set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fvisibility=hidden")
-        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fvisibility=hidden")
-    endif()
-endif()
 
 set (GLMINCLUDES "${CMAKE_SOURCE_DIR}/API-Samples/utils")
 
@@ -322,20 +320,12 @@ add_definitions(-DVULKAN_SAMPLES_BASE_DIR="${CMAKE_CURRENT_SOURCE_DIR}")
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/API-Samples/utils)
 
 option(BUILD_API_SAMPLES "Build API Samples " ON)
-option(BUILD_SAMPLE_LAYERS "Build Sample Layers " ON)
+option(BUILD_SAMPLE_LAYERS "Build Sample Layers " OFF) # Not brought forward after repository split
 
 if((CMAKE_SYSTEM_NAME STREQUAL "Linux") AND (NOT BUILD_WSI_XCB_SUPPORT) AND (NOT BUILD_WSI_WAYLAND_SUPPORT))
     set(BUILD_API_SAMPLES OFF)
     set(BUILD_SAMPLE_LAYERS OFF)
 endif()
-
-# Define macro used for building vkxml generated files
-macro(run_vk_xml_generate dependency output)
-    add_custom_command(OUTPUT ${output}
-    COMMAND ${PYTHON_CMD} ${VS_SCRIPTS_DIR}/lvl_genvk.py -registry ${LVL_SCRIPTS_DIR}/vk.xml ${output}
-    DEPENDS ${LVL_SCRIPTS_DIR}/vk.xml ${LVL_SCRIPTS_DIR}/generator.py ${VS_SCRIPTS_DIR}/${dependency} ${VS_SCRIPTS_DIR}/lvl_genvk.py ${LVL_SCRIPTS_DIR}/reg.py
-    )
-endmacro()
 
 if (BUILD_API_SAMPLES)
     add_subdirectory(API-Samples)
