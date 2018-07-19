@@ -29,10 +29,6 @@ function Exec
     }
 }
 
-if (Test-Path ..\submodules\Vulkan-LoaderAndValidationLayers\loader\$dPath\vulkan-1.dll) {
-    Copy-Item -force ..\submodules\Vulkan-LoaderAndValidationLayers\loader\$dPath\vulkan-1.dll $dPath
-}
-
 echo "Initialize Instance"
 Exec "01-init_instance"
 echo "Enumerate Devices"

@@ -29,27 +29,13 @@ branches:
 
 before_build:
   - "SET PATH=C:\\Python35;C:\\Python35\\Scripts;%PATH%"
-  - echo.
   - echo Starting build for %APPVEYOR_REPO_NAME%
-  - echo Update external sources
-  - if %PLATFORM% == Win32 (if %CONFIGURATION% == Debug (update_external_sources.bat --32 --debug))
-  - if %PLATFORM% == Win32 (if %CONFIGURATION% == Release (update_external_sources.bat --32 --release))
-  - if %PLATFORM% == x64 (if %CONFIGURATION% == Debug (update_external_sources.bat --64 --debug))
-  - if %PLATFORM% == x64 (if %CONFIGURATION% == Release (update_external_sources.bat --64 --release))
-  # Determine the appropriate CMake generator for the current version of Visual Studio
-  - echo Determining VS version
-  - python .\submodules\Vulkan-LoaderAndValidationLayers\scripts\determine_vs_version.py > vsversion.tmp
-  - set /p VS_VERSION=< vsversion.tmp
-  - echo Detected Visual Studio Version as %VS_VERSION%
-  - del /Q /F vsversion.tmp
-  - if %PLATFORM% == Win32 (set GENERATOR="Visual Studio %VS_VERSION%")
-  - if %PLATFORM% == x64 (set GENERATOR="Visual Studio %VS_VERSION% Win64")
-  # Generate build files using CMake for the build step.
-  - echo Generating CMake files for %GENERATOR%
-  - cd %TOP_DIR%
+  # Install dependencies
+  - python scripts/update_deps.py --dir=external --arch=%PLATFORM% --config=%CONFIGURATION% 
+  - echo Generating CMake files for %PLATFORM%
   - mkdir build
   - cd build
-  - cmake -G %GENERATOR% ..
+  - cmake -A %PLATFORM% -C../external/helper.cmake --config %CONFIGURATION% ..
   - echo Building platform=%PLATFORM% configuration=%CONFIGURATION%
 
 platform:
