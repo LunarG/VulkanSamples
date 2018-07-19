@@ -42,6 +42,8 @@ before_install:
       # Install the appropriate Linux packages.
       sudo apt-get -qq update
       sudo apt-get -y install libxkbcommon-dev libwayland-dev libmirclient-dev libxrandr-dev libx11-xcb-dev
+      # Install dependencies
+      python scripts/update_deps.py --dir=external
     fi
   - |
     if [[ "$VULKAN_BUILD_TARGET" == "ANDROID" ]]; then
@@ -66,46 +68,6 @@ before_install:
 script:
   - set -e
   - |
-    if [[ "$VULKAN_BUILD_TARGET" == "LINUX" ]]; then
-      # Get VulkanTools and build DevSim
-      mkdir -p external
-      cd external
-      git clone https://github.com/LunarG/VulkanTools.git
-      cd VulkanTools
-      # Get as little as possible from external sources
-      ./update_external_sources.sh --glslang --no-build
-      # Build as few components as possible
-      cmake -H. -Bbuild -DBUILD_LOADER=NO -DBUILD_TESTS=NO \
-          -DBUILD_LAYERS=NO -DBUILD_DEMOS=NO -DBUILD_VKTRACE=NO \
-          -DBUILD_VKJSON=NO -DBUILD_VIA=NO -DBUILD_ICD=NO
-      make -C build -j $core_count
-      cd ${TRAVIS_BUILD_DIR}
-    fi
-  - |
-    if [[ "$VULKAN_BUILD_TARGET" == "LINUX" ]]; then
-      # Build LVL
-      ./update_external_sources.sh
-      cmake -H. -Bdbuild -DCMAKE_BUILD_TYPE=Debug
-      make -C dbuild -j $core_count
-    fi
-  - |
-    if [[ "$VULKAN_BUILD_TARGET" == "LINUX" ]]; then
-      # Run Tests
-      LVL_BUILD=$TRAVIS_BUILD_DIR/dbuild/submodules/Vulkan-LoaderAndValidationLayers
-      LVL_PROFILES=$TRAVIS_BUILD_DIR/submodules/Vulkan-LoaderAndValidationLayers/tests/device_profiles
-      (cd $LVL_BUILD/tests; ./vkvalidatelayerdoc.sh)
-      export LD_LIBRARY_PATH=$LVL_BUILD/loader:$LD_LIBRARY_PATH
-      export VK_LAYER_PATH=$LVL_BUILD/layers:external/VulkanTools/build/layersvt
-      export VK_ICD_FILENAMES=$LVL_BUILD/icd/VkICD_mock_icd.json
-      $LVL_BUILD/tests/vk_layer_validation_tests
-      VK_DEVSIM_FILENAME=$LVL_PROFILES/adreno_540.json $LVL_BUILD/tests/vk_layer_validation_tests --devsim
-      VK_DEVSIM_FILENAME=$LVL_PROFILES/amd_radv_polaris10.json $LVL_BUILD/tests/vk_layer_validation_tests --devsim
-      VK_DEVSIM_FILENAME=$LVL_PROFILES/geforce_940m.json $LVL_BUILD/tests/vk_layer_validation_tests --devsim
-      VK_DEVSIM_FILENAME=$LVL_PROFILES/intel_hd_graphics_520_skylake_gt2.json $LVL_BUILD/tests/vk_layer_validation_tests --devsim
-      VK_DEVSIM_FILENAME=$LVL_PROFILES/mali-t760.json $LVL_BUILD/tests/vk_layer_validation_tests --devsim
-      VK_DEVSIM_FILENAME=$LVL_PROFILES/nvidia_tegra_x1.json $LVL_BUILD/tests/vk_layer_validation_tests --devsim
-      VK_DEVSIM_FILENAME=$LVL_PROFILES/powervr_rogue_ge8300.json $LVL_BUILD/tests/vk_layer_validation_tests --devsim
-    fi
   - |
     if [[ "$VULKAN_BUILD_TARGET" == "ANDROID" ]]; then
       pushd build-android
@@ -114,13 +76,21 @@ script:
       USE_CCACHE=1 NDK_CCACHE=ccache ndk-build APP_ABI=$ANDROID_ABI -j $core_count
       popd
     fi
+    if [[ "$VULKAN_BUILD_TARGET" == "LINUX" ]]; then
+      # Build VulkanSamples
+      mkdir build
+      cd build
+      cmake -DCMAKE_BUILD_TYPE=Debug -C../external/helper.cmake ..
+      make -j $core_count
+      cd ..
+    fi
   - |
     if [[ "$CHECK_FORMAT" == "ON" ]]; then
       if [[ "$TRAVIS_PULL_REQUEST" != "false" ]]; then
         # Run the clang format check only for pull request builds because the
         # master branch is needed to do the git diff.
         echo "Checking clang-format between TRAVIS_BRANCH=$TRAVIS_BRANCH and TRAVIS_PULL_REQUEST_BRANCH=$TRAVIS_PULL_REQUEST_BRANCH"
-        ./submodules/Vulkan-LoaderAndValidationLayers/scripts/check_code_format.sh
+        ./scripts/check_code_format.sh
       else
         echo "Skipping clang-format check since this is not a pull request."
       fi
@@ -134,5 +104,6 @@ notifications:
       - cnorthrop@google.com
       - tobine@google.com
       - chrisforbes@google.com
+      - tony@lunarg.com
     on_success: change
     on_failure: always
