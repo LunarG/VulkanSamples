@@ -362,7 +362,7 @@ following.
 - Build shaderc source code inside NDK
 ```java
 $ cd ${ndk_root}/sources/third_party/shaderc
-$ ../../../ndk-build NDK_PROJECT_PATH=. APP_BUILD_SCRIPT=Android.mk APP_STL:=gnustl_static APP_ABI=all NDK_TOOLCHAIN_VERSION:=clang libshaderc_combined -j16
+$ ../../../ndk-build NDK_PROJECT_PATH=. APP_BUILD_SCRIPT=Android.mk APP_STL:=c++_static APP_ABI=all NDK_TOOLCHAIN_VERSION:=clang libshaderc_combined -j16
 ```
 - Generate Android Studio Projects
 ```java
@@ -370,3 +370,8 @@ $ cd YOUR_DEV_DIRECTORY/VulkanSamples/API-Samples
 $ cmake -DANDROID=ON
 ```
 - Import VulkanSamples/API-Samples/android/build.gradle into Android Studio 2.3.0+.
+- Or if building from a terminal:
+```java
+$ cd android
+$ ./gradlew build
+```
