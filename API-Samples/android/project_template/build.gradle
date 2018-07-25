@@ -29,7 +29,7 @@ if(!ndkDir || ndkDir.empty) {
 }
 
 
-def stlType = 'gnustl_static'
+def stlType = 'c++_static'
 
 android {
     compileSdkVersion  24
