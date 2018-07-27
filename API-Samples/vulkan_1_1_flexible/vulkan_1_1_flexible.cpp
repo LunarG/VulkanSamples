@@ -32,6 +32,8 @@ int sample_main(int argc, char *argv[]) {
     struct sample_info info = {};
     init_global_layer_properties(info);
 
+// Android build not at 1.1 yet
+#ifndef ANDROID
     /* VULKAN_KEY_START */
 
     // Keep track of the major/minor version we can actually use
@@ -138,7 +140,7 @@ int sample_main(int argc, char *argv[]) {
     if (VK_NULL_HANDLE == instance) {
         vkDestroyInstance(instance, NULL);
     }
-
+#endif
     /* VULKAN_KEY_END */
 
     return 0;
