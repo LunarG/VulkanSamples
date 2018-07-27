@@ -97,3 +97,5 @@ add_executable(Hologram ${sources})
 target_compile_definitions(Hologram ${definitions})
 target_include_directories(Hologram ${includes})
 target_link_libraries(Hologram ${libraries})
+
+install(TARGETS Hologram RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
