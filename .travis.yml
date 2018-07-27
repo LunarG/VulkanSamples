@@ -10,13 +10,13 @@ matrix:
   fast_finish: true
   include:
     # Android build.
-    - os: linux
-      compiler: gcc
-      env: VULKAN_BUILD_TARGET=ANDROID ANDROID_TARGET=android-23 ANDROID_ABI=armeabi-v7a
-    # Android 64-bit build.
-    - os: linux
-      compiler: gcc
-      env: VULKAN_BUILD_TARGET=ANDROID ANDROID_TARGET=android-23 ANDROID_ABI=arm64-v8a
+    - language: android
+      android:
+        components:
+          - build-tools-26.0.2
+          - android-26
+          - extra
+      env: VULKAN_BUILD_TARGET=ANDROID ANDROID_ABI=armeabi-v7a
     # Linux GCC debug build.
     - os: linux
       compiler: gcc
@@ -54,6 +54,10 @@ before_install:
       export ANDROID_NDK_HOME=`pwd`/android-ndk-r15c
       export JAVA_HOME="/usr/lib/jvm/java-8-oracle"
       export PATH="$ANDROID_NDK_HOME:$PATH"
+      pushd android-ndk-r15c
+      yes | sdkmanager --update
+      yes | sdkmanager --licenses
+      popd
     fi
   - |
     if [[ "$CHECK_FORMAT" == "ON" && "$TRAVIS_PULL_REQUEST" != "false" ]]; then
@@ -70,11 +74,13 @@ script:
   - |
   - |
     if [[ "$VULKAN_BUILD_TARGET" == "ANDROID" ]]; then
-      pushd build-android
-      ./update_external_sources_android.sh --abi $ANDROID_ABI --no-build
-      ./android-generate.sh
-      USE_CCACHE=1 NDK_CCACHE=ccache ndk-build APP_ABI=$ANDROID_ABI -j $core_count
+      pushd android-ndk-r15c/sources/third_party/shaderc
+      ../../../ndk-build NDK_PROJECT_PATH=. APP_BUILD_SCRIPT=Android.mk APP_STL:=c++_static APP_ABI=$ANDROID_ABI NDK_TOOLCHAIN_VERSION:=clang libshaderc_combined -j16
       popd
+      cd API-Samples
+      cmake -DANDROID=ON -DABI_NAME=$ANDROID_ABI
+      cd android
+      ./gradlew build
     fi
     if [[ "$VULKAN_BUILD_TARGET" == "LINUX" ]]; then
       # Build VulkanSamples
