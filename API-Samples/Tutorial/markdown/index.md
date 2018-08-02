@@ -34,7 +34,6 @@ code from the progression.
 The final section in the tutorial produces a program that displays this:
 
 ![Draw Cube](../images/drawcube.png)
-<footer>&copy; Copyright 2016-2017 LunarG, Inc</footer>
 
 ## Change Log
 
@@ -42,3 +41,11 @@ The final section in the tutorial produces a program that displays this:
 * 26 Oct 2016 - Image layout transitions are now specified
 in render pass and subpass definitions, instead of using memory barriers
 * 26 Oct 2017 - Added new page on Vulkan 1.1
+* 01 Aug 2018 - Added "Next" link to Intro page from Index
+
+<table border="1" width="100%">
+    <tr>
+        <td align="center">Next: <a href="00-intro.html" title="Next">Introduction</a></td>
+    </tr>
+</table>
+<footer>&copy; Copyright 2016-2018 LunarG, Inc</footer>
