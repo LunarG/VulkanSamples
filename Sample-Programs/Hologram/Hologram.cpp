@@ -218,10 +218,10 @@ void Hologram::create_shader_modules() {
 #ifdef DEBUG
     // If debugging, enable MoltenVK debug mode to enable debugging capabilities,
     // including logging shader conversions from SPIR-V to Metal Shading Language.
-	// Be aware, changing the value of some of the members of MVKConfiguration must be
-	// performed before the device is created, in order for the change to take affect.
+    // Be aware, changing the value of some of the members of MVKConfiguration must be
+    // performed before the device is created, in order for the change to take affect.
     MVKConfiguration mvkConfig;
-	VkInstance vkInst = shell_->context().instance;
+    VkInstance vkInst = shell_->context().instance;
     vkGetMoltenVKConfigurationMVK(vkInst, &mvkConfig);
     mvkConfig.debugMode = true;
     vkSetMoltenVKConfigurationMVK(vkInst, &mvkConfig);
