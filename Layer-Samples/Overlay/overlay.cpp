@@ -32,6 +32,7 @@
 #include "vk_layer_data.h"
 #include "vk_layer_table.h"
 #include "vk_layer_extension_utils.h"
+#include <ctime>
 
 #define STB_TRUETYPE_IMPLEMENTATION
 //#define STBTT_STATIC
@@ -207,10 +208,46 @@ static uint32_t choose_memory_type(VkPhysicalDevice gpu, uint32_t typeBits, VkMe
 
 static int fill_vertex_buffer(layer_data *data, vertex *vertices, int index) {
     char str[1024];
-    sprintf(str,
-            "Vulkan Overlay Example\nWSI Image Index: %d\nFrame: "
-            "%d\nCmdBuffers: %d",
-            index, data->frame++, data->cmdBuffersThisFrame);
+#define MAXSAMPLES 100
+    static int tick_index = 0;
+    static int tick_sum = 0;
+    static int tick_list[MAXSAMPLES] = { 0 };
+    static unsigned max_fps = 0;
+    static unsigned min_fps = UINT_MAX;
+    static clock_t prev = clock();
+    clock_t curr = clock();
+    float time_between_frames = float(curr - prev);
+    prev = curr;
+    unsigned fps = (unsigned)((1 / time_between_frames) * 1000);
+    tick_sum -= tick_list[tick_index];
+    tick_sum += fps;
+    tick_list[tick_index] = fps;
+    if (++tick_index >= MAXSAMPLES)
+        tick_index = 0;
+
+    if (data->frame > MAXSAMPLES)
+    {
+        if (fps > max_fps) max_fps = fps;
+        else if (fps < min_fps) min_fps = fps;
+        sprintf(str,
+            "Vulkan Overlay Example\n"
+            "WSI Image Index: %d\n"
+            "Frame: %d\n"
+            "CmdBuffers: %d\n"
+            "Time: %d ms\nFPS: %d Min: %u Max: %u",
+            index, data->frame++, data->cmdBuffersThisFrame, (int)(time_between_frames), tick_sum / MAXSAMPLES, min_fps, max_fps);
+    }
+    else
+    {
+        sprintf(str,
+            "Vulkan Overlay Example\n"
+            "WSI Image Index: %d\n"
+            "Frame: %d\n"
+            "CmdBuffers: %d\n"
+            "Time: %d ms\nFPS avg: %d",
+            index, data->frame++, data->cmdBuffersThisFrame, (int)(time_between_frames), tick_sum / MAXSAMPLES);
+    }
+
     float x = 0;
     float y = 16;
 
