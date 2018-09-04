@@ -245,7 +245,7 @@ Now we can submit the command buffer:
 
     const VkCommandBuffer cmd_bufs[] = {info.cmd};
     VkPipelineStageFlags pipe_stage_flags =
-        VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
+        VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
     VkSubmitInfo submit_info[1] = {};
     submit_info[0].pNext = NULL;
     submit_info[0].sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
@@ -258,14 +258,11 @@ Now we can submit the command buffer:
     submit_info[0].pSignalSemaphores = NULL;
     res = vkQueueSubmit(info.queue, 1, submit_info, drawFence);
 
-The `VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT` is the final stage in the pipeline where the commands
-finish execution.
+The `VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT` is the stage where the final color
+values are output from the pipeline.  We use the `imageAcquiredSemaphore` to wait
+at the color attachment output stage until the swapchain image is available before 
+writing colors to it.
 
-The `imageAcquiredSemaphore` is used to wait until the image is ready before drawing,
-as explained at the top of this section.
-This makes the driver wait on the `imageAcquiredSemaphore` to know that the swapchain
-image is available.
-Then it submits the commands to the GPU.
 When the GPU is done executing the commands, it signals the fence `drawFence` to
 indicate that the drawing is complete.
 
