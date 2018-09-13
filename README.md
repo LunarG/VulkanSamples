@@ -34,7 +34,6 @@ Vulkan Samples
       the code from previous samples to get to the point to show something new.
       The drawtexturedcube sample takes all of the drawcube code and adds texturing.
 
-```
 ## Contributing
   Refer to the README.contrib file for specific info regarding contributing to
   the Vulkan samples creation effort.
