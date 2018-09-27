@@ -119,9 +119,6 @@ endif()
 
 add_definitions(-DAPI_NAME="${API_NAME}")
 
-# Needed to make structure definitions match with glslang libraries
-add_definitions(-DNV_EXTENSIONS -DAMD_EXTENSIONS)
-
 if (WIN32)
     if(CUSTOM_GLSLANG_BIN_ROOT)
         set(GSLANG_FINAL_BINARY_PATH ${GLSLANG_BINARY_ROOT}/${BUILDTGT_DIR})

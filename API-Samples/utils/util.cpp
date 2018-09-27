@@ -400,15 +400,6 @@ void init_resources(TBuiltInResource &Resources) {
     Resources.maxCullDistances = 8;
     Resources.maxCombinedClipAndCullDistances = 8;
     Resources.maxSamples = 4;
-    Resources.maxMeshOutputVerticesNV = 256;
-    Resources.maxMeshOutputPrimitivesNV = 512;
-    Resources.maxMeshWorkGroupSizeX_NV = 32;
-    Resources.maxMeshWorkGroupSizeY_NV = 1;
-    Resources.maxMeshWorkGroupSizeZ_NV = 1;
-    Resources.maxTaskWorkGroupSizeX_NV = 32;
-    Resources.maxTaskWorkGroupSizeY_NV = 1;
-    Resources.maxTaskWorkGroupSizeZ_NV = 1;
-    Resources.maxMeshViewCountNV = 4;
     Resources.limits.nonInductiveForLoops = 1;
     Resources.limits.whileLoops = 1;
     Resources.limits.doWhileLoops = 1;
