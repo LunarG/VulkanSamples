@@ -78,12 +78,6 @@ struct ShaderVariant {
 };
 
 int sample_main(int argc, char *argv[]) {
-#if !defined(VK_EXT_validation_cache)
-    fprintf(stderr, "%s not defined at build time.\n", VK_EXT_VALIDATION_CACHE_EXTENSION_NAME);
-    fprintf(stderr, "To build this sample, update your Vulkan SDK to 1.0.61 or later.\n");
-    return 0;
-#endif
-
     VkResult U_ASSERT_ONLY res;
     struct sample_info info = {};
     char sample_title[] = "Validation Cache";
@@ -91,6 +85,14 @@ int sample_main(int argc, char *argv[]) {
 
     process_command_line_args(info, argc, argv);
     init_global_layer_properties(info);
+// Android headers don't have validation cache yet
+#ifndef ANDROID
+#if !defined(VK_EXT_validation_cache)
+    fprintf(stderr, "%s not defined at build time.\n", VK_EXT_VALIDATION_CACHE_EXTENSION_NAME);
+    fprintf(stderr, "To build this sample, update your Vulkan SDK to 1.0.61 or later.\n");
+    return 0;
+#endif
+
     init_instance_extension_names(info);
     init_device_extension_names(info);
     // The VK_EXT_validation_cache extension is implemented by the validation layers, so
@@ -435,5 +437,6 @@ int sample_main(int argc, char *argv[]) {
     destroy_device(info);
     destroy_window(info);
     destroy_instance(info);
+#endif
     return 0;
 }

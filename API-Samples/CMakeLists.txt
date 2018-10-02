@@ -270,11 +270,11 @@ set (S_TARGETS
     spirv_assembly spirv_specialization memory_barriers validation_cache vulkan_1_1_flexible)
 sampleWithSingleFile()
 
+if (NOT ANDROID)
 foreach (sample ${S_TARGETS})
     install(TARGETS ${sample} RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
 endforeach(sample)
 
-if (NOT ANDROID)
     add_subdirectory(utils)
 endif()
 

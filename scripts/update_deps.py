@@ -107,7 +107,7 @@ $ cmake --build .
 JSON File Schema
 ----------------
 
-There's no formal schema for the "known-good" JSON file, but here is 
+There's no formal schema for the "known-good" JSON file, but here is
 a description of its elements.  All elements are required except those
 marked as optional.  Please see the "known_good.json" file for
 examples of all of these elements.
@@ -190,6 +190,12 @@ each of these CI systems sets an environment variable with its own
 name to "true".  Note that this could also be (ab)used to control
 the processing of the repo with any environment variable.  The default
 is an empty list, which means that the repo is always processed.
+
+- build_step (optional)
+
+Specifies if the dependent repository should be built or not. This can
+have a value of 'build' or 'skip'. The dependent repositories are
+built by default.
 
 Note
 ----
@@ -281,6 +287,7 @@ class GoodRepo(object):
         self.cmake_options = json['cmake_options'] if (
             'cmake_options' in json) else []
         self.ci_only = json['ci_only'] if ('ci_only' in json) else []
+        self.build_step = json['build_step'] if ('build_step' in json) else 'build'
         # Absolute paths for a repo's directories
         dir_top = os.path.abspath(args.dir)
         self.repo_dir = os.path.join(dir_top, self.sub_dir)
@@ -564,7 +571,7 @@ def main():
         repo.Checkout()
 
         # Build the repository
-        if args.do_build:
+        if args.do_build and repo.build_step == 'build':
             repo.Build(repos)
 
     # Need to restore original cwd in order for CreateHelper to find json file

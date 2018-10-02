@@ -38,6 +38,8 @@ samples utility functions
 #include <unordered_map>
 
 // Header files.
+#include "string.h"
+#include "errno.h"
 #include <android_native_app_glue.h>
 #include "shaderc/shaderc.hpp"
 // Static variable that keeps ANativeWindow and asset manager instances.
