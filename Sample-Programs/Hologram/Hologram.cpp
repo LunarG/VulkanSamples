@@ -222,9 +222,9 @@ void Hologram::create_shader_modules() {
     // performed before the device is created, in order for the change to take affect.
     MVKConfiguration mvkConfig;
     VkInstance vkInst = shell_->context().instance;
-    vkGetMoltenVKConfigurationMVK(vkInst, &mvkConfig);
+    vkGetMoltenVKConfigurationMVK(VK_MVK_MOLTENVK_SPEC_VERSION, vkInst, &mvkConfig);
     mvkConfig.debugMode = true;
-    vkSetMoltenVKConfigurationMVK(vkInst, &mvkConfig);
+    vkSetMoltenVKConfigurationMVK(VK_MVK_MOLTENVK_SPEC_VERSION, vkInst, &mvkConfig);
 #endif
 
     char *spvLog;
