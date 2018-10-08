@@ -33,11 +33,10 @@ def stlType = 'c++_static'
 
 android {
     compileSdkVersion  26
-    buildToolsVersion '28.0.2'
 
     defaultConfig {
         applicationId '@PACKAGE_NAME@'
-        minSdkVersion    22
+        minSdkVersion    24 // Official vulkan support starts in version 24
         targetSdkVersion 26
         versionCode  1
         versionName '0.0.1'
