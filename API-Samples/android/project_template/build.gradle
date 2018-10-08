@@ -1,4 +1,4 @@
-// Copyright 2016 Google Inc. All rights reserved.
+// Copyright 2016, 2018 Google Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -32,13 +32,12 @@ if(!ndkDir || ndkDir.empty) {
 def stlType = 'c++_static'
 
 android {
-    compileSdkVersion  24
-    buildToolsVersion '25.0.0'
+    compileSdkVersion  26
 
     defaultConfig {
         applicationId '@PACKAGE_NAME@'
-        minSdkVersion    22
-        targetSdkVersion 24
+        minSdkVersion    24 // Official vulkan support starts in version 24
+        targetSdkVersion 26
         versionCode  1
         versionName '0.0.1'
         ndk {
@@ -69,5 +68,5 @@ android {
 }
 
 dependencies {
-    compile fileTree(dir: 'libs', include: ['*.jar'])
+    implementation fileTree(dir: 'libs', include: ['*.jar'])
 }
