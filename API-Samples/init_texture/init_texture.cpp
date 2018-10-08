@@ -66,10 +66,14 @@ int sample_main(int argc, char *argv[]) {
     struct texture_object texObj;
     std::string filename = get_base_data_dir();
     filename.append("lunarg.ppm");
+
+#ifndef __ANDROID__
     struct stat statstruct;
     if (stat(filename.c_str(), &statstruct)){
         filename = "../../API-Samples/data/lunarg.ppm";
     }
+#endif
+
     if (!read_ppm(filename.c_str(), texObj.tex_width, texObj.tex_height, 0, NULL)) {
         std::cout << "Could not read texture file lunarg.ppm\n";
         exit(-1);
