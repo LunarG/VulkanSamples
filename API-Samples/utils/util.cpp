@@ -484,7 +484,7 @@ bool GLSLtoSPV(const VkShaderStageFlagBits shader_type, const char *pshader, std
     glslang::TShader shader(stage);
     glslang::TProgram program;
     const char *shaderStrings[1];
-    TBuiltInResource Resources;
+    TBuiltInResource Resources = {};
     init_resources(Resources);
 
     // Enable SPIR-V and Vulkan rules when parsing GLSL
