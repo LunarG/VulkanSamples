@@ -38,12 +38,17 @@ cache: ccache
 before_install:
   - set -e
   - |
+    if [[ "$TRAVIS_EVENT_TYPE" == "cron" ]]; then
+        # Add an option to update dependencies from master
+        UPDATE_DEPS_EXTRA_OPTIONS="--ref=master"
+    fi
+  - |
     if [[ "$VULKAN_BUILD_TARGET" == "LINUX" ]]; then
       # Install the appropriate Linux packages.
       sudo apt-get -qq update
       sudo apt-get -y install libxkbcommon-dev libwayland-dev libmirclient-dev libxrandr-dev libx11-xcb-dev
       # Install dependencies
-      python scripts/update_deps.py --dir=external
+      python scripts/update_deps.py --dir=external $UPDATE_DEPS_EXTRA_OPTIONS
     fi
   - |
     if [[ "$VULKAN_BUILD_TARGET" == "ANDROID" ]]; then
