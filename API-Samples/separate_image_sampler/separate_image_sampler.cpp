@@ -304,7 +304,11 @@ int sample_main(int argc, char *argv[]) {
     vkDestroySampler(info.device, separateSampler, NULL);
     vkDestroyImageView(info.device, info.textures[0].view, NULL);
     vkDestroyImage(info.device, info.textures[0].image, NULL);
-    vkFreeMemory(info.device, info.textures[0].mem, NULL);
+    vkFreeMemory(info.device, info.textures[0].image_memory, NULL);
+    if (info.textures[0].needs_staging) {
+        vkDestroyBuffer(info.device, info.textures[0].buffer, NULL);
+        vkFreeMemory(info.device, info.textures[0].buffer_memory, NULL);
+    }
 
     // instead of destroy_descriptor_pool(info);
     vkDestroyDescriptorPool(info.device, descriptor_pool[0], NULL);

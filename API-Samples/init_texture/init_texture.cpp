@@ -69,7 +69,7 @@ int sample_main(int argc, char *argv[]) {
 
 #ifndef __ANDROID__
     struct stat statstruct;
-    if (stat(filename.c_str(), &statstruct)){
+    if (stat(filename.c_str(), &statstruct)) {
         filename = "../../API-Samples/data/lunarg.ppm";
     }
 #endif
@@ -83,8 +83,8 @@ int sample_main(int argc, char *argv[]) {
     vkGetPhysicalDeviceFormatProperties(info.gpus[0], VK_FORMAT_R8G8B8A8_UNORM, &formatProps);
 
     /* See if we can use a linear tiled image for a texture, if not, we will
-     * need a staging image for the texture data */
-    bool needStaging = (!(formatProps.linearTilingFeatures & VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT)) ? true : false;
+     * need a staging buffer for the texture data */
+    texObj.needs_staging = (!(formatProps.linearTilingFeatures & VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT));
 
     VkImageCreateInfo image_create_info = {};
     image_create_info.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
@@ -97,9 +97,12 @@ int sample_main(int argc, char *argv[]) {
     image_create_info.mipLevels = 1;
     image_create_info.arrayLayers = 1;
     image_create_info.samples = NUM_SAMPLES;
-    image_create_info.tiling = VK_IMAGE_TILING_LINEAR;
-    image_create_info.initialLayout = VK_IMAGE_LAYOUT_PREINITIALIZED;
-    image_create_info.usage = needStaging ? VK_IMAGE_USAGE_TRANSFER_SRC_BIT : VK_IMAGE_USAGE_SAMPLED_BIT;
+    image_create_info.tiling = texObj.needs_staging ? VK_IMAGE_TILING_OPTIMAL : VK_IMAGE_TILING_LINEAR;
+    image_create_info.initialLayout = texObj.needs_staging ? VK_IMAGE_LAYOUT_UNDEFINED : VK_IMAGE_LAYOUT_PREINITIALIZED;
+    image_create_info.usage = VK_IMAGE_USAGE_SAMPLED_BIT;
+    if (texObj.needs_staging) {
+        image_create_info.usage |= VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+    }
     image_create_info.queueFamilyIndexCount = 0;
     image_create_info.pQueueFamilyIndices = NULL;
     image_create_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
@@ -111,33 +114,25 @@ int sample_main(int argc, char *argv[]) {
     mem_alloc.allocationSize = 0;
     mem_alloc.memoryTypeIndex = 0;
 
-    VkImage mappableImage;
-    VkDeviceMemory mappableMemory;
-
     VkMemoryRequirements mem_reqs;
 
-    /* Create a mappable image.  It will be the texture if linear images are ok
-     * to be textures or it will be the staging image if they are not.
-     */
-    res = vkCreateImage(info.device, &image_create_info, NULL, &mappableImage);
+    res = vkCreateImage(info.device, &image_create_info, NULL, &texObj.image);
     assert(res == VK_SUCCESS);
 
-    vkGetImageMemoryRequirements(info.device, mappableImage, &mem_reqs);
+    vkGetImageMemoryRequirements(info.device, texObj.image, &mem_reqs);
 
     mem_alloc.allocationSize = mem_reqs.size;
 
-    /* Find the memory type that is host mappable */
-    pass = memory_type_from_properties(info, mem_reqs.memoryTypeBits,
-                                       VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-                                       &mem_alloc.memoryTypeIndex);
+    VkFlags requirements = texObj.needs_staging ? 0 : (VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+    pass = memory_type_from_properties(info, mem_reqs.memoryTypeBits, requirements, &mem_alloc.memoryTypeIndex);
     assert(pass && "No mappable, coherent memory");
 
     /* allocate memory */
-    res = vkAllocateMemory(info.device, &mem_alloc, NULL, &(mappableMemory));
+    res = vkAllocateMemory(info.device, &mem_alloc, NULL, &(texObj.image_memory));
     assert(res == VK_SUCCESS);
 
     /* bind memory */
-    res = vkBindImageMemory(info.device, mappableImage, mappableMemory, 0);
+    res = vkBindImageMemory(info.device, texObj.image, texObj.image_memory, 0);
     assert(res == VK_SUCCESS);
 
     VkImageSubresource subres = {};
@@ -145,86 +140,93 @@ int sample_main(int argc, char *argv[]) {
     subres.mipLevel = 0;
     subres.arrayLayer = 0;
 
-    VkSubresourceLayout layout;
+    VkSubresourceLayout layout = {};
     void *data;
 
-    /* Get the subresource layout so we know what the row pitch is */
-    vkGetImageSubresourceLayout(info.device, mappableImage, &subres, &layout);
+    if (texObj.needs_staging) {
+        /* Need a staging buffer to map and copy texture into */
 
-    res = vkMapMemory(info.device, mappableMemory, 0, mem_reqs.size, 0, &data);
+        VkBufferCreateInfo buffer_create_info = {};
+        buffer_create_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+        buffer_create_info.pNext = NULL;
+        buffer_create_info.flags = 0;
+        buffer_create_info.size = texObj.tex_width * texObj.tex_height * 4;
+        buffer_create_info.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
+        buffer_create_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+        buffer_create_info.queueFamilyIndexCount = 0;
+        buffer_create_info.pQueueFamilyIndices = NULL;
+        res = vkCreateBuffer(info.device, &buffer_create_info, NULL, &texObj.buffer);
+        assert(res == VK_SUCCESS);
+
+        VkMemoryAllocateInfo buf_mem_alloc = {};
+        buf_mem_alloc.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+        buf_mem_alloc.pNext = NULL;
+        buf_mem_alloc.allocationSize = 0;
+        buf_mem_alloc.memoryTypeIndex = 0;
+
+        vkGetBufferMemoryRequirements(info.device, texObj.buffer, &mem_reqs);
+        buf_mem_alloc.allocationSize = mem_reqs.size;
+
+        requirements = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
+        pass = memory_type_from_properties(info, mem_reqs.memoryTypeBits, requirements, &buf_mem_alloc.memoryTypeIndex);
+        assert(pass && "No mappable, coherent memory");
+
+        /* allocate memory */
+        res = vkAllocateMemory(info.device, &buf_mem_alloc, NULL, &(texObj.buffer_memory));
+        assert(res == VK_SUCCESS);
+
+        /* bind memory */
+        res = vkBindBufferMemory(info.device, texObj.buffer, texObj.buffer_memory, 0);
+        assert(res == VK_SUCCESS);
+    } else {
+        texObj.buffer = VK_NULL_HANDLE;
+        texObj.buffer_memory = VK_NULL_HANDLE;
+
+        /* Get the subresource layout so we know what the row pitch is */
+        vkGetImageSubresourceLayout(info.device, texObj.image, &subres, &layout);
+    }
+
+    VkDeviceMemory mapped_memory = texObj.needs_staging ? texObj.buffer_memory : texObj.image_memory;
+    res = vkMapMemory(info.device, mapped_memory, 0, mem_reqs.size, 0, &data);
     assert(res == VK_SUCCESS);
+
     /* Read the ppm file into the mappable image's memory */
-    if (!read_ppm(filename.c_str(), texObj.tex_width, texObj.tex_height, layout.rowPitch, (unsigned char *)data)) {
+    if (!read_ppm(filename.c_str(), texObj.tex_width, texObj.tex_height,
+                  texObj.needs_staging ? (texObj.tex_width * 4) : layout.rowPitch, (unsigned char *)data)) {
         std::cout << "Could not load texture file lunarg.ppm\n";
         exit(-1);
     }
 
-    vkUnmapMemory(info.device, mappableMemory);
+    vkUnmapMemory(info.device, mapped_memory);
 
-    if (!needStaging) {
+    if (!texObj.needs_staging) {
         /* If we can use the linear tiled image as a texture, just do it */
-        texObj.image = mappableImage;
-        texObj.mem = mappableMemory;
         texObj.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
         set_image_layout(info, texObj.image, VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_PREINITIALIZED, texObj.imageLayout,
                          VK_PIPELINE_STAGE_HOST_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
     } else {
-        /* The mappable image cannot be our texture, so create an optimally
-         * tiled image and blit to it */
-        image_create_info.tiling = VK_IMAGE_TILING_OPTIMAL;
-        image_create_info.usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
-        image_create_info.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-
-        res = vkCreateImage(info.device, &image_create_info, NULL, &texObj.image);
-        assert(res == VK_SUCCESS);
-
-        vkGetImageMemoryRequirements(info.device, texObj.image, &mem_reqs);
-
-        mem_alloc.allocationSize = mem_reqs.size;
-
-        /* Find memory type - don't specify any mapping requirements */
-        pass = memory_type_from_properties(info, mem_reqs.memoryTypeBits, 0, &mem_alloc.memoryTypeIndex);
-        assert(pass);
-
-        /* allocate memory */
-        res = vkAllocateMemory(info.device, &mem_alloc, NULL, &texObj.mem);
-        assert(res == VK_SUCCESS);
-
-        /* bind memory */
-        res = vkBindImageMemory(info.device, texObj.image, texObj.mem, 0);
-        assert(res == VK_SUCCESS);
-
-        /* Since we're going to blit from the mappable image, set its layout to
-         * SOURCE_OPTIMAL */
-        /* Side effect is that this will create info.cmd */
-        set_image_layout(info, mappableImage, VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_PREINITIALIZED,
-                         VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, VK_PIPELINE_STAGE_HOST_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT);
         /* Since we're going to blit to the texture image, set its layout to
          * DESTINATION_OPTIMAL */
         set_image_layout(info, texObj.image, VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_UNDEFINED,
                          VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT);
-        VkImageCopy copy_region;
-        copy_region.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-        copy_region.srcSubresource.mipLevel = 0;
-        copy_region.srcSubresource.baseArrayLayer = 0;
-        copy_region.srcSubresource.layerCount = 1;
-        copy_region.srcOffset.x = 0;
-        copy_region.srcOffset.y = 0;
-        copy_region.srcOffset.z = 0;
-        copy_region.dstSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-        copy_region.dstSubresource.mipLevel = 0;
-        copy_region.dstSubresource.baseArrayLayer = 0;
-        copy_region.dstSubresource.layerCount = 1;
-        copy_region.dstOffset.x = 0;
-        copy_region.dstOffset.y = 0;
-        copy_region.dstOffset.z = 0;
-        copy_region.extent.width = texObj.tex_width;
-        copy_region.extent.height = texObj.tex_height;
-        copy_region.extent.depth = 1;
+
+        VkBufferImageCopy copy_region;
+        copy_region.bufferOffset = 0;
+        copy_region.bufferRowLength = texObj.tex_width;
+        copy_region.bufferImageHeight = texObj.tex_height;
+        copy_region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+        copy_region.imageSubresource.mipLevel = 0;
+        copy_region.imageSubresource.baseArrayLayer = 0;
+        copy_region.imageSubresource.layerCount = 1;
+        copy_region.imageOffset.x = 0;
+        copy_region.imageOffset.y = 0;
+        copy_region.imageOffset.z = 0;
+        copy_region.imageExtent.width = texObj.tex_width;
+        copy_region.imageExtent.height = texObj.tex_height;
+        copy_region.imageExtent.depth = 1;
 
         /* Put the copy command into the command buffer */
-        vkCmdCopyImage(info.cmd, mappableImage, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, texObj.image,
-                       VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &copy_region);
+        vkCmdCopyBufferToImage(info.cmd, texObj.buffer, texObj.image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &copy_region);
 
         /* Set the layout for the texture image from DESTINATION_OPTIMAL to
          * SHADER_READ_ONLY */
@@ -284,12 +286,11 @@ int sample_main(int argc, char *argv[]) {
     vkDestroySampler(info.device, texObj.sampler, NULL);
     vkDestroyImageView(info.device, texObj.view, NULL);
     vkDestroyImage(info.device, texObj.image, NULL);
-    vkFreeMemory(info.device, texObj.mem, NULL);
-    if (needStaging) {
-        /* Release the resources for the staging image */
-        vkFreeMemory(info.device, mappableMemory, NULL);
-        vkDestroyImage(info.device, mappableImage, NULL);
-    }
+    vkFreeMemory(info.device, texObj.image_memory, NULL);
+    /* Release the resources for the staging image */
+    vkFreeMemory(info.device, texObj.buffer_memory, NULL);
+    vkDestroyBuffer(info.device, texObj.buffer, NULL);
+
     destroy_command_buffer(info);
     destroy_command_pool(info);
     destroy_device(info);
