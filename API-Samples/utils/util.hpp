@@ -108,7 +108,12 @@ struct texture_object {
     VkImage image;
     VkImageLayout imageLayout;
 
-    VkDeviceMemory mem;
+    bool needs_staging;
+    VkBuffer buffer;
+    VkDeviceSize buffer_size;
+
+    VkDeviceMemory image_memory;
+    VkDeviceMemory buffer_memory;
     VkImageView view;
     int32_t tex_width, tex_height;
 };
@@ -212,8 +217,6 @@ struct sample_info {
     struct {
         VkDescriptorImageInfo image_info;
     } texture_data;
-    VkDeviceMemory stagingMemory;
-    VkImage stagingImage;
 
     struct {
         VkBuffer buf;
