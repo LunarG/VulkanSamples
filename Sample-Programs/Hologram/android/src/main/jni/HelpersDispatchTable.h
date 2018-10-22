@@ -189,12 +189,6 @@ extern PFN_vkCreateWaylandSurfaceKHR CreateWaylandSurfaceKHR;
 extern PFN_vkGetPhysicalDeviceWaylandPresentationSupportKHR GetPhysicalDeviceWaylandPresentationSupportKHR;
 #endif
 
-#ifdef VK_USE_PLATFORM_MIR_KHR
-// VK_KHR_mir_surface
-extern PFN_vkCreateMirSurfaceKHR CreateMirSurfaceKHR;
-extern PFN_vkGetPhysicalDeviceMirPresentationSupportKHR GetPhysicalDeviceMirPresentationSupportKHR;
-#endif
-
 #ifdef VK_USE_PLATFORM_ANDROID_KHR
 // VK_KHR_android_surface
 extern PFN_vkCreateAndroidSurfaceKHR CreateAndroidSurfaceKHR;

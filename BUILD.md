@@ -275,7 +275,7 @@ repository to other Linux distributions.
 #### Required Package List
 
     sudo apt-get install git cmake build-essential libx11-xcb-dev \
-        libxkbcommon-dev libmirclient-dev libwayland-dev libxrandr-dev
+        libxkbcommon-dev libwayland-dev libxrandr-dev
 
 ### Linux Build
 
