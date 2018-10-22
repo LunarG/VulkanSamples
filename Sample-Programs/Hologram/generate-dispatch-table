@@ -274,11 +274,6 @@ vk_khr_wayland_surface = Extension(name='VK_KHR_wayland_surface', version=5, gua
     Command(name='GetPhysicalDeviceWaylandPresentationSupportKHR', dispatch='VkPhysicalDevice'),
 ])
 
-vk_khr_mir_surface = Extension(name='VK_KHR_mir_surface', version=4, guard='VK_USE_PLATFORM_MIR_KHR', commands=[
-    Command(name='CreateMirSurfaceKHR', dispatch='VkInstance'),
-    Command(name='GetPhysicalDeviceMirPresentationSupportKHR', dispatch='VkPhysicalDevice'),
-])
-
 vk_khr_android_surface = Extension(name='VK_KHR_android_surface', version=6, guard='VK_USE_PLATFORM_ANDROID_KHR', commands=[
     Command(name='CreateAndroidSurfaceKHR', dispatch='VkInstance'),
 ])
@@ -303,7 +298,6 @@ extensions = [
     vk_khr_xlib_surface,
     vk_khr_xcb_surface,
     vk_khr_wayland_surface,
-    vk_khr_mir_surface,
     vk_khr_android_surface,
     vk_khr_win32_surface,
     vk_ext_debug_report,

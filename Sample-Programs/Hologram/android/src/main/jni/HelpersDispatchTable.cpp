@@ -170,10 +170,6 @@ PFN_vkGetPhysicalDeviceXcbPresentationSupportKHR GetPhysicalDeviceXcbPresentatio
 PFN_vkCreateWaylandSurfaceKHR CreateWaylandSurfaceKHR;
 PFN_vkGetPhysicalDeviceWaylandPresentationSupportKHR GetPhysicalDeviceWaylandPresentationSupportKHR;
 #endif
-#ifdef VK_USE_PLATFORM_MIR_KHR
-PFN_vkCreateMirSurfaceKHR CreateMirSurfaceKHR;
-PFN_vkGetPhysicalDeviceMirPresentationSupportKHR GetPhysicalDeviceMirPresentationSupportKHR;
-#endif
 #ifdef VK_USE_PLATFORM_ANDROID_KHR
 PFN_vkCreateAndroidSurfaceKHR CreateAndroidSurfaceKHR;
 #endif
@@ -263,13 +259,6 @@ void init_dispatch_table_middle(VkInstance instance, bool include_bottom) {
 #ifdef VK_USE_PLATFORM_WAYLAND_KHR
     GetPhysicalDeviceWaylandPresentationSupportKHR = reinterpret_cast<PFN_vkGetPhysicalDeviceWaylandPresentationSupportKHR>(
         GetInstanceProcAddr(instance, "vkGetPhysicalDeviceWaylandPresentationSupportKHR"));
-#endif
-#ifdef VK_USE_PLATFORM_MIR_KHR
-    CreateMirSurfaceKHR = reinterpret_cast<PFN_vkCreateMirSurfaceKHR>(GetInstanceProcAddr(instance, "vkCreateMirSurfaceKHR"));
-#endif
-#ifdef VK_USE_PLATFORM_MIR_KHR
-    GetPhysicalDeviceMirPresentationSupportKHR = reinterpret_cast<PFN_vkGetPhysicalDeviceMirPresentationSupportKHR>(
-        GetInstanceProcAddr(instance, "vkGetPhysicalDeviceMirPresentationSupportKHR"));
 #endif
 #ifdef VK_USE_PLATFORM_ANDROID_KHR
     CreateAndroidSurfaceKHR =

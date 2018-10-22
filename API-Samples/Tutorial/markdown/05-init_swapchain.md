@@ -33,7 +33,6 @@ The WSI extensions contain support for various platforms.
 The extensions are activated for a particular platform by defining:
 
 * `VK_USE_PLATFORM_ANDROID_KHR` - Android
-* `VK_USE_PLATFORM_MIR_KHR` - Mir
 * `VK_USE_PLATFORM_WAYLAND_KHR` - Wayland
 * `VK_USE_PLATFORM_WIN32_KHR` - Microsoft Windows
 * `VK_USE_PLATFORM_XCB_KHR` - X Window System, using the XCB library
