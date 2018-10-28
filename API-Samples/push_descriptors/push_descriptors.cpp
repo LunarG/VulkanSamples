@@ -207,7 +207,7 @@ int sample_main(int argc, char *argv[]) {
     descriptor_writes[1].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
     descriptor_writes[1].pImageInfo = &info.texture_data.image_info;  // populated by init_texture()
     descriptor_writes[1].dstArrayElement = 0;
-    descriptor_writes[1].dstBinding = 0;
+    descriptor_writes[1].dstBinding = 1;
 
     // Find address of extension call and make the call
     PFN_vkCmdPushDescriptorSetKHR vkCmdPushDescriptorSetKHR =
