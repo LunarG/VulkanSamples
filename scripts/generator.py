@@ -141,7 +141,7 @@ class GeneratorOptions:
     # Substitute a regular expression which matches no version
     # or extension names for None or the empty string.
     def emptyRegex(self,pat):
-        if (pat == None or pat == ''):
+        if (pat is None or pat == ''):
             return '_nomatch_^'
         else:
             return pat
@@ -231,14 +231,14 @@ class OutputGenerator:
         if (level == 'error'):
             strfile = io.StringIO()
             write('ERROR:', *args, file=strfile)
-            if (self.errFile != None):
+            if (self.errFile is not None):
                 write(strfile.getvalue(), file=self.errFile)
             raise UserWarning(strfile.getvalue())
         elif (level == 'warn'):
-            if (self.warnFile != None):
+            if (self.warnFile is not None):
                 write('WARNING:', *args, file=self.warnFile)
         elif (level == 'diag'):
-            if (self.diagFile != None):
+            if (self.diagFile is not None):
                 write('DIAG:', *args, file=self.diagFile)
         else:
             raise UserWarning(
@@ -271,7 +271,7 @@ class OutputGenerator:
             # If there's a non-integer, numeric 'type' attribute (e.g. 'u' or
             # 'ull'), append it to the string value.
             # t = enuminfo.elem.get('type')
-            # if (t != None and t != '' and t != 'i' and t != 's'):
+            # if (t is not None and t != '' and t != 'i' and t != 's'):
             #     value += enuminfo.type
             self.logMsg('diag', 'Enum', name, '-> value [', numVal, ',', value, ']')
             return [numVal, value]
@@ -318,7 +318,7 @@ class OutputGenerator:
         #
         # Open specified output file. Not done in constructor since a
         # Generator can be used without writing to a file.
-        if (self.genOpts.filename != None):
+        if (self.genOpts.filename is not None):
             filename = self.genOpts.directory + '/' + self.genOpts.filename
             self.outFile = io.open(filename, 'w', encoding='utf-8')
         else:
@@ -344,7 +344,7 @@ class OutputGenerator:
     # Utility method to validate we're generating something only inside a
     # <feature> tag
     def validateFeature(self, featureType, featureName):
-        if (self.featureName == None):
+        if (self.featureName is None):
             raise UserWarning('Attempt to generate', featureType, name,
                     'when not in feature')
     #
