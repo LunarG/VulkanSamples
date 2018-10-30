@@ -305,7 +305,7 @@ class ThreadOutputGenerator(OutputGenerator):
             # this one, it may be necessary to suppress the ExtraProtect,
             # or move it below the 'for section...' loop.
             #write('// endFeature looking at self.featureExtraProtect', file=self.outFile)
-            if (self.featureExtraProtect != None):
+            if (self.featureExtraProtect is not None):
                 write('#ifdef', self.featureExtraProtect, file=self.outFile)
             #write('#define', self.featureName, '1', file=self.outFile)
             for section in self.TYPE_SECTIONS:
@@ -318,7 +318,7 @@ class ThreadOutputGenerator(OutputGenerator):
             if (self.sections['command']):
                 write('\n'.join(self.sections['command']), end=u'', file=self.outFile)
                 self.newline()
-            if (self.featureExtraProtect != None):
+            if (self.featureExtraProtect is not None):
                 write('#endif /*', self.featureExtraProtect, '*/', file=self.outFile)
             if (self.genOpts.protectFeature):
                 write('#endif /*', self.featureName, '*/', file=self.outFile)
@@ -399,10 +399,10 @@ class ThreadOutputGenerator(OutputGenerator):
             return
         finishthreadsafety = self.makeThreadUseBlock(cmdinfo.elem, 'finish')
         # record that the function will be intercepted
-        if (self.featureExtraProtect != None):
+        if (self.featureExtraProtect is not None):
             self.intercepts += [ '#ifdef %s' % self.featureExtraProtect ]
         self.intercepts += [ '    {"%s", (void*)%s},' % (name,name[2:]) ]
-        if (self.featureExtraProtect != None):
+        if (self.featureExtraProtect is not None):
             self.intercepts += [ '#endif' ]
 
         OutputGenerator.genCmd(self, cmdinfo, name)
@@ -423,9 +423,9 @@ class ThreadOutputGenerator(OutputGenerator):
             self.appendSection('command', '    VkLayerDispatchTable *pTable = my_data->device_dispatch_table;')
         # Declare result variable, if any.
         resulttype = cmdinfo.elem.find('proto/type')
-        if (resulttype != None and resulttype.text == 'void'):
+        if (resulttype is not None and resulttype.text == 'void'):
           resulttype = None
-        if (resulttype != None):
+        if (resulttype is not None):
             self.appendSection('command', '    ' + resulttype.text + ' result;')
             assignresult = 'result = '
         else:
@@ -445,7 +445,7 @@ class ThreadOutputGenerator(OutputGenerator):
         self.appendSection('command', '        finishMultiThread();')
         self.appendSection('command', '    }')
         # Return result variable, if any.
-        if (resulttype != None):
+        if (resulttype is not None):
             self.appendSection('command', '    return result;')
         self.appendSection('command', '}')
     #

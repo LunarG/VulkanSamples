@@ -412,10 +412,10 @@ class HelperFileOutputGenerator(OutputGenerator):
         outstring += 'size_t get_struct_size(const void* struct_ptr);\n'
         for item in self.structMembers:
             lower_case_name = item.name.lower()
-            if item.ifdef_protect != None:
+            if item.ifdef_protect is not None:
                 outstring += '#ifdef %s\n' % item.ifdef_protect
             outstring += 'size_t vk_size_%s(const %s* struct_ptr);\n' % (item.name.lower(), item.name)
-            if item.ifdef_protect != None:
+            if item.ifdef_protect is not None:
                 outstring += '#endif // %s\n' % item.ifdef_protect
         outstring += '#ifdef __cplusplus\n'
         outstring += '}\n'
@@ -490,7 +490,7 @@ class HelperFileOutputGenerator(OutputGenerator):
         for item in self.structMembers:
             struct_size_funcs += '\n'
             lower_case_name = item.name.lower()
-            if item.ifdef_protect != None:
+            if item.ifdef_protect is not None:
                 struct_size_funcs += '#ifdef %s\n' % item.ifdef_protect
                 struct_size += '#ifdef %s\n' % item.ifdef_protect
                 chain_size += '#ifdef %s\n' % item.ifdef_protect
@@ -538,7 +538,7 @@ class HelperFileOutputGenerator(OutputGenerator):
             struct_size_funcs += '    }\n'
             struct_size_funcs += '    return struct_size;\n'
             struct_size_funcs += '}\n'
-            if item.ifdef_protect != None:
+            if item.ifdef_protect is not None:
                 struct_size_funcs += '#endif // %s\n' % item.ifdef_protect
                 struct_size += '#endif // %s\n' % item.ifdef_protect
                 chain_size += '#endif // %s\n' % item.ifdef_protect
@@ -573,7 +573,7 @@ class HelperFileOutputGenerator(OutputGenerator):
         for item in self.structMembers:
             if self.NeedSafeStruct(item) == True:
                 safe_struct_header += '\n'
-                if item.ifdef_protect != None:
+                if item.ifdef_protect is not None:
                     safe_struct_header += '#ifdef %s\n' % item.ifdef_protect
                 safe_struct_header += 'struct safe_%s {\n' % (item.name)
                 for member in item.members:
@@ -599,7 +599,7 @@ class HelperFileOutputGenerator(OutputGenerator):
                 safe_struct_header += '    %s *ptr() { return reinterpret_cast<%s *>(this); }\n' % (item.name, item.name)
                 safe_struct_header += '    %s const *ptr() const { return reinterpret_cast<%s const *>(this); }\n' % (item.name, item.name)
                 safe_struct_header += '};\n'
-                if item.ifdef_protect != None:
+                if item.ifdef_protect is not None:
                     safe_struct_header += '#endif // %s\n' % item.ifdef_protect
         return safe_struct_header
     #
@@ -778,7 +778,7 @@ class HelperFileOutputGenerator(OutputGenerator):
                 continue
             if item.name in wsi_structs:
                 continue
-            if item.ifdef_protect != None:
+            if item.ifdef_protect is not None:
                 safe_struct_body.append("#ifdef %s\n" % item.ifdef_protect)
             ss_name = "safe_%s" % item.name
             init_list = ''          # list of members in struct constructor initializer
@@ -1086,7 +1086,7 @@ class HelperFileOutputGenerator(OutputGenerator):
             init_copy = copy_construct_init.replace('src.', 'src->')
             init_construct = copy_construct_txt.replace('src.', 'src->')
             safe_struct_body.append("\nvoid %s::initialize(const %s* src)\n{\n%s%s}" % (ss_name, ss_name, init_copy, init_construct))
-            if item.ifdef_protect != None:
+            if item.ifdef_protect is not None:
                 safe_struct_body.append("#endif // %s\n" % item.ifdef_protect)
         return "\n".join(safe_struct_body)
     #
@@ -1178,7 +1178,7 @@ class HelperFileOutputGenerator(OutputGenerator):
             if not info:
                 continue
 
-            if item.ifdef_protect != None:
+            if item.ifdef_protect is not None:
                 code.append('#ifdef %s' % item.ifdef_protect)
 
             code.append('// Map type {} to id {}'.format(typename, info.value))
@@ -1186,7 +1186,7 @@ class HelperFileOutputGenerator(OutputGenerator):
                 id_decl=id_decl, id_member=id_member))
             code.append(idmap_format.format(template=idmap, typename=typename, id_value=info.value, typedef=type_member))
 
-            if item.ifdef_protect != None:
+            if item.ifdef_protect is not None:
                 code.append('#endif // %s' % item.ifdef_protect)
 
         # Generate utilities for all types

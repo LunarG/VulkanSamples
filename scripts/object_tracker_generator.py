@@ -251,7 +251,7 @@ class ObjectTrackerOutputGenerator(OutputGenerator):
             if os.path.isfile(vuid_filename):
                 self.vuid_file = open(vuid_filename, "r", encoding="utf8")
                 break
-        if self.vuid_file == None:
+        if self.vuid_file is None:
             print("Error: Could not find vk_validation_error_messages.h")
             sys.exit(1)
         os.chdir(previous_dir)
@@ -392,7 +392,7 @@ class ObjectTrackerOutputGenerator(OutputGenerator):
         # Actually write the interface to the output file.
         if (self.emit):
             self.newline()
-            if (self.featureExtraProtect != None):
+            if (self.featureExtraProtect is not None):
                 write('#ifdef', self.featureExtraProtect, file=self.outFile)
             # Write the object_tracker code to the file
             if (self.sections['command']):
@@ -400,7 +400,7 @@ class ObjectTrackerOutputGenerator(OutputGenerator):
                     write(self.genOpts.protectProto,
                           self.genOpts.protectProtoStr, file=self.outFile)
                 write('\n'.join(self.sections['command']), end=u'', file=self.outFile)
-            if (self.featureExtraProtect != None):
+            if (self.featureExtraProtect is not None):
                 write('\n#endif //', self.featureExtraProtect, file=self.outFile)
             else:
                 self.newline()
@@ -423,10 +423,10 @@ class ObjectTrackerOutputGenerator(OutputGenerator):
 
         if self.featureName != 'VK_VERSION_1_0':
             white_list_entry = []
-            if (self.featureExtraProtect != None):
+            if (self.featureExtraProtect is not None):
                 white_list_entry += [ '#ifdef %s' % self.featureExtraProtect ]
             white_list_entry += [ '"%s"' % self.featureName ]
-            if (self.featureExtraProtect != None):
+            if (self.featureExtraProtect is not None):
                 white_list_entry += [ '#endif' ]
             featureType = interface.get('type')
             if featureType == 'instance':
@@ -906,7 +906,7 @@ class ObjectTrackerOutputGenerator(OutputGenerator):
             if not api_decls and not api_pre and not api_post:
                 continue
             feature_extra_protect = cmd_protect_dict[api_call.name]
-            if (feature_extra_protect != None):
+            if (feature_extra_protect is not None):
                 self.appendSection('command', '')
                 self.appendSection('command', '#ifdef '+ feature_extra_protect)
                 self.intercepts += [ '#ifdef %s' % feature_extra_protect ]
@@ -919,9 +919,9 @@ class ObjectTrackerOutputGenerator(OutputGenerator):
             self.appendSection('command', '    bool skip = false;')
             # Handle return values, if any
             resulttype = cmdinfo.elem.find('proto/type')
-            if (resulttype != None and resulttype.text == 'void'):
+            if (resulttype is not None and resulttype.text == 'void'):
               resulttype = None
-            if (resulttype != None):
+            if (resulttype is not None):
                 assignresult = resulttype.text + ' result = '
             else:
                 assignresult = ''
@@ -954,9 +954,9 @@ class ObjectTrackerOutputGenerator(OutputGenerator):
             # And add the post-API-call codegen
             self.appendSection('command', "\n".join(str(api_post).rstrip().split("\n")))
             # Handle the return result variable, if any
-            if (resulttype != None):
+            if (resulttype is not None):
                 self.appendSection('command', '    return result;')
             self.appendSection('command', '}')
-            if (feature_extra_protect != None):
+            if (feature_extra_protect is not None):
                 self.appendSection('command', '#endif // '+ feature_extra_protect)
                 self.intercepts += [ '#endif' ]

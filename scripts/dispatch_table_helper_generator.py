@@ -161,7 +161,7 @@ class DispatchTableHelperOutputGenerator(OutputGenerator):
     # Determine if this API should be ignored or added to the instance or device dispatch table
     def AddCommandToDispatchList(self, name, handle_type, protect):
         handle = self.registry.tree.find("types/type/[name='" + handle_type + "'][@category='handle']")
-        if handle == None:
+        if handle is None:
             return
         if handle_type != 'VkInstance' and handle_type != 'VkPhysicalDevice' and name != 'vkGetInstanceProcAddr':
             self.device_dispatch_list.append((name, self.featureExtraProtect))

@@ -185,7 +185,7 @@ class COutputGenerator(OutputGenerator):
             # If type declarations are needed by other features based on
             # this one, it may be necessary to suppress the ExtraProtect,
             # or move it below the 'for section...' loop.
-            if (self.featureExtraProtect != None):
+            if (self.featureExtraProtect is not None):
                 write('#ifdef', self.featureExtraProtect, file=self.outFile)
             write('#define', self.featureName, '1', file=self.outFile)
             for section in self.TYPE_SECTIONS:
@@ -205,7 +205,7 @@ class COutputGenerator(OutputGenerator):
                     write('#endif', file=self.outFile)
                 else:
                     self.newline()
-            if (self.featureExtraProtect != None):
+            if (self.featureExtraProtect is not None):
                 write('#endif /*', self.featureExtraProtect, '*/', file=self.outFile)
             if (self.genOpts.protectFeature):
                 write('#endif /*', self.featureName, '*/', file=self.outFile)
@@ -317,7 +317,7 @@ class COutputGenerator(OutputGenerator):
                 body += "    " + name + " = " + strVal + ",\n"
 
             if (isEnum and elem.get('extends') is None):
-                if (minName == None):
+                if (minName is None):
                     minName = maxName = name
                     minValue = maxValue = numVal
                 elif (numVal < minValue):
