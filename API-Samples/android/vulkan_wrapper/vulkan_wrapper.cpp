@@ -226,12 +226,6 @@ int InitVulkan(void) {
         dlsym(libvulkan, "vkGetPhysicalDeviceWaylandPresentationSupportKHR"));
 #endif
 
-#ifdef VK_USE_PLATFORM_MIR_KHR
-    vkCreateMirSurfaceKHR = reinterpret_cast<PFN_vkCreateMirSurfaceKHR>(dlsym(libvulkan, "vkCreateMirSurfaceKHR"));
-    vkGetPhysicalDeviceMirPresentationSupportKHR = reinterpret_cast<PFN_vkGetPhysicalDeviceMirPresentationSupportKHR>(
-        dlsym(libvulkan, "vkGetPhysicalDeviceMirPresentationSupportKHR"));
-#endif
-
 #ifdef VK_USE_PLATFORM_ANDROID_KHR
     vkCreateAndroidSurfaceKHR = reinterpret_cast<PFN_vkCreateAndroidSurfaceKHR>(dlsym(libvulkan, "vkCreateAndroidSurfaceKHR"));
 #endif
@@ -419,11 +413,6 @@ PFN_vkGetPhysicalDeviceXcbPresentationSupportKHR vkGetPhysicalDeviceXcbPresentat
 #ifdef VK_USE_PLATFORM_WAYLAND_KHR
 PFN_vkCreateWaylandSurfaceKHR vkCreateWaylandSurfaceKHR;
 PFN_vkGetPhysicalDeviceWaylandPresentationSupportKHR vkGetPhysicalDeviceWaylandPresentationSupportKHR;
-#endif
-
-#ifdef VK_USE_PLATFORM_MIR_KHR
-PFN_vkCreateMirSurfaceKHR vkCreateMirSurfaceKHR;
-PFN_vkGetPhysicalDeviceMirPresentationSupportKHR vkGetPhysicalDeviceMirPresentationSupportKHR;
 #endif
 
 #ifdef VK_USE_PLATFORM_ANDROID_KHR
