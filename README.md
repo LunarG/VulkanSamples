@@ -51,6 +51,14 @@ Please see the [CONTRIBUTING.md](CONTRIBUTING.md) file in this repository for mo
 [BUILD.md](BUILD.md)
 Includes directions for building all components as well as running validation tests and demo applications.
 
+## Version Tagging Scheme
+
+Updates to the `LunarG-VulkanSamples` repository which correspond to a new Vulkan specification release are tagged using the following format: `v<`_`version`_`>` (e.g., `v1.1.96`).
+
+**Note**: Marked version releases have undergone thorough testing but do not imply the same quality level as SDK tags. SDK tags follow the `sdk-<`_`version`_`>.<`_`patch`_`>` format (e.g., `sdk-1.1.92.0`).
+
+This scheme was adopted following the 1.1.96 Vulkan specification release.
+
 ## License
 This work is released as open source under a Apache-style license.  See LICENSE.txt for full license.
 
