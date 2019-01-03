@@ -129,7 +129,7 @@ int sample_main(int argc, char *argv[]) {
     using_version_string += ".";
     using_version_string += std::to_string(using_minor_version);
 
-    if (using_minor_version != desired_minor_version) {
+    if (using_minor_version < desired_minor_version) {
         std::cout << "Determined that this system can only use Vulkan API version " << using_version_string
                   << " instead of desired version " << desired_version_string << std::endl;
     } else {
