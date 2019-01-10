@@ -6,7 +6,7 @@
       "sub_dir" : "glslang",
       "build_dir" : "glslang/build",
       "install_dir" : "glslang/build/install",
-      "commit" : "d509a5eec6f5a65b3ffdfa0a19096f338d2582be",
+      "commit" : "ba9f596eee0cff57b5fe855856293c71b482ee48",
       "prebuild" : [
         "python update_glslang_sources.py"
       ]
@@ -17,7 +17,7 @@
       "sub_dir" : "Vulkan-Headers",
       "build_dir" : "Vulkan-Headers/build",
       "install_dir" : "Vulkan-Headers/build/install",
-      "commit" : "114c3546e195819bd53a34b39f5194b2989a5b12"
+      "commit" : "v1.1.97"
     },
     {
       "name" : "Vulkan-Loader",
@@ -25,7 +25,7 @@
       "sub_dir" : "Vulkan-Loader",
       "build_dir" : "Vulkan-Loader/build",
       "install_dir" : "Vulkan-Loader/build/install",
-      "commit" : "abe5c2b3c33e42fff883d32d4c168556fb29b3ba",
+      "commit" : "v1.1.97",
       "deps" : [
         {
           "var_name" : "VULKAN_HEADERS_INSTALL_DIR",
