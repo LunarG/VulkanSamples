@@ -40,7 +40,7 @@ int sample_main(int argc, char *argv[]) {
     init_enumerate_device(info);
     init_queue_family_index(info);
     init_device(info);
-    init_window_size(info, 50, 50);
+    init_window_size(info, 64, 64);
 
     info.Projection = glm::perspective(glm::radians(45.0f), 1.0f, 0.1f, 100.0f);
     info.View = glm::lookAt(glm::vec3(-5, 3, -10),  // Camera is at (-5,3,-10), in World Space
