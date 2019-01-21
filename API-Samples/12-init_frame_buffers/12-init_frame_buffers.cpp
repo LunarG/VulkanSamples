@@ -40,7 +40,7 @@ int sample_main(int argc, char *argv[]) {
     init_instance(info, sample_title);
     init_enumerate_device(info);
     init_connection(info);
-    init_window_size(info, 50, 50);
+    init_window_size(info, 64, 64);
     init_window(info);
     init_swapchain_extension(info);
     init_device(info);
