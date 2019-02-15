@@ -30,6 +30,7 @@ before_build:
   - echo Generating CMake files for %PLATFORM%
   - mkdir build
   - cd build
+  - cmake --version
   - cmake -A %PLATFORM% -C../external/helper.cmake --config %CONFIGURATION% ..
   - echo Building platform=%PLATFORM% configuration=%CONFIGURATION%
 
