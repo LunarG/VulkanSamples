@@ -68,7 +68,7 @@ This file can be found in the Samples repository, under the `include` directory.
 
 The Vulkan specification document is an invaluable source for Vulkan information.
 You can find the specification at the
-<a href="https://vulkan.lunarg.com" target="_blank">LunarG LunarXchange website</a>
+<a href="https://vulkan.lunarg.com" target="_blank">Vulkan SDK Download site</a>
 or in the <a href="https://www.khronos.org/registry/vulkan/" target="_blank">Khronos Vulkan Registry</a>.
 Although it is not strictly required to refer to the specification as you
 work through the samples, you may find the specification useful to get
