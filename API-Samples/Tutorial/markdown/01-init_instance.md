@@ -42,8 +42,8 @@ time the application creates an instance.
 Vulkan layers are outside the scope of this tutorial
 and of the samples progression.
 So this tutorial does not cover the layers further.
-Further information about layers can be found on the
-<a href="https://vulkan.lunarg.com" target="_blank">LunarG LunarXchange website</a>.
+Further information about layers can be found at the
+<a href="https://vulkan.lunarg.com" target="_blank">Vulkan SDK download site</a>.
 
 ## `vkCreateInstance`
 
@@ -225,4 +225,4 @@ devices are available to your Vulkan instance.
         <td align="center" width="33%">Next: <a href="02-enumerate_devices.html" title="Next">Enumerate</a></td>
     </tr>
 </table>
-<footer>&copy; Copyright 2016 LunarG, Inc</footer>
+<footer>&copy; Copyright 2019 LunarG, Inc</footer>
