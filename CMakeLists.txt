@@ -295,6 +295,12 @@ if(WIN32)
     set(GLSLANG_LIBRARIES glslang OGLCompiler OSDependent HLSL SPIRV SPVRemapper ${SPIRV_TOOLS_LIBRARIES})
 else()
     set(SPIRV_TOOLS_LIBRARIES ${SPIRV_TOOLS_OPT_LIB} ${SPIRV_TOOLS_LIB})
+
+    CHECK_LIBRARY_EXISTS("rt" clock_gettime "" NEED_RT)
+    if (NEED_RT)
+        set(SPIRV_TOOLS_LIBRARIES ${SPIRV_TOOLS_LIBRARIES} rt)
+    endif()
+
     set(GLSLANG_LIBRARIES
         ${GLSLANG_LIB}
         ${OGLCompiler_LIB}
