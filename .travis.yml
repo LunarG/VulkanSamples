@@ -83,6 +83,7 @@ script:
       ../../../ndk-build NDK_PROJECT_PATH=. APP_BUILD_SCRIPT=Android.mk APP_STL:=c++_static APP_ABI=$ANDROID_ABI NDK_TOOLCHAIN_VERSION:=clang libshaderc_combined -j16
       popd
       cd API-Samples
+      cmake --version
       cmake -DANDROID=ON -DABI_NAME=$ANDROID_ABI
       cd android
       ./gradlew build
@@ -91,6 +92,7 @@ script:
       # Build VulkanSamples
       mkdir build
       cd build
+      cmake --version
       cmake -C../external/helper.cmake ..
       make -j $core_count
       cd ..
