@@ -176,6 +176,27 @@ googletest.
 The commands listed in "prebuild" are executed first, and then the
 commands for the specific platform are executed.
 
+- custom_build (optional)
+
+A list of commands to execute as a custom build instead of using
+the built in CMake way of building. Requires "build_step" to be
+set to "custom"
+
+You can insert the following keywords into the commands listed in
+"custom_build" if they require runtime information (like whether the
+build config is "Debug" or "Release").
+
+Keywords:
+{0} reference to a dictionary of repos and their attributes
+{1} reference to the command line arguments set before start
+{2} reference to the CONFIG_MAP value of config.
+
+Example:
+{2} returns the CONFIG_MAP value of config e.g. debug -> Debug
+{1}.config returns the config variable set when you ran update_dep.py
+{0}[Vulkan-Headers][repo_root] returns the repo_root variable from
+                                   the Vulkan-Headers GoodRepo object.
+
 - cmake_options (optional)
 
 A list of options to pass to CMake during the generation phase.
@@ -194,8 +215,18 @@ is an empty list, which means that the repo is always processed.
 - build_step (optional)
 
 Specifies if the dependent repository should be built or not. This can
-have a value of 'build' or 'skip'. The dependent repositories are
+have a value of 'build', 'custom',  or 'skip'. The dependent repositories are
 built by default.
+
+- build_platforms (optional)
+
+A list of platforms the repository will be built on.
+Legal options include:
+"windows"
+"linux"
+"darwin"
+
+Builds on all platforms by default.
 
 Note
 ----
@@ -217,6 +248,7 @@ import subprocess
 import sys
 import platform
 import multiprocessing
+import shlex
 import shutil
 
 KNOWN_GOOD_FILE_NAME = 'known_good.json'
@@ -253,7 +285,6 @@ def command_output(cmd, directory, fail_ok=False):
         print(stdout)
     return stdout
 
-
 class GoodRepo(object):
     """Represents a repository at a known-good commit."""
 
@@ -275,19 +306,21 @@ class GoodRepo(object):
         self.build_dir = None
         self.install_dir = None
         if json.get('build_dir'):
-            self.build_dir = json['build_dir']
+            self.build_dir = os.path.normpath(json['build_dir'])
         if json.get('install_dir'):
-            self.install_dir = json['install_dir']
+            self.install_dir = os.path.normpath(json['install_dir'])
         self.deps = json['deps'] if ('deps' in json) else []
         self.prebuild = json['prebuild'] if ('prebuild' in json) else []
         self.prebuild_linux = json['prebuild_linux'] if (
             'prebuild_linux' in json) else []
         self.prebuild_windows = json['prebuild_windows'] if (
             'prebuild_windows' in json) else []
+        self.custom_build = json['custom_build'] if ('custom_build' in json) else []
         self.cmake_options = json['cmake_options'] if (
             'cmake_options' in json) else []
         self.ci_only = json['ci_only'] if ('ci_only' in json) else []
         self.build_step = json['build_step'] if ('build_step' in json) else 'build'
+        self.build_platforms = json['build_platforms'] if ('build_platforms' in json) else []
         # Absolute paths for a repo's directories
         dir_top = os.path.abspath(args.dir)
         self.repo_dir = os.path.join(dir_top, self.sub_dir)
@@ -295,6 +328,10 @@ class GoodRepo(object):
             self.build_dir = os.path.join(dir_top, self.build_dir)
         if self.install_dir:
             self.install_dir = os.path.join(dir_top, self.install_dir)
+	    # Check if platform is one to build on
+        self.on_build_platform = False
+        if self.build_platforms == [] or platform.system().lower() in self.build_platforms:
+            self.on_build_platform = True
 
     def Clone(self):
         distutils.dir_util.mkpath(self.repo_dir)
@@ -316,16 +353,25 @@ class GoodRepo(object):
             command_output(['git', 'checkout', self.commit], self.repo_dir)
         print(command_output(['git', 'status'], self.repo_dir))
 
+    def CustomPreProcess(self, cmd_str, repo_dict):
+        return cmd_str.format(repo_dict, self._args, CONFIG_MAP[self._args.config])
+
     def PreBuild(self):
         """Execute any prebuild steps from the repo root"""
         for p in self.prebuild:
-            command_output(p.split(), self.repo_dir)
+            command_output(shlex.split(p), self.repo_dir)
         if platform.system() == 'Linux' or platform.system() == 'Darwin':
             for p in self.prebuild_linux:
-                command_output(p.split(), self.repo_dir)
+                command_output(shlex.split(p), self.repo_dir)
         if platform.system() == 'Windows':
             for p in self.prebuild_windows:
-                command_output(p.split(), self.repo_dir)
+                command_output(shlex.split(p), self.repo_dir)
+
+    def CustomBuild(self, repo_dict):
+        """Execute any custom_build steps from the repo root"""
+        for p in self.custom_build:
+            cmd = self.CustomPreProcess(p, repo_dict)
+            command_output(shlex.split(cmd), self.repo_dir)
 
     def CMakeConfig(self, repos):
         """Build CMake command for the configuration phase and execute it"""
@@ -369,6 +415,12 @@ class GoodRepo(object):
                 cmake_cmd.append('-A')
                 cmake_cmd.append('x64')
 
+        # Apply a generator, if one is specified.  This can be used to supply
+        # a specific generator for the dependent repositories to match
+        # that of the main repository.
+        if self._args.generator is not None:
+            cmake_cmd.extend(['-G', self._args.generator])
+
         if VERBOSE:
             print("CMake command: " + " ".join(cmake_cmd))
 
@@ -389,8 +441,13 @@ class GoodRepo(object):
         # Speed up the build.
         if platform.system() == 'Linux' or platform.system() == 'Darwin':
             cmake_cmd.append('--')
-            cmake_cmd.append('-j{ncpu}'
-                             .format(ncpu=multiprocessing.cpu_count()))
+            num_make_jobs = multiprocessing.cpu_count()
+            if 'MAKE_JOBS' in os.environ:
+                try:
+                    num_make_jobs = min(num_make_jobs, int(os.environ['MAKE_JOBS']))
+                except ValueError:
+                    pass
+            cmake_cmd.append('-j{}'.format(num_make_jobs))
         if platform.system() == 'Windows':
             cmake_cmd.append('--')
             cmake_cmd.append('/maxcpucount')
@@ -402,7 +459,7 @@ class GoodRepo(object):
         if ret_code != 0:
             sys.exit(ret_code)
 
-    def Build(self, repos):
+    def Build(self, repos, repo_dict):
         """Build the dependent repo"""
         print('Building {n} in {d}'.format(n=self.name, d=self.repo_dir))
         print('Build dir = {b}'.format(b=self.build_dir))
@@ -410,6 +467,10 @@ class GoodRepo(object):
 
         # Run any prebuild commands
         self.PreBuild()
+
+        if self.build_step == 'custom':
+            self.CustomBuild(repo_dict)
+            return
 
         # Build and execute CMake command for creating build files
         self.CMakeConfig(repos)
@@ -470,14 +531,16 @@ def CreateHelper(args, repos, filename):
     This information is baked into the CMake files of the home repo and so
     this dictionary is kept with the repo via the json file.
     """
+    def escape(path):
+        return path.replace('\\', '\\\\')
     install_names = GetInstallNames(args)
     with open(filename, 'w') as helper_file:
         for repo in repos:
-            if install_names and repo.name in install_names:
+            if install_names and repo.name in install_names and repo.on_build_platform:
                 helper_file.write('set({var} "{dir}" CACHE STRING "" FORCE)\n'
                                   .format(
                                       var=install_names[repo.name],
-                                      dir=repo.install_dir))
+                                      dir=escape(repo.install_dir)))
 
 
 def main():
@@ -542,6 +605,11 @@ def main():
         type=str.lower,
         help="Set build files configuration",
         default='debug')
+    parser.add_argument(
+        '--generator',
+        dest='generator',
+        help="Set the CMake generator",
+        default=None)
 
     args = parser.parse_args()
     save_cwd = os.getcwd()
@@ -551,9 +619,33 @@ def main():
     abs_top_dir = os.path.abspath(args.dir)
 
     repos = GetGoodRepos(args)
+    repo_dict = {}
 
     print('Starting builds in {d}'.format(d=abs_top_dir))
     for repo in repos:
+        # If the repo has a platform whitelist, skip the repo
+        # unless we are building on a whitelisted platform.
+        if not repo.on_build_platform:
+            continue
+
+        field_list = ('url',
+                      'sub_dir',
+                      'commit',
+                      'build_dir',
+                      'install_dir',
+                      'deps',
+                      'prebuild',
+                      'prebuild_linux',
+                      'prebuild_windows',
+                      'custom_build',
+                      'cmake_options',
+                      'ci_only',
+                      'build_step',
+                      'build_platforms',
+                      'repo_dir',
+                      'on_build_platform')
+        repo_dict[repo.name] = {field: getattr(repo, field) for field in field_list}
+
         # If the repo has a CI whitelist, skip the repo unless
         # one of the CI's environment variable is set to true.
         if len(repo.ci_only):
@@ -571,8 +663,8 @@ def main():
         repo.Checkout()
 
         # Build the repository
-        if args.do_build and repo.build_step == 'build':
-            repo.Build(repos)
+        if args.do_build and repo.build_step != 'skip':
+            repo.Build(repos, repo_dict)
 
     # Need to restore original cwd in order for CreateHelper to find json file
     os.chdir(save_cwd)
