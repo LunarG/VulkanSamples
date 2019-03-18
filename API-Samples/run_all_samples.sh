@@ -28,7 +28,7 @@ while test $# -gt 0; do
 done
 
 if ! test -z $COMPAREIMAGES; then
-    if ! test -d 'golden'; then 
+    if ! test -d 'golden'; then
         { echo >&2 "I require golden images but no golden directory.  Aborting."; exit 1; }
     fi
     type compare >/dev/null 2>&1 || { echo >&2 "I require ImageMagick compare but it's not installed.  Aborting."; exit 1; }
@@ -60,12 +60,12 @@ do
        GOLDNAME="golden/${RNAME}.ppm"
         if test -f $GOLDNAME; then
            THISNAME="${RNAME}.ppm"
-	   CMDRES=`compare -metric AE -fuzz 3% $THISNAME $GOLDNAME ${RNAME}-diff.ppm 2>&1` 
+	   CMDRES=`compare -metric AE -fuzz 3% $THISNAME $GOLDNAME ${RNAME}-diff.ppm 2>&1`
            if [ $CMDRES == "0" ]; then
                >&2 echo -e "${GREEN}${RNAME} PASS${NOCOLOR}"
            else
                >&2 echo -e "${RED}${RNAME} FAIL${NOCOLOR} : pixel error count is ${CMDRES}"
-               $SAVEIMAGES="true"
+               SAVEIMAGES="true"
 	       RETVAL=1
            fi
         else
@@ -81,4 +81,3 @@ do
     fi
 done
 exit $RETVAL
-
