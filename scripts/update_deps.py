@@ -442,11 +442,13 @@ class GoodRepo(object):
         if platform.system() == 'Linux' or platform.system() == 'Darwin':
             cmake_cmd.append('--')
             num_make_jobs = multiprocessing.cpu_count()
-            if 'MAKE_JOBS' in os.environ:
+            env_make_jobs = os.environ.get('MAKE_JOBS', None)
+            if env_make_jobs is not None:
                 try:
-                    num_make_jobs = min(num_make_jobs, int(os.environ['MAKE_JOBS']))
+                    num_make_jobs = min(num_make_jobs, int(env_make_jobs))
                 except ValueError:
-                    pass
+                    print('warning: environment variable MAKE_JOBS has non-numeric value "{}".  '
+                          'Using {} (CPU count) instead.'.format(env_make_jobs, num_make_jobs))
             cmake_cmd.append('-j{}'.format(num_make_jobs))
         if platform.system() == 'Windows':
             cmake_cmd.append('--')
