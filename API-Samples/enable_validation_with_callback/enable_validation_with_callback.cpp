@@ -66,18 +66,8 @@ int sample_main(int argc, char *argv[]) {
     /* Use standard_validation meta layer that enables all
      * recommended validation layers
      */
-    info.instance_layer_names.push_back("VK_LAYER_LUNARG_standard_validation");
+    info.instance_layer_names.push_back("VK_LAYER_KHRONOS_validation");
     if (!demo_check_layers(info.instance_layer_properties, info.instance_layer_names)) {
-        /* If standard validation is not present, search instead for the
-         * individual layers that make it up, in the correct order.
-         */
-        info.instance_layer_names.clear();
-        info.instance_layer_names.push_back("VK_LAYER_GOOGLE_threading");
-        info.instance_layer_names.push_back("VK_LAYER_LUNARG_parameter_validation");
-        info.instance_layer_names.push_back("VK_LAYER_LUNARG_object_tracker");
-        info.instance_layer_names.push_back("VK_LAYER_LUNARG_core_validation");
-        info.instance_layer_names.push_back("VK_LAYER_GOOGLE_unique_objects");
-
         if (!demo_check_layers(info.instance_layer_properties, info.instance_layer_names)) {
             std::cout << "Set the environment variable VK_LAYER_PATH to point to the location of your layers" << std::endl;
             exit(1);
