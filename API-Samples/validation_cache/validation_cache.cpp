@@ -120,7 +120,7 @@ int sample_main(int argc, char *argv[]) {
     }
     if (!foundExtension) {
         fprintf(stderr, "%s not supported.\n", VK_EXT_VALIDATION_CACHE_EXTENSION_NAME);
-        fprintf(stderr, "(Is VK_LAYER_LUNARG_core_validation enabled and up to date?)");
+        fprintf(stderr, "(Is VK_LAYER_KHRONOS_validation enabled and up to date?)");
         return 0;
     }
     info.device_extension_names.push_back(VK_EXT_VALIDATION_CACHE_EXTENSION_NAME);
