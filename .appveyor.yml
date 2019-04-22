@@ -12,7 +12,7 @@ version: "{build}"
 max_jobs: 4
 
 os:
-  - Visual Studio 2013
+  - Visual Studio 2015
 
 environment:
   PYTHON_PATH: "C:/Python35"
@@ -41,6 +41,16 @@ platform:
 configuration:
   - Release
   - Debug
+  
+# Build only x64 Release and Win32(x86) Debug to reduce build time.
+# This should still provide adequate 32-bit vs 64-bit and
+# Release vs Debug coverage.
+matrix:
+  exclude:
+    - configuration: Release
+      platform: Win32
+    - configuration: Debug
+      platform: x64
 
 build:
   parallel: true                  # enable MSBuild parallel builds

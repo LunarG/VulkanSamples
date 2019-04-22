@@ -166,7 +166,6 @@ generate the native platform files.
   - Any Personal Computer version supported by Microsoft
 - Microsoft [Visual Studio](https://www.visualstudio.com/)
   - Versions
-    - [2013 (update 4)](https://www.visualstudio.com/vs/older-downloads/)
     - [2015](https://www.visualstudio.com/vs/older-downloads/)
     - [2017](https://www.visualstudio.com/vs/downloads/)
   - The Community Edition of each of the above versions is sufficient, as
