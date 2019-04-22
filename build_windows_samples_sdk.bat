@@ -16,8 +16,8 @@ if not %errorlevel% equ 0 (
 :: Get the version of msbuild
 set cmd="msbuild /version | findstr /rxc:"[0-9]*\.[0-9]*\.[0-9]*\.[0-9]*""
 for /f "tokens=1* delims=." %%i in ('%cmd%') do set msbuild_version=%%i
-if %msbuild_version% lss 12 (
-    echo ERROR: MSBuild must be at least version 12 ^(Visual Studio 2013^). Found version %msbuild_version%.
+if %msbuild_version% lss 14 (
+    echo ERROR: MSBuild must be at least version 14 ^(Visual Studio 2015^). Found version %msbuild_version%.
     exit /b 1
 )
 set version_string=Visual Studio %msbuild_version% Win64
