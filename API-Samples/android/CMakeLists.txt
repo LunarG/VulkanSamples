@@ -14,7 +14,7 @@
 # limitations under the License.
 #
 
-cmake_minimum_required(VERSION 3.4.1)
+cmake_minimum_required(VERSION 3.12.4)
 get_filename_component(SHADERC_SRC
                        ${ANDROID_NDK}/sources/third_party/shaderc
                        ABSOLUTE)
