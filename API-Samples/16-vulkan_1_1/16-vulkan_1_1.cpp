@@ -134,7 +134,7 @@ int sample_main(int argc, char *argv[]) {
     }
 
     // Destroy the instance if it was created
-    if (VK_NULL_HANDLE == instance) {
+    if (VK_NULL_HANDLE != instance) {
         vkDestroyInstance(instance, NULL);
     }
 
