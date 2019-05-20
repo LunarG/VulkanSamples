@@ -120,8 +120,8 @@ int sample_main(int argc, char *argv[]) {
     // on the event
     res = vkWaitForFences(info.device, 1, &fence, VK_TRUE, FENCE_TIMEOUT);
     if (res != VK_TIMEOUT) {
-        std::cout << "Didn't get expected timeout in vkWaitForFences, exiting\n";
-        exit(-1);
+        std::cout << "Got " << res << " instead of VK_TIMEOUT (" << VK_TIMEOUT << ") from vkWaitForFences\n";
+        // Don't exit or assert here because doing so can TDR the device.
     }
 
     // Set the event from the CPU and wait for the fence.  This should succeed
