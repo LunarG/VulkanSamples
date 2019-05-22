@@ -22,6 +22,12 @@ branches:
   only:
     - master
 
+# Install desired CMake version before any building
+install:
+  - choco upgrade cmake --version 3.10.2
+  - set path=C:\Program Files\CMake\bin;%path%
+  - cmake --version
+
 before_build:
   - "SET PATH=C:\\Python35;C:\\Python35\\Scripts;%PATH%"
   - echo Starting build for %APPVEYOR_REPO_NAME%
@@ -30,7 +36,6 @@ before_build:
   - echo Generating CMake files for %PLATFORM%
   - mkdir build
   - cd build
-  - cmake --version
   - cmake -A %PLATFORM% -C../external/helper.cmake --config %CONFIGURATION% ..
   - echo Building platform=%PLATFORM% configuration=%CONFIGURATION%
 
