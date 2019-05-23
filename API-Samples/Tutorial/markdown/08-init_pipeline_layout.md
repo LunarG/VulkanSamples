@@ -97,15 +97,15 @@ As with the descriptor sets, you are just defining the layout.
 The actual descriptor set is allocated and
 filled in with the uniform buffer reference later.
 
-    VkPipelineLayoutCreateInfo pPipelineLayoutCreateInfo = {};
-    pPipelineLayoutCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-    pPipelineLayoutCreateInfo.pNext = NULL;
-    pPipelineLayoutCreateInfo.pushConstantRangeCount = 0;
-    pPipelineLayoutCreateInfo.pPushConstantRanges = NULL;
-    pPipelineLayoutCreateInfo.setLayoutCount = NUM_DESCRIPTOR_SETS;
-    pPipelineLayoutCreateInfo.pSetLayouts = info.desc_layout.data();
+    VkPipelineLayoutCreateInfo pipelineLayoutCreateInfo = {};
+    pipelineLayoutCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+    pipelineLayoutCreateInfo.pNext = NULL;
+    pipelineLayoutCreateInfo.pushConstantRangeCount = 0;
+    pipelineLayoutCreateInfo.pPushConstantRanges = NULL;
+    pipelineLayoutCreateInfo.setLayoutCount = NUM_DESCRIPTOR_SETS;
+    pipelineLayoutCreateInfo.pSetLayouts = info.desc_layout.data();
 
-    res = vkCreatePipelineLayout(info.device, &pPipelineLayoutCreateInfo, NULL,
+    res = vkCreatePipelineLayout(info.device, &pipelineLayoutCreateInfo, NULL,
                                  &info.pipeline_layout);
 
 You will use the pipeline layout later to create the graphics pipeline.
