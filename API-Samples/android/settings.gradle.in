@@ -13,4 +13,10 @@
 // limitations under the License.
 
 // configure path to the source code generated on your machine
+[
 @SETTINGS_GRADLE@
+].each {
+  include ":${it}"
+  project(":${it}").projectDir = new File("API-Samples/android/${it}")
+}
+
