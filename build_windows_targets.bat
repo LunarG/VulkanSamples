@@ -1,4 +1,8 @@
 echo off
+
+:: Specify UTF-8 for character encoding
+chcp 65001
+
 REM
 REM This Windows batch file builds this repository for the following targets:
 REM 64/32-bit Release/Debug
