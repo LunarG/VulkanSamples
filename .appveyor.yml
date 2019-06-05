@@ -17,7 +17,7 @@ os:
 environment:
   PYTHON_PATH: "C:/Python35"
   PYTHON_PACKAGE_PATH: "C:/Python35/Scripts"
-  CMAKE_URL: "https://cmake.org/files/v3.10/cmake-3.10.2-win64-x64.zip"
+  CMAKE_URL: "http://cmake.org/files/v3.10/cmake-3.10.2-win64-x64.zip"
 
 branches:
   only:
