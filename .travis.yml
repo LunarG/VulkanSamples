@@ -124,7 +124,6 @@ script:
 notifications:
   email:
     recipients:
-      - karl@lunarg.com
       - cnorthrop@google.com
       - tobine@google.com
       - chrisforbes@google.com
