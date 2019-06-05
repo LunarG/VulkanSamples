@@ -17,15 +17,16 @@ os:
 environment:
   PYTHON_PATH: "C:/Python35"
   PYTHON_PACKAGE_PATH: "C:/Python35/Scripts"
+  CMAKE_URL: "https://cmake.org/files/v3.10/cmake-3.10.2-win64-x64.zip"
 
 branches:
   only:
     - master
 
-# Install desired CMake version 3.10.2 before any other building
 install:
-  - choco upgrade cmake --version 3.10.2
-  - set path=C:\Program Files\CMake\bin;%path%
+  - appveyor DownloadFile %CMAKE_URL% -FileName cmake.zip
+  - 7z x cmake.zip -oC:\cmake > nul
+  - set path=C:\cmake\bin;%path%
   - cmake --version
 
 before_build:
