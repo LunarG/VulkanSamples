@@ -17,10 +17,17 @@ os:
 environment:
   PYTHON_PATH: "C:/Python35"
   PYTHON_PACKAGE_PATH: "C:/Python35/Scripts"
+  CMAKE_URL: "http://cmake.org/files/v3.10/cmake-3.10.2-win64-x64.zip"
 
 branches:
   only:
     - master
+
+install:
+  - appveyor DownloadFile %CMAKE_URL% -FileName cmake.zip
+  - 7z x cmake.zip -oC:\cmake > nul
+  - set path=C:\cmake\bin;%path%
+  - cmake --version
 
 before_build:
   - "SET PATH=C:\\Python35;C:\\Python35\\Scripts;%PATH%"
@@ -30,7 +37,6 @@ before_build:
   - echo Generating CMake files for %PLATFORM%
   - mkdir build
   - cd build
-  - cmake --version
   - cmake -A %PLATFORM% -C../external/helper.cmake --config %CONFIGURATION% ..
   - echo Building platform=%PLATFORM% configuration=%CONFIGURATION%
 

@@ -126,7 +126,7 @@ function(sampleWithSingleFile)
             # Add validation layer settings.
             set (SAMPLE_WITH_TOOLS create_debug_report_callback enable_validation_with_callback)
             if (";${SAMPLE_WITH_TOOLS};" MATCHES ";${SAMPLE_NAME};")
-                set (VALIDATIONLAYER_PACKING "sourceSets.main.jniLibs.srcDirs file(ndkDir).absolutePath +\n\t\t\t\t'/sources/third_party/vulkan/src/build-android/jniLibs'")
+                set (VALIDATIONLAYER_PACKING "sourceSets.main.jniLibs.srcDirs=[ndkDirectory.path + '/sources/third_party/vulkan/src/build-android/jniLibs']")
             endif()
 
             # Cook template files.
