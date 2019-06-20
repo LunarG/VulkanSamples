@@ -955,7 +955,7 @@ void init_swap_chain(struct sample_info &info, VkImageUsageFlags usageFlags) {
         VK_COMPOSITE_ALPHA_POST_MULTIPLIED_BIT_KHR,
         VK_COMPOSITE_ALPHA_INHERIT_BIT_KHR,
     };
-    for (uint32_t i = 0; i < sizeof(compositeAlphaFlags); i++) {
+    for (uint32_t i = 0; i < sizeof(compositeAlphaFlags) / sizeof(compositeAlphaFlags[0]); i++) {
         if (surfCapabilities.supportedCompositeAlpha & compositeAlphaFlags[i]) {
             compositeAlpha = compositeAlphaFlags[i];
             break;
