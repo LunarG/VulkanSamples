@@ -172,10 +172,8 @@ void init_instance_extension_names(struct sample_info &info) {
     info.instance_extension_names.push_back(VK_KHR_ANDROID_SURFACE_EXTENSION_NAME);
 #elif defined(_WIN32)
     info.instance_extension_names.push_back(VK_KHR_WIN32_SURFACE_EXTENSION_NAME);
-#elif defined(VK_USE_PLATFORM_IOS_MVK)
-    info.instance_extension_names.push_back(VK_MVK_IOS_SURFACE_EXTENSION_NAME);
-#elif defined(VK_USE_PLATFORM_MACOS_MVK)
-    info.instance_extension_names.push_back(VK_MVK_MACOS_SURFACE_EXTENSION_NAME);
+#elif defined(VK_USE_PLATFORM_METAL_EXT)
+    info.instance_extension_names.push_back(VK_EXT_METAL_SURFACE_EXTENSION_NAME);
 #elif defined(VK_USE_PLATFORM_WAYLAND_KHR)
     info.instance_extension_names.push_back(VK_KHR_WAYLAND_SURFACE_EXTENSION_NAME);
 #else
@@ -487,13 +485,11 @@ void destroy_window(struct sample_info &info) {
     DestroyWindow(info.window);
 }
 
-#elif defined(VK_USE_PLATFORM_IOS_MVK) || defined(VK_USE_PLATFORM_MACOS_MVK)
+#elif defined(VK_USE_PLATFORM_METAL_EXT)
 
 // iOS & macOS: init_window() implemented externally to allow access to Objective-C components
 
-void destroy_window(struct sample_info &info) {
-	info.window = NULL;
-}
+void destroy_window(struct sample_info &info) { info.caMetalLayer = NULL; }
 
 #elif defined(__ANDROID__)
 // Android implementation.
@@ -716,20 +712,13 @@ void init_swapchain_extension(struct sample_info &info) {
     createInfo.flags = 0;
     createInfo.window = AndroidGetApplicationWindow();
     res = info.fpCreateAndroidSurfaceKHR(info.inst, &createInfo, nullptr, &info.surface);
-#elif defined(VK_USE_PLATFORM_IOS_MVK)
-    VkIOSSurfaceCreateInfoMVK createInfo = {};
-    createInfo.sType = VK_STRUCTURE_TYPE_IOS_SURFACE_CREATE_INFO_MVK;
+#elif defined(VK_USE_PLATFORM_METAL_EXT)
+    VkMetalSurfaceCreateInfoEXT createInfo = {};
+    createInfo.sType = VK_STRUCTURE_TYPE_METAL_SURFACE_CREATE_INFO_EXT;
     createInfo.pNext = NULL;
     createInfo.flags = 0;
-    createInfo.pView = info.window;
-    res = vkCreateIOSSurfaceMVK(info.inst, &createInfo, NULL, &info.surface);
-#elif defined(VK_USE_PLATFORM_MACOS_MVK)
-    VkMacOSSurfaceCreateInfoMVK createInfo = {};
-    createInfo.sType = VK_STRUCTURE_TYPE_MACOS_SURFACE_CREATE_INFO_MVK;
-    createInfo.pNext = NULL;
-    createInfo.flags = 0;
-    createInfo.pView = info.window;
-    res = vkCreateMacOSSurfaceMVK(info.inst, &createInfo, NULL, &info.surface);
+    createInfo.pLayer = info.caMetalLayer;
+    res = vkCreateMetalSurfaceEXT(info.inst, &createInfo, NULL, &info.surface);
 #elif defined(VK_USE_PLATFORM_WAYLAND_KHR)
     VkWaylandSurfaceCreateInfoKHR createInfo = {};
     createInfo.sType = VK_STRUCTURE_TYPE_WAYLAND_SURFACE_CREATE_INFO_KHR;

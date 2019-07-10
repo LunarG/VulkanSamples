@@ -34,7 +34,7 @@ Use memory barriers to update texture
 #include <assert.h>
 #include <string.h>
 #include <cstdlib>
-#include <cube_data.h>
+#include "cube_data.h"
 
 // Using OpenGL based glm, so Y is upside down between OpenGL and Vulkan
 
@@ -100,10 +100,8 @@ int sample_main(int argc, char **argv) {
     info.instance_extension_names.push_back(VK_KHR_WIN32_SURFACE_EXTENSION_NAME);
 #elif __ANDROID__
     info.instance_extension_names.push_back(VK_KHR_ANDROID_SURFACE_EXTENSION_NAME);
-#elif defined(VK_USE_PLATFORM_IOS_MVK)
-    info.instance_extension_names.push_back(VK_MVK_IOS_SURFACE_EXTENSION_NAME);
-#elif defined(VK_USE_PLATFORM_MACOS_MVK)
-    info.instance_extension_names.push_back(VK_MVK_MACOS_SURFACE_EXTENSION_NAME);
+#elif defined(VK_USE_PLATFORM_METAL_EXT)
+    info.instance_extension_names.push_back(VK_EXT_METAL_SURFACE_EXTENSION_NAME);
 #elif defined(VK_USE_PLATFORM_WAYLAND_KHR)
     info.instance_extension_names.push_back(VK_KHR_WAYLAND_SURFACE_EXTENSION_NAME);
 #else

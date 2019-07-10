@@ -59,7 +59,7 @@ static android_app *Android_application = nullptr;
 
 using namespace std;
 
-#if !(defined(__ANDROID__) || defined(VK_USE_PLATFORM_IOS_MVK) || defined(VK_USE_PLATFORM_MACOS_MVK))
+#if !(defined(__ANDROID__) || defined(VK_USE_PLATFORM_METAL_EXT))
 // Android, iOS, and macOS: main() implemented externally to allow access to Objective-C components
 int main(int argc, char **argv) { return sample_main(argc, argv); }
 #endif
@@ -86,7 +86,7 @@ string get_file_name(const string &s) {
     return ("");
 }
 
-#if !(defined(VK_USE_PLATFORM_IOS_MVK) || defined(VK_USE_PLATFORM_MACOS_MVK))
+#if !defined(VK_USE_PLATFORM_METAL_EXT)
 // iOS & macOS: get_base_data_dir() implemented externally to allow access to Objective-C components
 std::string get_base_data_dir() {
 #ifdef __ANDROID__
@@ -313,7 +313,7 @@ bool GLSLtoSPV(const VkShaderStageFlagBits shader_type, const char *pshader, std
     return wasConverted;
 }
 
-#else  // not IOS OR macOS
+#else  // not MVK iOS/macOS
 
 #ifndef __ANDROID__
 void init_resources(TBuiltInResource &Resources) {

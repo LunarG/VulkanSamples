@@ -147,8 +147,8 @@ struct sample_info {
     HINSTANCE connection;        // hInstance - Windows Instance
     char name[APP_NAME_STR_LEN]; // Name to put on the window/icon
     HWND window;                 // hWnd - window handle
-#elif (defined(VK_USE_PLATFORM_IOS_MVK) || defined(VK_USE_PLATFORM_MACOS_MVK))
-	void* window;
+#elif defined(VK_USE_PLATFORM_METAL_EXT)
+    void *caMetalLayer;
 #elif defined(__ANDROID__)
     PFN_vkCreateAndroidSurfaceKHR fpCreateAndroidSurfaceKHR;
 #elif defined(VK_USE_PLATFORM_WAYLAND_KHR)
