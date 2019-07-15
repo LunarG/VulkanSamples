@@ -23,7 +23,7 @@ if %msbuild_version% lss 14 (
     echo ERROR: MSBuild must be at least version 14 ^(Visual Studio 2015^). Found version %msbuild_version%.
     exit /b 1
 )
-set version_string=Visual Studio %msbuild_version% Win64
+set version_string=Visual Studio %msbuild_version%
 
 set START_DIR=%CD%
 cd %VULKAN_SDK%
@@ -32,7 +32,7 @@ cd %VULKAN_SDK%
 cd glslang
 md build
 cd build
-cmake -G "%version_string%" ..
+cmake -G "%version_string%" -A x64 ..
 msbuild ALL_BUILD.vcxproj /p:Platform=x64 /p:Configuration=Debug /verbosity:quiet
 msbuild ALL_BUILD.vcxproj /p:Platform=x64 /p:Configuration=Release /verbosity:quiet
 cd ..\..
@@ -41,7 +41,7 @@ cd ..\..
 cd spirv-tools
 md build
 cd build
-cmake -G "%version_string%" ..
+cmake -G "%version_string%" -A x64 ..
 msbuild ALL_BUILD.vcxproj /p:Platform=x64 /p:Configuration=Debug /verbosity:quiet
 msbuild ALL_BUILD.vcxproj /p:Platform=x64 /p:Configuration=Release /verbosity:quiet
 cd ..\..
@@ -50,7 +50,7 @@ cd ..\..
 cd samples
 md build
 cd build
-cmake -G "%version_string%" ..
+cmake -G "%version_string%" -A x64 ..
 msbuild ALL_BUILD.vcxproj /p:Platform=x64 /p:Configuration=Debug /verbosity:quiet
 msbuild ALL_BUILD.vcxproj /p:Platform=x64 /p:Configuration=Release /verbosity:quiet
 
