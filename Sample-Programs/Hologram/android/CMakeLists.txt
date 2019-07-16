@@ -14,8 +14,8 @@
 # limitations under the License.
 #
 
+cmake_minimum_required(VERSION 3.10.2)
 project(Hologram)
-cmake_minimum_required(VERSION 3.4.1)
 
 get_filename_component(samplesDir "${CMAKE_SOURCE_DIR}/../../.." ABSOLUTE)
 set(hologramDir "${samplesDir}/Sample-Programs/Hologram")

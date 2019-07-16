@@ -189,7 +189,7 @@ generate the native platform files.
     - [2017](https://www.visualstudio.com/vs/downloads/)
   - The Community Edition of each of the above versions is sufficient, as
     well as any more capable edition.
-- CMake: Continuous integration tools use [CMake 3.12.2](https://github.com/Kitware/CMake/releases/tag/v3.12.2) for Windows
+- [CMake 3.10.2](https://cmake.org/files/v3.10/cmake-3.10.2-win64-x64.zip) is recommended.
   - Use the installer option to add CMake to the system PATH
 - Git Client Support
   - [Git for Windows](http://git-scm.com/download/win) is a popular solution
@@ -280,7 +280,7 @@ in the build folder. You may select "Debug" or "Release" from the Solution
 Configurations drop-down list. Start a build by selecting the Build->Build
 Solution menu item.
 
-The continuous integration tools use [CMake 3.12.4](https://github.com/Kitware/CMake/releases/tag/v3.12.4) for Linux
+[CMake 3.10.2](https://cmake.org/files/v3.10/cmake-3.10.2-win64-x64.zip) is recommended.
 
 ## Building On Linux
 
@@ -294,8 +294,10 @@ repository to other Linux distributions.
 
 #### Required Package List
 
-    sudo apt-get install git cmake build-essential libx11-xcb-dev \
+    sudo apt-get install git build-essential libx11-xcb-dev \
         libxkbcommon-dev libwayland-dev libxrandr-dev
+
+[CMake 3.10.2](https://cmake.org/files/v3.10/cmake-3.10.2-Linux-x86_64.tar.gz) is recommended.
 
 ### Linux Build
 
