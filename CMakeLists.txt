@@ -12,7 +12,14 @@ set(API_NAME "Vulkan" CACHE STRING "API name to use when building")
 set(MAJOR "1")
 string(TOLOWER ${API_NAME} API_LOWERCASE)
 set(VULKAN_HEADERS_INSTALL_DIR "HEADERS-NOTFOUND" CACHE PATH "Absolute path to a Vulkan-Headers install directory")
-set(VULKAN_LOADER_INSTALL_DIR "LOADER-NOTFOUND" CACHE PATH "Absolute path to a Vulkan-Loader install directory")
+if(NOT VULKAN_LOADER_INSTALL_DIR AND NOT DEFINED ENV{VULKAN_LOADER_INSTALL_DIR})
+    message(STATUS "Using local loader")
+    if(CMAKE_CL_64)
+        set(VULKAN_LOADER_INSTALL_DIR "${CMAKE_SOURCE_DIR}/external/x64")
+    else()
+        set(VULKAN_LOADER_INSTALL_DIR "${CMAKE_SOURCE_DIR}/external/x86")
+    endif()
+endif()
 set(CMAKE_PREFIX_PATH ${CMAKE_PREFIX_PATH};${VULKAN_HEADERS_INSTALL_DIR};${VULKAN_LOADER_INSTALL_DIR};
                        $ENV{VULKAN_HEADERS_INSTALL_DIR};$ENV{VULKAN_LOADER_INSTALL_DIR})
   
@@ -213,11 +220,6 @@ endif()
 # Cmake command line option overrides environment variable
 if(NOT VULKAN_HEADERS_INSTALL_DIR)
     set(VULKAN_HEADERS_INSTALL_DIR $ENV{VULKAN_HEADERS_INSTALL_DIR})
-endif()
-
-set(VULKAN_LOADER_INSTALL_DIR "VULKAN-LOADER-NOTFOUND" CACHE PATH "Absolute path to a Vulkan-Loader install directory")
-if(NOT VULKAN_LOADER_INSTALL_DIR AND NOT DEFINED ENV{VULKAN_LOADER_INSTALL_DIR})
-    message(FATAL_ERROR "Must define location of vulkan loader -- see BUILD.md")
 endif()
 
 # Cmake command line option overrides environment variable
