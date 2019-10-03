@@ -97,7 +97,7 @@ int sample_main(int argc, char *argv[]) {
     init_device_extension_names(info);
     // The VK_EXT_validation_cache extension is implemented by the validation layers, so
     // they must be enabled in order to use it.
-    info.instance_layer_names.push_back("VK_LAYER_LUNARG_standard_validation");
+    info.instance_layer_names.push_back("VK_LAYER_KHRONOS_validation");
     if (!demo_check_layers(info.instance_layer_properties, info.instance_layer_names)) {
         std::cout << "Set the environment variable VK_LAYER_PATH to point to the location of your layers" << std::endl;
         exit(1);

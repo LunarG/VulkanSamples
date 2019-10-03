@@ -63,9 +63,7 @@ int sample_main(int argc, char *argv[]) {
 
     /* VULKAN_KEY_START */
 
-    /* Use standard_validation meta layer that enables all
-     * recommended validation layers
-     */
+    /* Enable validation*/
     info.instance_layer_names.push_back("VK_LAYER_KHRONOS_validation");
     if (!demo_check_layers(info.instance_layer_properties, info.instance_layer_names)) {
         if (!demo_check_layers(info.instance_layer_properties, info.instance_layer_names)) {
