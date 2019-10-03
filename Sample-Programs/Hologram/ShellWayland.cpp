@@ -188,7 +188,7 @@ void ShellWayland::registry_handle_global_remove(void *data, wl_registry *regist
 const wl_registry_listener ShellWayland::registry_listener = {registry_handle_global, registry_handle_global_remove};
 
 ShellWayland::ShellWayland(Game &game) : Shell(game) {
-    if (game.settings().validate) instance_layers_.push_back("VK_LAYER_LUNARG_standard_validation");
+    if (game.settings().validate) instance_layers_.push_back("VK_LAYER_KHRONOS_validation");
     instance_extensions_.push_back(VK_KHR_WAYLAND_SURFACE_EXTENSION_NAME);
 
     init_connection();
