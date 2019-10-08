@@ -593,11 +593,17 @@ void init_depth_buffer(struct sample_info &info) {
     VkResult U_ASSERT_ONLY res;
     bool U_ASSERT_ONLY pass;
     VkImageCreateInfo image_info = {};
+    VkFormatProperties props;
 
     /* allow custom depth formats */
 #ifdef __ANDROID__
-    // Depth format needs to be VK_FORMAT_D24_UNORM_S8_UINT on Android.
-    info.depth.format = VK_FORMAT_D24_UNORM_S8_UINT;
+    // Depth format needs to be VK_FORMAT_D24_UNORM_S8_UINT on Android (if available).
+    vkGetPhysicalDeviceFormatProperties(info.gpus[0], VK_FORMAT_D24_UNORM_S8_UINT, &props);
+    if ((props.linearTilingFeatures & VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT) ||
+        (props.optimalTilingFeatures & VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT))
+        info.depth.format = VK_FORMAT_D24_UNORM_S8_UINT;
+    else
+        info.depth.format = VK_FORMAT_D16_UNORM;
 #elif defined(VK_USE_PLATFORM_IOS_MVK)
     if (info.depth.format == VK_FORMAT_UNDEFINED) info.depth.format = VK_FORMAT_D32_SFLOAT;
 #else
@@ -605,7 +611,6 @@ void init_depth_buffer(struct sample_info &info) {
 #endif
 
     const VkFormat depth_format = info.depth.format;
-    VkFormatProperties props;
     vkGetPhysicalDeviceFormatProperties(info.gpus[0], depth_format, &props);
     if (props.linearTilingFeatures & VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT) {
         image_info.tiling = VK_IMAGE_TILING_LINEAR;
