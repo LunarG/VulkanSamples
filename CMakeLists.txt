@@ -298,6 +298,7 @@ if(WIN32)
 else()
     set(SPIRV_TOOLS_LIBRARIES ${SPIRV_TOOLS_OPT_LIB} ${SPIRV_TOOLS_LIB})
 
+    INCLUDE(CheckLibraryExists)
     CHECK_LIBRARY_EXISTS("rt" clock_gettime "" NEED_RT)
     if (NEED_RT)
         set(SPIRV_TOOLS_LIBRARIES ${SPIRV_TOOLS_LIBRARIES} rt)
