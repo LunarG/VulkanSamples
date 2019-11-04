@@ -389,7 +389,7 @@ $ ../../../ndk-build NDK_PROJECT_PATH=. APP_BUILD_SCRIPT=Android.mk APP_STL:=c++
 - Generate Android Studio Projects
 ```java
 $ cd YOUR_DEV_DIRECTORY/VulkanSamples/API-Samples
-$ cmake -DANDROID=ON -DABI_NAME=<armabi-v7a|arm64-v8a|...>
+$ cmake -DANDROID=ON -DABI_NAME=<armeabi-v7a|arm64-v8a|...>
 ```
 - Import VulkanSamples/API-Samples/android/build.gradle into Android Studio 2.3.0+.
 - Or if building from a terminal:
