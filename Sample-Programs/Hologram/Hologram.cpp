@@ -181,22 +181,15 @@ void Hologram::create_render_pass() {
     subpass.colorAttachmentCount = 1;
     subpass.pColorAttachments = &attachment_ref;
 
-    std::array<VkSubpassDependency, 2> subpass_deps;
-    subpass_deps[0].srcSubpass = VK_SUBPASS_EXTERNAL;
-    subpass_deps[0].dstSubpass = 0;
-    subpass_deps[0].srcStageMask = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
-    subpass_deps[0].dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-    subpass_deps[0].srcAccessMask = VK_ACCESS_MEMORY_READ_BIT;
-    subpass_deps[0].dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-    subpass_deps[0].dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT;
-
-    subpass_deps[1].srcSubpass = 0;
-    subpass_deps[1].dstSubpass = VK_SUBPASS_EXTERNAL;
-    subpass_deps[1].srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-    subpass_deps[1].dstStageMask = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
-    subpass_deps[1].srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-    subpass_deps[1].dstAccessMask = VK_ACCESS_MEMORY_READ_BIT;
-    subpass_deps[1].dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT;
+    // Subpass dependency to wait for wsi image acquired semaphore before starting layout transition
+    VkSubpassDependency subpass_dependency = {};
+    subpass_dependency.srcSubpass = VK_SUBPASS_EXTERNAL;
+    subpass_dependency.dstSubpass = 0;
+    subpass_dependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+    subpass_dependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+    subpass_dependency.srcAccessMask = 0;
+    subpass_dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+    subpass_dependency.dependencyFlags = 0;
 
     VkRenderPassCreateInfo render_pass_info = {};
     render_pass_info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
@@ -204,8 +197,8 @@ void Hologram::create_render_pass() {
     render_pass_info.pAttachments = &attachment;
     render_pass_info.subpassCount = 1;
     render_pass_info.pSubpasses = &subpass;
-    render_pass_info.dependencyCount = (uint32_t)subpass_deps.size();
-    render_pass_info.pDependencies = subpass_deps.data();
+    render_pass_info.dependencyCount = 1;
+    render_pass_info.pDependencies = &subpass_dependency;
 
     vk::assert_success(vk::CreateRenderPass(dev_, &render_pass_info, nullptr, &render_pass_));
 }
