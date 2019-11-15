@@ -257,6 +257,22 @@ The `pipelineBindPoint` member is meant to indicate if this is a graphics
 or a compute subpass.
 Currently, only the graphics subpass is valid.
 
+#### Dependency
+
+We are asking the renderpass to transition our image layout from UNDEFINED to 
+COLOR_ATTACHMENT_OPTIMAL. We will be using a semaphore that signals at the COLOR_ATTACHMENT_OUTPUT
+stage to indicate that the present engine has made the swapchain image available, so we want 
+to create a dependency on that stage before beginning our subpass.
+
+    VkSubpassDependency subpass_dependency = {};
+    subpass_dependency.srcSubpass = VK_SUBPASS_EXTERNAL;
+    subpass_dependency.dstSubpass = 0;
+    subpass_dependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+    subpass_dependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+    subpass_dependency.srcAccessMask = 0;
+    subpass_dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+    subpass_dependency.dependencyFlags = 0;
+
 #### Render Pass
 
 Now you have all you need to define the render pass:
@@ -268,8 +284,8 @@ Now you have all you need to define the render pass:
     rp_info.pAttachments = attachments;
     rp_info.subpassCount = 1;
     rp_info.pSubpasses = &subpass;
-    rp_info.dependencyCount = 0;
-    rp_info.pDependencies = NULL;
+    rp_info.dependencyCount = 1;
+    rp_info.pDependencies = &subpass_dependency;
     res = vkCreateRenderPass(info.device, &rp_info, NULL, &info.render_pass);
 
 You'll be using the render pass in several of the upcoming samples.

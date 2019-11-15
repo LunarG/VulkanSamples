@@ -267,6 +267,16 @@ int sample_main(int argc, char *argv[]) {
     subpass.preserveAttachmentCount = 0;
     subpass.pPreserveAttachments = NULL;
 
+    // Subpass dependency to wait for wsi image acquired semaphore before starting layout transition
+    VkSubpassDependency subpass_dependency = {};
+    subpass_dependency.srcSubpass = VK_SUBPASS_EXTERNAL;
+    subpass_dependency.dstSubpass = 0;
+    subpass_dependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+    subpass_dependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+    subpass_dependency.srcAccessMask = 0;
+    subpass_dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+    subpass_dependency.dependencyFlags = 0;
+
     VkRenderPassCreateInfo rp_info = {};
     rp_info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
     rp_info.pNext = NULL;
@@ -274,8 +284,8 @@ int sample_main(int argc, char *argv[]) {
     rp_info.pAttachments = attachments;
     rp_info.subpassCount = 1;
     rp_info.pSubpasses = &subpass;
-    rp_info.dependencyCount = 0;
-    rp_info.pDependencies = NULL;
+    rp_info.dependencyCount = 1;
+    rp_info.pDependencies = &subpass_dependency;
 
     res = vkCreateRenderPass(info.device, &rp_info, NULL, &info.render_pass);
     assert(!res);
