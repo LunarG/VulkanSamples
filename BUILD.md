@@ -242,7 +242,7 @@ install directory must be provided. This can be done by setting the
 `VULKAN_LOADER_INSTALL_DIR` environment variable or by setting the
 `VULKAN_LOADER_INSTALL_DIR` CMake variable with the `-D` CMake option. In
 either case, the variable should point to the installation directory of a
-Vulkan-Headers repository built with the install target.
+Vulkan-Loader repository built with the install target.
 
 When generating the project files, the absolute path to a glslang install
 directory must be provided. This can be done by setting the
