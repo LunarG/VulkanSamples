@@ -113,9 +113,10 @@ and then unmap it:
 
     vkUnmapMemory(info.device, info.uniform_data.mem);
 
-You want to unmap it fairly immediately because the memory mapping
-mechanisms such as page tables have limited size, especially for memory
-that is visible to both the CPU and GPU.
+You can unmap the memory now since we're drawing a single static frame and there
+is no need to update the MVP matrix again.
+But if you plan to extend this example to change the view, it is more efficient
+to leave it mapped.
 
 Finally, you associate the memory you just allocated with the buffer object:
 
