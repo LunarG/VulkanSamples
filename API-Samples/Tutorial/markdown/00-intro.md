@@ -64,7 +64,8 @@ Once you have the samples built and running, you can proceed with this tutorial.
 
 It is also useful to be able to easily access the
 `vulkan.h` header file for reference as you look at the sample code.
-This file can be found in the Samples repository, under the `include` directory.
+This file can be found in the `include` directory of the Vulkan SDK, or in the
+Vulkan-Headers repository, or installed elsewhere on your system.
 
 The Vulkan specification document is an invaluable source for Vulkan information.
 You can find the specification at the
