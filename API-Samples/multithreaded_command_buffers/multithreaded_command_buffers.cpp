@@ -134,11 +134,12 @@ int sample_main(int argc, char *argv[]) {
 
     res = vkCreatePipelineLayout(info.device, &pPipelineLayoutCreateInfo, NULL, &info.pipeline_layout);
     assert(res == VK_SUCCESS);
-    init_renderpass(info, depthPresent, false, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);  // Can't clear in
-                                                                                           // renderpass
-                                                                                           // load because
-                                                                                           // we re-use
-                                                                                           // pipeline
+    init_renderpass(info, depthPresent, false, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+                    VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);  // Can't clear in
+                                                                // renderpass
+                                                                // load because
+                                                                // we re-use
+                                                                // pipeline
     init_shaders(info, vertShaderText, fragShaderText);
     init_framebuffers(info, depthPresent);
 

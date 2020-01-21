@@ -64,9 +64,9 @@ void init_depth_buffer(struct sample_info &info);
 void init_uniform_buffer(struct sample_info &info);
 void init_descriptor_and_pipeline_layouts(struct sample_info &info, bool use_texture,
                                           VkDescriptorSetLayoutCreateFlags descSetLayoutCreateFlags = 0);
-void init_renderpass(
-    struct sample_info &info, bool include_depth, bool clear = true,
-    VkImageLayout finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
+void init_renderpass(struct sample_info &info, bool include_depth, bool clear = true,
+                     VkImageLayout finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
+                     VkImageLayout initialLayout = VK_IMAGE_LAYOUT_UNDEFINED);
 void init_vertex_buffer(struct sample_info &info, const void *vertexData,
                         uint32_t dataSize, uint32_t dataStride,
                         bool use_texture);
