@@ -126,7 +126,7 @@ int sample_main(int argc, char **argv) {
     init_texture(info, nullptr, VK_IMAGE_USAGE_TRANSFER_DST_BIT, VK_FORMAT_FEATURE_BLIT_DST_BIT);
     init_uniform_buffer(info);
     init_descriptor_and_pipeline_layouts(info, true);
-    init_renderpass(info, DEPTH_PRESENT, false, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
+    init_renderpass(info, DEPTH_PRESENT, false, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
     init_shaders(info, vertShaderText, fragShaderText);
     init_framebuffers(info, DEPTH_PRESENT);
     init_vertex_buffer(info, vb_Data, sizeof(vb_Data), sizeof(vb_Data[0]), true);
@@ -172,6 +172,10 @@ int sample_main(int argc, char **argv) {
     // we will use the same renderpass multiple times in the frame
     vkCmdClearColorImage(info.cmd, info.buffers[info.current_buffer].image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, clear_color, 1,
                          &srRange);
+
+    set_image_layout(info, info.buffers[info.current_buffer].image, VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+                     VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_PIPELINE_STAGE_TRANSFER_BIT,
+                     VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT);
 
     VkRenderPassBeginInfo rp_begin;
     rp_begin.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
