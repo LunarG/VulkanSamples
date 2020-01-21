@@ -1145,7 +1145,8 @@ void init_descriptor_and_pipeline_layouts(struct sample_info &info, bool use_tex
     assert(res == VK_SUCCESS);
 }
 
-void init_renderpass(struct sample_info &info, bool include_depth, bool clear, VkImageLayout finalLayout) {
+void init_renderpass(struct sample_info &info, bool include_depth, bool clear, VkImageLayout finalLayout,
+                     VkImageLayout initialLayout) {
     /* DEPENDS on init_swap_chain() and init_depth_buffer() */
 
     VkResult U_ASSERT_ONLY res;
@@ -1157,7 +1158,7 @@ void init_renderpass(struct sample_info &info, bool include_depth, bool clear, V
     attachments[0].storeOp = VK_ATTACHMENT_STORE_OP_STORE;
     attachments[0].stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
     attachments[0].stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-    attachments[0].initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+    attachments[0].initialLayout = initialLayout;
     attachments[0].finalLayout = finalLayout;
     attachments[0].flags = 0;
 
