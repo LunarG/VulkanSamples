@@ -1149,6 +1149,8 @@ void init_renderpass(struct sample_info &info, bool include_depth, bool clear, V
                      VkImageLayout initialLayout) {
     /* DEPENDS on init_swap_chain() and init_depth_buffer() */
 
+    assert(clear || (initialLayout != VK_IMAGE_LAYOUT_UNDEFINED));
+
     VkResult U_ASSERT_ONLY res;
     /* Need attachments for render target and depth buffer */
     VkAttachmentDescription attachments[2];
@@ -1165,9 +1167,9 @@ void init_renderpass(struct sample_info &info, bool include_depth, bool clear, V
     if (include_depth) {
         attachments[1].format = info.depth.format;
         attachments[1].samples = NUM_SAMPLES;
-        attachments[1].loadOp = clear ? VK_ATTACHMENT_LOAD_OP_CLEAR : VK_ATTACHMENT_LOAD_OP_LOAD;
+        attachments[1].loadOp = clear ? VK_ATTACHMENT_LOAD_OP_CLEAR : VK_ATTACHMENT_LOAD_OP_DONT_CARE;
         attachments[1].storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-        attachments[1].stencilLoadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
+        attachments[1].stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
         attachments[1].stencilStoreOp = VK_ATTACHMENT_STORE_OP_STORE;
         attachments[1].initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
         attachments[1].finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
