@@ -301,8 +301,8 @@ int sample_main(int argc, char *argv[]) {
         spv_context spvContext = spvContextCreate(SPV_ENV_VULKAN_1_0);
         spv_binary fragmentBinary = {};
         spv_diagnostic fragmentDiag = {};
-        spv_result_t fragmentResult = spvTextToBinary(spvContext, fragmentSPIRV_specialized.c_str(),
-                                                      fragmentSPIRV_specialized.length(), &fragmentBinary, &fragmentDiag);
+        spv_result_t U_ASSERT_ONLY fragmentResult = spvTextToBinary(
+            spvContext, fragmentSPIRV_specialized.c_str(), fragmentSPIRV_specialized.length(), &fragmentBinary, &fragmentDiag);
         if (fragmentDiag) {
             printf("Diagnostic info from fragment shader:\n");
             spvDiagnosticPrint(fragmentDiag);

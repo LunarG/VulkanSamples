@@ -257,8 +257,8 @@ VkResult init_enumerate_device(struct sample_info &info, uint32_t gpu_count) {
     vkGetPhysicalDeviceMemoryProperties(info.gpus[0], &info.memory_properties);
     vkGetPhysicalDeviceProperties(info.gpus[0], &info.gpu_props);
     /* query device extensions for enabled layers */
-    for (auto& layer_props : info.instance_layer_properties) {
-      init_device_extension_properties(info, layer_props);
+    for (auto &layer_props : info.instance_layer_properties) {
+        init_device_extension_properties(info, layer_props);
     }
 
     return res;
@@ -280,7 +280,7 @@ void init_queue_family_index(struct sample_info &info) {
     vkGetPhysicalDeviceQueueFamilyProperties(info.gpus[0], &info.queue_family_count, info.queue_props.data());
     assert(info.queue_family_count >= 1);
 
-    bool found = false;
+    bool U_ASSERT_ONLY found = false;
     for (unsigned int i = 0; i < info.queue_family_count; i++) {
         if (info.queue_props[i].queueFlags & VK_QUEUE_GRAPHICS_BIT) {
             info.graphics_queue_family_index = i;
@@ -409,7 +409,8 @@ void init_connection(struct sample_info &info) {
 #endif
 }
 #ifdef _WIN32
-static void run(struct sample_info *info) { /* Placeholder for samples that want to show dynamic content */ }
+static void run(struct sample_info *info) { /* Placeholder for samples that want to show dynamic content */
+}
 
 // MS-Windows event handling function:
 LRESULT CALLBACK WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
@@ -1047,7 +1048,7 @@ void init_uniform_buffer(struct sample_info &info) {
     info.View = glm::lookAt(glm::vec3(-5, 3, -10),  // Camera is at (-5,3,-10), in World Space
                             glm::vec3(0, 0, 0),     // and looks at the origin
                             glm::vec3(0, -1, 0)     // Head is up (set to 0,-1,0 to look upside-down)
-                            );
+    );
     info.Model = glm::mat4(1.0f);
     // Vulkan clip space has inverted Y and half Z.
     info.Clip = glm::mat4(1.0f, 0.0f, 0.0f, 0.0f, 0.0f, -1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.5f, 0.0f, 0.0f, 0.0f, 0.5f, 1.0f);

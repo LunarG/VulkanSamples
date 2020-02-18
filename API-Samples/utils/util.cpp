@@ -224,7 +224,8 @@ bool read_ppm(char const *const filename, int &width, int &height, uint64_t rowP
     }
 
     // Read the four values from file, accounting with any and all whitepace
-    fscanf(fPtr, "%s %s %s %s ", magicStr, widthStr, heightStr, formatStr);
+    int U_ASSERT_ONLY count = fscanf(fPtr, "%s %s %s %s ", magicStr, widthStr, heightStr, formatStr);
+    assert(count == 4);
 
     // Kick out if comments present
     if (magicStr[0] == '#' || widthStr[0] == '#' || heightStr[0] == '#' || formatStr[0] == '#') {
@@ -261,7 +262,8 @@ bool read_ppm(char const *const filename, int &width, int &height, uint64_t rowP
     for (int y = 0; y < height; y++) {
         unsigned char *rowPtr = dataPtr;
         for (int x = 0; x < width; x++) {
-            fread(rowPtr, 3, 1, fPtr);
+            count = fread(rowPtr, 3, 1, fPtr);
+            assert(count == 1);
             rowPtr[3] = 255; /* Alpha of 1 */
             rowPtr += 4;
         }
@@ -653,9 +655,9 @@ void write_ppm(struct sample_info &info, const char *basename) {
     mem_alloc.allocationSize = mem_reqs.size;
 
     /* Find the memory type that is host mappable */
-    bool pass = memory_type_from_properties(info, mem_reqs.memoryTypeBits,
-                                            VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-                                            &mem_alloc.memoryTypeIndex);
+    bool U_ASSERT_ONLY pass = memory_type_from_properties(
+        info, mem_reqs.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+        &mem_alloc.memoryTypeIndex);
     assert(pass && "No mappable, coherent memory");
 
     /* allocate memory */

@@ -359,7 +359,7 @@ static void *per_thread_code(void *arg) {
     alloc_info.memoryTypeIndex = 0;
 
     alloc_info.allocationSize = mem_reqs.size;
-    bool pass;
+    bool U_ASSERT_ONLY pass;
     pass = memory_type_from_properties(info, mem_reqs.memoryTypeBits,
                                        VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
                                        &alloc_info.memoryTypeIndex);

@@ -120,8 +120,8 @@ int sample_main(int argc, char *argv[]) {
     memAllocInfo.pNext = NULL;
 
     vkGetImageMemoryRequirements(info.device, bltSrcImage, &memReq);
-    bool pass = memory_type_from_properties(info, memReq.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT,
-                                            &memAllocInfo.memoryTypeIndex);
+    bool U_ASSERT_ONLY pass = memory_type_from_properties(info, memReq.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT,
+                                                          &memAllocInfo.memoryTypeIndex);
     assert(pass);
     memAllocInfo.allocationSize = memReq.size;
     res = vkAllocateMemory(info.device, &memAllocInfo, NULL, &dmem);
@@ -273,8 +273,8 @@ int sample_main(int argc, char *argv[]) {
     prePresentBarrier.subresourceRange.baseArrayLayer = 0;
     prePresentBarrier.subresourceRange.layerCount = 1;
     prePresentBarrier.image = info.buffers[info.current_buffer].image;
-    vkCmdPipelineBarrier(info.cmd, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, 0, 0, NULL,
-                         0, NULL, 1, &prePresentBarrier);
+    vkCmdPipelineBarrier(info.cmd, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, 0, 0, NULL, 0, NULL, 1,
+                         &prePresentBarrier);
 
     res = vkEndCommandBuffer(info.cmd);
     VkFenceCreateInfo fenceInfo;
