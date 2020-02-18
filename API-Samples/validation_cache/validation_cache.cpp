@@ -278,7 +278,7 @@ int sample_main(int argc, char *argv[]) {
     // Compile fragment shader to SPIRV to use as a template for the remaining variants.
     init_glslang();
     std::vector<uint32_t> spvTemplate;
-    bool compileSuccess = GLSLtoSPV(VK_SHADER_STAGE_FRAGMENT_BIT, fragShaderText, spvTemplate);
+    bool U_ASSERT_ONLY compileSuccess = GLSLtoSPV(VK_SHADER_STAGE_FRAGMENT_BIT, fragShaderText, spvTemplate);
     assert(compileSuccess);
     finalize_glslang();
     // Locate tweak_value in the compiled binary and save its word index.

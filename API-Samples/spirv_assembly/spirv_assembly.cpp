@@ -202,7 +202,8 @@ int sample_main(int argc, char *argv[]) {
     // Convert the vertex assembly into binary format
     spv_binary vertexBinary = {};
     spv_diagnostic vertexDiag = {};
-    spv_result_t vertexResult = spvTextToBinary(spvContext, vertexSPIRV.c_str(), vertexSPIRV.length(), &vertexBinary, &vertexDiag);
+    spv_result_t U_ASSERT_ONLY vertexResult =
+        spvTextToBinary(spvContext, vertexSPIRV.c_str(), vertexSPIRV.length(), &vertexBinary, &vertexDiag);
     if (vertexDiag) {
         printf("Diagnostic info from vertex shader:\n");
         spvDiagnosticPrint(vertexDiag);
@@ -212,7 +213,7 @@ int sample_main(int argc, char *argv[]) {
     // Convert the fragment assembly into binary format
     spv_binary fragmentBinary = {};
     spv_diagnostic fragmentDiag = {};
-    spv_result_t fragmentResult =
+    spv_result_t U_ASSERT_ONLY fragmentResult =
         spvTextToBinary(spvContext, fragmentSPIRV.c_str(), fragmentSPIRV.length(), &fragmentBinary, &fragmentDiag);
     if (fragmentDiag) {
         printf("Diagnostic info from fragment shader:\n");
