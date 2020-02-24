@@ -28,29 +28,11 @@ set version_string=Visual Studio %msbuild_version%
 set START_DIR=%CD%
 cd %VULKAN_SDK%
 
-:: Build glslang
-cd glslang
-md build
-cd build
-cmake -G "%version_string%" -A x64 ..
-msbuild ALL_BUILD.vcxproj /p:Platform=x64 /p:Configuration=Debug /verbosity:quiet
-msbuild ALL_BUILD.vcxproj /p:Platform=x64 /p:Configuration=Release /verbosity:quiet
-cd ..\..
-
-:: Build spirv-tools
-cd spirv-tools
-md build
-cd build
-cmake -G "%version_string%" -A x64 ..
-msbuild ALL_BUILD.vcxproj /p:Platform=x64 /p:Configuration=Debug /verbosity:quiet
-msbuild ALL_BUILD.vcxproj /p:Platform=x64 /p:Configuration=Release /verbosity:quiet
-cd ..\..
-
 :: Build samples
 cd samples
 md build
 cd build
-cmake -G "%version_string%" -A x64 ..
+cmake -G "%version_string%" -A x64 -DGLSLANG_INSTALL_DIR=%VULKAN_SDK% -DVULKAN_HEADERS_INSTALL_DIR=%VULKAN_SDK% -DVULKAN_LOADER_INSTALL_DIR=%VULKAN_SDK% ..
 msbuild ALL_BUILD.vcxproj /p:Platform=x64 /p:Configuration=Debug /verbosity:quiet
 msbuild ALL_BUILD.vcxproj /p:Platform=x64 /p:Configuration=Release /verbosity:quiet
 
