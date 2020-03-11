@@ -1,5 +1,19 @@
 cmake_minimum_required(VERSION 3.10.2)
 
+find_program(GLSLANG_VALIDATOR names glslangValidator
+    HINTS "${GLSLANG_INSTALL_DIR}/bin"
+    )
+
+macro(glsl_to_spirv src basename)
+    add_custom_command(OUTPUT ${src}.h
+        COMMAND ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/glsl-to-spirv ${CMAKE_CURRENT_SOURCE_DIR}/${basename}/${src} ${CMAKE_CURRENT_BINARY_DIR}/ShaderHeaders/${src}.h ${GLSLANG_VALIDATOR}
+        DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/glsl-to-spirv ${CMAKE_CURRENT_SOURCE_DIR}/${basename}/${src} ${GLSLANG_VALIDATOR}
+        )
+endmacro()
+
+add_custom_target(make-shader-directory ALL
+    COMMAND ${CMAKE_COMMAND} -E make_directory ShaderHeaders)
+
 # If ANDROID is ON, turn on cross-compiling for it
 if(ANDROID)
     set(CMAKE_SYSTEM_NAME "Android")
@@ -34,7 +48,7 @@ endif()
 
 set(SAMPLES_DATA_DIR ${SAMPLES_DATA_DIR} "${CMAKE_SOURCE_DIR}/API-Samples/data")
 set(SHADER_FILES ${SHADER_FILES} "")
-include_directories( ${SAMPLES_DATA_DIR} ${GLSLANG_SPIRV_INCLUDE_DIR} ${GLMINC_PREFIX} ${Vulkan_INCLUDE_DIR})
+include_directories( ${SAMPLES_DATA_DIR} ${GLSLANG_SPIRV_INCLUDE_DIR} ${GLMINC_PREFIX} ${Vulkan_INCLUDE_DIR} ${CMAKE_CURRENT_BINARY_DIR}/ShaderHeaders)
 
 # Additional includes for spirv-tools
 include_directories(${SPIRV_TOOLS_INCLUDE_DIR})
@@ -141,10 +155,28 @@ function(sampleWithSingleFile)
             endforeach(TEMPLATE_FILE)
             SET(SETTINGS_GRADLE "${SETTINGS_GRADLE}include ':${SAMPLE_NAME}'\n")
         elseif(UNIX)
-            add_executable(${SAMPLE_NAME} ${SAMPLE_NAME}/${SAMPLE_NAME}.cpp)
+            set(sources ${SAMPLE_NAME}/${SAMPLE_NAME}.cpp)
+            if (EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/${SAMPLE_NAME}/${SAMPLE_NAME}.vert)
+                glsl_to_spirv(${SAMPLE_NAME}.vert ${SAMPLE_NAME})
+                set (sources ${sources} ${SAMPLE_NAME}.vert.h)
+            endif()
+            if (EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/${SAMPLE_NAME}/${SAMPLE_NAME}.frag)
+                glsl_to_spirv(${SAMPLE_NAME}.frag ${SAMPLE_NAME})
+                set (sources ${sources} ${SAMPLE_NAME}.frag.h)
+            endif()
+            add_executable(${SAMPLE_NAME} ${sources})
             target_link_libraries(${SAMPLE_NAME} ${UTILS_NAME} ${GLSLANG_LIBRARIES} ${XCB_LIBRARIES} ${WAYLAND_CLIENT_LIBRARIES} ${VULKAN_LOADER} ${PTHREAD} ${SPIRV_TOOLS_LIBRARIES})
         else()
-            add_executable(${SAMPLE_NAME} WIN32 ${SAMPLE_NAME}/${SAMPLE_NAME}.cpp)
+            set(sources ${SAMPLE_NAME}/${SAMPLE_NAME}.cpp)
+            if (EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/${SAMPLE_NAME}/${SAMPLE_NAME}.vert)
+                glsl_to_spirv(${SAMPLE_NAME}.vert ${SAMPLE_NAME})
+                set (sources ${sources} ${SAMPLE_NAME}.vert.h)
+            endif()
+            if (EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/${SAMPLE_NAME}/${SAMPLE_NAME}.frag)
+                glsl_to_spirv(${SAMPLE_NAME}.frag ${SAMPLE_NAME})
+                set (sources ${sources} ${SAMPLE_NAME}.frag.h)
+            endif()
+            add_executable(${SAMPLE_NAME} WIN32 ${sources})
             target_link_libraries(${SAMPLE_NAME} ${UTILS_NAME} ${GLSLANG_LIBRARIES} ${VULKAN_LOADER} ${WINLIBS} ${SPIRV_TOOLS_LIBRARIES})
         endif()
     endforeach(TARG)

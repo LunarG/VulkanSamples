@@ -1,9 +1,9 @@
 /*
  * Vulkan Samples
  *
- * Copyright (C) 2015-2016 Valve Corporation
- * Copyright (C) 2015-2016 LunarG, Inc.
- * Copyright (C) 2015-2016 Google, Inc.
+ * Copyright (C) 2015-2020 Valve Corporation
+ * Copyright (C) 2015-2020 LunarG, Inc.
+ * Copyright (C) 2015-2020 Google, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -73,8 +73,9 @@ void init_vertex_buffer(struct sample_info &info, const void *vertexData,
 void init_framebuffers(struct sample_info &info, bool include_depth);
 void init_descriptor_pool(struct sample_info &info, bool use_texture);
 void init_descriptor_set(struct sample_info &info, bool use_texture);
-void init_shaders(struct sample_info &info, const char *vertShaderText,
-                  const char *fragShaderText);
+void init_shaders(struct sample_info &info, const char *vertShaderText, const char *fragShaderText);
+void init_shaders(struct sample_info &info, const VkShaderModuleCreateInfo *vertShaderCI,
+                  const VkShaderModuleCreateInfo *fragShaderCI);
 void init_pipeline_cache(struct sample_info &info);
 void init_pipeline(struct sample_info &info, VkBool32 include_depth,
                    VkBool32 include_vi = true);
