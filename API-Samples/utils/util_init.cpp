@@ -1,9 +1,9 @@
 /*
  * Vulkan Samples
  *
- * Copyright (C) 2015-2016 Valve Corporation
- * Copyright (C) 2015-2016 LunarG, Inc.
- * Copyright (C) 2015-2016 Google, Inc.
+ * Copyright (C) 2015-2020 Valve Corporation
+ * Copyright (C) 2015-2020 LunarG, Inc.
+ * Copyright (C) 2015-2020 Google, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -1469,6 +1469,34 @@ void init_descriptor_set(struct sample_info &info, bool use_texture) {
     }
 
     vkUpdateDescriptorSets(info.device, use_texture ? 2 : 1, writes, 0, NULL);
+}
+
+void init_shaders(struct sample_info &info, const VkShaderModuleCreateInfo *vertShaderCI,
+                  const VkShaderModuleCreateInfo *fragShaderCI) {
+    VkResult U_ASSERT_ONLY res;
+
+    if (vertShaderCI) {
+        info.shaderStages[0].sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+        info.shaderStages[0].pNext = NULL;
+        info.shaderStages[0].pSpecializationInfo = NULL;
+        info.shaderStages[0].flags = 0;
+        info.shaderStages[0].stage = VK_SHADER_STAGE_VERTEX_BIT;
+        info.shaderStages[0].pName = "main";
+        res = vkCreateShaderModule(info.device, vertShaderCI, NULL, &info.shaderStages[0].module);
+        assert(res == VK_SUCCESS);
+    }
+
+    if (fragShaderCI) {
+        std::vector<unsigned int> vtx_spv;
+        info.shaderStages[1].sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+        info.shaderStages[1].pNext = NULL;
+        info.shaderStages[1].pSpecializationInfo = NULL;
+        info.shaderStages[1].flags = 0;
+        info.shaderStages[1].stage = VK_SHADER_STAGE_FRAGMENT_BIT;
+        info.shaderStages[1].pName = "main";
+        res = vkCreateShaderModule(info.device, fragShaderCI, NULL, &info.shaderStages[1].module);
+        assert(res == VK_SUCCESS);
+    }
 }
 
 void init_shaders(struct sample_info &info, const char *vertShaderText, const char *fragShaderText) {
