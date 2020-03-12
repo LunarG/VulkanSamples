@@ -73,7 +73,6 @@ before_install:
       export PATH="$ANDROID_NDK_HOME:$PATH"
       pushd android-ndk-r15c
       yes | sdkmanager --update
-      yes | sdkmanager --licenses
       popd
     fi
   - |
