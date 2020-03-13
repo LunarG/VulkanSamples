@@ -1,8 +1,8 @@
 /*
  * Vulkan Samples
  *
- * Copyright (C) 2015-2016 Valve Corporation
- * Copyright (C) 2015-2016 LunarG, Inc.
+ * Copyright (C) 2015-2020 Valve Corporation
+ * Copyright (C) 2015-2020 LunarG, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -27,30 +27,10 @@ Use an input attachment to draw a yellow triangle
 #include <string.h>
 #include <util_init.hpp>
 
-/* For this sample, we'll start with GLSL so the shader function is plain */
-/* and then use the glslang GLSLtoSPV utility to convert it to SPIR-V for */
-/* the driver.  We do this for clarity rather than using pre-compiled     */
-/* SPIR-V                                                                 */
-
-static const char *vertShaderText =
-    "#version 450\n"
-    "vec2 vertices[3];\n"
-    "void main() {\n"
-    "    vertices[0] = vec2(-1.0, -1.0);\n"
-    "    vertices[1] = vec2( 1.0, -1.0);\n"
-    "    vertices[2] = vec2( 0.0,  1.0);\n"
-    "    gl_Position = vec4(vertices[gl_VertexIndex % 3], 0.0, 1.0);\n"
-    "}\n";
-
-// Use subpassLoad to read from input attachment
-static const char *fragShaderText =
-    "#version 450\n"
-    "layout (input_attachment_index = 0, set = 0, binding = 0) uniform subpassInput "
-    "myInputAttachment;\n"
-    "layout (location = 0) out vec4 outColor;\n"
-    "void main() {\n"
-    "   outColor = subpassLoad(myInputAttachment);\n"
-    "}\n";
+/* We've setup cmake to process input_attachment.vert and input_attachment.frag          */
+/* files containing the glsl shader code for this sample.  The glsl-to-spirv script uses */
+/* glslangValidator to compile the glsl into spir-v and places the spir-v into a struct  */
+/* into a generated header file                                                          */
 
 int sample_main(int argc, char *argv[]) {
     VkResult U_ASSERT_ONLY res;
@@ -290,7 +270,16 @@ int sample_main(int argc, char *argv[]) {
     res = vkCreateRenderPass(info.device, &rp_info, NULL, &info.render_pass);
     assert(!res);
 
-    init_shaders(info, vertShaderText, fragShaderText);
+#include "input_attachment.vert.h"
+#include "input_attachment.frag.h"
+    VkShaderModuleCreateInfo vert_info = {};
+    VkShaderModuleCreateInfo frag_info = {};
+    vert_info.sType = frag_info.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
+    vert_info.codeSize = sizeof(input_attachment_vert);
+    vert_info.pCode = input_attachment_vert;
+    frag_info.codeSize = sizeof(input_attachment_frag);
+    frag_info.pCode = input_attachment_frag;
+    init_shaders(info, &vert_info, &frag_info);
 
     VkImageView fb_attachments[2];
     fb_attachments[1] = input_attachment_view;

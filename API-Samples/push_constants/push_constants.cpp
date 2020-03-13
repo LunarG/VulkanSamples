@@ -1,9 +1,9 @@
 /*
  * Vulkan Samples
  *
- * Copyright (C) 2015-2016 Valve Corporation
- * Copyright (C) 2015-2016 LunarG, Inc.
- * Copyright (C) 2015-2016 Google, Inc.
+ * Copyright (C) 2015-2020 Valve Corporation
+ * Copyright (C) 2015-2020 LunarG, Inc.
+ * Copyright (C) 2015-2020 Google, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -33,53 +33,6 @@ Use push constants in a simple shader, validate the correct value was read.
 // that simply reads in the values, ensures they are correct.  If correct
 // values are read, the shader draws green.  If incorrect, shader draws red.
 
-const char *vertShaderText =
-    "#version 400\n"
-    "#extension GL_ARB_separate_shader_objects : enable\n"
-    "#extension GL_ARB_shading_language_420pack : enable\n"
-    "layout (std140, set = 0, binding = 0) uniform buf {\n"
-    "    mat4 mvp;\n"
-    "} ubuf;\n"
-    "layout (location = 0) in vec4 pos;\n"
-    "layout (location = 1) in vec2 inTexCoords;\n"
-    "layout (location = 0) out vec2 outTexCoords;\n"
-    "void main() {\n"
-    "   gl_Position = ubuf.mvp * pos;\n"
-    "   outTexCoords = inTexCoords;\n"
-    "}\n";
-
-const char *fragShaderText =
-    "#version 400\n"
-    "#extension GL_ARB_separate_shader_objects : enable\n"
-    "#extension GL_ARB_shading_language_420pack : enable\n"
-    "layout(push_constant) uniform pushBlock {\n"
-    "    int iFoo;\n"
-    "    float fBar;\n"
-    "} pushConstantsBlock;\n"
-    "layout (location = 0) in vec2 inTexCoords;\n"
-    "layout (location = 0) out vec4 outColor;\n"
-    "void main() {\n"
-
-    "    vec4 green = vec4(0.0, 1.0, 0.0, 1.0);\n"
-    "    vec4 red   = vec4(1.0, 0.0, 0.0, 1.0);\n"
-
-    // Start with passing color
-    "    vec4 resColor = green;\n"
-
-    // See if we've read in the correct push constants
-    "    if (pushConstantsBlock.iFoo != 2)\n"
-    "        resColor = red;\n"
-    "    if (pushConstantsBlock.fBar != 1.0f)\n"
-    "        resColor = red;\n"
-
-    // Create a border to see the cube more easily
-    "   if (inTexCoords.x < 0.01 || inTexCoords.x > 0.99)\n"
-    "       resColor *= vec4(0.1, 0.1, 0.1, 1.0);\n"
-    "   if (inTexCoords.y < 0.01 || inTexCoords.y > 0.99)\n"
-    "       resColor *= vec4(0.1, 0.1, 0.1, 1.0);\n"
-    "   outColor = resColor;\n"
-    "}\n";
-
 int sample_main(int argc, char *argv[]) {
     VkResult U_ASSERT_ONLY res;
     struct sample_info info = {};
@@ -105,7 +58,16 @@ int sample_main(int argc, char *argv[]) {
     init_depth_buffer(info);
     init_uniform_buffer(info);
     init_renderpass(info, depthPresent);
-    init_shaders(info, vertShaderText, fragShaderText);
+#include "push_constants.vert.h"
+#include "push_constants.frag.h"
+    VkShaderModuleCreateInfo vert_info = {};
+    VkShaderModuleCreateInfo frag_info = {};
+    vert_info.sType = frag_info.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
+    vert_info.codeSize = sizeof(push_constants_vert);
+    vert_info.pCode = push_constants_vert;
+    frag_info.codeSize = sizeof(push_constants_frag);
+    frag_info.pCode = push_constants_frag;
+    init_shaders(info, &vert_info, &frag_info);
     init_framebuffers(info, depthPresent);
     init_vertex_buffer(info, g_vb_texture_Data, sizeof(g_vb_texture_Data), sizeof(g_vb_texture_Data[0]), true);
 

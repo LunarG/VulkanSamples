@@ -1,9 +1,9 @@
 /*
  * Vulkan Samples
  *
- * Copyright (C) 2016 Valve Corporation
- * Copyright (C) 2016 LunarG, Inc.
- * Copyright (C) 2016 Google, Inc.
+ * Copyright (C) 2016-2020 Valve Corporation
+ * Copyright (C) 2016-2020 LunarG, Inc.
+ * Copyright (C) 2016-2020 Google, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -38,37 +38,6 @@ can be updated then.
 #include <cstdlib>
 #include "cube_data.h"
 
-/* For this sample, we'll start with GLSL so the shader function is plain */
-/* and then use the glslang GLSLtoSPV utility to convert it to SPIR-V for */
-/* the driver.  We do this for clarity rather than using pre-compiled     */
-/* SPIR-V                                                                 */
-
-const char *vertShaderText =
-    "#version 400\n"
-    "#extension GL_ARB_separate_shader_objects : enable\n"
-    "#extension GL_ARB_shading_language_420pack : enable\n"
-    "layout (std140, binding = 0) uniform buf {\n"
-    "        mat4 mvp;\n"
-    "} ubuf;\n"
-    "layout (location = 0) in vec4 pos;\n"
-    "layout (location = 1) in vec2 inTexCoords;\n"
-    "layout (location = 0) out vec2 texcoord;\n"
-    "void main() {\n"
-    "   texcoord = inTexCoords;\n"
-    "   gl_Position = ubuf.mvp * pos;\n"
-    "}\n";
-
-const char *fragShaderText =
-    "#version 400\n"
-    "#extension GL_ARB_separate_shader_objects : enable\n"
-    "#extension GL_ARB_shading_language_420pack : enable\n"
-    "layout (binding = 1) uniform sampler2D tex;\n"
-    "layout (location = 0) in vec2 texcoord;\n"
-    "layout (location = 0) out vec4 outColor;\n"
-    "void main() {\n"
-    "   outColor = textureLod(tex, texcoord, 0.0);\n"
-    "}\n";
-
 int sample_main(int argc, char *argv[]) {
     VkResult U_ASSERT_ONLY res;
     struct sample_info info = {};
@@ -96,7 +65,16 @@ int sample_main(int argc, char *argv[]) {
     init_uniform_buffer(info);
     init_descriptor_and_pipeline_layouts(info, true);
     init_renderpass(info, depthPresent);
-    init_shaders(info, vertShaderText, fragShaderText);
+#include "pipeline_derivative.vert.h"
+#include "pipeline_derivative.frag.h"
+    VkShaderModuleCreateInfo vert_info = {};
+    VkShaderModuleCreateInfo frag_info = {};
+    vert_info.sType = frag_info.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
+    vert_info.codeSize = sizeof(pipeline_derivative_vert);
+    vert_info.pCode = pipeline_derivative_vert;
+    frag_info.codeSize = sizeof(pipeline_derivative_frag);
+    frag_info.pCode = pipeline_derivative_frag;
+    init_shaders(info, &vert_info, &frag_info);
     init_framebuffers(info, depthPresent);
     init_vertex_buffer(info, g_vb_texture_Data, sizeof(g_vb_texture_Data), sizeof(g_vb_texture_Data[0]), true);
     init_descriptor_pool(info, true);
@@ -257,21 +235,7 @@ int sample_main(int argc, char *argv[]) {
     // NOTE:  If this step is too heavyweight to show any benefit of derivation,
     // then
     //        create a pipeline that differs in some other, simpler way.
-    const char *fragShaderText2 =
-        "#version 450\n"
-        "layout (location = 0) in vec2 texcoord;\n"
-        "layout (location = 0) out vec4 outColor;\n"
-        "void main() {\n"
-        "   outColor = vec4(texcoord.x, texcoord.y, "
-        "1.0 - texcoord.x - texcoord.y, 1.0f);\n"
-        "}\n";
-
-    // Convert GLSL to SPIR-V
-    init_glslang();
-    std::vector<unsigned int> fragSpv;
-    bool U_ASSERT_ONLY retVal = GLSLtoSPV(VK_SHADER_STAGE_FRAGMENT_BIT, fragShaderText2, fragSpv);
-    assert(retVal);
-    finalize_glslang();
+#include "pipeline_derivative2.frag.h"
 
     // Replace the module entry of info.shaderStages to change the fragment
     // shader
@@ -280,8 +244,8 @@ int sample_main(int argc, char *argv[]) {
     moduleCreateInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
     moduleCreateInfo.pNext = NULL;
     moduleCreateInfo.flags = 0;
-    moduleCreateInfo.codeSize = fragSpv.size() * sizeof(unsigned int);
-    moduleCreateInfo.pCode = fragSpv.data();
+    moduleCreateInfo.codeSize = sizeof(pipeline_derivative2_frag);
+    moduleCreateInfo.pCode = pipeline_derivative2_frag;
     res = vkCreateShaderModule(info.device, &moduleCreateInfo, NULL, &info.shaderStages[1].module);
     assert(res == VK_SUCCESS);
 

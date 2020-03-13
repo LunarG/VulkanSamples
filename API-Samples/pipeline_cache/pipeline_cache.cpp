@@ -1,9 +1,9 @@
 /*
  * Vulkan Samples
  *
- * Copyright (C) 2016 Valve Corporation
- * Copyright (C) 2016 LunarG, Inc.
- * Copyright (C) 2016 Google, Inc.
+ * Copyright (C) 2016-2020 Valve Corporation
+ * Copyright (C) 2016-2020 LunarG, Inc.
+ * Copyright (C) 2016-2020 Google, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -36,32 +36,6 @@ Create and use a pipeline cache across runs.
 // be complicated a bit, to show a greater cache benefit.  Also, two
 // caches could be created and merged.
 
-const char *vertShaderText =
-    "#version 400\n"
-    "#extension GL_ARB_separate_shader_objects : enable\n"
-    "#extension GL_ARB_shading_language_420pack : enable\n"
-    "layout (std140, binding = 0) uniform buf {\n"
-    "        mat4 mvp;\n"
-    "} ubuf;\n"
-    "layout (location = 0) in vec4 pos;\n"
-    "layout (location = 1) in vec2 inTexCoords;\n"
-    "layout (location = 0) out vec2 texcoord;\n"
-    "void main() {\n"
-    "   texcoord = inTexCoords;\n"
-    "   gl_Position = ubuf.mvp * pos;\n"
-    "}\n";
-
-const char *fragShaderText =
-    "#version 400\n"
-    "#extension GL_ARB_separate_shader_objects : enable\n"
-    "#extension GL_ARB_shading_language_420pack : enable\n"
-    "layout (binding = 1) uniform sampler2D tex;\n"
-    "layout (location = 0) in vec2 texcoord;\n"
-    "layout (location = 0) out vec4 outColor;\n"
-    "void main() {\n"
-    "   outColor = textureLod(tex, texcoord, 0.0);\n"
-    "}\n";
-
 int sample_main(int argc, char *argv[]) {
     VkResult U_ASSERT_ONLY res;
     struct sample_info info = {};
@@ -89,7 +63,16 @@ int sample_main(int argc, char *argv[]) {
     init_uniform_buffer(info);
     init_descriptor_and_pipeline_layouts(info, true);
     init_renderpass(info, depthPresent);
-    init_shaders(info, vertShaderText, fragShaderText);
+#include "pipeline_cache.vert.h"
+#include "pipeline_cache.frag.h"
+    VkShaderModuleCreateInfo vert_info = {};
+    VkShaderModuleCreateInfo frag_info = {};
+    vert_info.sType = frag_info.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
+    vert_info.codeSize = sizeof(pipeline_cache_vert);
+    vert_info.pCode = pipeline_cache_vert;
+    frag_info.codeSize = sizeof(pipeline_cache_frag);
+    frag_info.pCode = pipeline_cache_frag;
+    init_shaders(info, &vert_info, &frag_info);
     init_framebuffers(info, depthPresent);
     init_vertex_buffer(info, g_vb_texture_Data, sizeof(g_vb_texture_Data), sizeof(g_vb_texture_Data[0]), true);
     init_descriptor_pool(info, true);
