@@ -73,7 +73,6 @@ void init_vertex_buffer(struct sample_info &info, const void *vertexData,
 void init_framebuffers(struct sample_info &info, bool include_depth);
 void init_descriptor_pool(struct sample_info &info, bool use_texture);
 void init_descriptor_set(struct sample_info &info, bool use_texture);
-void init_shaders(struct sample_info &info, const char *vertShaderText, const char *fragShaderText);
 void init_shaders(struct sample_info &info, const VkShaderModuleCreateInfo *vertShaderCI,
                   const VkShaderModuleCreateInfo *fragShaderCI);
 void init_pipeline_cache(struct sample_info &info);
