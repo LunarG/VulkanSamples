@@ -1,8 +1,8 @@
 /*
  * Vulkan Samples
  *
- * Copyright (C) 2015-2016 Valve Corporation
- * Copyright (C) 2015-2016 LunarG, Inc.
+ * Copyright (C) 2015-2020 Valve Corporation
+ * Copyright (C) 2015-2020 LunarG, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -57,36 +57,10 @@ static const VertexUV vb_Data[] = {
 
 #define DEPTH_PRESENT false
 
-/* For this sample, we'll start with GLSL so the shader function is plain */
-/* and then use the glslang GLSLtoSPV utility to convert it to SPIR-V for */
-/* the driver.  We do this for clarity rather than using pre-compiled     */
-/* SPIR-V                                                                 */
-
-const char *vertShaderText =
-    "#version 400\n"
-    "#extension GL_ARB_separate_shader_objects : enable\n"
-    "#extension GL_ARB_shading_language_420pack : enable\n"
-    "layout (std140, binding = 0) uniform buf {\n"
-    "        mat4 mvp;\n"
-    "} ubuf;\n"
-    "layout (location = 0) in vec4 pos;\n"
-    "layout (location = 1) in vec2 inTexCoords;\n"
-    "layout (location = 0) out vec2 texcoord;\n"
-    "void main() {\n"
-    "   texcoord = inTexCoords;\n"
-    "   gl_Position = ubuf.mvp * pos;\n"
-    "}\n";
-
-const char *fragShaderText =
-    "#version 400\n"
-    "#extension GL_ARB_separate_shader_objects : enable\n"
-    "#extension GL_ARB_shading_language_420pack : enable\n"
-    "layout (binding = 1) uniform sampler2D tex;\n"
-    "layout (location = 0) in vec2 texcoord;\n"
-    "layout (location = 0) out vec4 outColor;\n"
-    "void main() {\n"
-    "   outColor = textureLod(tex, texcoord, 0.0);\n"
-    "}\n";
+/* We've setup cmake to process memory_barriers.vert and memory_barriers.frag            */
+/* files containing the glsl shader code for this sample.  The glsl-to-spirv script uses */
+/* glslangValidator to compile the glsl into spir-v and places the spir-v into a struct  */
+/* into a generated header file                                                          */
 
 int sample_main(int argc, char **argv) {
     VkResult U_ASSERT_ONLY res;
@@ -127,7 +101,17 @@ int sample_main(int argc, char **argv) {
     init_uniform_buffer(info);
     init_descriptor_and_pipeline_layouts(info, true);
     init_renderpass(info, DEPTH_PRESENT, false, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
-    init_shaders(info, vertShaderText, fragShaderText);
+#include "memory_barriers.vert.h"
+#include "memory_barriers.frag.h"
+    VkShaderModuleCreateInfo vert_info = {};
+    VkShaderModuleCreateInfo frag_info = {};
+    vert_info.sType = frag_info.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
+    vert_info.codeSize = sizeof(memory_barriers_vert);
+    vert_info.pCode = memory_barriers_vert;
+    frag_info.codeSize = sizeof(memory_barriers_frag);
+    frag_info.pCode = memory_barriers_frag;
+    init_shaders(info, &vert_info, &frag_info);
+
     init_framebuffers(info, DEPTH_PRESENT);
     init_vertex_buffer(info, vb_Data, sizeof(vb_Data), sizeof(vb_Data[0]), true);
     init_descriptor_pool(info, true);

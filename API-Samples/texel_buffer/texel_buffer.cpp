@@ -1,8 +1,8 @@
 /*
  * Vulkan Samples
  *
- * Copyright (C) 2015-2016 Valve Corporation
- * Copyright (C) 2015-2016 LunarG, Inc.
+ * Copyright (C) 2015-2020 Valve Corporation
+ * Copyright (C) 2015-2020 LunarG, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -27,41 +27,10 @@ Use a texel buffer to draw a magenta triangle
 #include <string.h>
 #include <cstdlib>
 
-/* For this sample, we'll start with GLSL so the shader function is plain */
-/* and then use the glslang GLSLtoSPV utility to convert it to SPIR-V for */
-/* the driver.  We do this for clarity rather than using pre-compiled     */
-/* SPIR-V                                                                 */
-
-static const char *vertShaderText =
-    "#version 400\n"
-    "#extension GL_ARB_separate_shader_objects : enable\n"
-    "#extension GL_ARB_shading_language_420pack : enable\n"
-    "layout (binding = 0) uniform samplerBuffer texels;\n"
-    "layout (location = 0) out vec4 outColor;\n"
-    "vec2 vertices[3];\n"
-    "float r;\n"
-    "float g;\n"
-    "float b;\n"
-    "void main() {\n"
-    "    r = texelFetch(texels, 0).r;\n"
-    "    g = texelFetch(texels, 1).r;\n"
-    "    b = texelFetch(texels, 2).r;\n"
-    "    outColor = vec4(r, g, b, 1.0);\n"
-    "    vertices[0] = vec2(-1.0, -1.0);\n"
-    "    vertices[1] = vec2( 1.0, -1.0);\n"
-    "    vertices[2] = vec2( 0.0,  1.0);\n"
-    "    gl_Position = vec4(vertices[gl_VertexIndex % 3], 0.0, 1.0);\n"
-    "}\n";
-
-static const char *fragShaderText =
-    "#version 400\n"
-    "#extension GL_ARB_separate_shader_objects : enable\n"
-    "#extension GL_ARB_shading_language_420pack : enable\n"
-    "layout (location = 0) in vec4 color;\n"
-    "layout (location = 0) out vec4 outColor;\n"
-    "void main() {\n"
-    "   outColor = color;\n"
-    "}\n";
+/* We've setup cmake to process texel_buffer.vert and texel_buffer.frag                  */
+/* files containing the glsl shader code for this sample.  The glsl-to-spirv script uses */
+/* glslangValidator to compile the glsl into spir-v and places the spir-v into a struct  */
+/* into a generated header file                                                          */
 
 int sample_main(int argc, char *argv[]) {
     VkResult U_ASSERT_ONLY res;
@@ -192,7 +161,16 @@ int sample_main(int argc, char *argv[]) {
     assert(res == VK_SUCCESS);
 
     init_renderpass(info, depthPresent);
-    init_shaders(info, vertShaderText, fragShaderText);
+#include "texel_buffer.vert.h"
+#include "texel_buffer.frag.h"
+    VkShaderModuleCreateInfo vert_info = {};
+    VkShaderModuleCreateInfo frag_info = {};
+    vert_info.sType = frag_info.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
+    vert_info.codeSize = sizeof(texel_buffer_vert);
+    vert_info.pCode = texel_buffer_vert;
+    frag_info.codeSize = sizeof(texel_buffer_frag);
+    frag_info.pCode = texel_buffer_frag;
+    init_shaders(info, &vert_info, &frag_info);
     init_framebuffers(info, depthPresent);
 
     VkDescriptorPoolSize type_count[1];

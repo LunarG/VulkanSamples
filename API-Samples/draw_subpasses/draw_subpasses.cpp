@@ -1,8 +1,8 @@
 /*
  * Vulkan Samples
  *
- * Copyright (C) 2015-2016 Valve Corporation
- * Copyright (C) 2015-2016 LunarG, Inc.
+ * Copyright (C) 2015-2020 Valve Corporation
+ * Copyright (C) 2015-2020 LunarG, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -28,52 +28,10 @@ Render two multi-subpass render passes with different framebuffer attachments
 #include <cstdlib>
 #include "cube_data.h"
 
-/* For this sample, we'll start with GLSL so the shader function is plain */
-/* and then use the glslang GLSLtoSPV utility to convert it to SPIR-V for */
-/* the driver.  We do this for clarity rather than using pre-compiled     */
-/* SPIR-V                                                                 */
-
-/* This shader renders the cubes in projected space */
-static const char *normalVertShaderText =
-    "#version 400\n"
-    "#extension GL_ARB_separate_shader_objects : enable\n"
-    "#extension GL_ARB_shading_language_420pack : enable\n"
-    "layout (std140, binding = 0) uniform bufferVals {\n"
-    "    mat4 mvp;\n"
-    "} myBufferVals;\n"
-    "layout (location = 0) in vec4 pos;\n"
-    "layout (location = 1) in vec4 inColor;\n"
-    "layout (location = 0) out vec4 outColor;\n"
-    "void main() {\n"
-    "   outColor = inColor;\n"
-    "   gl_Position = myBufferVals.mvp * pos;\n"
-    "}\n";
-
-/* This shader renders a simple fullscreen quad using the VS alone */
-static const char *fullscreenVertShaderText =
-    "#version 400\n"
-    "#extension GL_ARB_separate_shader_objects : enable\n"
-    "#extension GL_ARB_shading_language_420pack : enable\n"
-    "layout (location = 0) out vec4 outColor;\n"
-    "void main() {\n"
-    "   outColor = vec4(1.0f, 0.1f, 0.1f, 0.5f);\n"
-    "   const vec4 verts[4] = vec4[4](vec4(-1.0, -1.0, 0.5, 1.0),\n"
-    "                                 vec4( 1.0, -1.0, 0.5, 1.0),\n"
-    "                                 vec4(-1.0,  1.0, 0.5, 1.0),\n"
-    "                                 vec4( 1.0,  1.0, 0.5, 1.0));\n"
-    "\n"
-    "   gl_Position = verts[gl_VertexIndex];\n"
-    "}\n";
-
-static const char *fragShaderText =
-    "#version 400\n"
-    "#extension GL_ARB_separate_shader_objects : enable\n"
-    "#extension GL_ARB_shading_language_420pack : enable\n"
-    "layout (location = 0) in vec4 color;\n"
-    "layout (location = 0) out vec4 outColor;\n"
-    "void main() {\n"
-    "   outColor = color;\n"
-    "}\n";
+/* We've setup cmake to process draw_subpasses.vert, draw_subpasses.full.vert and draww_subpasses.frag */
+/* files containing the glsl shader code for this sample.  The glsl-to-spirv script uses               */
+/* glslangValidator to compile the glsl into spir-v and places the spir-v into a struct                */
+/* into a generated header file                                                                        */
 
 /**
  *  Sample using multiple render passes per framebuffer (different x,y extents)
@@ -332,7 +290,16 @@ int sample_main(int argc, char *argv[]) {
     pipeline.renderPass = stencil_render_pass;
     pipeline.subpass = 0;
 
-    init_shaders(info, normalVertShaderText, fragShaderText);
+#include "draw_subpasses.vert.h"
+#include "draw_subpasses.frag.h"
+    VkShaderModuleCreateInfo vert_info = {};
+    VkShaderModuleCreateInfo frag_info = {};
+    vert_info.sType = frag_info.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
+    vert_info.codeSize = sizeof(draw_subpasses_vert);
+    vert_info.pCode = draw_subpasses_vert;
+    frag_info.codeSize = sizeof(draw_subpasses_frag);
+    frag_info.pCode = draw_subpasses_frag;
+    init_shaders(info, &vert_info, &frag_info);
 
     /* The first pipeline will render in subpass 0 to fill the stencil */
     pipeline.subpass = 0;
@@ -345,7 +312,10 @@ int sample_main(int argc, char *argv[]) {
        those for the
        fullscreen fill pass */
     destroy_shaders(info);
-    init_shaders(info, fullscreenVertShaderText, fragShaderText);
+#include "draw_subpasses.full.vert.h"
+    vert_info.codeSize = sizeof(draw_subpasses_full_vert);
+    vert_info.pCode = draw_subpasses_full_vert;
+    init_shaders(info, &vert_info, &frag_info);
 
     /* the second pipeline will stencil test but not write, using the same
      * reference */
@@ -526,7 +496,9 @@ int sample_main(int argc, char *argv[]) {
     cb.blendConstants[2] = 1.0f;
     cb.blendConstants[3] = 0.3f;
 
-    init_shaders(info, normalVertShaderText, fragShaderText);
+    vert_info.codeSize = sizeof(draw_subpasses_vert);
+    vert_info.pCode = draw_subpasses_vert;
+    init_shaders(info, &vert_info, &frag_info);
 
     /* This is the first subpass's pipeline, to blend a cube onto the color
      * image */
@@ -538,7 +510,9 @@ int sample_main(int argc, char *argv[]) {
 
     /* Now we will set up the fullscreen pass to render on top. */
     destroy_shaders(info);
-    init_shaders(info, fullscreenVertShaderText, fragShaderText);
+    vert_info.codeSize = sizeof(draw_subpasses_full_vert);
+    vert_info.pCode = draw_subpasses_full_vert;
+    init_shaders(info, &vert_info, &frag_info);
 
     /* the second pipeline will be a fullscreen triangle strip with no inputs */
     ia.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP;
