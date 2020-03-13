@@ -1,8 +1,8 @@
 /*
  * Vulkan Samples
  *
- * Copyright (C) 2015-2016 Valve Corporation
- * Copyright (C) 2015-2016 LunarG, Inc.
+ * Copyright (C) 2015-2020 Valve Corporation
+ * Copyright (C) 2015-2020 LunarG, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -30,35 +30,10 @@ Draw Cube
 #include <cstdlib>
 #include "cube_data.h"
 
-/* For this sample, we'll start with GLSL so the shader function is plain */
-/* and then use the glslang GLSLtoSPV utility to convert it to SPIR-V for */
-/* the driver.  We do this for clarity rather than using pre-compiled     */
-/* SPIR-V                                                                 */
-
-static const char *vertShaderText =
-    "#version 400\n"
-    "#extension GL_ARB_separate_shader_objects : enable\n"
-    "#extension GL_ARB_shading_language_420pack : enable\n"
-    "layout (std140, binding = 0) uniform bufferVals {\n"
-    "    mat4 mvp;\n"
-    "} myBufferVals;\n"
-    "layout (location = 0) in vec4 pos;\n"
-    "layout (location = 1) in vec4 inColor;\n"
-    "layout (location = 0) out vec4 outColor;\n"
-    "void main() {\n"
-    "   outColor = inColor;\n"
-    "   gl_Position = myBufferVals.mvp * pos;\n"
-    "}\n";
-
-static const char *fragShaderText =
-    "#version 400\n"
-    "#extension GL_ARB_separate_shader_objects : enable\n"
-    "#extension GL_ARB_shading_language_420pack : enable\n"
-    "layout (location = 0) in vec4 color;\n"
-    "layout (location = 0) out vec4 outColor;\n"
-    "void main() {\n"
-    "   outColor = color;\n"
-    "}\n";
+/* We've setup cmake to process 15-draw_cube.vert and 15-draw_cube.frag                  */
+/* files containing the glsl shader code for this sample.  The glsl-to-spirv script uses */
+/* glslangValidator to compile the glsl into spir-v and places the spir-v into a struct  */
+/* into a generated header file                                                          */
 
 int sample_main(int argc, char *argv[]) {
     VkResult U_ASSERT_ONLY res;
@@ -87,7 +62,16 @@ int sample_main(int argc, char *argv[]) {
     init_uniform_buffer(info);
     init_descriptor_and_pipeline_layouts(info, false);
     init_renderpass(info, depthPresent);
-    init_shaders(info, vertShaderText, fragShaderText);
+#include "15-draw_cube.vert.h"
+#include "15-draw_cube.frag.h"
+    VkShaderModuleCreateInfo vert_info = {};
+    VkShaderModuleCreateInfo frag_info = {};
+    vert_info.sType = frag_info.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
+    vert_info.codeSize = sizeof(__draw_cube_vert);
+    vert_info.pCode = __draw_cube_vert;
+    frag_info.codeSize = sizeof(__draw_cube_frag);
+    frag_info.pCode = __draw_cube_frag;
+    init_shaders(info, &vert_info, &frag_info);
     init_framebuffers(info, depthPresent);
     init_vertex_buffer(info, g_vb_solid_face_colors_Data, sizeof(g_vb_solid_face_colors_Data),
                        sizeof(g_vb_solid_face_colors_Data[0]), false);

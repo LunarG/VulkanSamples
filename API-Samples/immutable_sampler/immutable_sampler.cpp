@@ -1,9 +1,9 @@
 /*
  * Vulkan Samples
  *
- * Copyright (C) 2015-2016 Valve Corporation
- * Copyright (C) 2015-2016 LunarG, Inc.
- * Copyright (C) 2015-2016 Google, Inc.
+ * Copyright (C) 2015-2020 Valve Corporation
+ * Copyright (C) 2015-2020 LunarG, Inc.
+ * Copyright (C) 2015-2020 Google, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -32,34 +32,10 @@ Use an immutable sampler to texture a cube.
 // This sample is based on template and uses an immutable sampler,
 // along with a sampled image.  It should render the LunarG textured cube.
 
-const char *vertShaderText =
-    "#version 400\n"
-    "#extension GL_ARB_separate_shader_objects : enable\n"
-    "#extension GL_ARB_shading_language_420pack : enable\n"
-    "layout (std140, set = 0, binding = 0) uniform buf {\n"
-    "    mat4 mvp;\n"
-    "} ubuf;\n"
-    "layout (location = 0) in vec4 pos;\n"
-    "layout (location = 1) in vec2 inTexCoords;\n"
-    "layout (location = 0) out vec2 outTexCoords;\n"
-    "void main() {\n"
-    "   outTexCoords = inTexCoords;\n"
-    "   gl_Position = ubuf.mvp * pos;\n"
-    "}\n";
-
-const char *fragShaderText =
-    "#version 400\n"
-    "#extension GL_ARB_separate_shader_objects : enable\n"
-    "#extension GL_ARB_shading_language_420pack : enable\n"
-    "layout (set = 0, binding = 1) uniform sampler2D surface;\n"
-    "layout (location = 0) in vec2 inTexCoords;\n"
-    "layout (location = 0) out vec4 outColor;\n"
-    "void main() {\n"
-
-    // Sample from the texture, using an immutable sampler
-    "    outColor = texture(surface, inTexCoords);\n"
-
-    "}\n";
+/* We've setup cmake to process immutable_sampler.vert and immutable_sampler.frag        */
+/* files containing the glsl shader code for this sample.  The glsl-to-spirv script uses */
+/* glslangValidator to compile the glsl into spir-v and places the spir-v into a struct  */
+/* into a generated header file                                                          */
 
 int sample_main(int argc, char *argv[]) {
     VkResult U_ASSERT_ONLY res;
@@ -86,7 +62,17 @@ int sample_main(int argc, char *argv[]) {
     init_depth_buffer(info);
     init_uniform_buffer(info);
     init_renderpass(info, depthPresent);
-    init_shaders(info, vertShaderText, fragShaderText);
+#include "immutable_sampler.vert.h"
+#include "immutable_sampler.frag.h"
+    VkShaderModuleCreateInfo vert_info = {};
+    VkShaderModuleCreateInfo frag_info = {};
+    vert_info.sType = frag_info.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
+    vert_info.codeSize = sizeof(immutable_sampler_vert);
+    vert_info.pCode = immutable_sampler_vert;
+    frag_info.codeSize = sizeof(immutable_sampler_frag);
+    frag_info.pCode = immutable_sampler_frag;
+    init_shaders(info, &vert_info, &frag_info);
+
     init_framebuffers(info, depthPresent);
     init_vertex_buffer(info, g_vb_texture_Data, sizeof(g_vb_texture_Data), sizeof(g_vb_texture_Data[0]), true);
 
