@@ -48,50 +48,10 @@ endif()
 
 set(SAMPLES_DATA_DIR ${SAMPLES_DATA_DIR} "${CMAKE_SOURCE_DIR}/API-Samples/data")
 set(SHADER_FILES ${SHADER_FILES} "")
-include_directories( ${SAMPLES_DATA_DIR} ${GLSLANG_SPIRV_INCLUDE_DIR} ${GLMINC_PREFIX} ${Vulkan_INCLUDE_DIR} ${CMAKE_CURRENT_BINARY_DIR}/ShaderHeaders)
+include_directories( ${SAMPLES_DATA_DIR} ${GLMINC_PREFIX} ${Vulkan_INCLUDE_DIR} ${CMAKE_CURRENT_BINARY_DIR}/ShaderHeaders)
 
 # Additional includes for spirv-tools
 include_directories(${SPIRV_TOOLS_INCLUDE_DIR})
-
-# function to build a single-source-file sample that uses glsl shaders;
-#   - assumes SAMPLE_GLSL_VERT_SHADERS and SAMPLE_GLSL_FRAG_SHADERS is set to
-#     the list of shader files of that type, with .vert and .frag omitted
-#   - uses glslangValidator to convert glsl to spirv
-function(sampleExtGLSLShaders SNAME)
-    set(SAMPLE_NAME ${SNAME})
-    set(SHADER_DIR ${SAMPLES_DATA_DIR}/${VULKAN_VERSION})
-    foreach(SFILE ${SAMPLE_GLSL_VERT_SHADERS})
-        add_custom_command(OUTPUT ${SHADER_DIR}/${SFILE}-vert.spv
-            COMMAND ${GLSLANG_VALIDATOR} -s -V ${SHADER_DIR}/${SFILE}.vert
-            COMMAND ${MOVE_CMD} vert.spv ${SHADER_DIR}/${SFILE}-vert.spv
-            DEPENDS ${SHADER_DIR}/${SFILE}.vert ${GLSLANG_VALIDATOR}
-        )
-        set(SHADER_FILES ${SHADER_FILES} ${SHADER_DIR}/${SFILE}-vert.spv)
-    endforeach(SFILE)
-    foreach(SFILE ${SAMPLE_GLSL_FRAG_SHADERS})
-        add_custom_command(OUTPUT ${SHADER_DIR}/${SFILE}-frag.spv
-            COMMAND ${GLSLANG_VALIDATOR} -s -V ${SHADER_DIR}/${SFILE}.frag
-            COMMAND ${MOVE_CMD} frag.spv ${SHADER_DIR}/${SFILE}-frag.spv
-            DEPENDS ${SHADER_DIR}/${SFILE}.frag ${GLSLANG_VALIDATOR}
-        )
-        set(SHADER_FILES ${SHADER_FILES} ${SHADER_DIR}/${SFILE}-frag.spv)
-    endforeach(SFILE)
-    add_executable(${SAMPLE_NAME} ${SAMPLE_NAME}/${SAMPLE_NAME}.cpp ${SHADER_FILES})
-    target_link_libraries(${SAMPLE_NAME} ${VULKAN_LOADER} ${UTILS_NAME} ${GLSLANG_LIBRARIES} ${PTHREAD})
-endfunction(sampleExtGLSLShaders)
-
-# function to build a single-source-file sample that uses spirv shaders
-#   - assumes SAMPLE_SPIRV_SHADERS is set to list to list of spirv shsders
-#     used by the sample, with the .spv omitted
-function(sampleExtSPIRVShaders SNAME)
-    set(SAMPLE_NAME ${SNAME})
-    set(SHADER_DIR ${SAMPLES_DATA_DIR}/${VULKAN_VERSION})
-    foreach(SFILE ${SAMPLE_SPIRV_SHADERS})
-        set(SHADER_FILES ${SHADER_FILES} ${SHADER_DIR}/${SFILE}.spv)
-    endforeach(SFILE)
-    add_executable(${SAMPLE_NAME} ${SAMPLE_NAME}/${SAMPLE_NAME}.cpp ${SHADER_FILES})
-    target_link_libraries(${SAMPLE_NAME} ${VULKAN_LOADER} ${UTILS_NAME} ${GLSLANG_LIBRARIES} ${PTHREAD})
-endfunction(sampleExtSPIRVShaders)
 
 # function to build a simple single-source-file sample
 #   - assumes S_TARGETS set to list of build targets
@@ -173,7 +133,7 @@ function(sampleWithSingleFile)
                 set (sources ${sources} ${SAMPLE_NAME}2.frag.h)
             endif()
             add_executable(${SAMPLE_NAME} ${sources})
-            target_link_libraries(${SAMPLE_NAME} ${UTILS_NAME} ${GLSLANG_LIBRARIES} ${XCB_LIBRARIES} ${WAYLAND_CLIENT_LIBRARIES} ${VULKAN_LOADER} ${PTHREAD} ${SPIRV_TOOLS_LIBRARIES})
+            target_link_libraries(${SAMPLE_NAME} ${UTILS_NAME} ${XCB_LIBRARIES} ${WAYLAND_CLIENT_LIBRARIES} ${VULKAN_LOADER} ${PTHREAD})
         else()
             set(sources ${SAMPLE_NAME}/${SAMPLE_NAME}.cpp)
             if (EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/${SAMPLE_NAME}/${SAMPLE_NAME}.vert)
@@ -193,7 +153,7 @@ function(sampleWithSingleFile)
                 set (sources ${sources} ${SAMPLE_NAME}2.frag.h)
             endif()
             add_executable(${SAMPLE_NAME} WIN32 ${sources})
-            target_link_libraries(${SAMPLE_NAME} ${UTILS_NAME} ${GLSLANG_LIBRARIES} ${VULKAN_LOADER} ${WINLIBS} ${SPIRV_TOOLS_LIBRARIES})
+            target_link_libraries(${SAMPLE_NAME} ${UTILS_NAME} ${VULKAN_LOADER} ${WINLIBS})
         endif()
     endforeach(TARG)
 
@@ -202,22 +162,6 @@ function(sampleWithSingleFile)
         configure_file(android/settings.gradle.in android/settings.gradle @ONLY)
     endif()
 endfunction(sampleWithSingleFile)
-
-# function to build a simple single-source-file sample
-#   - assumes that code is standalone and doesn't depend on utilitites
-#   - assumes S_TARGETS set to list of build targets
-function(sampleInlineGLSLShaders)
-    foreach(TARG ${S_TARGETS})
-        set(SAMPLE_NAME ${TARG})
-        if(UNIX)
-            add_executable(${SAMPLE_NAME} ${SAMPLE_NAME}/${SAMPLE_NAME}.cpp)
-            target_link_libraries(${SAMPLE_NAME} ${GLSLANG_LIBRARIES} ${XCB_LIBRARIES} ${VULKAN_LOADER} ${PTHREAD})
-        else()
-            add_executable(${SAMPLE_NAME} WIN32 ${SAMPLE_NAME}/${SAMPLE_NAME}.cpp)
-            target_link_libraries(${SAMPLE_NAME} ${GLSLANG_LIBRARIES} ${VULKAN_LOADER} ${WINLIBS})
-        endif()
-    endforeach(TARG)
-endfunction(sampleInlineGLSLShaders)
 
 if(WIN32)
     set (MOVE_CMD "move")
@@ -310,8 +254,10 @@ set (S_TARGETS
     copy_blit_image template separate_image_sampler input_attachment
     occlusion_query pipeline_cache pipeline_derivative push_descriptors
     immutable_sampler push_constants draw_subpasses secondary_command_buffer
-    spirv_assembly spirv_specialization memory_barriers validation_cache vulkan_1_1_flexible)
+    memory_barriers vulkan_1_1_flexible)
 sampleWithSingleFile()
+
+# spirv_assembly spirv_specialization validation_cache
 
 if (NOT ANDROID)
 foreach (sample ${S_TARGETS})
@@ -320,16 +266,3 @@ endforeach(sample)
 
     add_subdirectory(utils)
 endif()
-
-# targets that use spv shaders
-
-# usespirvshader
-# set(SAMPLE_SPIRV_SHADERS spirvshader-vert spirvshader-frag)
-# sampleExtSPIRVShaders()
-
-# targets that require glsl to spv shader conversion
-
-# useglslshader
-# set(SAMPLE_GLSL_FRAG_SHADERS glslshader)
-# set(SAMPLE_GLSL_VERT_SHADERS glslshader)
-# sampleExtGLSLShaders()
