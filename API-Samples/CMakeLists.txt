@@ -6,8 +6,8 @@ find_program(GLSLANG_VALIDATOR names glslangValidator
 
 macro(glsl_to_spirv src basename)
     add_custom_command(OUTPUT ${src}.h
-        COMMAND ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/glsl-to-spirv ${CMAKE_CURRENT_SOURCE_DIR}/${basename}/${src} ${CMAKE_CURRENT_BINARY_DIR}/ShaderHeaders/${src}.h ${GLSLANG_VALIDATOR}
-        DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/glsl-to-spirv ${CMAKE_CURRENT_SOURCE_DIR}/${basename}/${src} ${GLSLANG_VALIDATOR}
+        COMMAND ${PYTHON_EXECUTABLE} ${CMAKE_SOURCE_DIR}/scripts/glsl-to-spirv ${CMAKE_CURRENT_SOURCE_DIR}/${basename}/${src} ${CMAKE_CURRENT_BINARY_DIR}/ShaderHeaders/${src}.h ${GLSLANG_VALIDATOR}
+        DEPENDS ${CMAKE_SOURCE_DIR}/scripts/glsl-to-spirv ${CMAKE_CURRENT_SOURCE_DIR}/${basename}/${src} ${GLSLANG_VALIDATOR}
         )
 endmacro()
 
