@@ -92,6 +92,20 @@ if(WIN32)
     add_compile_options("$<$<CXX_COMPILER_ID:MSVC>:/w34245>")
 endif()
 
+set(SCRIPTS_DIR "${PROJECT_SOURCE_DIR}/scripts")
+set(GLSLANG_VALIDATOR_NAME "glslangValidator")
+message(STATUS "Using cmake find_program to look for glslangValidator")
+if(WIN32)
+    execute_process(
+        COMMAND ${PYTHON_EXECUTABLE} ${SCRIPTS_DIR}/fetch_glslangvalidator.py glslang-master-windows-x64-Release.zip)
+    set(GLSLANG_VALIDATOR_NAME "glslangValidator.exe")
+elseif(APPLE)
+    execute_process(COMMAND ${PYTHON_EXECUTABLE} ${SCRIPTS_DIR}/fetch_glslangvalidator.py glslang-master-osx-Release.zip)
+elseif(UNIX AND NOT APPLE) # i.e. Linux
+    execute_process(COMMAND ${PYTHON_EXECUTABLE} ${SCRIPTS_DIR}/fetch_glslangvalidator.py glslang-master-linux-Release.zip)
+endif()
+find_program(GLSLANG_VALIDATOR NAMES ${GLSLANG_VALIDATOR_NAME} HINTS "${PROJECT_SOURCE_DIR}/glslang/bin")
+	
 if(NOT WIN32)
     set (BUILDTGT_DIR build)
     set (BINDATA_DIR Bin)
