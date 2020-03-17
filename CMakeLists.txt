@@ -99,12 +99,18 @@ if(WIN32)
     execute_process(
         COMMAND ${PYTHON_EXECUTABLE} ${SCRIPTS_DIR}/fetch_glslangvalidator.py glslang-master-windows-x64-Release.zip)
     set(GLSLANG_VALIDATOR_NAME "glslangValidator.exe")
+    execute_process(
+        COMMAND ${PYTHON_EXECUTABLE} ${SCRIPTS_DIR}/fetch_spirv_tools.py SPIRV-Tools-master-windows-x64-Release.zip)
+    set(SPIRV_TOOLS_ASSEMBLER_NAME "spirv-as.exe")
 elseif(APPLE)
     execute_process(COMMAND ${PYTHON_EXECUTABLE} ${SCRIPTS_DIR}/fetch_glslangvalidator.py glslang-master-osx-Release.zip)
 elseif(UNIX AND NOT APPLE) # i.e. Linux
     execute_process(COMMAND ${PYTHON_EXECUTABLE} ${SCRIPTS_DIR}/fetch_glslangvalidator.py glslang-master-linux-Release.zip)
+    execute_process(COMMAND ${PYTHON_EXECUTABLE} ${SCRIPTS_DIR}/fetch_spirv_tools.py SPIRV-Tools-master-linux-RelWithDebInfo.zip)
+    set(SPIRV_TOOLS_ASSEMBLER_NAME "spirv-as")
 endif()
 find_program(GLSLANG_VALIDATOR NAMES ${GLSLANG_VALIDATOR_NAME} HINTS "${PROJECT_SOURCE_DIR}/glslang/bin")
+find_program(SPIRV_TOOLS_ASSEMBLER NAMES ${SPIRV_TOOLS_ASSEMBLER_NAME} HINTS "${PROJECT_SOURCE_DIR}/spirv-tools/bin")
 	
 if(NOT WIN32)
     set (BUILDTGT_DIR build)
