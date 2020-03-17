@@ -289,10 +289,8 @@ set (S_TARGETS
     copy_blit_image template separate_image_sampler input_attachment
     occlusion_query pipeline_cache pipeline_derivative push_descriptors
     immutable_sampler push_constants draw_subpasses secondary_command_buffer
-    memory_barriers spirv_assembly spirv_specialization vulkan_1_1_flexible)
+    memory_barriers spirv_assembly spirv_specialization validation_cache vulkan_1_1_flexible)
 sampleWithSingleFile()
-
-# validation_cache
 
 if (NOT ANDROID)
 foreach (sample ${S_TARGETS})
