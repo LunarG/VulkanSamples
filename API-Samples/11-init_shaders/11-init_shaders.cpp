@@ -40,10 +40,10 @@ int sample_main(int argc, char *argv[]) {
     init_queue_family_index(info);
     init_device(info);
 
-    /* We've setup cmake to process 11-init_shaders.vert and 11-init_shaders.frag            */
-    /* files containing the glsl shader code for this sample.  The glsl-to-spirv script uses */
-    /* glslangValidator to compile the glsl into spir-v and places the spir-v into a struct  */
-    /* into a generated header file                                                          */
+    /* We've setup cmake to process 11-init_shaders.vert and 11-init_shaders.frag             */
+    /* files containing the glsl shader code for this sample.  The generate-spirv script uses */
+    /* glslangValidator to compile the glsl into spir-v and places the spir-v into a struct   */
+    /* into a generated header file                                                           */
 
     /* VULKAN_KEY_START */
 

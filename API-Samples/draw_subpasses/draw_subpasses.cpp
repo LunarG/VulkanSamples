@@ -29,7 +29,7 @@ Render two multi-subpass render passes with different framebuffer attachments
 #include "cube_data.h"
 
 /* We've setup cmake to process draw_subpasses.vert, draw_subpasses.full.vert and draww_subpasses.frag */
-/* files containing the glsl shader code for this sample.  The glsl-to-spirv script uses               */
+/* files containing the glsl shader code for this sample.  The generate-spirv script uses              */
 /* glslangValidator to compile the glsl into spir-v and places the spir-v into a struct                */
 /* into a generated header file                                                                        */
 

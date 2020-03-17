@@ -22,10 +22,10 @@ VULKAN_SAMPLE_SHORT_DESCRIPTION
 Draw Textured Cube
 */
 
-/* We've setup cmake to process draw_textured_cube.vert and draw_textured_cube.frag      */
-/* files containing the glsl shader code for this sample.  The glsl-to-spirv script uses */
-/* glslangValidator to compile the glsl into spir-v and places the spir-v into a struct  */
-/* into a generated header file                                                          */
+/* We've setup cmake to process draw_textured_cube.vert and draw_textured_cube.frag       */
+/* files containing the glsl shader code for this sample.  The generate-spirv script uses */
+/* glslangValidator to compile the glsl into spir-v and places the spir-v into a struct   */
+/* into a generated header file                                                           */
 
 #include <util_init.hpp>
 #include <assert.h>
