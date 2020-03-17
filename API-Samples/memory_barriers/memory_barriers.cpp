@@ -57,10 +57,10 @@ static const VertexUV vb_Data[] = {
 
 #define DEPTH_PRESENT false
 
-/* We've setup cmake to process memory_barriers.vert and memory_barriers.frag            */
-/* files containing the glsl shader code for this sample.  The glsl-to-spirv script uses */
-/* glslangValidator to compile the glsl into spir-v and places the spir-v into a struct  */
-/* into a generated header file                                                          */
+/* We've setup cmake to process memory_barriers.vert and memory_barriers.frag             */
+/* files containing the glsl shader code for this sample.  The generate-spirv script uses */
+/* glslangValidator to compile the glsl into spir-v and places the spir-v into a struct   */
+/* into a generated header file                                                           */
 
 int sample_main(int argc, char **argv) {
     VkResult U_ASSERT_ONLY res;

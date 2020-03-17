@@ -16,7 +16,7 @@
 
 """Compile GLSL to SPIR-V.
 
-Depends on glslangValidator.
+Depends on glslangValidator and/or spirv-as.
 """
 
 import os
@@ -31,8 +31,8 @@ INDENT = 4
 
 in_filename = sys.argv[1]
 out_filename = sys.argv[2] if len(sys.argv) > 2 else None
-validator = sys.argv[3] if len(sys.argv) > 3 else \
-        "../../../glslang/build/install/bin/glslangValidator"
+executable = sys.argv[3]
+assemble = sys.argv[4]
 
 def identifierize(s):
     # translate invalid chars
@@ -40,10 +40,13 @@ def identifierize(s):
     # translate leading digits
     return re.sub("^[^a-zA-Z_]+", "_", s)
 
-def compile_glsl(filename, tmpfile):
-    # invoke glslangValidator
+def compile(filename, tmpfile):
+    # invoke glslangValidator or spirv-as
     try:
-        args = [validator, "-V", "-H", "-o", tmpfile, filename]
+        if (assemble == 'true'):
+            args = [executable, "-o", tmpfile, "--target-env", "spv1.0", filename]
+        else:
+            args = [executable, "-V", "-H", "-o", tmpfile, filename]
         output = subprocess.check_output(args, universal_newlines=True)
     except subprocess.CalledProcessError as e:
         print(e.output, file=sys.stderr)
@@ -69,7 +72,7 @@ def compile_glsl(filename, tmpfile):
     return (words, output.rstrip())
 
 base = os.path.basename(in_filename)
-words, comments = compile_glsl(in_filename, base + ".tmp")
+words, comments = compile(in_filename, base + ".tmp")
 
 literals = []
 for i in range(0, len(words), COLUMNS):

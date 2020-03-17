@@ -30,10 +30,10 @@ Create Graphics Pipeline
 #include <cstdlib>
 #include "cube_data.h"
 
-/* We've setup cmake to process 14-init_pipeline.vert and 14-init_pipeline.frag          */
-/* files containing the glsl shader code for this sample.  The glsl-to-spirv script uses */
-/* glslangValidator to compile the glsl into spir-v and places the spir-v into a struct  */
-/* into a generated header file                                                          */
+/* We've setup cmake to process 14-init_pipeline.vert and 14-init_pipeline.frag           */
+/* files containing the glsl shader code for this sample.  The generate-spirv script uses */
+/* glslangValidator to compile the glsl into spir-v and places the spir-v into a struct   */
+/* into a generated header file                                                           */
 
 
 int sample_main(int argc, char *argv[]) {

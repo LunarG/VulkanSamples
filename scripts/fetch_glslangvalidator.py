@@ -20,7 +20,7 @@
 
 
 # This script will download the latest glslang release binary and extract the
-# glslangValidator binary needed by the vkcube and vkcubepp applications.
+# glslangValidator binary needed by the samples.
 #
 # It takes as its lone argument the filname (no path) describing the release
 # binary name from the glslang github releases page.

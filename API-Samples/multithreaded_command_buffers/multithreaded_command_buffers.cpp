@@ -55,7 +55,7 @@ VkCommandPool threadCmdPools[3];
 static void *per_thread_code(void *arg);
 
 /* We've setup cmake to process multithreaded_command_buffers.vert and multithreaded_command_buffers.frag  */
-/* files containing the glsl shader code for this sample.  The glsl-to-spirv script uses                   */
+/* files containing the glsl shader code for this sample.  The generate-spirv script uses                  */
 /* glslangValidator to compile the glsl into spir-v and places the spir-v into a struct                    */
 /* into a generated header file                                                                            */
 
