@@ -35,7 +35,6 @@ The SPIR-V path is included as an alternative to using a front end.
 #include <string.h>
 #include <cstdlib>
 #include "cube_data.h"
-#include "spirv-tools/libspirv.h"
 
 static const bool use_SPIRV_asm = true;
 
@@ -270,24 +269,11 @@ int sample_main(int argc, char *argv[]) {
 
     if (use_SPIRV_asm) {
         // Use the hand edited SPIR-V assembly
-        spv_context spvContext = spvContextCreate(SPV_ENV_VULKAN_1_0);
-        spv_binary fragmentBinary = {};
-        spv_diagnostic fragmentDiag = {};
-        spv_result_t U_ASSERT_ONLY fragmentResult = spvTextToBinary(
-            spvContext, fragmentSPIRV_specialized.c_str(), fragmentSPIRV_specialized.length(), &fragmentBinary, &fragmentDiag);
-        if (fragmentDiag) {
-            printf("Diagnostic info from fragment shader:\n");
-            spvDiagnosticPrint(fragmentDiag);
-        }
-        assert(fragmentResult == SPV_SUCCESS);
-        moduleCreateInfo.codeSize = fragmentBinary->wordCount * sizeof(unsigned int);
-        moduleCreateInfo.pCode = fragmentBinary->code;
-        spvDiagnosticDestroy(fragmentDiag);
-        spvContextDestroy(spvContext);
-
+#include "specialized.frag.h"
+        moduleCreateInfo.codeSize = sizeof(specialized_frag);
+        moduleCreateInfo.pCode = specialized_frag;
     } else {
 #include "spirv_specialization.frag.h"
-
         moduleCreateInfo.codeSize = sizeof(spirv_specialization_frag);
         moduleCreateInfo.pCode = spirv_specialization_frag;
     }

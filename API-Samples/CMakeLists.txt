@@ -124,6 +124,14 @@ function(sampleWithSingleFile)
                 set (sources ${SAMPLE_NAME}/${SAMPLE_NAME}.cpp)
                 set (sources ${sources} ${SAMPLE_NAME}.vert.h)
                 set (sources ${sources} ${SAMPLE_NAME}.frag.h)
+            elseif (${SAMPLE_NAME} MATCHES spirv_specialization)
+                set (sources ${SAMPLE_NAME}/${SAMPLE_NAME}.cpp)
+                glsl_to_spirv(${SAMPLE_NAME}.vert ${SAMPLE_NAME})
+                set (sources ${sources} ${SAMPLE_NAME}.vert.h)
+                glsl_to_spirv(${SAMPLE_NAME}.frag ${SAMPLE_NAME})
+                set (sources ${sources} ${SAMPLE_NAME}.frag.h)
+                assembly_to_spirv(specialized.frag ${SAMPLE_NAME})
+                set (sources ${sources} specialized.frag.h)
             else()
                 set(sources ${SAMPLE_NAME}/${SAMPLE_NAME}.cpp)
                 if (EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/${SAMPLE_NAME}/${SAMPLE_NAME}.vert)
@@ -152,6 +160,14 @@ function(sampleWithSingleFile)
                 set (sources ${SAMPLE_NAME}/${SAMPLE_NAME}.cpp)
                 set (sources ${sources} ${SAMPLE_NAME}.vert.h)
                 set (sources ${sources} ${SAMPLE_NAME}.frag.h)
+            elseif (${SAMPLE_NAME} MATCHES spirv_specialization)
+                set (sources ${SAMPLE_NAME}/${SAMPLE_NAME}.cpp)
+                glsl_to_spirv(${SAMPLE_NAME}.vert ${SAMPLE_NAME})
+                set (sources ${sources} ${SAMPLE_NAME}.vert.h)
+                glsl_to_spirv(${SAMPLE_NAME}.frag ${SAMPLE_NAME})
+                set (sources ${sources} ${SAMPLE_NAME}.frag.h)
+                assembly_to_spirv(specialized.frag ${SAMPLE_NAME})
+                set (sources ${sources} specialized.frag.h)
             else()
                 set(sources ${SAMPLE_NAME}/${SAMPLE_NAME}.cpp)
                 if (EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/${SAMPLE_NAME}/${SAMPLE_NAME}.vert)
@@ -273,10 +289,10 @@ set (S_TARGETS
     copy_blit_image template separate_image_sampler input_attachment
     occlusion_query pipeline_cache pipeline_derivative push_descriptors
     immutable_sampler push_constants draw_subpasses secondary_command_buffer
-    memory_barriers spirv_assembly vulkan_1_1_flexible)
+    memory_barriers spirv_assembly spirv_specialization vulkan_1_1_flexible)
 sampleWithSingleFile()
 
-# spirv_specialization validation_cache
+# validation_cache
 
 if (NOT ANDROID)
 foreach (sample ${S_TARGETS})
