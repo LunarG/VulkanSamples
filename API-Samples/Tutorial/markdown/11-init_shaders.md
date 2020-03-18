@@ -8,17 +8,17 @@ Code file for this section is `11-init_shaders.cpp`
 
 The low-level shader code representation for Vulkan is SPIR-V.
 The sample programs compile shader programs written in GLSL
-into SPIR-V with a call to a utility function:
+into SPIR-V by running a utility called glslangValidator.
 
-    GLSLtoSPV(VK_SHADER_STAGE_VERTEX_BIT, vertShaderText, vtx_spv);
+The shader source code is in the `<sample name>.vert` and `<sample name>.frag`
+files and part of the build process is to run glslangValidator on each
+of them to generate a header file in `build/ShaderHeaders` that
+contains a struct holding the raw SPIR-V representation of the shader.
+The samples then include these header files when creating their shader modules.
 
-The shader source code is in the `vertShaderText` variable and the
-compiled SPIR-V is returned in `vtx_spv`, which is a vector of
-`unsigned int` and is suitable for storing the SPIR-V code.
-
-Look at the sample code to find the shader source for this vertex
-shader and notice that the fragment shader source is provided as well,
-along with a similar call to compile it.
+Look at the `11-init_shaders.vert` file to find the shader source for the vertex
+shader and notice that the fragment shader source is provided in
+`11-init_shaders.frag`
 
 Also notice that these are simple shaders.
 The vertex shader simply passes the color through to its output
