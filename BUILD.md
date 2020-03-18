@@ -69,18 +69,10 @@ the samples. You must also take note of the headers' install
 directory and pass it on the CMake command line for building this repository,
 as described below.
 
-#### glslang
-
-This repository has a required dependency on the
-[glslang repository](https://github.com/KhronosGroup/glslang).
-The glslang repository is required because it contains components that are
-required to build the samples. You must clone the glslang repository
-and build its `install` target. Follow the build instructions in the glslang
-[README.md](https://github.com/KhronosGroup/glslang/blob/master/README.md)
-file. Ensure that the `update_glslang_sources.py` script has been run as part
-of building glslang. You must also take note of the glslang install directory
-and pass it on the CMake command line for building this repository, as
-described below.
+#### glslangValidator and spirv-as
+The samples use glslangValidator to compile glsl shaders and spirv-as to assemble
+spirv assembly code.  CMake is set up to fetch these executables if they are not 
+found in your PATH.
 
 #### Vulkan-Loader
 
@@ -316,7 +308,6 @@ create a build directory and generate the make files.
     cmake -DCMAKE_BUILD_TYPE=Debug \
           -DVULKAN_HEADERS_INSTALL_DIR=absolute_path_to_install_dir \
           -DVULKAN_LOADER_INSTALL_DIR=absolute_path_to_install_dir \
-          -DGLSLANG_INSTALL_DIR=absolute_path_to_install_dir \
           -DCMAKE_INSTALL_PREFIX=install ..
 
 > Note: The `..` parameter tells `cmake` the location of the top of the
@@ -339,15 +330,8 @@ install directory must be provided. This can be done by setting the
 either case, the variable should point to the installation directory of a
 Vulkan-Headers repository built with the install target.
 
-When generating the project files, the absolute path to a glslang install
-directory must be provided. This can be done by setting the
-`GLSLANG_INSTALL_DIR` environment variable or by setting the
-`GLSLANG_INSTALL_DIR` CMake variable with the `-D` CMake option. In either
-case, the variable should point to the installation directory of a glslang
-repository built with the install target.
-
-Note that if you don't want to use specific revisions of HEADERS, LOADER, 
-and GLSLANG, the update_deps.py script mentioned above will handle all 
+Note that if you don't want to use specific revisions of HEADERS or LOADER,
+the update_deps.py script mentioned above will handle all
 of the dependencies for you.
 
 #### Build the Project
