@@ -4,20 +4,34 @@
 import os, subprocess, platform
 
 if platform.system() == 'Windows':
-    if os.path.isdir("Debug"):
-        directory = "Debug"
-    elif ospath.isdir("Release"):
-        directory = "Release"
+    for subdir in ["Debug", "Release"]:
+        if os.path.isdir(subdir):
+            directory = os.path.realpath(subdir)
+            break
     else:
         sys.exit("Cannot find samples in Debug or Release, have they been built?")
+    suffix = ".exe"
 else:
-    directory = os.cwd()
-    
-for file in os.listdir(directory):
-    if file.endswith(".exe"):
-        sample = os.path.join(directory, file)
-        if "VK_LAYER_PATH" not in os.environ:
-            if file == "enable_validation_with_callback.exe" or file == "validation_cache.exe":
-                continue
-        print("Running: ", sample)
-        subprocess.check_call(sample)
+    directory = os.getcwd()
+    suffix = ""
+
+samples = []
+samplesdir = os.path.join("..", "..", "API-Samples")
+for root, dir, files in os.walk(samplesdir):
+    for file in files:
+        if file.endswith(".cpp") and "utils" not in root and "android" not in root:
+            samples.append(os.path.splitext(file)[0])
+
+samples.sort()
+samples_requiring_validation_layer = ["enable_validation_with_callback", "validation_cache"]
+for sample in samples:
+    executable = os.path.join(directory, sample)
+    print('exe = ' + executable)
+    if "VK_LAYER_PATH" not in os.environ and sample in samples_requiring_validation_layer:
+        print('Skipping {} because it requires validation layers'.format(sample))
+        continue
+    if os.path.isfile(executable + suffix):
+        print('Running: ' + sample)
+        subprocess.check_call(executable)
+    else:
+        print("Skipping {} because the sample doesn't seem to be built".format(sample))
