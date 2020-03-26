@@ -33,7 +33,7 @@ cd samples
 md build
 cd build
 cmake -G "%version_string%" -A x64 -DGLSLANG_INSTALL_DIR=%VULKAN_SDK% ..
-msbuild ALL_BUILD.vcxproj /p:Platform=x64 /p:Configuration=Debug /verbosity:quiet
-msbuild ALL_BUILD.vcxproj /p:Platform=x64 /p:Configuration=Release /verbosity:quiet
+call msbuild ALL_BUILD.vcxproj /p:Platform=x64 /p:Configuration=Debug /verbosity:quiet
+call msbuild ALL_BUILD.vcxproj /p:Platform=x64 /p:Configuration=Release /verbosity:quiet
 
 cd %START_DIR%
