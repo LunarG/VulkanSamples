@@ -14,8 +14,7 @@ macro(assembly_to_spirv src basename)
         )
 endmacro()
 
-add_custom_target(make-shader-directory ALL
-    COMMAND ${CMAKE_COMMAND} -E make_directory ShaderHeaders)
+file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/ShaderHeaders)
 
 # If ANDROID is ON, turn on cross-compiling for it
 if(ANDROID)
