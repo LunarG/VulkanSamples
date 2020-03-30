@@ -41,7 +41,6 @@ samples utility functions
 #include "string.h"
 #include "errno.h"
 #include <android_native_app_glue.h>
-#include "shaderc/shaderc.hpp"
 // Static variable that keeps ANativeWindow and asset manager instances.
 static android_app *Android_application = nullptr;
 #elif (defined(VK_USE_PLATFORM_IOS_MVK) || defined(VK_USE_PLATFORM_MACOS_MVK))
@@ -312,33 +311,6 @@ bool GLSLtoSPV(const VkShaderStageFlagBits shader_type, const char *pshader, std
     }
     return wasConverted;
 }
-
-#else  // not MVK iOS/macOS
-
-#ifdef __ANDROID__
-// Android specific helper functions for shaderc.
-struct shader_type_mapping {
-    VkShaderStageFlagBits vkshader_type;
-    shaderc_shader_kind shaderc_type;
-};
-static const shader_type_mapping shader_map_table[] = {
-    {VK_SHADER_STAGE_VERTEX_BIT, shaderc_glsl_vertex_shader},
-    {VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT, shaderc_glsl_tess_control_shader},
-    {VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT, shaderc_glsl_tess_evaluation_shader},
-    {VK_SHADER_STAGE_GEOMETRY_BIT, shaderc_glsl_geometry_shader},
-    {VK_SHADER_STAGE_FRAGMENT_BIT, shaderc_glsl_fragment_shader},
-    {VK_SHADER_STAGE_COMPUTE_BIT, shaderc_glsl_compute_shader},
-};
-shaderc_shader_kind MapShadercType(VkShaderStageFlagBits vkShader) {
-    for (auto shader : shader_map_table) {
-        if (shader.vkshader_type == vkShader) {
-            return shader.shaderc_type;
-        }
-    }
-    assert(false);
-    return shaderc_glsl_infer_from_source;
-}
-#endif
 
 #endif  // IOS or macOS
 

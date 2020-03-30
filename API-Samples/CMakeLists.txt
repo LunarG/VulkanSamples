@@ -77,13 +77,9 @@ function(sampleWithSingleFile)
             set (OTHER_FLAGS "")
             set (ASSET_DIR "")
             set (EXTRA_PERMISSIONS "")
-            set (SHADERC_LINKAGE "")
             set (VALIDATIONLAYER_PACKING "")
 
             # Add extra setting for some samples.
-            # shaderc usage.
-            set (SHADERC_LINKAGE "library \"shaderc\"         linkage \"static\"")
-
             # Include resource files.
             set (SAMPLE_WITH_RESOURCES
              draw_textured_cube init_texture immutable_sampler memory_barriers multiple_sets pipeline_cache

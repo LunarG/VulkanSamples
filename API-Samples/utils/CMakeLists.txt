@@ -31,8 +31,7 @@ if(ANDROID)
    target_include_directories(${UTILS_NAME} PRIVATE
                               ${ANDROID_NDK}/sources/android/native_app_glue
                               ${CMAKE_CURRENT_SOURCE_DIR}/../android/vulkan_wrapper
-                              ${CMAKE_CURRENT_SOURCE_DIR}/../data
-                              ${ANDROID_NDK}/sources/third_party/shaderc/include)
+                              ${CMAKE_CURRENT_SOURCE_DIR}/../data)
    target_link_libraries(${UTILS_NAME}
                               android
                               log

@@ -15,12 +15,8 @@
 #
 
 cmake_minimum_required(VERSION 3.4.1)
-get_filename_component(SHADERC_SRC
-                       ${ANDROID_NDK}/sources/third_party/shaderc
-                       ABSOLUTE)
 # Build Util Lib
 set(UTILS_NAME  vsamputils)
-set(GLSLANG_SPIRV_INCLUDE_DIR ${SHADERC_SRC}/third_party/glslang)
 get_filename_component(PROJECT_SOURCE_DIR
                        "${CMAKE_SOURCE_DIR}/../../.."
                        ABSOLUTE)
@@ -28,11 +24,6 @@ get_filename_component(GLMINC_PREFIX
                        "${CMAKE_SOURCE_DIR}/../utils"
                        ABSOLUTE)
 add_subdirectory(${CMAKE_SOURCE_DIR}/../utils ${CMAKE_BINARY_DIR}/utils)
-
-# Import shaderc lib in NDK
-add_library(shaderc_lib STATIC IMPORTED)
-set_target_properties(shaderc_lib PROPERTIES IMPORTED_LOCATION
-                      ${SHADERC_SRC}/libs/${ANDROID_STL}/${ANDROID_ABI}/libshaderc.a)
 
 # Build application's shared lib
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11  -Werror -D VK_USE_PLATFORM_ANDROID_KHR")
@@ -49,11 +40,9 @@ add_library(vulkan_sample SHARED
 target_include_directories(vulkan_sample PRIVATE
                            ${CMAKE_SOURCE_DIR}/../data
                            ${GLMINC_PREFIX}
-                           ${SHADERC_SRC}/third_party/spirv-tools/include
-                           ${SHADERC_SRC}/third_party/spirv-tools/include/spirv-tools
+                           ${CMAKE_SOURCE_DIR}/ShaderHeaders
                            ${CMAKE_SOURCE_DIR}/../android/vulkan_wrapper)
 
 target_link_libraries(vulkan_sample
                       log
-                      ${UTILS_NAME}
-                      shaderc_lib)
+                      ${UTILS_NAME})
