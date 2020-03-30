@@ -379,5 +379,6 @@ $ cmake -DANDROID=ON -DABI_NAME=<armeabi-v7a|arm64-v8a|...>
 - Or if building from a terminal:
 ```java
 $ cd android
+$ python3 ./compile_shaders.py
 $ ./gradlew build
 ```

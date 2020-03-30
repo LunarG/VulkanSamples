@@ -97,6 +97,7 @@ script:
       cmake --version
       cmake -DANDROID=ON -DABI_NAME=$ANDROID_ABI
       cd android
+      python3 compile_shaders.py
       ./gradlew build
     fi
     if [[ "$VULKAN_BUILD_TARGET" == "LINUX" ]]; then
