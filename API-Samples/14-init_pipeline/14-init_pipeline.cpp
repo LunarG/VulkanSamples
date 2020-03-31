@@ -35,7 +35,6 @@ Create Graphics Pipeline
 /* glslangValidator to compile the glsl into spir-v and places the spir-v into a struct   */
 /* into a generated header file                                                           */
 
-
 int sample_main(int argc, char *argv[]) {
     VkResult U_ASSERT_ONLY res;
     struct sample_info info = {};
