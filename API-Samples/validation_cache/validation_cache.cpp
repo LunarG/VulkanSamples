@@ -271,7 +271,7 @@ int sample_main(int argc, char *argv[]) {
     const size_t SHADER_COUNT = 10000;
     std::vector<ShaderVariant> shaderVariants(SHADER_COUNT);
     for (size_t i = 0; i < SHADER_COUNT; ++i) {
-        auto ptr = const_cast<uint32_t*>(validation_cache_frag);
+        auto ptr = const_cast<uint32_t *>(validation_cache_frag);
         shaderVariants[i].spv = std::vector<uint32_t>(ptr, ptr + sizeof(validation_cache_frag));
         shaderVariants[i].spv[tweakValueIndex] = i;
 #if defined(VK_EXT_validation_cache)

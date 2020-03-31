@@ -33,10 +33,10 @@ Use Push Descriptors to Draw Textured Cube
  * the same as draw_textured_cube, a cube with LunarG texture
  */
 
- /* We've setup cmake to process push_descriptors.vert and push_descriptors.frag           */
- /* files containing the glsl shader code for this sample.  The generate-spirv script uses */
- /* glslangValidator to compile the glsl into spir-v and places the spir-v into a struct   */
- /* into a generated header file                                                           */
+/* We've setup cmake to process push_descriptors.vert and push_descriptors.frag           */
+/* files containing the glsl shader code for this sample.  The generate-spirv script uses */
+/* glslangValidator to compile the glsl into spir-v and places the spir-v into a struct   */
+/* into a generated header file                                                           */
 
 int sample_main(int argc, char *argv[]) {
     VkResult U_ASSERT_ONLY res;
