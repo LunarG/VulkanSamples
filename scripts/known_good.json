@@ -6,7 +6,7 @@
       "sub_dir" : "Vulkan-Headers",
       "build_dir" : "Vulkan-Headers/build",
       "install_dir" : "Vulkan-Headers/build/install",
-      "commit" : "v1.2.135"
+      "commit" : "mikew_pr110"
     },
     {
       "name" : "Vulkan-Loader",
@@ -14,7 +14,7 @@
       "sub_dir" : "Vulkan-Loader",
       "build_dir" : "Vulkan-Loader/build",
       "install_dir" : "Vulkan-Loader/build/install",
-      "commit" : "v1.2.135",
+      "commit" : "mikew_pr110",
       "deps" : [
         {
           "var_name" : "VULKAN_HEADERS_INSTALL_DIR",
