@@ -6,12 +6,18 @@ script = os.path.join("..", "..", "scripts", "generate_spirv.py")
 validator = os.path.join("..", "..", "glslang", "bin", "glslangValidator")
 assembler = os.path.join("..", "..", "spirv-tools", "bin", "spirv-as")
 
+zip_name = {"Linux": "glslang-master-linux-Release.zip",
+            "Darwin": "glslang-master-osx-Release.zip",
+            "Windows": "glslang-master-windows-x64-Release.zip"}[platform.system()]
 if not os.path.exists(validator):
-    args = [ sys.executable, os.path.join("..", "..", "scripts", "fetch_glslangvalidator.py"), "glslang-master-linux-Release.zip" ]
+    args = [ sys.executable, os.path.join("..", "..", "scripts", "fetch_glslangvalidator.py"), zip_name]
     subprocess.check_call(args)
 
+zip_name = {"Linux" : "SPIRV-Tools-master-linux-RelWithDebInfo.zip",
+            "Darwin": "SPIRV-Tools-master-osx-RelWithDebInfo.zip",
+            "Windows":"SPIRV-Tools-master-windows-x64-Release.zip"}[platform.system()]
 if not os.path.exists(assembler):
-    args = [ sys.executable, os.path.join("..", "..", "scripts", "fetch_spirv_tools.py"), "SPIRV-Tools-master-linux-RelWithDebInfo.zip" ]
+    args = [ sys.executable, os.path.join("..", "..", "scripts", "fetch_spirv_tools.py"), zip_name]
     subprocess.check_call(args)
 
 samplesdir = os.path.join(os.getcwd(), "..")

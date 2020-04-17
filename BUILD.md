@@ -362,23 +362,21 @@ CMake option of the form `BUILD_WSI_xxx_SUPPORT` can be set to `OFF`.
 
 ## Building On Android
 
-Install the required tools for Linux and Windows covered above, then add the
-following.
+Install the required tools for Linux/Mac OS/Windows covered above, plus the
+following instructions
 
-- Build shaderc source code inside NDK
-```java
-$ cd ${ndk_root}/sources/third_party/shaderc
-$ ../../../ndk-build NDK_PROJECT_PATH=. APP_BUILD_SCRIPT=Android.mk APP_STL:=c++_static APP_ABI=all NDK_TOOLCHAIN_VERSION:=clang libshaderc_combined -j16
-```
 - Generate Android Studio Projects
-```java
-$ cd YOUR_DEV_DIRECTORY/VulkanSamples/API-Samples
-$ cmake -DANDROID=ON -DABI_NAME=<armeabi-v7a|arm64-v8a|...>
 ```
-- Import VulkanSamples/API-Samples/android/build.gradle into Android Studio 2.3.0+.
-- Or if building from a terminal:
-```java
-$ cd android
-$ python3 ./compile_shaders.py
-$ ./gradlew build
+    $ cd YOUR_DEV_DIRECTORY/VulkanSamples/API-Samples
+    $ cmake -DANDROID=ON -DABI_NAME=<armeabi-v7a|arm64-v8a|...>
+```
+- Precompile Shaders
+```
+     $ cd android
+     $ python3 ./compile_shaders.py
+```
+- Import VulkanSamples/API-Samples/android/build.gradle into Android Studio 3.6.0+.
+- If building from a terminal, do:
+```
+    $ ./gradlew build
 ```
