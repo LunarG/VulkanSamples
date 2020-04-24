@@ -2,19 +2,19 @@
   "repos" : [
     {
       "name" : "Vulkan-Headers",
-      "url" : "https://github.com/KhronosGroup/Vulkan-Headers.git",
+      "url" : "https://github.com/NeroBurner/Vulkan-Headers.git",
       "sub_dir" : "Vulkan-Headers",
       "build_dir" : "Vulkan-Headers/build",
       "install_dir" : "Vulkan-Headers/build/install",
-      "commit" : "v1.2.135"
+      "commit" : "cmake_install"
     },
     {
       "name" : "Vulkan-Loader",
-      "url" : "https://github.com/KhronosGroup/Vulkan-Loader.git",
+      "url" : "https://github.com/NeroBurner/Vulkan-Loader.git",
       "sub_dir" : "Vulkan-Loader",
       "build_dir" : "Vulkan-Loader/build",
       "install_dir" : "Vulkan-Loader/build/install",
-      "commit" : "v1.2.135",
+      "commit" : "cmake_export_target",
       "deps" : [
         {
           "var_name" : "VULKAN_HEADERS_INSTALL_DIR",
