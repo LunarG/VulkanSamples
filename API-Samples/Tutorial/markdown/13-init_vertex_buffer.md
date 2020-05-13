@@ -101,7 +101,7 @@ Even though the first attribute is position data, a 4-byte float color format
 is used to describe it in the `format` member for attribute 0.
 The `format` for attribute 1 is more clearly a color format, since attribute 1 is a color.
 
-The `offset` members are strightforward indicators of where each attribute is found in the
+The `offset` members are straightforward indicators of where each attribute is found in the
 vertex data.
 
 ## Binding the Vertex Buffer to a Render Pass
