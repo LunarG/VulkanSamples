@@ -168,7 +168,7 @@ int sample_main(int argc, char *argv[]) {
     info.render_pass = stencil_render_pass;
     init_framebuffers(info, depthPresent);
 
-    VkDynamicState dynamicStateEnables[VK_DYNAMIC_STATE_RANGE_SIZE];
+    VkDynamicState dynamicStateEnables[2];  // Viewport + Scissor
     VkPipelineDynamicStateCreateInfo dynamicState = {};
     memset(dynamicStateEnables, 0, sizeof dynamicStateEnables);
     dynamicState.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
