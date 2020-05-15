@@ -195,19 +195,11 @@ endfunction(sampleWithSingleFile)
 
 if(WIN32)
     set (MOVE_CMD "move")
-    set (VULKAN_LOADER_NAME "${API_LOWERCASE}-${MAJOR}")
 else()
     set (MOVE_CMD "mv")
     set (PTHREAD "pthread")
-    set (VULKAN_LOADER_NAME "${API_LOWERCASE}")
 endif()
-
-if(EXISTS "${PROJECT_SOURCE_DIR}/${V_LVL_RELATIVE_LOCATION}/loader")
-    set (VULKAN_LOADER ${VULKAN_LOADER_NAME})
-else()
-    find_library(VULKAN_LOADER NAMES ${VULKAN_LOADER_NAME}
-    HINTS "${V_LVL_RELATIVE_LOCATION}/${LIBSOURCE_DIR}" "${V_LVL_RELATIVE_LOCATION}/x86_64/lib" )
-endif()
+set (VULKAN_LOADER "${Vulkan_LIBRARY}")
 
 set (LIBGLM_INCLUDE_DIR ${V_LVL_RELATIVE_LOCATION}/libs)
 
