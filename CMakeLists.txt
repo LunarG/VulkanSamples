@@ -17,6 +17,18 @@ set(CMAKE_PREFIX_PATH ${CMAKE_PREFIX_PATH};${VULKAN_HEADERS_INSTALL_DIR};${VULKA
   
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 find_package(PythonInterp 3 REQUIRED)
+
+# Cmake command line option overrides environment variable
+if(NOT VULKAN_HEADERS_INSTALL_DIR)
+    set(VULKAN_HEADERS_INSTALL_DIR $ENV{VULKAN_HEADERS_INSTALL_DIR})
+endif()
+
+# Cmake command line option overrides environment variable
+if(NOT VULKAN_LOADER_INSTALL_DIR)
+    set(VULKAN_LOADER_INSTALL_DIR $ENV{VULKAN_LOADER_INSTALL_DIR})
+endif()
+
+# Use INSTALL_DIR variables to set Vulkan_DIR and VulkanHeaders_DIR variable
 if(DEFINED VULKAN_HEADERS_INSTALL_DIR AND VULKAN_HEADERS_INSTALL_DIR)
     set(VulkanHeaders_DIR "${VULKAN_HEADERS_INSTALL_DIR}/share/cmake/VulkanHeaders")
     message(STATUS "VULKAN_HEADERS_INSTALL_DIR is set. Using it to set VulkanHeaders_DIR to '${VulkanHeaders_DIR}'")
@@ -25,11 +37,20 @@ if(DEFINED VULKAN_LOADER_INSTALL_DIR AND VULKAN_LOADER_INSTALL_DIR)
     set(Vulkan_DIR "${VULKAN_LOADER_INSTALL_DIR}/share/cmake/Vulkan")
     message(STATUS "VULKAN_LOADER_INSTALL_DIR is set. Using it to set Vulkan_DIR to '${Vulkan_DIR}'")
 endif()
+
+message(STATUS "Using find_package to locate VulkanHeaders")
+find_package(VulkanHeaders CONFIG)
+if(NOT "${VulkanHeaders_FOUND}")
+    message(FATAL_ERROR "Must define location of vulkan headers -- see BUILD.md")
+endif()
+
 message(STATUS "Using find_package to locate Vulkan")
 find_package(Vulkan CONFIG)
 if(WIN32 AND NOT "${Vulkan_FOUND}")
     message(STATUS "Using local loader")
     set(Vulkan_FOUND Yes)
+    message(STATUS "Vulkan_INCLUDE_DIR not set, using VulkanHeaders_INCLUDE_DIRS '${VulkanHeaders_INCLUDE_DIRS}'")
+    set(Vulkan_INCLUDE_DIR "${VulkanHeaders_INCLUDE_DIRS}")
     if(CMAKE_CL_64)
         set(Vulkan_LIBRARY "${CMAKE_SOURCE_DIR}/external/x64/lib/vulkan-1.lib")
     else()
@@ -176,31 +197,6 @@ if (CMAKE_COMPILER_IS_GNUCC OR CMAKE_C_COMPILER_ID MATCHES "Clang")
         set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fvisibility=hidden")
         set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fvisibility=hidden")
     endif()
-endif()
-
-set(VULKAN_HEADERS_INSTALL_DIR "VULKAN-HEADERS-NOTFOUND" CACHE PATH "Absolute path to a Vulkan-Headers install directory")
-if(NOT VULKAN_HEADERS_INSTALL_DIR AND NOT DEFINED ENV{VULKAN_HEADERS_INSTALL_DIR})
-    find_package(VulkanHeaders CONFIG)
-    if("${VulkanHeaders_FOUND}")
-        message(STATUS "VulkanHeaders found. Using it for VULKAN_HEADERS_INSTALL_DIR")
-        set(VULKAN_HEADERS_INSTALL_DIR "${VulkanHeaders_INSTALL_DIR}" CACHE PATH "Absolute path to a Vulkan-Headers install directory" FORCE)
-        if(NOT Vulkan_INCLUDE_DIR)
-            message(STATUS "Vulkan_INCLUDE_DIR not set, using VulkanHeaders_INCLUDE_DIRS '${VulkanHeaders_INCLUDE_DIRS}'")
-            set(Vulkan_INCLUDE_DIR "${VulkanHeaders_INCLUDE_DIRS}")
-        endif()
-    else()
-        message(FATAL_ERROR "Must define location of vulkan headers -- see BUILD.md")
-    endif()
-endif()
-
-# Cmake command line option overrides environment variable
-if(NOT VULKAN_HEADERS_INSTALL_DIR)
-    set(VULKAN_HEADERS_INSTALL_DIR $ENV{VULKAN_HEADERS_INSTALL_DIR})
-endif()
-
-# Cmake command line option overrides environment variable
-if(NOT VULKAN_LOADER_INSTALL_DIR)
-    set(VULKAN_LOADER_INSTALL_DIR $ENV{VULKAN_LOADER_INSTALL_DIR})
 endif()
 
 set (PYTHON_CMD ${PYTHON_EXECUTABLE})
