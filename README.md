@@ -44,7 +44,7 @@ Vulkan Samples
 
 ## Information for Developing or Contributing:
 
-Please see the [CONTRIBUTING.md](CONTRIBUTING.md) file in this repository for more details.
+Please see the [CONTRIBUTING.md](README-contrib.md) file in this repository for more details.
 
 ## How to Build and Run
 
