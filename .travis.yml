@@ -16,7 +16,7 @@ matrix:
           - build-tools-26.0.2
           - android-26
           - extra
-      env: VULKAN_BUILD_TARGET=ANDROID ANDROID_ABI=armeabi-v7a
+      env: VULKAN_BUILD_TARGET=ANDROID ANDROID_ABI=arm64-v8a
     # Linux GCC debug build.
     - os: linux
       compiler: gcc
@@ -68,10 +68,17 @@ before_install:
       export ARCH=`uname -m`
       wget http://dl.google.com/android/repository/android-ndk-r15c-linux-${ARCH}.zip
       unzip -u -q android-ndk-r15c-linux-${ARCH}.zip
-      export ANDROID_NDK_HOME=`pwd`/android-ndk-r15c
+      # export ANDROID_NDK_HOME=`pwd`/android-ndk-r15c
       export JAVA_HOME="/usr/lib/jvm/java-8-oracle"
       export PATH="$ANDROID_NDK_HOME:$PATH"
       pushd android-ndk-r15c
+
+      ndk_version=$(grep ndkVersion API-Samples/android/project_template/build.gradle | sed "s/^.*ndkVersion//; s/'//g"|sed 's/"//g;s/[[:space:]]//g')
+      if [ ! -z $ndk_version ]
+      then
+        yes | sdkmanager --channel=3 --install "ndk;$ndk_version"
+      fi
+
       yes | sdkmanager --update
       popd
     fi

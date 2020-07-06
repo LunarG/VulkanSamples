@@ -14,15 +14,16 @@
 
 apply plugin: 'com.android.application'
 
-def ndkDir=android.ndkDirectory.path
 def stlType = 'c++_static'
 
 android {
-    compileSdkVersion  26
+    compileSdkVersion  30
+    buildToolsVersion  '30.0.0'
+    ndkVersion '21.3.6528147'
 
     defaultConfig {
         applicationId '@PACKAGE_NAME@'
-        minSdkVersion    24 // Official vulkan support starts in version 24
+        minSdkVersion    24 // Official vulkan support starts from API level 24
         targetSdkVersion 26
         versionCode  1
         versionName '0.0.1'
@@ -45,8 +46,6 @@ android {
     buildTypes {
         release {
             minifyEnabled false
-            proguardFiles getDefaultProguardFile('proguard-android.txt'),
-                    'proguard-rules.pro'
         }
     }
     @ASSET_DIR@
