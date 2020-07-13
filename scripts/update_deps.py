@@ -2,7 +2,7 @@
 
 # Copyright 2017 The Glslang Authors. All rights reserved.
 # Copyright (c) 2018 Valve Corporation
-# Copyright (c) 2018 LunarG, Inc.
+# Copyright (c) 2018-2020 LunarG, Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -250,6 +250,8 @@ import platform
 import multiprocessing
 import shlex
 import shutil
+import stat
+import time
 
 KNOWN_GOOD_FILE_NAME = 'known_good.json'
 
@@ -264,6 +266,14 @@ VERBOSE = False
 
 DEVNULL = open(os.devnull, 'wb')
 
+
+def on_rm_error( func, path, exc_info):
+    """Error handler for recursively removing a directory. The
+    shutil.rmtree function can fail on Windows due to read-only files.
+    This handler will change the permissions for tha file and continue.
+    """
+    os.chmod( path, stat.S_IWRITE )
+    os.unlink( path )
 
 def command_output(cmd, directory, fail_ok=False):
     """Runs a command in a directory and returns its standard output stream.
@@ -333,17 +343,52 @@ class GoodRepo(object):
         if self.build_platforms == [] or platform.system().lower() in self.build_platforms:
             self.on_build_platform = True
 
-    def Clone(self):
+    def Clone(self, retries=10, retry_seconds=60):
+        print('Cloning {n} into {d}'.format(n=self.name, d=self.repo_dir))
         distutils.dir_util.mkpath(self.repo_dir)
-        command_output(['git', 'clone', self.url, '.'], self.repo_dir)
+        for retry in range(retries):
+            try:
+                command_output(['git', 'clone', self.url, '.'], self.repo_dir)
+                # If we get here, we didn't raise an error
+                return
+            except RuntimeError as e:
+                print("Error cloning on iteration {}/{}: {}".format(retry + 1, retries, e))
+                if retry + 1 < retries:
+                    if retry_seconds > 0:
+                        print("Waiting {} seconds before trying again".format(retry_seconds))
+                        time.sleep(retry_seconds)
+                    if os.path.isdir(self.repo_dir):
+                        print("Removing old tree {}".format(self.repo_dir))
+                        shutil.rmtree(self.repo_dir, onerror=on_rm_error)
+                    continue
 
-    def Fetch(self):
-        command_output(['git', 'fetch', 'origin'], self.repo_dir)
+                # If we get here, we've exhausted our retries.
+                print("Failed to clone {} on all retries.".format(self.url))
+                raise e
+
+    def Fetch(self, retries=10, retry_seconds=60):
+        for retry in range(retries):
+            try:
+                command_output(['git', 'fetch', 'origin'], self.repo_dir)
+                # if we get here, we didn't raise an error, and we're done
+                return
+            except RuntimeError as e:
+                print("Error fetching on iteration {}/{}: {}".format(retry + 1, retries, e))
+                if retry + 1 < retries:
+                    if retry_seconds > 0:
+                        print("Waiting {} seconds before trying again".format(retry_seconds))
+                        time.sleep(retry_seconds)
+                    continue
+
+                # If we get here, we've exhausted our retries.
+                print("Failed to fetch {} on all retries.".format(self.url))
+                raise e
 
     def Checkout(self):
         print('Checking out {n} in {d}'.format(n=self.name, d=self.repo_dir))
         if self._args.do_clean_repo:
-            shutil.rmtree(self.repo_dir, ignore_errors=True)
+            if os.path.isdir(self.repo_dir):
+                shutil.rmtree(self.repo_dir, onerror = on_rm_error)
         if not os.path.exists(os.path.join(self.repo_dir, '.git')):
             self.Clone()
         self.Fetch()
@@ -394,7 +439,7 @@ class GoodRepo(object):
         # repo's install dir.
         for d in self.deps:
             dep_commit = [r for r in repos if r.name == d['repo_name']]
-            if len(dep_commit):
+            if len(dep_commit) and dep_commit[0].on_build_platform:
                 cmake_cmd.append('-D{var_name}={install_dir}'.format(
                     var_name=d['var_name'],
                     install_dir=dep_commit[0].install_dir))
@@ -411,9 +456,12 @@ class GoodRepo(object):
         # Use the CMake -A option to select the platform architecture
         # without needing a Visual Studio generator.
         if platform.system() == 'Windows':
-            if self._args.arch == '64' or self._args.arch == 'x64' or self._args.arch == 'win64':
+            if self._args.arch.lower() == '64' or self._args.arch == 'x64' or self._args.arch == 'win64':
                 cmake_cmd.append('-A')
                 cmake_cmd.append('x64')
+            else:
+                cmake_cmd.append('-A')
+                cmake_cmd.append('Win32')
 
         # Apply a generator, if one is specified.  This can be used to supply
         # a specific generator for the dependent repositories to match
