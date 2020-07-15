@@ -345,8 +345,8 @@ class GoodRepo(object):
 
     def Clone(self, retries=10, retry_seconds=60):
         print('Cloning {n} into {d}'.format(n=self.name, d=self.repo_dir))
-        distutils.dir_util.mkpath(self.repo_dir)
         for retry in range(retries):
+            distutils.dir_util.mkpath(self.repo_dir)
             try:
                 command_output(['git', 'clone', self.url, '.'], self.repo_dir)
                 # If we get here, we didn't raise an error
