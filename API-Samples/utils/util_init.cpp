@@ -696,6 +696,11 @@ void init_depth_buffer(struct sample_info &info) {
     assert(res == VK_SUCCESS);
 }
 
+/* Use this surface format if it's available.  This ensures that generated
+ * images are similar on different devices and with different drivers.
+ */
+#define PREFERRED_SURFACE_FORMAT VK_FORMAT_B8G8R8A8_UNORM
+
 void init_swapchain_extension(struct sample_info &info) {
     /* DEPENDS on init_connection() and init_window() */
 
@@ -793,10 +798,18 @@ void init_swapchain_extension(struct sample_info &info) {
     // the surface has no preferred format.  Otherwise, at least one
     // supported format will be returned.
     if (formatCount == 1 && surfFormats[0].format == VK_FORMAT_UNDEFINED) {
-        info.format = VK_FORMAT_B8G8R8A8_UNORM;
+        info.format = PREFERRED_SURFACE_FORMAT;
     } else {
         assert(formatCount >= 1);
+        // If the device supports our preferred surface format, use it.
+        // Otherwise, use whatever the device's preferred surface format is.
         info.format = surfFormats[0].format;
+        for (size_t i = 0; i < formatCount; ++i) {
+            if (surfFormats[i].format == PREFERRED_SURFACE_FORMAT) {
+                info.format = PREFERRED_SURFACE_FORMAT;
+                break;
+            }
+        }
     }
     free(surfFormats);
 }
