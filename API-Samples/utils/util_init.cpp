@@ -794,23 +794,19 @@ void init_swapchain_extension(struct sample_info &info) {
     VkSurfaceFormatKHR *surfFormats = (VkSurfaceFormatKHR *)malloc(formatCount * sizeof(VkSurfaceFormatKHR));
     res = vkGetPhysicalDeviceSurfaceFormatsKHR(info.gpus[0], info.surface, &formatCount, surfFormats);
     assert(res == VK_SUCCESS);
-    // If the format list includes just one entry of VK_FORMAT_UNDEFINED,
-    // the surface has no preferred format.  Otherwise, at least one
-    // supported format will be returned.
-    if (formatCount == 1 && surfFormats[0].format == VK_FORMAT_UNDEFINED) {
-        info.format = PREFERRED_SURFACE_FORMAT;
-    } else {
-        assert(formatCount >= 1);
-        // If the device supports our preferred surface format, use it.
-        // Otherwise, use whatever the device's preferred surface format is.
-        info.format = surfFormats[0].format;
-        for (size_t i = 0; i < formatCount; ++i) {
-            if (surfFormats[i].format == PREFERRED_SURFACE_FORMAT) {
-                info.format = PREFERRED_SURFACE_FORMAT;
-                break;
-            }
+
+    // If the device supports our preferred surface format, use it.
+    // Otherwise, use whatever the device's first reported surface
+    // format is.
+    assert(formatCount >= 1);
+    info.format = surfFormats[0].format;
+    for (size_t i = 0; i < formatCount; ++i) {
+        if (surfFormats[i].format == PREFERRED_SURFACE_FORMAT) {
+            info.format = PREFERRED_SURFACE_FORMAT;
+            break;
         }
     }
+
     free(surfFormats);
 }
 
