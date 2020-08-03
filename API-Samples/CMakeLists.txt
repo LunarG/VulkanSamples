@@ -2,19 +2,17 @@ cmake_minimum_required(VERSION 3.10.2)
 
 macro(glsl_to_spirv src basename)
     add_custom_command(OUTPUT ${src}.h
-        COMMAND ${PYTHON_EXECUTABLE} ${CMAKE_SOURCE_DIR}/scripts/generate_spirv.py ${CMAKE_CURRENT_SOURCE_DIR}/${basename}/${src} ${CMAKE_CURRENT_BINARY_DIR}/ShaderHeaders/${src}.h ${GLSLANG_VALIDATOR} false
+        COMMAND ${PYTHON_EXECUTABLE} ${CMAKE_SOURCE_DIR}/scripts/generate_spirv.py ${CMAKE_CURRENT_SOURCE_DIR}/${basename}/${src} ${CMAKE_CURRENT_BINARY_DIR}/${src}.h ${GLSLANG_VALIDATOR} false
         DEPENDS ${CMAKE_SOURCE_DIR}/scripts/generate_spirv.py ${CMAKE_CURRENT_SOURCE_DIR}/${basename}/${src} ${GLSLANG_VALIDATOR}
         )
 endmacro()
 
 macro(assembly_to_spirv src basename)
     add_custom_command(OUTPUT ${src}.h
-        COMMAND ${PYTHON_EXECUTABLE} ${CMAKE_SOURCE_DIR}/scripts/generate_spirv.py ${CMAKE_CURRENT_SOURCE_DIR}/${basename}/${src} ${CMAKE_CURRENT_BINARY_DIR}/ShaderHeaders/${src}.h ${SPIRV_TOOLS_ASSEMBLER} true
+        COMMAND ${PYTHON_EXECUTABLE} ${CMAKE_SOURCE_DIR}/scripts/generate_spirv.py ${CMAKE_CURRENT_SOURCE_DIR}/${basename}/${src} ${CMAKE_CURRENT_BINARY_DIR}/${src}.h ${SPIRV_TOOLS_ASSEMBLER} true
         DEPENDS ${CMAKE_SOURCE_DIR}/scripts/generate_spirv.py ${CMAKE_CURRENT_SOURCE_DIR}/${basename}/${src} ${SPIRV_TOOLS_ASSEMBLER}
         )
 endmacro()
-
-file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/ShaderHeaders)
 
 # If ANDROID is ON, turn on cross-compiling for it
 if(ANDROID)
@@ -50,7 +48,7 @@ endif()
 
 set(SAMPLES_DATA_DIR ${SAMPLES_DATA_DIR} "${CMAKE_SOURCE_DIR}/API-Samples/data")
 set(SHADER_FILES ${SHADER_FILES} "")
-include_directories( ${SAMPLES_DATA_DIR} ${GLMINC_PREFIX} ${Vulkan_INCLUDE_DIR} ${CMAKE_CURRENT_BINARY_DIR}/ShaderHeaders)
+include_directories( ${SAMPLES_DATA_DIR} ${GLMINC_PREFIX} ${Vulkan_INCLUDE_DIR} ${CMAKE_CURRENT_BINARY_DIR})
 
 # Additional includes for spirv-tools
 include_directories(${SPIRV_TOOLS_INCLUDE_DIR})
