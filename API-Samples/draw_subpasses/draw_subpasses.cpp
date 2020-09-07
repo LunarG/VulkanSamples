@@ -42,6 +42,7 @@ int sample_main(int argc, char *argv[]) {
     struct sample_info info = {};
     char sample_title[] = "Multi-pass render passes";
     const bool depthPresent = true;
+    VkFormatProperties props;
 
     process_command_line_args(info, argc, argv);
     init_global_layer_properties(info);
@@ -60,7 +61,12 @@ int sample_main(int argc, char *argv[]) {
     init_device_queue(info);
     init_swap_chain(info);
 
-    info.depth.format = VK_FORMAT_D32_SFLOAT_S8_UINT;
+    vkGetPhysicalDeviceFormatProperties(info.gpus[0], VK_FORMAT_D32_SFLOAT_S8_UINT, &props);
+    if ((props.linearTilingFeatures & VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT) ||
+        (props.optimalTilingFeatures & VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT))
+        info.depth.format = VK_FORMAT_D32_SFLOAT_S8_UINT;
+    else
+        info.depth.format = VK_FORMAT_D24_UNORM_S8_UINT;
     init_depth_buffer(info);
 
     init_uniform_buffer(info);
