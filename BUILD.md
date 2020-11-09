@@ -28,7 +28,6 @@ Vulkan Samples
         Vulkan API
       - Vulkan Tutorial - Steps you through the process of creating a simple Vulkan application, learning the basics along the way. This [Vulkan Tutorial link](https://vulkan.lunarg.com/doc/sdk/latest/windows/tutorial/html/index.html) allows you to view the Vulkan Tutorial on LunarXchange as well. 
       - Sample-Programs - Samples that are more functional and go deeper than simple API use.
-      - Layer-Samples - Samples that are implemented as layers.  The Overlay layer sample is deprecated and does not build.
 
 ## Repository Set-Up
 
@@ -164,7 +163,6 @@ on/off options currently supported by this repository:
 | Option | Platform | Default | Description |
 | ------ | -------- | ------- | ----------- |
 | BUILD_API_SAMPLES | All | `ON` | Controls whether or not the basic api samples are built. |
-| BUILD_SAMPLE_LAYERS | All | `OFF` | Controls whether or not the Overlay sample layer is built.  The Overlay layer is currently deprcated and will not build. |
 
 These variables should be set using the `-D` option when invoking CMake to
 generate the native platform files.
@@ -235,13 +233,6 @@ install directory must be provided. This can be done by setting the
 `VULKAN_LOADER_INSTALL_DIR` CMake variable with the `-D` CMake option. In
 either case, the variable should point to the installation directory of a
 Vulkan-Loader repository built with the install target.
-
-When generating the project files, the absolute path to a glslang install
-directory must be provided. This can be done by setting the
-`GLSLANG_INSTALL_DIR` environment variable or by setting the
-`GLSLANG_INSTALL_DIR` CMake variable with the `-D` CMake option. In either
-case, the variable should point to the installation directory of a glslang
-repository built with the install target.
 
 Note that if you don't want to use specific revisions of HEADERS, LOADER, 
 and GLSLANG, the update_deps.py script mentioned above will handle all 
