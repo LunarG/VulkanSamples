@@ -22,7 +22,6 @@ Vulkan Samples
         Vulkan API
       - Vulkan Tutorial - Steps you through the process of creating a simple Vulkan application, learning the basics along the way. This [Vulkan Tutorial link](https://vulkan.lunarg.com/doc/sdk/latest/windows/tutorial/html/index.html) allows you to view the Vulkan Tutorial on LunarXchange as well. 
       - Sample-Programs - Samples that are more functional and go deeper than simple API use.
-      - Layer-Samples - Samples that are implemented as layers.  The Overlay layer sample is deprecated and does not build.
 	  
 ## Sample progression
   - In general, the samples are not interrelated, but there is a progression
