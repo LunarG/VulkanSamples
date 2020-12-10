@@ -40,6 +40,7 @@ Shell::Shell(Game &game)
 void Shell::log(LogPriority priority, const char *msg) const {
     std::ostream &st = (priority >= LOG_ERR) ? std::cerr : std::cout;
     st << msg << "\n";
+    fflush(stdout);
 }
 
 void Shell::init_vk() {
