@@ -1,5 +1,6 @@
 # Vulkan Samples
   - This repository is a collection of Vulkan C++ sample applications.
+  - These samples were developed in the early days of Vulkan and are no longer enhanced or maintained. Refer to the [KhronosGroup/Vulkan-Samples repository](https://github.com/KhronosGroup/Vulkan-Samples) for newer samples that are enhanced and maintained.
   - Run the following script to obtain a short description of all or a 
     specific sample:
     `$ API-Samples/get-short-descripts.sh`
